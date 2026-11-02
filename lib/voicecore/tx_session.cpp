@@ -1,0 +1,90 @@
+#include "tx_session.h"
+
+#include <cstring>
+
+namespace lcr {
+
+TxSession::TxSession(const char* callsign, uint16_t session, bool fec) : session_(session), fec_(fec) {
+  if (callsign) {
+    strncpy(callsign_, callsign, kMaxCallsign);
+    callsign_[kMaxCallsign] = 0;
+  }
+  parity_.reset();
+}
+
+bool TxSession::enqueue(const Packet& p) {
+  if (qCount_ >= kQueue) {
+    overflow_ = true;
+    return false;
+  }
+  q_[(qHead_ + qCount_) % kQueue] = p;
+  qCount_++;
+  return true;
+}
+
+bool TxSession::popPacket(Packet& out) {
+  if (qCount_ == 0) return false;
+  out = q_[qHead_];
+  qHead_ = (qHead_ + 1) % kQueue;
+  qCount_--;
+  return true;
+}
+
+bool TxSession::emitData(uint8_t extraFlags) {
+  Packet p;
+  p.session = session_;
+  p.seq = seq_;
+  p.flags = extraFlags | (fec_ ? 0 : kFlagNoFec) | (seq_ == 0 ? kFlagStart : 0);
+
+  const bool withCallsign = callsign_[0] != 0 && (seq_ == 0 || (extraFlags & kFlagEnd) ||
+                                                   static_cast<uint8_t>(seq_ - lastCallsignSeq_) >= kCallsignRepeatPackets);
+  if (withCallsign) {
+    memcpy(p.callsign, callsign_, sizeof(p.callsign));
+    lastCallsignSeq_ = seq_;
+  }
+
+  p.payloadLen = static_cast<uint8_t>(frameCount_ * kFrameBytes);
+  if (p.payloadLen) memcpy(p.payload, frames_, p.payloadLen);
+  frameCount_ = 0;
+
+  if (!enqueue(p)) return false;
+  seq_++;
+  if (fec_) {
+    parity_.add(p);
+    if (parity_.count() == kParityGroup) emitParity();
+  }
+  return true;
+}
+
+void TxSession::emitParity() {
+  Packet p;
+  parity_.build(p, session_, kModeCodec2_1200, seq_);
+  if (enqueue(p)) seq_++;
+  parity_.reset();
+}
+
+void TxSession::begin() {
+  if (begun_) return;
+  begun_ = true;
+  emitData(kFlagStart);
+}
+
+bool TxSession::pushFrame(const uint8_t* frame) {
+  if (finished_) return false;
+  if (!begun_) begin();
+  if (seq_ >= kTxSeqLimit || overflow_) return false;
+  memcpy(frames_ + frameCount_ * kFrameBytes, frame, kFrameBytes);
+  frameCount_++;
+  if (frameCount_ == kFramesPerPacket) return emitData(0);
+  return true;
+}
+
+void TxSession::finish() {
+  if (finished_) return;
+  if (!begun_) begin();
+  finished_ = true;
+  emitData(kFlagEnd);
+  if (fec_ && parity_.count() > 0) emitParity();
+}
+
+}  // namespace lcr
