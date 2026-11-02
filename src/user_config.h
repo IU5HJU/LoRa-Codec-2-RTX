@@ -5,6 +5,14 @@
 // Solo A-Z, 0-9 e '/', massimo 8 caratteri.
 #define LCR_CALLSIGN "IU5HJU"
 
+// Pulsante PTT. Di default il pulsante a bordo (GPIO0, BOOT/PRG), se la tua
+// revisione lo ha: da verificare sulla scheda. GPIO0 e' un pin di boot, quindi
+// non tenerlo premuto durante accensione o reset.
+// Per un pulsante esterno cambia solo LCR_PTT_PIN (verso massa, con pull-up interno).
+#define LCR_PTT_PIN 0
+#define LCR_PTT_ACTIVE_LOW 1
+#define LCR_PTT_DEBOUNCE_MS 30
+
 // Parita' XOR (1 pacchetto ogni 4): consigliata.
 #define LCR_FEC 1
 

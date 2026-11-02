@@ -17,6 +17,7 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md).
 | Parte | Stato |
 |---|---|
 | Formato pacchetti, parità XOR, sessioni TX/RX | fatto, testato sul PC |
+| Antirimbalzo del pulsante PTT (pin configurabile in `user_config.h`) | fatto, testato sul PC |
 | Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
 | Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT) | da fare, servono le schede |
 | Test radio reale, misura di portata e airtime | da fare |

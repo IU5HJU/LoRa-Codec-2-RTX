@@ -6,7 +6,8 @@
 //     transmit(), startReceive(), lettura pacchetti;
 //  2. adattatore ICodec con arduino-codec2 (modo 1200);
 //  3. adattatori IAudioIn / IAudioOut su I2S (microfono e amplificatore);
-//  4. pulsante PTT, OLED e segnali acustici (INotifier);
+//  4. pulsante PTT: pinMode(LCR_PTT_PIN, INPUT_PULLUP), PttButton::update() nel loop()
+//     e pttPressed()/pttReleased() su VoiceNode; poi OLED e segnali acustici (INotifier);
 //  5. VoiceNode::tick() nel loop().
 #include <Arduino.h>
 
