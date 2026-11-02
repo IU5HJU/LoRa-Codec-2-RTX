@@ -19,6 +19,7 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e colleg
 | Formato pacchetti, parità XOR, sessioni TX/RX | fatto, testato sul PC |
 | Antirimbalzo del pulsante PTT (pin configurabile in `user_config.h`) | fatto, testato sul PC |
 | Catena audio del microfono (passa-alto, decimazione, AGC) e pre-roll | fatta, testata sul PC con segnali sintetici |
+| Blocco di uscita audio (AGC, volume, limitatore, raddoppio) | fatto, testato sul PC con segnali sintetici |
 | Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
 | Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT) | da fare, servono le schede |
 | Test radio reale, misura di portata e airtime | da fare |

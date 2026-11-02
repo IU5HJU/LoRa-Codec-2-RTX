@@ -29,6 +29,9 @@ class Biquad {
   float z1_ = 0, z2_ = 0;
 };
 
+// Progetta un FIR passa-basso (finestra di Hamming) con guadagno unitario in continua.
+void designLowpass(float* taps, size_t n, float cutoffHz, float sampleRate);
+
 // Decimazione per 2 con FIR passa-basso (31 tappe, taglio ~3,6 kHz a 16 kHz).
 class Decimator2 {
  public:

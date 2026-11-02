@@ -85,11 +85,22 @@ Note:
 - **Livello I2S:** se l'ESP32 invia solo il canale sinistro e l'amplificatore fa la media dei canali, il livello può risultare dimezzato: da provare e, se serve, inviare lo stesso campione su entrambi i canali.
 - **Frequenza di campionamento:** il MAX98357A accetta 8 kHz, quindi si può riprodurre direttamente l'uscita di Codec2; in alternativa raddoppiare a 16 kHz.
 
-## Da fare per la riproduzione
+## Blocco di uscita (`lib/voicecore/audio_backend.*`)
 
-Un blocco di uscita nel core, testabile sul PC, con:
+```
+frame Codec2 decodificato (int16 @ 8 kHz, 320 campioni)
+  -> AGC in ricezione (target -24 dBFS RMS, guadagno da -20 a +24 dB, soglia -60 dBFS)
+  -> volume (0 = muto, 1..10 in passi da 3 dB, 10 = 0 dB; mai oltre 0 dB)
+  -> limitatore morbido (da 0,6 del fondo scala, picco massimo 0,9)
+  -> opzionale: raddoppio a 16 kHz con FIR (640 campioni)
+  -> I2S verso il MAX98357A
+```
 
-- volume regolabile;
-- limitatore, per non superare la potenza dell'altoparlante;
-- eventuale AGC in ricezione, come fa `esp32_loradv` (livelli molto diversi tra stazioni);
-- eventuale raddoppio della frequenza.
+- **AGC:** stazioni con livelli molto diversi arrivano allo stesso livello. Sotto -60 dBFS, cioè nelle pause, non amplifica il fondo.
+- **Volume:** `setVolumeStep()` per i comandi dell'utente (muto, +/-), `setVolumeDb()` per un valore diretto.
+- **Limitatore:** protegge amplificatore e altoparlante da picchi forti. Fino a 0,6 del fondo scala il segnale non viene toccato.
+- **Frame perso:** `processLost()` scrive silenzio senza alterare AGC e filtri; in futuro si può sostituire con una mascheratura di Codec2.
+- **Frequenza di uscita:** a 8 kHz il MAX98357A funziona; a 16 kHz (`upsample2x`) l'immagine spettrale è attenuata di oltre 25 dB. Da confrontare a orecchio.
+
+I valori sono verificati con segnali sintetici sul PC (`tests/test_output.cpp`) e vanno regolati con altoparlante e amplificatore reali.
+Il consumo di stack del raddoppio (`Interpolator2`) è circa 3 kB.

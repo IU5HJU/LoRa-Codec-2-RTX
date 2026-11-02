@@ -36,18 +36,22 @@ void Biquad::reset() {
   z2_ = 0;
 }
 
-Decimator2::Decimator2() {
-  const float wc = 2.0f * 3600.0f / static_cast<float>(kMicRate);  // taglio normalizzato
-  const int m = static_cast<int>((kTaps - 1) / 2);
+void designLowpass(float* taps, size_t n, float cutoffHz, float sampleRate) {
+  const float wc = 2.0f * cutoffHz / sampleRate;  // taglio normalizzato
+  const int m = static_cast<int>((n - 1) / 2);
   float sum = 0;
-  for (size_t j = 0; j < kTaps; j++) {
+  for (size_t j = 0; j < n; j++) {
     const float k = static_cast<float>(static_cast<int>(j) - m);
     const float sinc = (k == 0) ? 1.0f : std::sin(kPi * wc * k) / (kPi * wc * k);
-    const float hamming = 0.54f - 0.46f * std::cos(2.0f * kPi * static_cast<float>(j) / static_cast<float>(kTaps - 1));
-    taps_[j] = wc * sinc * hamming;
-    sum += taps_[j];
+    const float hamming = 0.54f - 0.46f * std::cos(2.0f * kPi * static_cast<float>(j) / static_cast<float>(n - 1));
+    taps[j] = wc * sinc * hamming;
+    sum += taps[j];
   }
-  for (size_t j = 0; j < kTaps; j++) taps_[j] /= sum;  // guadagno unitario in continua
+  for (size_t j = 0; j < n; j++) taps[j] /= sum;
+}
+
+Decimator2::Decimator2() {
+  designLowpass(taps_, kTaps, 3600.0f, static_cast<float>(kMicRate));
   reset();
 }
 
