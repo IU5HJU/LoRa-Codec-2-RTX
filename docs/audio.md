@@ -58,3 +58,38 @@ aggiungere un mutex tra task di cattura e loop principale.
 - Verificare il livello reale in ingresso e regolare `targetDbfs`, `maxGainDb` e `gateDbfs`.
 - Provare il clic del PTT sulla scheda e, se disturba, scartare i primi frame dopo la pressione.
 - Confrontare a orecchio 8 e 16 kHz, e AGC attivo o guadagno fisso.
+
+## Amplificatore MAX98357A e altoparlante 3 W 8 Ω
+
+Componenti ordinati: modulo I2S MAX98357A (classe D, 3 pezzi) e altoparlanti da 3 W / 8 Ω con cavetto.
+Le note sui pin vengono dalla scheda tecnica e dal modulo standard; vanno confermate sul tuo modulo
+quando arriva, perché i cloni possono differire.
+
+| Pin modulo | Collegamento |
+|---|---|
+| VIN | 5 V se disponibile (più volume), altrimenti 3,3 V. Con USB il pin 5 V della scheda è comodo. |
+| GND | massa in comune |
+| DIN | dati I2S in uscita dall'ESP32 |
+| BCLK | clock di bit I2S |
+| LRC | word select I2S |
+| GAIN | libero = 9 dB. A GND 12 dB, a VIN 6 dB; con resistenza da 100 kΩ a GND 15 dB, a VIN 3 dB |
+| SD | libero va bene sulla maggior parte dei moduli (uscita = media dei due canali). A GND l'amplificatore è spento. |
+
+Note:
+
+- **Potenza:** a 5 V un 8 Ω dà circa 1,5-2 W, a 3,3 V circa 0,7 W. Per una voce parlata a distanza ravvicinata basta, ma conviene limitare il volume nel software per non superare i 3 W nominali dell'altoparlante.
+- **Alimentazione:** i picchi di corrente della classe D possono disturbare microfono e radio se condividono lo stesso 3,3 V. Meglio alimentare l'amplificatore da 5 V o dalla batteria, con un condensatore elettrolitico da circa 100 µF vicino a VIN/GND.
+- **Cablaggio:** i fili dell'altoparlante e dell'amplificatore lontani da microfono, antenna e fili I2S del microfono.
+- **Spegnimento:** se SD è collegato a un GPIO si può spegnere l'amplificatore quando non si ascolta, per eliminare il fruscio e risparmiare corrente. Durante la trasmissione serve comunque spento, perché l'altoparlante deve tacere (half-duplex).
+- **Contenitore:** l'altoparlante rende meglio chiuso dietro in un piccolo volume sigillato; per la voce (300-3400 Hz) non servono bassi.
+- **Livello I2S:** se l'ESP32 invia solo il canale sinistro e l'amplificatore fa la media dei canali, il livello può risultare dimezzato: da provare e, se serve, inviare lo stesso campione su entrambi i canali.
+- **Frequenza di campionamento:** il MAX98357A accetta 8 kHz, quindi si può riprodurre direttamente l'uscita di Codec2; in alternativa raddoppiare a 16 kHz.
+
+## Da fare per la riproduzione
+
+Un blocco di uscita nel core, testabile sul PC, con:
+
+- volume regolabile;
+- limitatore, per non superare la potenza dell'altoparlante;
+- eventuale AGC in ricezione, come fa `esp32_loradv` (livelli molto diversi tra stazioni);
+- eventuale raddoppio della frequenza.
