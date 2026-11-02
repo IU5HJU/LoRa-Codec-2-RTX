@@ -18,6 +18,7 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Progetti simil
 |---|---|
 | Formato pacchetti, parità XOR, sessioni TX/RX | fatto, testato sul PC |
 | Antirimbalzo del pulsante PTT (pin configurabile in `user_config.h`) | fatto, testato sul PC |
+| Catena audio del microfono (passa-alto, decimazione, AGC) e pre-roll | fatta, testata sul PC con segnali sintetici |
 | Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
 | Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT) | da fare, servono le schede |
 | Test radio reale, misura di portata e airtime | da fare |
@@ -28,7 +29,7 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Progetti simil
 lib/voicecore/   logica del protocollo, indipendente dalla scheda
 src/             firmware (stub) e impostazioni dell'operatore (user_config.h)
 tests/           test sul PC con radio, codec e audio simulati
-docs/            protocollo e pinout
+docs/            protocollo, audio, pinout, progetti simili
 ```
 
 ## Test
