@@ -10,7 +10,7 @@ Funzionamento in breve:
 3. Al rilascio del PTT (massimo 30 s) si invia l'ultimo audio e il segnale di fine turno (OVER).
 4. Tutte le stazioni in ascolto sulla frequenza ricevono e riproducono. Dopo 5-10 s di attesa si risponde.
 
-Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md).
+Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
 
 ## Stato
 
