@@ -39,4 +39,9 @@ constexpr int kAmpShutdown = 25; // MAX98357A SD (alto = acceso). Condiviso col 
 // --- PTT: pulsante esterno tra GPIO0 e massa (la scheda ha solo RST) ---
 constexpr int kPtt = 0;
 
+// --- Volume: pulsante esterno opzionale tra GPIO15 e massa (pull-up interno).
+// Se non e' collegato resta alto e non fa nulla. GPIO15 e' un pin di strapping:
+// non tenerlo premuto durante accensione o reset. ---
+constexpr int kVolume = 15;
+
 }  // namespace pins

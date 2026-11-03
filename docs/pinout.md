@@ -38,6 +38,7 @@ La scheda non ha un pulsante utente: c'è solo **RST**.
 | Dati altoparlante | 4 | MAX98357A `DIN` |
 | Shutdown amplificatore | 25 | MAX98357A `SD` (alto = acceso); è anche il LED di bordo |
 | PTT | 0 | Pulsante esterno tra GPIO0 e GND (pull-up interno) |
+| Volume (opzionale) | 15 | Pulsante esterno tra GPIO15 e GND; se non collegato non fa nulla |
 
 Collegamenti fissi:
 
@@ -50,7 +51,7 @@ Perché così:
 - **GPIO13 e GPIO14 sono i pin dello slot microSD:** funzionano solo senza scheda inserita. La documentazione LilyGO avverte inoltre di togliere la microSD quando si carica il firmware.
 - **GPIO0 per il PTT:** è anche il pin di boot, quindi il pulsante esterno funziona da PTT e permette di forzare la modalità flash. Non tenerlo premuto durante accensione o reset.
 - **GPIO12, 1, 3, 6-11 evitati:** strapping, UART di debug e flash.
-- Restano liberi: GPIO15 e GPIO2 (strapping, ma utilizzabili), GPIO35 (ADC batteria), GPIO22/21 se l'OLED non serve.
+- Restano liberi: GPIO2 (strapping, ma utilizzabile), GPIO35 (ADC batteria), GPIO22/21 se l'OLED non serve.
 
 ## Alimentazione
 
@@ -65,5 +66,5 @@ Collegare sempre l'antenna a 433 MHz **prima** di alimentare o trasmettere: senz
 ## Da verificare con le schede in mano
 
 - Che GPIO13/14 siano davvero liberi (microSD non inserita) e che il cablaggio non carichi i segnali.
-- Se la scheda ha l'OLED montato: nella foto non è visibile. Non è indispensabile, il feedback può essere acustico (toni dall'altoparlante).
+- L'OLED (SSD1306 128x64, indirizzo 0x3C, GPIO21/22) è presente sulla scheda; il firmware lo usa per lo stato e per il nominativo ricevuto. Se non risponde il sistema funziona comunque, con i segnali acustici.
 - Il livello I2S dell'amplificatore (possibile dimezzamento con la media dei canali).

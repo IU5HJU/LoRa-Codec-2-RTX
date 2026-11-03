@@ -24,5 +24,13 @@
 #define LCR_SPREADING_FACTOR 8
 #define LCR_CODING_RATE 5  // 4/5
 #define LCR_TX_POWER_DBM 10
+#define LCR_PREAMBLE_SYMBOLS 12
 // Sync word LoRa dedicato (diverso da LoRaWAN 0x34 e Meshtastic 0x2B).
 #define LCR_SYNC_WORD 0x4C
+
+// Microfono I2S: slot dello stereo da cui leggere (0 = sinistro, con L/R a GND).
+// Se si sente solo silenzio provare 1.
+#define LCR_MIC_SLOT 0
+
+// OLED SSD1306 (128x64, indirizzo 0x3C) sulla T3 V1.6.1.
+#define LCR_OLED_ADDRESS 0x3C

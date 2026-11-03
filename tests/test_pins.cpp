@@ -7,7 +7,7 @@
 int main() {
   using namespace pins;
   // Pin che assegniamo noi (audio e PTT) e pin gia' usati dalla scheda.
-  const std::vector<int> mine = {kI2sBclk, kI2sWs, kMicData, kAmpData, kAmpShutdown, kPtt};
+  const std::vector<int> mine = {kI2sBclk, kI2sWs, kMicData, kAmpData, kAmpShutdown, kPtt, kVolume};
   const std::vector<int> board = {kRadioSclk, kRadioMiso, kRadioMosi, kRadioCs, kRadioDio0, kRadioRst,
                                   kRadioDio1, kRadioDio2, kOledSda, kOledScl, kBatteryAdc};
 
@@ -27,6 +27,8 @@ int main() {
   // GPIO34-39 sono solo ingressi: nessuna uscita li puo' usare.
   for (int out : {kI2sBclk, kI2sWs, kAmpData, kAmpShutdown}) CHECK(out < 34);
   CHECK(kMicData >= 34);  // e' un ingresso
+  // I pulsanti usano il pull-up interno: non possono stare sui pin 34-39.
+  CHECK(kPtt < 34 && kVolume < 34);
 
   // Il LED condiviso con lo shutdown dell'amplificatore e' voluto.
   CHECK(kLed == kAmpShutdown);

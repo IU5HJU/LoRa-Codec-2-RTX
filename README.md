@@ -10,7 +10,7 @@ Funzionamento in breve:
 3. Al rilascio del PTT (massimo 30 s) si invia l'ultimo audio e il segnale di fine turno (OVER).
 4. Tutte le stazioni in ascolto sulla frequenza ricevono e riproducono. Dopo 5-10 s di attesa si risponde.
 
-Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
+Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
 
 ## Stato
 
@@ -22,14 +22,14 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e colleg
 | Blocco di uscita audio (AGC, volume, limitatore, raddoppio) | fatto, testato sul PC con segnali sintetici |
 | Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
 | Mappa dei pin della T3 V1.6.1 con test dei conflitti | fatta (`src/board_pins.h`, `docs/pinout.md`) |
-| Adattatori hardware (RadioLib, Codec2, I2S, PTT) | da fare |
+| Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT, volume) | scritti, **non compilati né provati sulla scheda** (`docs/firmware.md`) |
 | Test radio reale, misura di portata e airtime | da fare |
 
 ## Struttura
 
 ```
 lib/voicecore/   logica del protocollo, indipendente dalla scheda
-src/             firmware (stub) e impostazioni dell'operatore (user_config.h)
+src/             firmware per la T3 V1.6.1 e impostazioni dell'operatore (user_config.h)
 tests/           test sul PC con radio, codec e audio simulati
 docs/            protocollo, audio, pinout (T3 V1.6.1), progetti simili
 ```
