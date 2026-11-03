@@ -32,6 +32,13 @@ Funzionamento in breve:
 3. **Carica `web_factory.bin` all'indirizzo `0x0`** sulla scheda: istruzioni per Windows in [docs/firmware.md](docs/firmware.md). In alternativa compila in locale con PlatformIO.
 4. **Frequenza.** Il valore predefinito in `src/user_config.h` è un **segnaposto**: scegli il canale con il band plan IARU R1 / ARI. Le stazioni che si ascoltano devono avere gli **stessi** parametri LoRa e la stessa frequenza.
 
+## Per chi collabora
+
+- **`main` è il punto comune di partenza**: è sempre compilabile (GitHub Actions deve essere verde) e ha come nominativo `N0CALL`, quindi non trasmette finché non imposti il tuo.
+- **Come contribuire:** fai un fork, lavora su un ramo tuo e proponi le modifiche con una pull request. Prima di proporle esegui `make test`.
+- **Prove:** annota ogni prova in [docs/prove.md](docs/prove.md) con il modello indicato. Per un problema da risolvere apri una segnalazione (Issues).
+- **Decisioni e ordine dei lavori:** [docs/roadmap.md](docs/roadmap.md). Prossimi passi: ricezione tra due schede, voce a turni, TOT fino a 3 minuti con i profili, pagina web di configurazione, flasher web.
+
 ## Licenza
 
 Copyright (C) 2026 IU5HJU. Questo programma è software libero, distribuito sotto la
@@ -51,8 +58,8 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e colleg
 | Blocco di uscita audio (AGC, volume, limitatore, raddoppio) | fatto, testato sul PC con segnali sintetici |
 | Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
 | Mappa dei pin della T3 V1.6.1 con test dei conflitti | fatta (`src/board_pins.h`, `docs/pinout.md`) |
-| Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT, volume) | scritti, **compilano su GitHub Actions**, non ancora provati sulla scheda (`docs/firmware.md`) |
-| Test radio reale, misura di portata e airtime | da fare |
+| Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT, volume) | scritti, **compilano su GitHub Actions**; provati sulla scheda: avvio, OLED, PTT e trasmissione. Da provare: ricezione, microfono, altoparlante, voce (`docs/firmware.md`, `docs/prove.md`) |
+| Test radio reale, misura di portata e airtime | in corso: prima prova del 3 novembre con una scheda; la seconda arriva il 4 |
 
 ## Struttura
 

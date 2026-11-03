@@ -4,12 +4,12 @@
 > solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
 > carico si può danneggiare. Prima l'antenna, poi il cavo USB.
 
-**Stato: compila con PlatformIO su GitHub Actions (3 novembre 2026), ma non è ancora stato provato
-sulla scheda.** La logica del protocollo (`lib/voicecore/`) è testata sul PC; gli adattatori
-hardware in `src/` compilano e si collegano alle librerie reali (RadioLib 7.5.0, esp32_codec2 1.0.7,
-driver I2S di ESP-IDF 4.4.x), ma il loro comportamento reale (I2S, radio, OLED, Codec2) è tutto
-da verificare con le schede. Il workflow `.github/workflows/build.yml` produce `web_factory.bin` e
-`ota_update.bin` come artefatti di ogni esecuzione.
+**Stato (3 novembre 2026).** Compila con PlatformIO su GitHub Actions. **Provato sulla scheda**
+(una sola scheda, senza microfono né amplificatore): avvio fino a "ASCOLTO", OLED, PTT e
+trasmissione. **Ancora da provare:** ricezione tra due schede, microfono, altoparlante e voce a turni.
+Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protocollo
+(`lib/voicecore/`) è testata sul PC. Il workflow `.github/workflows/build.yml` produce
+`web_factory.bin` e `ota_update.bin` come artefatti di ogni esecuzione.
 
 ## File
 
@@ -45,6 +45,36 @@ Il workflow di GitHub Actions compila a ogni modifica. Per averlo col **proprio 
    - `SHA256SUMS`: somme di controllo.
 
 Non usare i rami di prova di altri radioamatori (per esempio `prova-iu5hju`): contengono il loro nominativo.
+
+## Caricare il firmware sulla scheda (Linux, provato su Ubuntu 24.04)
+
+**Prima:** antenna collegata, microSD tolta, PTT non premuto.
+
+1. **esptool** in un ambiente separato (su Ubuntu recenti `pip install` globale è bloccato):
+   ```
+   sudo apt install python3-venv        # se serve il pacchetto esatto: python3.12-venv
+   python3 -m venv ~/esp
+   ~/esp/bin/pip install esptool==4.8.1
+   ```
+2. **Porta seriale.** La scheda compare come `/dev/ttyACM0` (chip USB CH9102, ID `1a86:55d4`, verificabile con `lsusb`).
+   Per usarla l'utente deve stare nel gruppo `dialout`:
+   ```
+   sudo usermod -aG dialout $USER
+   newgrp dialout          # oppure esci dalla sessione e rientra
+   ```
+3. **Prova di collegamento (non scrive nulla):**
+   ```
+   ~/esp/bin/esptool.py --chip esp32 --port /dev/ttyACM0 chip_id
+   ```
+   Deve riconoscere `ESP32-PICO-D4`.
+4. **Scrittura** (dalla cartella dove hai decompresso lo zip e verificato `SHA256SUMS`):
+   ```
+   ~/esp/bin/esptool.py --chip esp32 --port /dev/ttyACM0 --baud 460800 write_flash 0x0 web_factory.bin
+   ```
+5. **Seriale:** `~/esp/bin/python -m serial.tools.miniterm --rts 0 --dtr 0 /dev/ttyACM0 115200` (esci con Ctrl+]).
+   Dopo l'avvio compaiono le righe `[avvio] ...` e `IU5HJU pronto, 433.900 MHz, SF8 BW250`.
+
+Il comando `chip_id` e la scrittura sono entrati in modalità di caricamento da soli, senza toccare pulsanti.
 
 ## Caricare il firmware sulla scheda (Windows)
 
