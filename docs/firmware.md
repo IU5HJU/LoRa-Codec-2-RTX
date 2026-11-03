@@ -32,6 +32,33 @@ pio device monitor           # seriale a 115200
 
 Dipendenze (in `platformio.ini`): RadioLib 7.5.0, esp32_codec2 1.0.7, Adafruit SSD1306 e GFX.
 
+## Ottenere il firmware senza compilare in locale
+
+Il workflow di GitHub Actions compila a ogni modifica. Per averlo col **proprio nominativo**:
+
+1. Fai un **fork** del repository su GitHub.
+2. Nel fork modifica `src/user_config.h` e cambia `#define LCR_CALLSIGN "N0CALL"` con il tuo nominativo (puoi farlo dal sito, con il pulsante di modifica del file). Se è la prima volta che usi Actions nel fork, abilitale dalla scheda Actions.
+3. Aspetta che l'esecuzione sul tuo ramo diventi verde (circa 2-3 minuti).
+4. Aprila e scarica l'artefatto **`firmware-t3-v161`** (serve essere loggati su GitHub; scade dopo circa 90 giorni). Contiene:
+   - `web_factory.bin`: immagine completa, da scrivere all'indirizzo `0x0` (prima installazione);
+   - `ota_update.bin`: solo l'applicazione, per gli aggiornamenti futuri;
+   - `SHA256SUMS`: somme di controllo.
+
+Non usare i rami di prova di altri radioamatori (per esempio `prova-iu5hju`): contengono il loro nominativo.
+
+## Caricare il firmware sulla scheda (Windows)
+
+**Prima:** antenna collegata, microSD tolta, PTT non premuto. Driver USB CH343/CH34x di WCH installato:
+in Gestione dispositivi, sotto "Porte (COM e LPT)", deve comparire la porta della scheda (`COMx`).
+
+- **Dal browser (Chrome o Edge):** apri la pagina esptool-js di Espressif, premi Connect, scegli la porta, imposta indirizzo `0x0` e il file `web_factory.bin`, poi Program.
+- **Da riga di comando:**
+  ```
+  pip install esptool==4.8.1
+  esptool.py --chip esp32 --port COMx --baud 460800 write_flash 0x0 web_factory.bin
+  ```
+- Se la scheda non entra in modalità di scrittura, tieni premuto **RST** all'avvio del comando e rilascia dopo la connessione.
+
 ## Licenze (da decidere prima di distribuire)
 
 - Il repository del progetto **non ha ancora un file di licenza**.

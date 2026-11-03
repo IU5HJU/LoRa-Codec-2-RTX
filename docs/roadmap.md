@@ -5,7 +5,7 @@ poi TOT e profili, poi la pagina web di configurazione.
 
 ## 1. Prima trasmissione (in corso)
 
-Procedura in [firmware.md](firmware.md). Stato: schede arrivate, compilazione e carico a carico di IU5HJU su Windows.
+Procedura in [firmware.md](firmware.md). Stato: schede arrivate; il firmware compila su GitHub Actions; la prima prova sulla scheda è in attesa (IU5HJU, Windows). Un collega si aggiunge alle prove.
 Regola ferma: **mai alimentare una scheda senza antenna**, nemmeno via USB per caricare il firmware.
 
 ## 2. TOT fino a 3 minuti e profili (dopo la prima trasmissione)

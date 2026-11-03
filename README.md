@@ -10,6 +10,30 @@ Funzionamento in breve:
 3. Al rilascio del PTT (massimo 30 s) si invia l'ultimo audio e il segnale di fine turno (OVER).
 4. Tutte le stazioni in ascolto sulla frequenza ricevono e riproducono. Dopo 5-10 s di attesa si risponde.
 
+> **Progetto sperimentale.** Il firmware compila e la logica è testata sul PC, ma **non è ancora stato
+> provato su hardware**. Possono trasmettere solo radioamatori con il proprio nominativo, sulle
+> frequenze e con le potenze consentite. Il nominativo viaggia in chiaro e i contenuti non sono cifrati.
+
+## Per provare il firmware
+
+**Occorrente per ogni stazione:**
+
+- scheda **LILYGO LoRa32 T3 V1.6.1** a 433 MHz con **antenna a 433 MHz** (SMA);
+- un **pulsante PTT** esterno tra GPIO0 e massa;
+- per la voce: microfono **INMP441**, amplificatore **MAX98357A** e altoparlante 8 Ω 3 W (per il solo test radio senza audio non servono);
+- schema dei collegamenti in [docs/pinout.md](docs/pinout.md) e [docs/audio.md](docs/audio.md).
+
+**Regole di sicurezza:** antenna collegata **prima** del cavo USB, mai alimentare la scheda senza antenna o carico fittizio; microSD tolta durante il caricamento.
+
+**Passi:**
+
+1. **Nominativo.** Il firmware predefinito ha `N0CALL` e **non trasmette** (riceve soltanto). Ogni stazione deve usare il proprio nominativo in `LCR_CALLSIGN` (`src/user_config.h`). Il modo più semplice: fai un **fork** del repository, modifica quella riga direttamente dal sito GitHub e lascia che GitHub Actions compili nel tuo fork. Non usare i rami di prova di altri, che contengono il loro nominativo.
+2. **Scarica i binari** dall'esecuzione di GitHub Actions: artefatto `firmware-t3-v161` (serve essere loggati). Contiene `web_factory.bin` e `ota_update.bin`.
+3. **Carica `web_factory.bin` all'indirizzo `0x0`** sulla scheda: istruzioni per Windows in [docs/firmware.md](docs/firmware.md). In alternativa compila in locale con PlatformIO.
+4. **Frequenza.** Il valore predefinito in `src/user_config.h` è un **segnaposto**: scegli il canale con il band plan IARU R1 / ARI. Le stazioni che si ascoltano devono avere gli **stessi** parametri LoRa e la stessa frequenza.
+
+**Licenza:** non ancora scelta (vedi [docs/firmware.md](docs/firmware.md)). Il codice è visibile ma, finché non c'è una licenza, non è libero da riusare.
+
 Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
 
 ## Stato
