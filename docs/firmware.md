@@ -4,11 +4,12 @@
 > solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
 > carico si può danneggiare. Prima l'antenna, poi il cavo USB.
 
-**Stato: scritto ma non ancora compilato né provato sulla scheda.** La logica del protocollo
-(`lib/voicecore/`) è testata sul PC; gli adattatori hardware in `src/` sono stati controllati
-solo contro le intestazioni reali delle librerie (RadioLib 7.5.0, esp32_codec2 1.0.7, driver I2S
-di ESP-IDF 4.4.7) e con una compilazione di sola sintassi su stub. La compilazione vera con
-PlatformIO non è stata possibile nell'ambiente in cui ho lavorato (registro PlatformIO bloccato).
+**Stato: compila con PlatformIO su GitHub Actions (3 novembre 2026), ma non è ancora stato provato
+sulla scheda.** La logica del protocollo (`lib/voicecore/`) è testata sul PC; gli adattatori
+hardware in `src/` compilano e si collegano alle librerie reali (RadioLib 7.5.0, esp32_codec2 1.0.7,
+driver I2S di ESP-IDF 4.4.x), ma il loro comportamento reale (I2S, radio, OLED, Codec2) è tutto
+da verificare con le schede. Il workflow `.github/workflows/build.yml` produce `web_factory.bin` e
+`ota_update.bin` come artefatti di ogni esecuzione.
 
 ## File
 

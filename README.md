@@ -22,7 +22,7 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e colleg
 | Blocco di uscita audio (AGC, volume, limitatore, raddoppio) | fatto, testato sul PC con segnali sintetici |
 | Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
 | Mappa dei pin della T3 V1.6.1 con test dei conflitti | fatta (`src/board_pins.h`, `docs/pinout.md`) |
-| Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT, volume) | scritti, **non compilati né provati sulla scheda** (`docs/firmware.md`) |
+| Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT, volume) | scritti, **compilano su GitHub Actions**, non ancora provati sulla scheda (`docs/firmware.md`) |
 | Test radio reale, misura di portata e airtime | da fare |
 
 ## Struttura
