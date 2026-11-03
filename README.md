@@ -39,7 +39,7 @@ Copyright (C) 2026 IU5HJU. Questo programma è software libero, distribuito sott
 La scelta deriva dalla libreria Codec2 per ESP32 usata (GPL-3.0); dettagli sulle librerie in
 [docs/firmware.md](docs/firmware.md).
 
-Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
+Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Registro delle prove: [docs/prove.md](docs/prove.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
 
 ## Stato
 
