@@ -32,7 +32,12 @@ Funzionamento in breve:
 3. **Carica `web_factory.bin` all'indirizzo `0x0`** sulla scheda: istruzioni per Windows in [docs/firmware.md](docs/firmware.md). In alternativa compila in locale con PlatformIO.
 4. **Frequenza.** Il valore predefinito in `src/user_config.h` è un **segnaposto**: scegli il canale con il band plan IARU R1 / ARI. Le stazioni che si ascoltano devono avere gli **stessi** parametri LoRa e la stessa frequenza.
 
-**Licenza:** non ancora scelta (vedi [docs/firmware.md](docs/firmware.md)). Il codice è visibile ma, finché non c'è una licenza, non è libero da riusare.
+## Licenza
+
+Copyright (C) 2026 IU5HJU. Questo programma è software libero, distribuito sotto la
+**GNU General Public License versione 3** (vedi [LICENSE](LICENSE)), senza alcuna garanzia.
+La scelta deriva dalla libreria Codec2 per ESP32 usata (GPL-3.0); dettagli sulle librerie in
+[docs/firmware.md](docs/firmware.md).
 
 Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
 

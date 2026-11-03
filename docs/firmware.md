@@ -59,11 +59,12 @@ in Gestione dispositivi, sotto "Porte (COM e LPT)", deve comparire la porta dell
   ```
 - Se la scheda non entra in modalità di scrittura, tieni premuto **RST** all'avvio del comando e rilascia dopo la connessione.
 
-## Licenze (da decidere prima di distribuire)
+## Licenza
 
-- Il repository del progetto **non ha ancora un file di licenza**.
-- La libreria `esp32_codec2` (sh123) ha nel suo repository licenza **GPL-3.0** e contiene i sorgenti di Codec2 di David Rowe (LGPL-2.1). Distribuire un firmware compilato con quella libreria comporta gli obblighi della GPL-3.0 per l'insieme.
-- Per uso personale non cambia nulla; se si vuole pubblicare il firmware con un'altra licenza va scelta un'altra implementazione di Codec2 (da verificarne la licenza) oppure il progetto va rilasciato sotto GPL-3.0.
+- Il progetto è rilasciato sotto **GNU GPL versione 3** (file [`LICENSE`](../LICENSE)), Copyright (C) 2026 IU5HJU.
+- Motivo: la libreria `esp32_codec2` (sh123) ha nel suo repository licenza **GPL-3.0** e contiene i sorgenti di Codec2 di David Rowe (LGPL-2.1). Un firmware compilato con quella libreria è soggetto alla GPL-3.0 per l'insieme.
+- Chi distribuisce il firmware compilato (per esempio le release di GitHub) deve rendere disponibile il sorgente corrispondente e mantenere la stessa licenza.
+- Altre librerie usate, con licenze compatibili: RadioLib (MIT), Adafruit SSD1306 e GFX (BSD). Le licenze esatte e le versioni sono da controllare nei rispettivi repository; questo elenco non è un parere legale.
 - Il codice di `esp32_loradv` (GPL-2.0) non è stato copiato.
 
 ## Prima di trasmettere
