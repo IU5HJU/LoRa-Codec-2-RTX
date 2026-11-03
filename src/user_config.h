@@ -3,7 +3,9 @@
 
 // Nominativo trasmesso a inizio e fine turno e ripetuto ogni ~5 s.
 // Solo A-Z, 0-9 e '/', massimo 8 caratteri.
-#define LCR_CALLSIGN "IU5HJU"
+// Il valore predefinito N0CALL e' il segnaposto "nessun nominativo": con N0CALL
+// la scheda riceve ma NON trasmette. Per trasmettere inserire il proprio nominativo.
+#define LCR_CALLSIGN "N0CALL"
 
 // Pulsante PTT. La T3 V1.6.1 ha solo il tasto RST, quindi serve un pulsante
 // ESTERNO tra GPIO0 e massa (pull-up interno). GPIO0 e' un pin di boot: se e'

@@ -16,6 +16,10 @@ bool isValidCallsign(const char* cs) {
   return true;
 }
 
+bool isPlaceholderCallsign(const char* cs) {
+  return cs && (strncmp(cs, "N0CALL", kMaxCallsign + 1) == 0 || strncmp(cs, "NOCALL", kMaxCallsign + 1) == 0);
+}
+
 size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
   const bool cs = p.callsign[0] != 0;
   if (cs && !isValidCallsign(p.callsign)) return 0;

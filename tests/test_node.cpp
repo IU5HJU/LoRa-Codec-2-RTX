@@ -136,6 +136,33 @@ static void testTurnLimit() {
   CHECK(s.b.spk.played == seq(n));
 }
 
+static void testPlaceholderCallsignBlocksTx() {
+  // Con N0CALL (o NOCALL) la scheda non trasmette, ma riceve normalmente.
+  fake::Air air;
+  uint32_t clock = 0;
+  Station silent(air, 0, "N0CALL", clock);
+  Station talker(air, 1, "IU5HJU", clock);
+  silent.node.pttPressed(clock);
+  CHECK(silent.node.state() == VoiceNode::State::Idle);
+  CHECK(silent.note.denied == 1 && silent.note.lastDeny == DenyReason::NoCallsign);
+  CHECK(silent.note.txStarts == 0 && air.sent[0] == 0);
+  Station other(air, 0, "NOCALL", clock);
+  other.node.pttPressed(clock);
+  CHECK(other.note.lastDeny == DenyReason::NoCallsign && air.sent[0] == 0);
+
+  // Riceve la voce di un'altra stazione.
+  talker.node.pttPressed(clock);
+  for (int i = 0; i < 600; i++, clock += 10) {
+    silent.node.tick(clock);
+    talker.node.tick(clock);
+    if (i == 250) talker.node.pttReleased(clock);
+  }
+  CHECK(silent.spk.played.size() > 20);
+  CHECK(silent.note.callsign == "IU5HJU");
+  CHECK(isPlaceholderCallsign("N0CALL") && isPlaceholderCallsign("NOCALL"));
+  CHECK(!isPlaceholderCallsign("IU5HJU") && !isPlaceholderCallsign("N0CALL1") && !isPlaceholderCallsign(""));
+}
+
 static void testLossOnAir() {
   Sim s;
   // Si perde un pacchetto dati per gruppo: la parita' lo recupera.
@@ -154,6 +181,7 @@ int main() {
   testReplyAfterWhite();
   testPttDenied();
   testTurnLimit();
+  testPlaceholderCallsignBlocksTx();
   testLossOnAir();
   TEST_MAIN_END();
 }

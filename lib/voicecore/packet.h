@@ -24,6 +24,9 @@ struct Packet {
 // Nominativo: 1-8 caratteri tra A-Z, 0-9 e '/'.
 bool isValidCallsign(const char* cs);
 
+// true per i segnaposto "nessun nominativo" (N0CALL, NOCALL): la trasmissione e' bloccata.
+bool isPlaceholderCallsign(const char* cs);
+
 // Serializza. Ritorna i byte scritti, 0 se non entra o il nominativo non e' valido.
 // Il flag kFlagCallsign e' impostato automaticamente.
 size_t encodePacket(const Packet& p, uint8_t* out, size_t cap);

@@ -44,7 +44,7 @@ class IAudioOut {
   virtual void playLost() = 0;                     // 40 ms di frame perso
 };
 
-enum class DenyReason { Receiving, ChannelBusy, Transmitting };
+enum class DenyReason { Receiving, ChannelBusy, Transmitting, NoCallsign };
 
 // Notifiche per display, LED e segnali acustici. Tutte facoltative.
 class INotifier {

@@ -55,6 +55,7 @@ void UiNotifier::pttDenied(lcr::DenyReason r) {
     case lcr::DenyReason::Receiving: notice_ = "STAI RICEVENDO"; break;
     case lcr::DenyReason::ChannelBusy: notice_ = "CANALE OCCUPATO"; break;
     case lcr::DenyReason::Transmitting: notice_ = "TX IN CORSO"; break;
+    case lcr::DenyReason::NoCallsign: notice_ = "IMPOSTA NOMINATIVO"; break;
   }
   noticeUntilMs_ = millis() + 1500;
   dirty_ = true;

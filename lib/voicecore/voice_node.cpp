@@ -14,6 +14,11 @@ uint16_t VoiceNode::makeSessionId() {
 }
 
 void VoiceNode::pttPressed(uint32_t nowMs) {
+  // Senza un nominativo reale (N0CALL) non si trasmette: la ricezione funziona.
+  if (isPlaceholderCallsign(cfg_.callsign)) {
+    notify_.pttDenied(DenyReason::NoCallsign);
+    return;
+  }
   if (state_ == State::Transmitting) {
     notify_.pttDenied(DenyReason::Transmitting);
     return;

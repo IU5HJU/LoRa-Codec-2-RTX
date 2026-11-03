@@ -41,6 +41,11 @@ void setup() {
   ui.showMessage("AVVIO");
 
   if (!lcr::isValidCallsign(LCR_CALLSIGN)) fatal("nominativo non valido");
+  if (lcr::isPlaceholderCallsign(LCR_CALLSIGN)) {
+    Serial.println("Nominativo N0CALL: trasmissione disattivata, solo ascolto");
+    ui.showMessage("SOLO RX", "Imposta il nominativo");
+    delay(2500);
+  }
   if (!codec.begin()) fatal("Codec2");
   if (!audio.begin()) fatal("audio I2S");
   if (!radio.begin()) fatal("radio", radio.lastError());

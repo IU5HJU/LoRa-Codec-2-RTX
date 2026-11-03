@@ -41,7 +41,7 @@ Dipendenze (in `platformio.ini`): RadioLib 7.5.0, esp32_codec2 1.0.7, Adafruit S
 ## Prima di trasmettere
 
 1. **Frequenza:** `LCR_FREQUENCY_MHZ` in `src/user_config.h` è un segnaposto. Scegliere il canale col band plan IARU R1 / ARI per i modi digitali sui 70 cm.
-2. **Nominativo:** `LCR_CALLSIGN` deve essere il tuo (A-Z, 0-9, `/`, massimo 8 caratteri).
+2. **Nominativo:** `LCR_CALLSIGN` in `src/user_config.h` vale di default **`N0CALL`**, il segnaposto "nessun nominativo": con N0CALL (o NOCALL) la scheda **riceve ma non trasmette**, e l'OLED mostra "SOLO RX" all'avvio e "IMPOSTA NOMINATIVO" se premi il PTT. Per trasmettere inserisci il tuo nominativo (A-Z, 0-9, `/`, massimo 8 caratteri) e ricompila. In futuro lo imposterà la pagina di configurazione.
 3. **Antenna** collegata prima di alimentare la scheda.
 4. **Potenza:** `LCR_TX_POWER_DBM` parte da 10 dBm per i test.
 
