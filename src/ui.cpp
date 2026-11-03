@@ -82,15 +82,20 @@ void UiNotifier::rxEnded(const char* callsign, uint32_t lostFrames, uint32_t rec
   lastLost_ = lostFrames;
   lastRecovered_ = recoveredPackets;
   haveLast_ = true;
+  // Riga per il registro delle prove (docs/prove.md): valori dell'ultimo pacchetto ricevuto.
+  Serial.printf("RX fine: %s RSSI %d dBm SNR %.1f dB, frame persi %lu, pacchetti recuperati %lu\n",
+                rxCall_[0] ? rxCall_ : "-", rssi_, static_cast<double>(snr_), static_cast<unsigned long>(lostFrames),
+                static_cast<unsigned long>(recoveredPackets));
   dirty_ = true;
   audio_.beep(800, 40);  // fine della trasmissione ricevuta (OVER)
 }
 
-void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm) {
+void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb) {
   if (state != state_ || volumeStep != volume_) dirty_ = true;
   state_ = state;
   volume_ = volumeStep;
   rssi_ = rssiDbm;
+  snr_ = snrDb;
   if (notice_ && nowMs > noticeUntilMs_) {
     notice_ = nullptr;
     dirty_ = true;
@@ -127,7 +132,7 @@ void UiNotifier::draw(uint32_t nowMs) {
   } else if (state_ == lcr::VoiceNode::State::Transmitting) {
     display_.printf("Trasmissione %lu/30 s", static_cast<unsigned long>((nowMs - txStartMs_) / 1000));
   } else if (state_ == lcr::VoiceNode::State::Receiving) {
-    display_.printf("RSSI %d dBm", rssi_);
+    display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
   } else if (haveLast_) {
     display_.printf("Ultimo %s", rxCall_[0] ? rxCall_ : "-");
     display_.setCursor(0, 48);

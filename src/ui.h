@@ -19,7 +19,7 @@ class UiNotifier : public lcr::INotifier {
   void showMessage(const char* line1, const char* line2 = nullptr);  // schermata bloccante (avvio/errori)
 
   // Da chiamare nel loop: ridisegna a ~4 Hz e quando cambia qualcosa.
-  void loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm);
+  void loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb);
 
   // lcr::INotifier
   void txStarted() override;
@@ -41,6 +41,7 @@ class UiNotifier : public lcr::INotifier {
   lcr::VoiceNode::State state_ = lcr::VoiceNode::State::Idle;
   int volume_ = 0;
   int rssi_ = 0;
+  float snr_ = 0;
   uint32_t txStartMs_ = 0;
   bool limitHit_ = false;
   char rxCall_[lcr::kMaxCallsign + 1] = {0};

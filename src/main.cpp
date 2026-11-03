@@ -79,6 +79,6 @@ void loop() {
 
   node->tick(now);
   audio.loop(now);
-  ui.loop(now, node->state(), audio.volumeStep(), static_cast<int>(radio.lastRssi()));
+  ui.loop(now, node->state(), audio.volumeStep(), static_cast<int>(radio.lastRssi()), radio.lastSnr());
   delay(1);
 }

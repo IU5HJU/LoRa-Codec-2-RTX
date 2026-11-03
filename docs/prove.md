@@ -29,15 +29,17 @@ Per un problema da risolvere apri invece una segnalazione (Issues) e collega la 
 Ogni livello presuppone che il precedente funzioni.
 
 1. **Avvio.** L'OLED mostra "AVVIO" e poi "ASCOLTO" con nominativo e frequenza. Con N0CALL mostra "SOLO RX".
-2. **Solo radio.** Premi il PTT su una scheda (anche senza microfono): l'altra passa a "RX" con il nominativo e l'RSSI.
+2. **Solo radio.** Premi il PTT su una scheda (anche senza microfono): l'altra passa a "RX" con il nominativo, l'**RSSI** (dBm) e l'**SNR** (dB) dell'ultimo pacchetto ricevuto.
 3. **Microfono.** Parla con il PTT premuto: sull'altra scheda deve arrivare audio (anche con l'altoparlante non ancora collegato non si rompe nulla; si guardano le statistiche "persi" e "recup." a fine ricezione).
 4. **Altoparlante.** Controlla volume, bip di fine trasmissione e di fine ricezione, assenza di fruscio a riposo.
 5. **Voce a turni.** Turno di qualche secondo, attesa di 5-10 s, risposta. Qualità e comprensibilità.
-6. **Portata.** Allontana le schede a passi, annotando distanza, RSSI e comprensibilità.
+6. **Portata.** Allontana le schede a passi, annotando distanza, RSSI, SNR e comprensibilità. Con SF8 il pacchetto si demodula fino a circa -10 dB di SNR (valore teorico): più ci si avvicina a quel limite, più i frame persi aumentano.
 
 ## Aiuto per la diagnosi
 
 - Seriale della scheda: `pio device monitor` a 115200 baud, oppure un qualunque terminale seriale.
+  A fine di ogni ricezione stampa una riga pronta per il registro, per esempio
+  `RX fine: IU5HJU RSSI -92 dBm SNR 7.5 dB, frame persi 0, pacchetti recuperati 1`.
 - **"ERRORE" sull'OLED:** il nome indica il blocco (Codec2, audio I2S, radio); il codice è nella seriale.
 - **Si sente solo silenzio:** prova `LCR_MIC_SLOT 1` in `src/user_config.h`.
 - **Volume dimezzato o basso:** verifica il pin `SD` dell'amplificatore e l'alimentazione (5 V o 3,3 V).
@@ -56,7 +58,7 @@ Ogni livello presuppone che il precedente funzioni.
 - Antenne:
 - Distanza e ambiente:
 - Livello raggiunto della scaletta (1-6):
-- Risultato (cosa si vede e si sente, RSSI, "persi" e "recup."):
+- Risultato (cosa si vede e si sente, RSSI, SNR, "persi" e "recup."):
 - Problemi (OLED, seriale):
 - Da fare / idee:
 ```
