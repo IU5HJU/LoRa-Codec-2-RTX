@@ -46,9 +46,23 @@ void setup() {
     ui.showMessage("SOLO RX", "Imposta il nominativo");
     delay(2500);
   }
+  // Ogni fase e' annunciata su OLED e seriale: se la scheda si ferma, l'ultimo
+  // messaggio dice dove (utile per la diagnosi, vedi docs/prove.md).
+  Serial.printf("[avvio] heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
+  ui.showMessage("CODEC2");
+  Serial.println("[avvio] Codec2...");
   if (!codec.begin()) fatal("Codec2");
+  Serial.printf("[avvio] Codec2 ok, heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
+
+  ui.showMessage("AUDIO");
+  Serial.println("[avvio] audio I2S...");
   if (!audio.begin()) fatal("audio I2S");
+  Serial.printf("[avvio] audio ok, heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
+
+  ui.showMessage("RADIO");
+  Serial.println("[avvio] radio SX1278...");
   if (!radio.begin()) fatal("radio", radio.lastError());
+  Serial.println("[avvio] radio ok");
 
   lcr::NodeConfig cfg;
   strncpy(cfg.callsign, LCR_CALLSIGN, lcr::kMaxCallsign);

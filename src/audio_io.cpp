@@ -104,6 +104,9 @@ void AudioIo::captureLoop() {
     const esp_err_t e = i2s_read(kPort, rxStereo_, sizeof(rxStereo_), &bytes, portMAX_DELAY);
     if (e != ESP_OK || bytes != sizeof(rxStereo_)) {
       micErrors_++;
+      // Senza questa pausa un errore ripetuto terrebbe occupato il core 0 e farebbe
+      // scattare il watchdog (riavvio continuo).
+      vTaskDelay(pdMS_TO_TICKS(10));
       continue;
     }
     for (size_t i = 0; i < lcr::kMicSamplesPerFrame; i++) micMono_[i] = rxStereo_[2 * i + LCR_MIC_SLOT];
