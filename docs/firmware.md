@@ -1,5 +1,9 @@
 # Firmware (LILYGO LoRa32 T3 V1.6.1)
 
+> **Mai alimentare la scheda senza antenna a 433 MHz (o carico fittizio) collegata**, nemmeno
+> solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
+> carico si può danneggiare. Prima l'antenna, poi il cavo USB.
+
 **Stato: scritto ma non ancora compilato né provato sulla scheda.** La logica del protocollo
 (`lib/voicecore/`) è testata sul PC; gli adattatori hardware in `src/` sono stati controllati
 solo contro le intestazioni reali delle librerie (RadioLib 7.5.0, esp32_codec2 1.0.7, driver I2S
