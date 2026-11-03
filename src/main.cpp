@@ -4,6 +4,7 @@
 // ATTENZIONE: collegare l'antenna a 433 MHz prima di alimentare la scheda.
 #include <Arduino.h>
 #include <esp_system.h>
+#include <freertos/task.h>
 
 #include "audio_io.h"
 #include "board_pins.h"
@@ -14,6 +15,11 @@
 #include "ui.h"
 #include "user_config.h"
 #include "voice_node.h"
+
+// Codec2 e il resto dell'applicazione girano nel task principale. Lo stack
+// predefinito (8 kB) non basta: "stack overflow in task loopTask" e riavvio
+// continuo. 32 kB come nel progetto di riferimento per Codec2.
+SET_LOOP_TASK_STACK_SIZE(32 * 1024);
 
 static RadioLora radio;
 static Codec2Adapter codec;
@@ -70,6 +76,8 @@ void setup() {
   cfg.newSessionId = newSessionId;
   node = new lcr::VoiceNode(cfg, radio, codec, audio.mic(), audio.speaker(), ui);
 
+  Serial.printf("[avvio] stack libero minimo del task principale: %u byte\n",
+                static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
   Serial.printf("%s pronto, %.3f MHz, SF%d BW%.0f\n", LCR_CALLSIGN, static_cast<double>(LCR_FREQUENCY_MHZ),
                 LCR_SPREADING_FACTOR, static_cast<double>(LCR_BANDWIDTH_KHZ));
 }
