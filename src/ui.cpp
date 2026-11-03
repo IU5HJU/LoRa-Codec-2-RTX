@@ -135,7 +135,7 @@ void UiNotifier::draw(uint32_t nowMs) {
     display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
   } else if (haveLast_) {
     display_.printf("Ultimo %s", rxCall_[0] ? rxCall_ : "-");
-    display_.setCursor(0, 48);
+    display_.setCursor(0, 47);  // 1 pixel di stacco dalla riga sopra e da "Vol"
     display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
                     static_cast<unsigned long>(lastRecovered_));
   } else {
