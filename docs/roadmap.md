@@ -55,7 +55,7 @@ Modifiche al codice previste:
 
 ## 5. T-Beam V1.2 (batteria e GPS)
 
-- **Fase 1** (fatta, da provare): alimentazione AXP2101 (radio accesa, GPS spento), tasto di bordo IO38 come PTT, pin audio propri (microfono su GPIO36, altoparlante su GPIO2), due ambienti `lora32` e `tbeam`, compilazione di entrambi su Actions.
+- **Fase 1** (fatta e provata il 4 novembre: avvio, AXP2101, radio, tasto IO38, trasmissione): alimentazione AXP2101 (radio accesa, GPS spento), tasto di bordo IO38 come PTT, pin audio propri (microfono su GPIO36, altoparlante su GPIO2), due ambienti `lora32` e `tbeam`, compilazione di entrambi su Actions.
 - **Fase 2**: batteria e carica sull'OLED e in seriale, avviso di batteria scarica con un bip.
 - **Fase 3**: GPS: locatore Maidenhead e ora precisa, per esempio nell'intestazione di inizio e fine turno.
 - Se la scheda risultasse con radio SX1262 serve una variante di `RadioLora`.

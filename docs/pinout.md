@@ -6,7 +6,7 @@ Le schede supportate sono due. La mappa in codice è un file per scheda, scelto 
 | Scheda | Ambiente | File dei pin | Stato |
 |---|---|---|---|
 | LILYGO LoRa32 T3 V1.6.1 | `lora32` | [`src/board_pins_t3_v161.h`](../src/board_pins_t3_v161.h) | provata (avvio, OLED, PTT, trasmissione) |
-| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) | **fase 1, non ancora provata** |
+| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) | **fase 1, provata:** avvio, AXP2101, radio, tasto IO38 e trasmissione (4 novembre) |
 
 La sezione seguente riguarda la **T3**; quella della T-Beam è più sotto.
 
@@ -82,7 +82,7 @@ Collegare sempre l'antenna a 433 MHz **prima** di alimentare o trasmettere: senz
 
 ## LILYGO T-Beam V1.2 (AXP2101)
 
-**Fase 1: supporto scritto e compilato, non ancora provato sulla scheda.**
+**Fase 1: supporto scritto, compilato e provato sulla scheda (4 novembre 2026):** avvio, AXP2101, radio, tasto IO38 come PTT, trasmissione ricevuta da una T3 con SNR circa 11 dB. Ancora da provare: audio (microfono, amplificatore, altoparlante).
 Scheda riconosciuta dalla serigrafia **T-BEAM-AXP2101-V1.2** (2023-05-08): ESP32 con 4 MB di flash (e 8 MB di PSRAM, non usata),
 modulo LoRa "LORA32 433/470MHz" (famiglia SX127x come la T3; il primo avvio lo conferma, RadioLib controlla il chip),
 GPS u-blox NEO-6M, **OLED** SSD1306 montato, tasti PWR / IO38 / RST, pila a bottone per il GPS, vano per la batteria 18650.

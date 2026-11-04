@@ -58,9 +58,9 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e colleg
 | Blocco di uscita audio (AGC, volume, limitatore, raddoppio) | fatto, testato sul PC con segnali sintetici |
 | Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
 | Mappa dei pin della T3 V1.6.1 e della T-Beam V1.2 con test dei conflitti | fatta (`src/board_pins*.h`, `docs/pinout.md`) |
-| Supporto T-Beam V1.2, fase 1 (alimentazione AXP2101, tasto IO38 come PTT, pin audio propri) | scritto, **compila su GitHub Actions**, non ancora provato sulla scheda. GPS e batteria sull'OLED: fase successiva |
+| Supporto T-Beam V1.2, fase 1 (alimentazione AXP2101, tasto IO38 come PTT, pin audio propri) | scritto, compilato e **provato sulla scheda** (avvio, AXP2101, radio, tasto IO38, trasmissione ricevuta da una T3). Audio da provare; GPS e batteria sull'OLED: fase successiva |
 | Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT, volume) | scritti, **compilano su GitHub Actions**; provati sulla scheda: avvio, OLED, PTT e trasmissione. Da provare: ricezione, microfono, altoparlante, voce (`docs/firmware.md`, `docs/prove.md`) |
-| Test radio reale, misura di portata e airtime | in corso: prima prova del 3 novembre con una scheda; la seconda arriva il 4 |
+| Test radio reale, misura di portata e airtime | in corso: primo collegamento T-Beam -> T3 il 4 novembre (SNR circa 11 dB a 1-2 m); mancano il verso opposto e la voce |
 
 ## Struttura
 
