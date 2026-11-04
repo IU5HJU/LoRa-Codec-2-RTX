@@ -6,12 +6,13 @@
 #include <RadioLib.h>
 
 #include "interfaces.h"
+#include "settings.h"
 
 class RadioLora : public lcr::IRadio {
  public:
-  // Inizializza SPI e radio con i parametri di user_config.h. ATTENZIONE:
+  // Inizializza SPI e radio con frequenza e potenza delle impostazioni, il resto da user_config.h. ATTENZIONE:
   // collegare l'antenna prima di chiamarla (il modulo puo' trasmettere).
-  bool begin();
+  bool begin(const lcr::Settings& settings);
 
   bool channelBusy() override;
   bool send(const uint8_t* data, size_t len) override;

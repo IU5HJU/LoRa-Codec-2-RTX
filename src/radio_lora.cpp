@@ -12,12 +12,12 @@ void IRAM_ATTR RadioLora::onPacketIsr() {
   if (!txActive_) rxFlag_ = true;  // durante la TX DIO0 segnala "trasmesso", non "ricevuto"
 }
 
-bool RadioLora::begin() {
+bool RadioLora::begin(const lcr::Settings& settings) {
   SPI.begin(pins::kRadioSclk, pins::kRadioMiso, pins::kRadioMosi, pins::kRadioCs);
   radio_ = new SX1278(new Module(pins::kRadioCs, pins::kRadioDio0, pins::kRadioRst, pins::kRadioDio1, SPI));
 
-  int state = radio_->begin(LCR_FREQUENCY_MHZ, LCR_BANDWIDTH_KHZ, LCR_SPREADING_FACTOR, LCR_CODING_RATE,
-                            LCR_SYNC_WORD, LCR_TX_POWER_DBM, LCR_PREAMBLE_SYMBOLS);
+  int state = radio_->begin(settings.freqMhz(), LCR_BANDWIDTH_KHZ, LCR_SPREADING_FACTOR, LCR_CODING_RATE,
+                            LCR_SYNC_WORD, static_cast<int8_t>(settings.powerDbm), LCR_PREAMBLE_SYMBOLS);
   if (state != RADIOLIB_ERR_NONE) {
     lastError_ = state;
     return false;

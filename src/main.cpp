@@ -15,6 +15,8 @@
 #include "pmu.h"
 #include "ptt_button.h"
 #include "radio_lora.h"
+#include "settings.h"
+#include "settings_nvs.h"
 #include "ui.h"
 #include "user_config.h"
 #include "voice_node.h"
@@ -26,8 +28,10 @@ SET_LOOP_TASK_STACK_SIZE(32 * 1024);
 
 #if defined(BOARD_TBEAM_V12)
 static const char* const kBoardName = "T-Beam V1.2";
+static const char* const kBoardShort = "tbeam";
 #else
 static const char* const kBoardName = "LoRa32 T3 V1.6.1";
+static const char* const kBoardShort = "t3";
 #endif
 
 static Pmu pmu;
@@ -37,6 +41,9 @@ static Codec2Adapter codec;
 static AudioIo audio;
 static UiNotifier ui(audio);
 static lcr::VoiceNode* node = nullptr;
+static NvsSettingsStorage settingsStorage;
+static lcr::Settings settings;                // in uso: NVS se valida, altrimenti user_config.h
+static lcr::SettingsConsole* console = nullptr;  // comandi CFG sulla seriale
 static lcr::PttButton ptt(LCR_PTT_DEBOUNCE_MS);
 static lcr::PttButton volumeButton(30);
 
@@ -76,6 +83,12 @@ void setup() {
   delay(300);
   Serial.printf("[avvio] scheda %s\n", kBoardName);
 
+  // Impostazioni dell'operatore: salvate nella scheda, altrimenti quelle di user_config.h.
+  const lcr::Settings defaults = compileTimeSettings();
+  settings = lcr::loadSettings(settingsStorage, defaults);
+  console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort);
+  ui.setSettings(settings);
+
   // L'alimentazione va per prima: sulla T-Beam senza il PMU la radio non e' alimentata.
   const bool pmuOk = pmu.begin();
   battery.begin(pmu);
@@ -93,8 +106,8 @@ void setup() {
     delay(2500);
   }
 
-  if (!lcr::isValidCallsign(LCR_CALLSIGN)) fatal("nominativo non valido");
-  if (lcr::isPlaceholderCallsign(LCR_CALLSIGN)) {
+  if (!lcr::isValidCallsign(settings.callsign)) fatal("nominativo non valido");
+  if (lcr::isPlaceholderCallsign(settings.callsign)) {
     Serial.println("Nominativo N0CALL: trasmissione disattivata, solo ascolto");
     ui.showMessage("SOLO RX", "Imposta il nominativo");
     delay(2500);
@@ -114,23 +127,57 @@ void setup() {
 
   ui.showMessage("RADIO");
   Serial.println("[avvio] radio SX127x...");
-  if (!radio.begin()) fatal("radio", radio.lastError());
+  if (!radio.begin(settings)) fatal("radio", radio.lastError());
   Serial.println("[avvio] radio ok");
 
   lcr::NodeConfig cfg;
-  strncpy(cfg.callsign, LCR_CALLSIGN, lcr::kMaxCallsign);
+  strncpy(cfg.callsign, settings.callsign, lcr::kMaxCallsign);
   cfg.fec = LCR_FEC != 0;
   cfg.newSessionId = newSessionId;
   node = new lcr::VoiceNode(cfg, radio, codec, audio.mic(), audio.speaker(), ui);
 
   Serial.printf("[avvio] stack libero minimo del task principale: %u byte\n",
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
-  Serial.printf("%s pronto, %.3f MHz, SF%d BW%.0f\n", LCR_CALLSIGN, static_cast<double>(LCR_FREQUENCY_MHZ),
-                LCR_SPREADING_FACTOR, static_cast<double>(LCR_BANDWIDTH_KHZ));
+  Serial.printf("%s pronto, %.3f MHz, %d dBm, SF%d BW%.0f\n", settings.callsign,
+                static_cast<double>(settings.freqMhz()), settings.powerDbm, LCR_SPREADING_FACTOR,
+                static_cast<double>(LCR_BANDWIDTH_KHZ));
+  char reply[128];
+  console->handleLine("CFG GET", reply, sizeof(reply));
+  Serial.println(reply);  // la pagina di configurazione legge questa riga
+}
+
+// Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
+static void serviceConsole() {
+  static char line[96];
+  static size_t len = 0;
+  static bool tooLong = false;
+  while (Serial.available() > 0) {
+    const char c = static_cast<char>(Serial.read());
+    if (c == '\n' || c == '\r') {
+      line[len] = 0;
+      const bool skip = tooLong;
+      len = 0;
+      tooLong = false;
+      if (skip) continue;  // riga troppo lunga: scartata
+      char reply[128];
+      const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
+      if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
+      if (r == lcr::ConsoleResult::Reboot) {
+        Serial.flush();
+        delay(100);
+        ESP.restart();
+      }
+    } else if (len < sizeof(line) - 1) {
+      line[len++] = c;
+    } else {
+      tooLong = true;
+    }
+  }
 }
 
 void loop() {
   const uint32_t now = millis();
+  serviceConsole();
 
   const bool raw = pttRawPressed();
   if (!raw) pttArmed = true;  // un PTT gia' premuto all'accensione non fa partire la trasmissione

@@ -101,6 +101,26 @@ in Gestione dispositivi, sotto "Porte (COM e LPT)", deve comparire la porta dell
   ```
 - Se la scheda non entra in modalità di scrittura, tieni premuto **RST** all'avvio del comando e rilascia dopo la connessione.
 
+## Impostazioni senza ricompilare
+
+Nominativo, frequenza e potenza si possono cambiare dalla seriale e restano nella memoria della scheda (NVS).
+All'avvio si usano i valori salvati se sono validi, altrimenti quelli di `src/user_config.h`. Una modifica vale
+**dal riavvio successivo**. La pagina web di configurazione userà gli stessi comandi.
+
+Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; maiuscole e minuscole sono indifferenti:
+
+| Comando | Risposta | Note |
+|---|---|---|
+| `CFG GET` | `CFG callsign=IU5HJU freq=433.900 power=10 board=t3 reboot=0` | `reboot=1` se i valori salvati differiscono da quelli in uso |
+| `CFG SET CALLSIGN iu5hju` | `CFG OK callsign=IU5HJU` | solo A-Z, 0-9 e `/`, massimo 8 caratteri |
+| `CFG SET FREQ 433.900` | `CFG OK freq=433.900` | MHz, da 430.000 a 440.000 (70 cm); **segnaposto**: scegli il canale col band plan IARU R1 / ARI |
+| `CFG SET POWER 10` | `CFG OK power=10` | dBm, da 2 a 17 |
+| `CFG RESET` | `CFG OK reset` | cancella i valori salvati e torna a quelli di `user_config.h` |
+| `CFG REBOOT` | `CFG OK reboot` | riavvia la scheda |
+
+Un valore non valido dà `CFG ERR <parametro> <motivo>` e non viene salvato. Con `N0CALL` la scheda continua a non trasmettere.
+All'avvio la seriale stampa la riga `CFG GET` in fondo al log. Il resto dei parametri radio (SF, BW, CR, sync) resta in `user_config.h`.
+
 ## Licenza
 
 - Il progetto è rilasciato sotto **GNU GPL versione 3** (file [`LICENSE`](../LICENSE)), Copyright (C) 2026 IU5HJU.

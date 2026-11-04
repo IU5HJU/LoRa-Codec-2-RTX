@@ -25,7 +25,7 @@ void UiNotifier::showMessage(const char* line1, const char* line2) {
   display_.clearDisplay();
   display_.setTextSize(1);
   display_.setCursor(0, 0);
-  display_.println(LCR_CALLSIGN);
+  display_.println(settings_.callsign);
   display_.setTextSize(2);
   display_.setCursor(0, 20);
   display_.println(line1);
@@ -130,7 +130,7 @@ void UiNotifier::draw(uint32_t nowMs) {
 
   display_.setTextSize(1);
   display_.setCursor(0, 0);
-  display_.printf("%s  %.3f MHz", LCR_CALLSIGN, static_cast<double>(LCR_FREQUENCY_MHZ));
+  display_.printf("%s  %.3f MHz", settings_.callsign, static_cast<double>(settings_.freqMhz()));
   display_.drawFastHLine(0, 10, 128, SSD1306_WHITE);
 
   display_.setTextSize(2);
@@ -138,7 +138,7 @@ void UiNotifier::draw(uint32_t nowMs) {
   switch (state_) {
     case lcr::VoiceNode::State::Idle: display_.print("ASCOLTO"); break;
     case lcr::VoiceNode::State::Receiving: display_.printf("RX %s", rxCall_); break;
-    case lcr::VoiceNode::State::Transmitting: display_.printf("TX %s", LCR_CALLSIGN); break;
+    case lcr::VoiceNode::State::Transmitting: display_.printf("TX %s", settings_.callsign); break;
   }
 
   display_.setTextSize(1);

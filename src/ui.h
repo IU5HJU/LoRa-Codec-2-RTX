@@ -8,11 +8,15 @@
 
 #include "audio_io.h"
 #include "interfaces.h"
+#include "settings.h"
 #include "voice_node.h"
 
 class UiNotifier : public lcr::INotifier {
  public:
   explicit UiNotifier(AudioIo& audio) : audio_(audio), display_(128, 64, &Wire, -1) {}
+
+  // Nominativo e frequenza mostrati sul display (da chiamare appena lette le impostazioni).
+  void setSettings(const lcr::Settings& s) { settings_ = s; }
 
   // false se il display non risponde (il resto del sistema funziona comunque).
   bool begin();
@@ -35,6 +39,7 @@ class UiNotifier : public lcr::INotifier {
   void draw(uint32_t nowMs);
 
   AudioIo& audio_;
+  lcr::Settings settings_;
   Adafruit_SSD1306 display_;
   bool ok_ = false;
   bool dirty_ = true;
