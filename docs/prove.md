@@ -111,3 +111,10 @@ Ogni livello presuppone che il precedente funzioni.
 - Cella carica (circa 4,2 V). **La T-Beam parte anche a batteria**, premendo PWR con l'USB scollegata: il mancato avvio era dovuto alla cella scarica (1,84 V), non al firmware.
 - **La tensione mostrata sul display coincide con quella del tester**, anche a cella carica.
 - Da fare: prova di durata della batteria in standby (radio in ascolto, OLED acceso), da interrompere quando il testo della batteria va in negativo (sotto 3,40 V) per non scaricare di nuovo la cella; provare una trasmissione col tasto IO38 a batteria; confrontare la lettura della LoRa32 T3 (ADC GPIO35) con il tester.
+
+### 2026-11-04, casa, IU5HJU (verso opposto, T3 -> T-Beam)
+
+- Schede e collegamenti: LoRa32 T3 V1.6.1 trasmette, T-Beam V1.2 riceve; microfono INMP441 arrivato e cablato sulla T3 (amplificatore e altoparlante non ancora arrivati).
+- Livello raggiunto della scaletta: **2 (solo radio) completo nei due versi**. La T-Beam riceve correttamente dalla T3.
+- Da annotare: RSSI, SNR, "persi" e "recup." di questa prova.
+- Da fare: prova del microfono (livello 3); per sentire la voce serve ancora amplificatore e altoparlante.
