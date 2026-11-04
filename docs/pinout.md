@@ -15,6 +15,13 @@ La sezione seguente riguarda la **T3**; quella della T-Beam è più sotto.
 Scheda confermata dalla foto: serigrafia **T3_V1.6.1**, modulo LoRa 433/470 MHz, **ESP32-PICO-D4**
 (4 MB di flash, senza PSRAM), USB micro con CH9102, connettore batteria LiPo, SMA più connettore U.FL.
 
+## Schema dei collegamenti (T3)
+
+![Collegamenti della LoRa32 T3 V1.6.1](images/collegamenti-t3.png)
+
+Versione vettoriale: [collegamenti-t3.svg](images/collegamenti-t3.svg), generata da `tools/render_wiring.py`.
+I fili dello stesso colore vanno insieme; le etichette scure (GND), rossa (5V) e arancio (3,3 V) indicano i pin di alimentazione.
+
 ## Componenti (ordinati il 2 novembre 2026)
 
 | Funzione | Modello |
