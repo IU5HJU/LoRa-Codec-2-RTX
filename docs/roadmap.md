@@ -44,7 +44,8 @@ Modifiche al codice previste:
 **Decisione del 4 novembre:** la prima versione passa dal cavo USB (Web Serial, Chrome/Edge) ed è
 ospitata su GitHub Pages, insieme al flasher. Il Wi-Fi sulla scheda resta come seconda fase.
 Fatto: impostazioni nella memoria della scheda (nominativo, frequenza, potenza) e comandi `CFG` sulla
-seriale, con test sul PC ([firmware.md](firmware.md#impostazioni-senza-ricompilare)). Da fare: la pagina.
+seriale, con test sul PC ([firmware.md](firmware.md#impostazioni-senza-ricompilare)).
+Fatta anche la pagina (`site/index.html`, flasher e configurazione via Web Serial), pubblicata da Actions su GitHub Pages; da provare con le schede. 
 
 - Entrata con pressione lunga (3 s) sul pulsante volume (GPIO15) a scheda ferma; in quella modalità la **trasmissione è disattivata**.
 - La scheda crea un Wi-Fi proprio (`LoRaCodec2-XXXX`, password sull'OLED); pagina su `192.168.4.1`; salvataggio in memoria non volatile e riavvio.

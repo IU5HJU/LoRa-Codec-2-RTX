@@ -28,7 +28,7 @@ Funzionamento in breve:
 **Passi:**
 
 1. **Nominativo.** Il firmware predefinito ha `N0CALL` e **non trasmette** (riceve soltanto). Ogni stazione deve usare il proprio nominativo in `LCR_CALLSIGN` (`src/user_config.h`). Il modo più semplice: fai un **fork** del repository, modifica quella riga direttamente dal sito GitHub e lascia che GitHub Actions compili nel tuo fork. Non usare i rami di prova di altri, che contengono il loro nominativo.
-2. **Scarica i binari** dall'esecuzione di GitHub Actions: artefatto `firmware-t3-v161` (T3) o `firmware-tbeam-v12` (T-Beam), serve essere loggati. Contiene `web_factory.bin` e `ota_update.bin`.
+2. **Senza Linux né PlatformIO:** quando la pagina è attiva (`https://iu5hju.github.io/LoRa-Codec-2-RTX/`) installi il firmware e imposti nominativo, frequenza e potenza dal browser (Chrome o Edge, cavo USB), senza i passi 1 e 3. Altrimenti, **scarica i binari** dall'esecuzione di GitHub Actions: artefatto `firmware-t3-v161` (T3) o `firmware-tbeam-v12` (T-Beam), serve essere loggati. Contiene `web_factory.bin` e `ota_update.bin`.
 3. **Carica `web_factory.bin` all'indirizzo `0x0`** sulla scheda: istruzioni per Windows in [docs/firmware.md](docs/firmware.md). In alternativa compila in locale con PlatformIO.
 4. **Frequenza.** Il valore predefinito in `src/user_config.h` è un **segnaposto**: scegli il canale con il band plan IARU R1 / ARI. Le stazioni che si ascoltano devono avere gli **stessi** parametri LoRa e la stessa frequenza.
 

@@ -101,6 +101,16 @@ in Gestione dispositivi, sotto "Porte (COM e LPT)", deve comparire la porta dell
   ```
 - Se la scheda non entra in modalità di scrittura, tieni premuto **RST** all'avvio del comando e rilascia dopo la connessione.
 
+## Pagina web di installazione e configurazione
+
+La pagina in `site/index.html` installa il firmware (esp-web-tools) e imposta nominativo, frequenza e potenza con i
+comandi `CFG` della sezione seguente, tutto dal browser (Chrome, Edge od Opera, cavo USB). Il workflow
+`.github/workflows/build.yml` la pubblica su **GitHub Pages** a ogni push su `main` e a ogni tag `v*`, insieme ai
+binari appena compilati (`tools/make_site.sh`). Una volta sola, nel repository: **Settings -> Pages -> Source: GitHub Actions**.
+L'indirizzo sarà `https://iu5hju.github.io/LoRa-Codec-2-RTX/`. Il firmware pubblico ha N0CALL: chi lo installa imposta
+il proprio nominativo dal passo 2 della pagina. In locale: `tools/make_site.sh <artefatti> <uscita> <versione> <commit>` e un server
+statico (Web Serial richiede https o `localhost`).
+
 ## Impostazioni senza ricompilare
 
 Nominativo, frequenza e potenza si possono cambiare dalla seriale e restano nella memoria della scheda (NVS).

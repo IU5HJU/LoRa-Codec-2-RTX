@@ -7,6 +7,9 @@ name: Build
 #   web_factory.bin  immagine completa da scrivere all'indirizzo 0 (prima installazione)
 #   ota_update.bin   solo l'applicazione, da scrivere a 0x10000 (aggiornamento)
 # Con un tag "v*" i binari di tutte le schede vengono anche pubblicati in una release.
+# Su main e sui tag "v*" il job "pages" pubblica su GitHub Pages la pagina di installazione e
+# configurazione (cartella site/) con i binari appena compilati. Richiede, una volta sola,
+# Settings -> Pages -> Source: GitHub Actions.
 
 on:
   push:
@@ -118,3 +121,38 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes
+
+  pages:
+    name: Pubblica su GitHub Pages
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: firmware
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: firmware-*
+          path: dist
+      - name: Assembla il sito
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME}"; else v="main-$(date -u +%Y%m%d)"; fi
+          tools/make_site.sh dist _site "$v" "$GITHUB_SHA"
+          find _site -type f | sort
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Pubblica
+        id: deploy
+        uses: actions/deploy-pages@v4
