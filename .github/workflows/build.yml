@@ -1,10 +1,12 @@
 name: Build
 
-# Test sul PC e compilazione del firmware per la LILYGO LoRa32 T3 V1.6.1.
-# Produce due binari, pronti per un flasher web (esp-web-tools):
+# Test sul PC e compilazione del firmware per le schede supportate:
+#   lora32  LILYGO LoRa32 T3 V1.6.1   artefatto firmware-t3-v161
+#   tbeam   LILYGO T-Beam V1.2        artefatto firmware-tbeam-v12
+# Ogni artefatto contiene due binari, pronti per un flasher web (esp-web-tools):
 #   web_factory.bin  immagine completa da scrivere all'indirizzo 0 (prima installazione)
 #   ota_update.bin   solo l'applicazione, da scrivere a 0x10000 (aggiornamento)
-# Con un tag "v*" i binari vengono anche pubblicati in una release di GitHub.
+# Con un tag "v*" i binari di tutte le schede vengono anche pubblicati in una release.
 
 on:
   push:
@@ -26,9 +28,19 @@ jobs:
         run: make test
 
   firmware:
-    name: Firmware T3 V1.6.1
+    name: Firmware ${{ matrix.board }}
     runs-on: ubuntu-latest
     needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env: lora32
+            board: T3 V1.6.1
+            artifact: firmware-t3-v161
+          - env: tbeam
+            board: T-Beam V1.2
+            artifact: firmware-tbeam-v12
     steps:
       - uses: actions/checkout@v4
 
@@ -49,12 +61,12 @@ jobs:
         run: pip install platformio==6.1.19 esptool==4.8.1
 
       - name: Compila
-        run: pio run -e lora32
+        run: pio run -e ${{ matrix.env }}
 
       - name: Crea i binari per il flasher
         run: |
           set -euo pipefail
-          B=.pio/build/lora32
+          B=.pio/build/${{ matrix.env }}
           BOOT_APP0=$(find "$HOME/.platformio/packages" -name boot_app0.bin | head -n 1)
           test -n "$BOOT_APP0"
           mkdir -p dist
@@ -70,11 +82,11 @@ jobs:
           cat dist/SHA256SUMS
 
       - name: Dimensioni (RAM e flash)
-        run: pio run -e lora32 -t size
+        run: pio run -e ${{ matrix.env }} -t size
 
       - uses: actions/upload-artifact@v4
         with:
-          name: firmware-t3-v161
+          name: ${{ matrix.artifact }}
           path: dist/*
           if-no-files-found: error
 
@@ -88,13 +100,21 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: firmware-t3-v161
+          pattern: firmware-*
           path: dist
       - name: Crea la release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          set -euo pipefail
+          mkdir -p release
+          for d in dist/firmware-*; do
+            n=$(basename "$d")
+            cp "$d/web_factory.bin" "release/${n}-web_factory.bin"
+            cp "$d/ota_update.bin" "release/${n}-ota_update.bin"
+          done
+          (cd release && sha256sum *.bin > SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" release/* \
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes

@@ -1,4 +1,13 @@
-# Firmware (LILYGO LoRa32 T3 V1.6.1)
+# Firmware
+
+Schede supportate (un ambiente PlatformIO e un artefatto di Actions ciascuna):
+
+| Scheda | Ambiente | Artefatto di GitHub Actions | Stato |
+|---|---|---|---|
+| LILYGO LoRa32 T3 V1.6.1 | `lora32` | `firmware-t3-v161` | provata: avvio, OLED, PTT, trasmissione |
+| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **fase 1: compila, non ancora provata** (alimentazione AXP2101, tasto IO38 come PTT) |
+
+I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 
 > **Mai alimentare la scheda senza antenna a 433 MHz (o carico fittizio) collegata**, nemmeno
 > solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
@@ -20,17 +29,20 @@ Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protoco
 | `src/codec2_adapter.*` | Codec2 modo 1200 bps (`ICodec`) |
 | `src/audio_io.*` | I2S full duplex a 16 kHz, task di cattura, pre-roll, amplificatore, toni (`IAudioIn`/`IAudioOut`) |
 | `src/ui.*` | OLED SSD1306 128x64 e segnali acustici (`INotifier`) |
-| `src/board_pins.h`, `src/user_config.h` | Pin della scheda e impostazioni (nominativo, frequenza, SF/BW, parità) |
+| `src/board_pins.h`, `src/board_pins_t3_v161.h`, `src/board_pins_tbeam_v12.h` | Pin per scheda: `board_pins.h` sceglie il file in base al flag di compilazione |
+| `src/pmu.*` | Alimentazione: sulla T-Beam inizializza l'AXP2101 (radio e GPS); sulla T3 non fa nulla |
+| `src/user_config.h` | Impostazioni (nominativo, frequenza, SF/BW, parità) |
 
 ## Compilazione
 
 ```
-pio run -e lora32            # compila
+pio run -e lora32            # T3 V1.6.1
+pio run -e tbeam             # T-Beam V1.2
 pio run -e lora32 -t upload  # carica (togliere la microSD)
 pio device monitor           # seriale a 115200
 ```
 
-Dipendenze (in `platformio.ini`): RadioLib 7.5.0, esp32_codec2 1.0.7, Adafruit SSD1306 e GFX.
+Dipendenze (in `platformio.ini`): RadioLib 7.5.0, esp32_codec2 1.0.7, Adafruit SSD1306 e GFX; per la T-Beam anche XPowersLib 0.2.6.
 
 ## Ottenere il firmware senza compilare in locale
 
@@ -39,7 +51,7 @@ Il workflow di GitHub Actions compila a ogni modifica. Per averlo col **proprio 
 1. Fai un **fork** del repository su GitHub.
 2. Nel fork modifica `src/user_config.h` e cambia `#define LCR_CALLSIGN "N0CALL"` con il tuo nominativo (puoi farlo dal sito, con il pulsante di modifica del file). Se è la prima volta che usi Actions nel fork, abilitale dalla scheda Actions.
 3. Aspetta che l'esecuzione sul tuo ramo diventi verde (circa 2-3 minuti).
-4. Aprila e scarica l'artefatto **`firmware-t3-v161`** (serve essere loggati su GitHub; scade dopo circa 90 giorni). Contiene:
+4. Aprila e scarica l'artefatto della tua scheda, **`firmware-t3-v161`** (T3) oppure **`firmware-tbeam-v12`** (T-Beam). Serve essere loggati su GitHub; scade dopo circa 90 giorni. Contiene:
    - `web_factory.bin`: immagine completa, da scrivere all'indirizzo `0x0` (prima installazione);
    - `ota_update.bin`: solo l'applicazione, per gli aggiornamenti futuri;
    - `SHA256SUMS`: somme di controllo.

@@ -53,8 +53,15 @@ Modifiche al codice previste:
 - Il nominativo di default è **N0CALL** con trasmissione bloccata, quindi il binario è distribuibile; nominativo e frequenza si impostano con la pagina di configurazione.
 - Licenza scelta (GPL-3.0): chi distribuisce i binari deve rendere disponibile il sorgente corrispondente.
 
+## 5. T-Beam V1.2 (batteria e GPS)
+
+- **Fase 1** (fatta, da provare): alimentazione AXP2101 (radio accesa, GPS spento), tasto di bordo IO38 come PTT, pin audio propri (microfono su GPIO36, altoparlante su GPIO2), due ambienti `lora32` e `tbeam`, compilazione di entrambi su Actions.
+- **Fase 2**: batteria e carica sull'OLED e in seriale, avviso di batteria scarica con un bip.
+- **Fase 3**: GPS: locatore Maidenhead e ora precisa, per esempio nell'intestazione di inizio e fine turno.
+- Se la scheda risultasse con radio SX1262 serve una variante di `RadioLora`.
+
 ## Aperto
 
 - Frequenza di lavoro: ancora il segnaposto 433,900 MHz in `src/user_config.h`, da scegliere col band plan IARU R1 / ARI.
 - Licenza: scelta la **GPL-3.0** (file `LICENSE`), coerente con la libreria `esp32_codec2` (vedi [firmware.md](firmware.md)).
-- Compilazione con PlatformIO e prova su scheda: mai eseguite.
+- Prove su scheda: T3 con avvio, OLED, PTT e trasmissione (3 novembre); ricezione, audio e T-Beam ancora da provare (vedi [prove.md](prove.md)).

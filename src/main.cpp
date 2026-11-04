@@ -1,5 +1,6 @@
 // LoRa-Codec-2-RTX: messaggi vocali broadcast a turni su LoRa, con Codec2.
-// Scheda: LILYGO LoRa32 T3 V1.6.1 (433 MHz). Vedi README.md e docs/.
+// Schede: LILYGO LoRa32 T3 V1.6.1 (predefinita) e T-Beam V1.2 (-DBOARD_TBEAM_V12).
+// Vedi README.md e docs/.
 //
 // ATTENZIONE: collegare l'antenna a 433 MHz prima di alimentare la scheda.
 #include <Arduino.h>
@@ -10,6 +11,7 @@
 #include "board_pins.h"
 #include "codec2_adapter.h"
 #include "packet.h"
+#include "pmu.h"
 #include "ptt_button.h"
 #include "radio_lora.h"
 #include "ui.h"
@@ -21,6 +23,13 @@
 // continuo. 32 kB come nel progetto di riferimento per Codec2.
 SET_LOOP_TASK_STACK_SIZE(32 * 1024);
 
+#if defined(BOARD_TBEAM_V12)
+static const char* const kBoardName = "T-Beam V1.2";
+#else
+static const char* const kBoardName = "LoRa32 T3 V1.6.1";
+#endif
+
+static Pmu pmu;
 static RadioLora radio;
 static Codec2Adapter codec;
 static AudioIo audio;
@@ -28,6 +37,9 @@ static UiNotifier ui(audio);
 static lcr::VoiceNode* node = nullptr;
 static lcr::PttButton ptt(LCR_PTT_DEBOUNCE_MS);
 static lcr::PttButton volumeButton(30);
+
+static bool pttUsable = true;   // false se il pin PTT risulta instabile all'avvio
+static bool pttArmed = false;   // il PTT vale solo dopo essere stato rilasciato almeno una volta
 
 static uint16_t newSessionId() { return static_cast<uint16_t>(esp_random()); }
 
@@ -37,14 +49,46 @@ static void fatal(const char* what, int code = 0) {
   for (;;) delay(1000);
 }
 
+// Pin PTT: se la scheda non ha un pull-up interno sul pin (GPIO34-39, come il tasto IO38 della
+// T-Beam) si conta su quello esterno.
+static int pttPinMode() {
+  if (!pins::kPttHasInternalPullup) return INPUT;
+  return LCR_PTT_ACTIVE_LOW ? INPUT_PULLUP : INPUT_PULLDOWN;
+}
+
+static bool pttRawPressed() { return (digitalRead(pins::kPtt) == LOW) == (LCR_PTT_ACTIVE_LOW != 0); }
+
+// Un pin PTT che cambia livello da solo (flottante, per esempio senza pull-up) potrebbe far
+// partire trasmissioni a caso: in quel caso il PTT viene disattivato.
+static bool pttPinUnstable() {
+  int pressed = 0;
+  for (int i = 0; i < 32; i++) {
+    if (pttRawPressed()) pressed++;
+    delayMicroseconds(500);
+  }
+  return pressed > 0 && pressed < 32;
+}
+
 void setup() {
   Serial.begin(115200);
   delay(300);
-  pinMode(pins::kPtt, LCR_PTT_ACTIVE_LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
+  Serial.printf("[avvio] scheda %s\n", kBoardName);
+
+  // L'alimentazione va per prima: sulla T-Beam senza il PMU la radio non e' alimentata.
+  const bool pmuOk = pmu.begin();
+
+  pinMode(pins::kPtt, pttPinMode());
   pinMode(pins::kVolume, INPUT_PULLUP);
+  pttUsable = !pttPinUnstable();
 
   if (!ui.begin()) Serial.println("OLED non trovato: si continua senza display");
   ui.showMessage("AVVIO");
+  if (!pmuOk) fatal("alimentazione PMU");
+  if (!pttUsable) {
+    Serial.printf("ATTENZIONE: il pin PTT (GPIO%d) e' instabile (manca il pull-up?): PTT disattivato\n", pins::kPtt);
+    ui.showMessage("PTT?", "pin instabile");
+    delay(2500);
+  }
 
   if (!lcr::isValidCallsign(LCR_CALLSIGN)) fatal("nominativo non valido");
   if (lcr::isPlaceholderCallsign(LCR_CALLSIGN)) {
@@ -66,7 +110,7 @@ void setup() {
   Serial.printf("[avvio] audio ok, heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
 
   ui.showMessage("RADIO");
-  Serial.println("[avvio] radio SX1278...");
+  Serial.println("[avvio] radio SX127x...");
   if (!radio.begin()) fatal("radio", radio.lastError());
   Serial.println("[avvio] radio ok");
 
@@ -85,7 +129,9 @@ void setup() {
 void loop() {
   const uint32_t now = millis();
 
-  const bool pttDown = (digitalRead(pins::kPtt) == LOW) == (LCR_PTT_ACTIVE_LOW != 0);
+  const bool raw = pttRawPressed();
+  if (!raw) pttArmed = true;  // un PTT gia' premuto all'accensione non fa partire la trasmissione
+  const bool pttDown = pttUsable && pttArmed && raw;
   switch (ptt.update(pttDown, now)) {
     case lcr::PttButton::Event::Pressed: node->pttPressed(now); break;
     case lcr::PttButton::Event::Released: node->pttReleased(now); break;

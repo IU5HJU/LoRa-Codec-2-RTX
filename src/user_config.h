@@ -5,13 +5,16 @@
 // Solo A-Z, 0-9 e '/', massimo 8 caratteri.
 // Il valore predefinito N0CALL e' il segnaposto "nessun nominativo": con N0CALL
 // la scheda riceve ma NON trasmette. Per trasmettere inserire il proprio nominativo.
+#ifndef LCR_CALLSIGN
 #define LCR_CALLSIGN "N0CALL"
+#endif
 
-// Pulsante PTT. La T3 V1.6.1 ha solo il tasto RST, quindi serve un pulsante
-// ESTERNO tra GPIO0 e massa (pull-up interno). GPIO0 e' un pin di boot: se e'
-// premuto durante accensione o reset la scheda entra in modalita' flash.
-// Per usare un altro pin cambia LCR_PTT_PIN (e src/board_pins.h).
-#define LCR_PTT_PIN 0
+// Pulsante PTT. Il pin dipende dalla scheda (src/board_pins_*.h):
+//  - T3 V1.6.1: ha solo il tasto RST, quindi serve un pulsante ESTERNO tra GPIO0 e massa
+//    (pull-up interno). GPIO0 e' un pin di boot: se e' premuto durante accensione o reset
+//    la scheda entra in modalita' flash.
+//  - T-Beam V1.2: tasto di bordo IO38 (pull-up esterno della scheda).
+// Il PTT vale solo dopo essere stato rilasciato almeno una volta dopo l'accensione.
 #define LCR_PTT_ACTIVE_LOW 1
 #define LCR_PTT_DEBOUNCE_MS 30
 

@@ -1,8 +1,19 @@
-# Pinout: LILYGO LoRa32 T3 V1.6.1
+# Pinout
+
+Le schede supportate sono due. La mappa in codice è un file per scheda, scelto a compilazione
+(`-DBOARD_T3_V161` o `-DBOARD_TBEAM_V12`) e controllato da `tests/test_pins.cpp`:
+
+| Scheda | Ambiente | File dei pin | Stato |
+|---|---|---|---|
+| LILYGO LoRa32 T3 V1.6.1 | `lora32` | [`src/board_pins_t3_v161.h`](../src/board_pins_t3_v161.h) | provata (avvio, OLED, PTT, trasmissione) |
+| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) | **fase 1, non ancora provata** |
+
+La sezione seguente riguarda la **T3**; quella della T-Beam è più sotto.
+
+## LILYGO LoRa32 T3 V1.6.1
 
 Scheda confermata dalla foto: serigrafia **T3_V1.6.1**, modulo LoRa 433/470 MHz, **ESP32-PICO-D4**
 (4 MB di flash, senza PSRAM), USB micro con CH9102, connettore batteria LiPo, SMA più connettore U.FL.
-Mappa in codice: [`src/board_pins.h`](../src/board_pins.h), controllata da `tests/test_pins.cpp`.
 
 ## Componenti (ordinati il 2 novembre 2026)
 
@@ -68,3 +79,44 @@ Collegare sempre l'antenna a 433 MHz **prima** di alimentare o trasmettere: senz
 - Che GPIO13/14 siano davvero liberi (microSD non inserita) e che il cablaggio non carichi i segnali.
 - L'OLED (SSD1306 128x64, indirizzo 0x3C, GPIO21/22) è presente sulla scheda; il firmware lo usa per lo stato e per il nominativo ricevuto. Se non risponde il sistema funziona comunque, con i segnali acustici.
 - Il livello I2S dell'amplificatore (possibile dimezzamento con la media dei canali).
+
+## LILYGO T-Beam V1.2 (AXP2101)
+
+**Fase 1: supporto scritto e compilato, non ancora provato sulla scheda.**
+Scheda riconosciuta dalla serigrafia **T-BEAM-AXP2101-V1.2** (2023-05-08): ESP32 con 4 MB di flash (e 8 MB di PSRAM, non usata),
+modulo LoRa "LORA32 433/470MHz" (famiglia SX127x come la T3; il primo avvio lo conferma, RadioLib controlla il chip),
+GPS u-blox NEO-6M, **OLED** SSD1306 montato, tasti PWR / IO38 / RST, pila a bottone per il GPS, vano per la batteria 18650.
+
+### Differenze rispetto alla T3
+
+| Aspetto | T3 V1.6.1 | T-Beam V1.2 |
+|---|---|---|
+| Alimentazione | diretta | **AXP2101** (I2C 0x34) che alimenta radio (ALDO2) e GPS (ALDO3): va inizializzato prima della radio |
+| Radio | SX127x, stessi pin | SX127x, **stessi pin** (SCK 5, MISO 19, MOSI 27, CS 18, DIO0 26, RST 23, DIO1 33) |
+| OLED | integrato | montato sul connettore, stesso bus I2C 21/22 |
+| PTT | pulsante esterno IO0-GND | **tasto di bordo IO38** (solo ingresso, senza pull-up interno) |
+| GPS | assente | RX = GPIO34, TX = GPIO12 (non usato in fase 1, alimentazione GPS spenta) |
+| LED di bordo | GPIO25 | GPIO4 (attivo basso) |
+
+### Assegnazione per il progetto
+
+| Segnale | GPIO | Collegamento |
+|---|---|---|
+| I2S BCLK (condiviso) | 14 | INMP441 `SCK` e MAX98357A `BCLK` |
+| I2S WS (condiviso) | 13 | INMP441 `WS` e MAX98357A `LRC` |
+| Dati microfono | **36** (pin `VP`) | INMP441 `SD` (solo ingresso, va bene). Non il 34: è il GPS |
+| Dati altoparlante | **2** | MAX98357A `DIN`. Non il 4: è il LED di bordo |
+| Shutdown amplificatore | 25 | MAX98357A `SD` (alto = acceso) |
+| PTT | **38** | tasto di bordo `IO38` |
+| Volume (opzionale) | 15 | pulsante esterno tra GPIO15 e GND |
+
+Sul connettore della scheda i pin accessibili sono `VP(36)`, `VN(39)`, 15, 35, 32, 33, 25, 14, 13, 2, GND, 5V.
+**Non utilizzabili:** 32 e 33 (DIO della radio) e 35 (interrupt dell'AXP2101).
+Il collegamento fisso del microfono (`VDD` a 3,3 V, `GND`, `L/R` a GND) e dell'amplificatore (`VIN`, `GND`, `GAIN` libero) è lo stesso della T3.
+
+### Da verificare con la scheda in mano
+
+- **Il tasto IO38** ha un pull-up esterno sulla scheda? GPIO38 non ne ha di interni. Il firmware controlla all'avvio che il pin sia stabile: se cambia livello da solo, il PTT viene **disattivato** e l'OLED mostra "PTT? pin instabile". In quel caso serve una resistenza di pull-up (10 kΩ verso 3,3 V).
+- **Il chip radio** è davvero un SX127x (se fosse SX1262 compare "ERRORE radio"; serve allora una variante del codice).
+- **La batteria:** all'avvio la seriale stampa `[pmu] AXP2101 ok, batteria presente/assente, … mV, … %, USB …, carica …`.
+- **Alimentazione dell'amplificatore** dal pin 5V del connettore o dalla batteria: stesse regole della T3.
