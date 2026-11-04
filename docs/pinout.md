@@ -121,6 +121,12 @@ Sul connettore della scheda i pin accessibili sono `VP(36)`, `VN(39)`, 15, 35, 3
 **Non utilizzabili:** 32 e 33 (DIO della radio) e 35 (interrupt dell'AXP2101).
 Il collegamento fisso del microfono (`VDD` a 3,3 V, `GND`, `L/R` a GND) e dell'amplificatore (`VIN`, `GND`, `GAIN` libero) è lo stesso della T3.
 
+### Schema dei collegamenti (T-Beam)
+
+![Collegamenti della T-Beam V1.2](images/collegamenti-tbeam.png)
+
+Versione vettoriale: [collegamenti-tbeam.svg](images/collegamenti-tbeam.svg), generata da `tools/render_wiring.py tbeam`. Il connettore a 13 pin non ha un pin 3,3 V: per `VDD` del microfono prendere i 3,3 V da un punto della scheda (per esempio il VCC del connettore dell'OLED) e verificarli con il tester.
+
 ### Da verificare con la scheda in mano
 
 - **Il tasto IO38** ha un pull-up esterno sulla scheda? GPIO38 non ne ha di interni. Il firmware controlla all'avvio che il pin sia stabile: se cambia livello da solo, il PTT viene **disattivato** e l'OLED mostra "PTT? pin instabile". In quel caso serve una resistenza di pull-up (10 kΩ verso 3,3 V).

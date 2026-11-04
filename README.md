@@ -21,7 +21,7 @@ Funzionamento in breve:
 - scheda **LILYGO LoRa32 T3 V1.6.1** oppure **T-Beam V1.2 (AXP2101)**, a 433 MHz, con **antenna a 433 MHz** (SMA);
 - un **pulsante PTT** esterno tra GPIO0 e massa;
 - per la voce: microfono **INMP441**, amplificatore **MAX98357A** e altoparlante 8 Ω 3 W (per il solo test radio senza audio non servono);
-- schema dei collegamenti in [docs/pinout.md](docs/pinout.md) (con l'immagine dei collegamenti della T3) e [docs/audio.md](docs/audio.md).
+- schema dei collegamenti in [docs/pinout.md](docs/pinout.md) (con le immagini dei collegamenti di T3 e T-Beam) e [docs/audio.md](docs/audio.md).
 
 **Regole di sicurezza:** antenna collegata **prima** del cavo USB, mai alimentare la scheda senza antenna o carico fittizio; microSD tolta durante il caricamento.
 

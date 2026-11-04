@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1150" viewBox="0 0 1700 1150">
+<rect x="0" y="0" width="1700" height="1150" rx="0" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text x="40" y="44" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="28" font-weight="bold" text-anchor="start" fill="#111827">T-Beam V1.2 (AXP2101): collegamenti audio e pulsanti</text>
+<text x="40" y="72" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="15" font-weight="normal" text-anchor="start" fill="#4b5563">Scheda con l'OLED in alto. Connettore a 13 pin con l'ordine stampato sulla scheda: VP in alto, 5V in basso.</text>
+<rect x="220" y="100" width="360" height="800" rx="18" fill="#1f2937" stroke="#111827" stroke-width="2"/>
+<rect x="280" y="118" width="240" height="118" rx="8" fill="#1d4ed8" stroke="#93c5fd" stroke-width="2"/>
+<rect x="300" y="134" width="200" height="86" rx="4" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+<text x="400" y="168" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" fill="#e5e7eb">OLED 0,96"</text>
+<text x="400" y="190" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" fill="#9ca3af">(sul connettore I2C 21/22)</text>
+<text x="400" y="280" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="19" font-weight="bold" text-anchor="middle" fill="#e5e7eb">LILYGO T-Beam V1.2</text>
+<text x="400" y="304" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="middle" fill="#d1d5db">TBeam-AXP2101</text>
+<rect x="290" y="330" width="220" height="64" rx="8" fill="#374151" stroke="#4b5563" stroke-width="2"/>
+<text x="400" y="358" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#e5e7eb">Radio SX127x 433 MHz</text>
+<text x="400" y="378" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" fill="#d1d5db">antenna SMA</text>
+<rect x="290" y="410" width="220" height="64" rx="8" fill="#374151" stroke="#4b5563" stroke-width="2"/>
+<text x="400" y="438" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#e5e7eb">AXP2101</text>
+<text x="400" y="458" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" fill="#d1d5db">batteria 18650 e carica</text>
+<rect x="290" y="490" width="220" height="64" rx="8" fill="#374151" stroke="#4b5563" stroke-width="2"/>
+<text x="400" y="518" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#e5e7eb">GPS u-blox NEO-6M</text>
+<text x="400" y="538" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" fill="#d1d5db">RX 34 / TX 12 (non usato)</text>
+<rect x="260" y="800" width="66" height="34" rx="6" fill="#374151" stroke="#4b5563" stroke-width="1"/>
+<text x="293" y="822" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#d1d5db">PWR</text>
+<rect x="340" y="800" width="66" height="34" rx="6" fill="#fff7ed" stroke="#ea580c" stroke-width="3"/>
+<text x="373" y="822" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#ea580c">IO38</text>
+<rect x="420" y="800" width="66" height="34" rx="6" fill="#374151" stroke="#4b5563" stroke-width="1"/>
+<text x="453" y="822" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#d1d5db">RST</text>
+<text x="400" y="854" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#ea580c">IO38 = tasto PTT (sulla scheda)</text>
+<rect x="350" y="866" width="100" height="26" rx="5" fill="#9ca3af" stroke="none" stroke-width="0"/>
+<text x="400" y="884" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#111827">micro USB</text>
+<polyline points="580,170 1180,170" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="580,170 1180,170" fill="none" stroke="#7c3aed" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="580,562 1180,562" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="580,562 1180,562" fill="none" stroke="#0d9488" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="580,730 860,730 860,650 1180,650" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="580,730 860,730 860,650 1180,650" fill="none" stroke="#db2777" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="580,618 900,618 900,204 1180,204" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="580,618 900,618 900,204 1180,204" fill="none" stroke="#2563eb" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="900,618 900,694 1180,694" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="900,618 900,694 1180,694" fill="none" stroke="#2563eb" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="580,674 940,674 940,238 1180,238" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="580,674 940,674 940,238 1180,238" fill="none" stroke="#16a34a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="940,674 940,738 1180,738" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="940,674 940,738 1180,738" fill="none" stroke="#16a34a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="580,338 700,338" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
+<polyline points="580,338 700,338" fill="none" stroke="#ca8a04" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="900" cy="618" r="6" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+<circle cx="940" cy="674" r="6" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+<rect x="660" y="286" width="210" height="86" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+<text x="672" y="316" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="start" fill="#ca8a04">Volume (opzionale)</text>
+<circle cx="700" cy="338" r="6" fill="#ffffff" stroke="#ca8a04" stroke-width="2"/>
+<line x1="700" y1="338" x2="745" y2="320" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+<circle cx="760" cy="338" r="6" fill="#ffffff" stroke="#111827" stroke-width="2"/>
+<line x1="766" y1="338" x2="792" y2="338" stroke="#111827" stroke-width="3"/>
+<rect x="792" y="326" width="56" height="24" rx="12" fill="#111827" stroke="none" stroke-width="0"/>
+<text x="820" y="343" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">GND</text>
+<rect x="1180" y="130" width="260" height="236" rx="10" fill="#f3f4f6" stroke="#374151" stroke-width="2"/>
+<text x="1180" y="104" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" text-anchor="start" fill="#111827">INMP441</text>
+<text x="1180" y="122" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#4b5563">microfono I2S (modulo a 6 pin)</text>
+<text x="1198" y="175" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SD</text>
+<circle cx="1180" cy="170" r="7" fill="#7c3aed" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="209" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SCK</text>
+<circle cx="1180" cy="204" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="243" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">WS</text>
+<circle cx="1180" cy="238" r="7" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="277" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">L/R</text>
+<circle cx="1180" cy="272" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="311" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">VDD</text>
+<circle cx="1180" cy="306" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="345" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GND</text>
+<circle cx="1180" cy="340" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<rect x="1119" y="260" width="41" height="24" rx="12" fill="#111827" stroke="none" stroke-width="0"/>
+<text x="1139.5" y="277" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">GND</text>
+<line x1="1160" y1="272" x2="1180" y2="272" stroke="#111827" stroke-width="3"/>
+<rect x="1083" y="294" width="77" height="24" rx="12" fill="#b45309" stroke="none" stroke-width="0"/>
+<text x="1121.5" y="311" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">3,3 V *</text>
+<line x1="1160" y1="306" x2="1180" y2="306" stroke="#b45309" stroke-width="3"/>
+<rect x="1119" y="328" width="41" height="24" rx="12" fill="#111827" stroke="none" stroke-width="0"/>
+<text x="1139.5" y="345" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">GND</text>
+<line x1="1160" y1="340" x2="1180" y2="340" stroke="#111827" stroke-width="3"/>
+<rect x="1180" y="434" width="260" height="344" rx="10" fill="#f3f4f6" stroke="#374151" stroke-width="2"/>
+<text x="1180" y="408" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" text-anchor="start" fill="#111827">MAX98357A</text>
+<text x="1180" y="426" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#4b5563">amplificatore I2S classe D</text>
+<text x="1198" y="479" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">VIN</text>
+<circle cx="1180" cy="474" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="523" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GND</text>
+<circle cx="1180" cy="518" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="567" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SD</text>
+<circle cx="1180" cy="562" r="7" fill="#0d9488" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="611" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GAIN</text>
+<circle cx="1180" cy="606" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="655" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">DIN</text>
+<circle cx="1180" cy="650" r="7" fill="#db2777" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="699" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">BCLK</text>
+<circle cx="1180" cy="694" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="743" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">LRC</text>
+<circle cx="1180" cy="738" r="7" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+<rect x="1128" y="462" width="32" height="24" rx="12" fill="#dc2626" stroke="none" stroke-width="0"/>
+<text x="1144.0" y="479" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">5V</text>
+<line x1="1160" y1="474" x2="1180" y2="474" stroke="#dc2626" stroke-width="3"/>
+<rect x="1119" y="506" width="41" height="24" rx="12" fill="#111827" stroke="none" stroke-width="0"/>
+<text x="1139.5" y="523" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">GND</text>
+<line x1="1160" y1="518" x2="1180" y2="518" stroke="#111827" stroke-width="3"/>
+<rect x="1062" y="594" width="98" height="24" rx="12" fill="#e5e7eb" stroke="none" stroke-width="0"/>
+<text x="1111" y="611" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#374151">libero</text>
+<line x1="1160" y1="606" x2="1180" y2="606" stroke="#9ca3af" stroke-width="3"/>
+<text x="1422" y="534" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#111827">OUT +</text>
+<text x="1422" y="614" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#111827">OUT -</text>
+<circle cx="1440" cy="530" r="7" fill="#92400e" stroke="#ffffff" stroke-width="2"/>
+<circle cx="1440" cy="610" r="7" fill="#92400e" stroke="#ffffff" stroke-width="2"/>
+<polyline points="1440,530 1530,530" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="round"/>
+<polyline points="1440,530 1530,530" fill="none" stroke="#92400e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1440,610 1530,610" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="round"/>
+<polyline points="1440,610 1530,610" fill="none" stroke="#92400e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="1530" y="480" width="130" height="180" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+<text x="1595" y="502" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" fill="#92400e">Altoparlante</text>
+<text x="1595" y="520" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#92400e">8 ohm 3 W</text>
+<polygon points="1560,580 1585,580 1610,556 1610,604 1585,580" fill="#92400e"/>
+<path d="M1625,568 q14,12 0,24 M1636,558 q22,22 0,44" fill="none" stroke="#92400e" stroke-width="3" stroke-linecap="round"/>
+<circle cx="1530" cy="530" r="7" fill="#92400e" stroke="#ffffff" stroke-width="2"/>
+<circle cx="1530" cy="610" r="7" fill="#92400e" stroke="#ffffff" stroke-width="2"/>
+<text x="1546" y="534" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" text-anchor="start" fill="#92400e">+</text>
+<text x="1546" y="614" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" text-anchor="start" fill="#92400e">-</text>
+<circle cx="580" cy="170" r="7" fill="#7c3aed" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="175" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">VP</text>
+<text x="594" y="161" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#7c3aed">SD: dati microfono (GPIO36)</text>
+<circle cx="580" cy="226" r="7" fill="#6b7280" stroke="#6b7280" stroke-width="2"/>
+<text x="564" y="231" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#9ca3af">VN</text>
+<text x="594" y="231" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="start" fill="#9ca3af">libero</text>
+<circle cx="580" cy="282" r="7" fill="#6b7280" stroke="#6b7280" stroke-width="2"/>
+<text x="564" y="287" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#9ca3af">RST</text>
+<text x="594" y="287" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="start" fill="#9ca3af">reset</text>
+<circle cx="580" cy="338" r="7" fill="#ca8a04" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="343" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">15</text>
+<circle cx="580" cy="394" r="7" fill="#6b7280" stroke="#6b7280" stroke-width="2"/>
+<text x="564" y="399" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#9ca3af">35</text>
+<text x="594" y="399" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="start" fill="#9ca3af">occupato: interrupt dell'AXP2101</text>
+<circle cx="580" cy="450" r="7" fill="#6b7280" stroke="#6b7280" stroke-width="2"/>
+<text x="564" y="455" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#9ca3af">32</text>
+<text x="594" y="455" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="start" fill="#9ca3af">occupato: DIO2 della radio</text>
+<circle cx="580" cy="506" r="7" fill="#6b7280" stroke="#6b7280" stroke-width="2"/>
+<text x="564" y="511" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#9ca3af">33</text>
+<text x="594" y="511" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="normal" text-anchor="start" fill="#9ca3af">occupato: DIO1 della radio</text>
+<circle cx="580" cy="562" r="7" fill="#0d9488" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="567" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">25</text>
+<text x="594" y="553" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#0d9488">SD: shutdown ampl.</text>
+<circle cx="580" cy="618" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="623" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">14</text>
+<text x="594" y="609" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#2563eb">BCLK: clock di bit</text>
+<circle cx="580" cy="674" r="7" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="679" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">13</text>
+<text x="594" y="665" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#16a34a">WS: word select</text>
+<circle cx="580" cy="730" r="7" fill="#db2777" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="735" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">2</text>
+<text x="594" y="721" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="12" font-weight="bold" text-anchor="start" fill="#db2777">DIN: dati altoparlante</text>
+<circle cx="580" cy="786" r="7" fill="#111827" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="791" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">GND</text>
+<circle cx="580" cy="842" r="7" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
+<text x="564" y="847" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#e5e7eb">5V</text>
+<text x="594" y="791" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="start" fill="#111827">GND  -&gt;  massa comune</text>
+<text x="594" y="847" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="start" fill="#dc2626">5V  -&gt;  VIN amplificatore</text>
+<rect x="40" y="916" width="1620" height="196" rx="10" fill="#f9fafb" stroke="#e5e7eb" stroke-width="2"/>
+<text x="60" y="948" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#374151">Alimentazione: il pin 5V del connettore va a VIN dell'amplificatore (da verificare con il tester se c'e' anche a batteria; altrimenti usare 3,3 V). GND in comune per tutti i moduli.</text>
+<text x="60" y="978" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#374151">* Il connettore a 13 pin NON ha un pin 3,3 V: il 3,3 V per VDD del microfono va preso da un punto a 3,3 V della scheda (per esempio il VCC del connettore dell'OLED), verificato con il tester. Mai oltre 3,6 V.</text>
+<text x="60" y="1008" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#374151">Elettrolitico da circa 100 uF tra VIN e GND dell'amplificatore. GAIN libero (9 dB). INMP441: L/R a GND (canale sinistro); SCK e WS sono in comune con l'amplificatore. Fili corti, lontani dall'antenna.</text>
+<text x="60" y="1038" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#374151">PTT: il tasto IO38 di bordo (nessun filo). Se l'OLED mostra "PTT? pin instabile" serve un pull-up da 10 kohm tra IO38 e 3,3 V. Volume: pulsante opzionale tra il pin 15 e GND.</text>
+<text x="60" y="1068" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#374151">Non toccati: GPS (GPIO34 e 12), interrupt AXP2101 (GPIO35), DIO della radio (32 e 33), LED di bordo (GPIO4). Antenna a 433 MHz sempre collegata prima dell'USB.</text>
+<text x="60" y="1098" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#6b7280">Fonte: docs/pinout.md e src/board_pins_tbeam_v12.h. Fase 1: non ancora provato con l'audio. Generato da tools/render_wiring.py.</text>
+</svg>

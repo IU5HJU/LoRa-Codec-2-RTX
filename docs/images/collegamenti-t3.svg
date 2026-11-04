@@ -31,10 +31,6 @@
 <polyline points="580,282 730,282" fill="none" stroke="#ea580c" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
 <polyline points="580,394 730,394" fill="none" stroke="#ffffff" stroke-width="11" stroke-linejoin="round"/>
 <polyline points="580,394 730,394" fill="none" stroke="#ca8a04" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="1440,250 1530,250" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="round"/>
-<polyline points="1440,250 1530,250" fill="none" stroke="#92400e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-<polyline points="1440,330 1530,330" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="round"/>
-<polyline points="1440,330 1530,330" fill="none" stroke="#92400e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
 <circle cx="920" cy="450" r="6" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
 <circle cx="960" cy="562" r="6" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
 <rect x="690" y="236" width="210" height="184" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
@@ -56,18 +52,18 @@
 <text x="1180" y="120" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" text-anchor="start" fill="#111827">MAX98357A</text>
 <text x="1180" y="138" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#4b5563">amplificatore I2S classe D</text>
 <text x="1198" y="191" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">VIN</text>
-<text x="1198" y="235" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GND</text>
-<text x="1198" y="279" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SD</text>
-<text x="1198" y="323" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GAIN</text>
-<text x="1198" y="367" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">DIN</text>
-<text x="1198" y="411" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">BCLK</text>
-<text x="1198" y="455" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">LRC</text>
 <circle cx="1180" cy="186" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="235" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GND</text>
 <circle cx="1180" cy="230" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="279" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SD</text>
 <circle cx="1180" cy="274" r="7" fill="#0d9488" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="323" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GAIN</text>
 <circle cx="1180" cy="318" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="367" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">DIN</text>
 <circle cx="1180" cy="362" r="7" fill="#db2777" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="411" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">BCLK</text>
 <circle cx="1180" cy="406" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="455" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">LRC</text>
 <circle cx="1180" cy="450" r="7" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
 <rect x="1128" y="174" width="32" height="24" rx="12" fill="#dc2626" stroke="none" stroke-width="0"/>
 <text x="1144.0" y="191" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">5V</text>
@@ -82,6 +78,10 @@
 <text x="1422" y="334" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="end" fill="#111827">OUT -</text>
 <circle cx="1440" cy="250" r="7" fill="#92400e" stroke="#ffffff" stroke-width="2"/>
 <circle cx="1440" cy="330" r="7" fill="#92400e" stroke="#ffffff" stroke-width="2"/>
+<polyline points="1440,250 1530,250" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="round"/>
+<polyline points="1440,250 1530,250" fill="none" stroke="#92400e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1440,330 1530,330" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="round"/>
+<polyline points="1440,330 1530,330" fill="none" stroke="#92400e" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
 <rect x="1530" y="200" width="130" height="180" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
 <text x="1595" y="222" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" fill="#92400e">Altoparlante</text>
 <text x="1595" y="240" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#92400e">8 ohm 3 W</text>
@@ -95,16 +95,16 @@
 <text x="1180" y="524" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" text-anchor="start" fill="#111827">INMP441</text>
 <text x="1180" y="542" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="normal" text-anchor="start" fill="#4b5563">microfono I2S (modulo a 6 pin)</text>
 <text x="1198" y="591" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SCK</text>
-<text x="1198" y="635" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">WS</text>
-<text x="1198" y="679" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SD</text>
-<text x="1198" y="723" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">L/R</text>
-<text x="1198" y="767" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">VDD</text>
-<text x="1198" y="811" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GND</text>
 <circle cx="1180" cy="586" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="635" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">WS</text>
 <circle cx="1180" cy="630" r="7" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="679" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">SD</text>
 <circle cx="1180" cy="674" r="7" fill="#7c3aed" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="723" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">L/R</text>
 <circle cx="1180" cy="718" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="767" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">VDD</text>
 <circle cx="1180" cy="762" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
+<text x="1198" y="811" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" text-anchor="start" fill="#111827">GND</text>
 <circle cx="1180" cy="806" r="7" fill="#6b7280" stroke="#ffffff" stroke-width="2"/>
 <rect x="1119" y="706" width="41" height="24" rx="12" fill="#111827" stroke="none" stroke-width="0"/>
 <text x="1139.5" y="723" font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#ffffff">GND</text>
