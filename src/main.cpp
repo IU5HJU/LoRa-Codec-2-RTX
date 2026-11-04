@@ -8,6 +8,7 @@
 #include <freertos/task.h>
 
 #include "audio_io.h"
+#include "battery.h"
 #include "board_pins.h"
 #include "codec2_adapter.h"
 #include "packet.h"
@@ -30,6 +31,7 @@ static const char* const kBoardName = "LoRa32 T3 V1.6.1";
 #endif
 
 static Pmu pmu;
+static Battery battery;
 static RadioLora radio;
 static Codec2Adapter codec;
 static AudioIo audio;
@@ -76,6 +78,7 @@ void setup() {
 
   // L'alimentazione va per prima: sulla T-Beam senza il PMU la radio non e' alimentata.
   const bool pmuOk = pmu.begin();
+  battery.begin(pmu);
 
   pinMode(pins::kPtt, pttPinMode());
   pinMode(pins::kVolume, INPUT_PULLUP);
@@ -145,15 +148,22 @@ void loop() {
     audio.beep(600, 40);
   }
 
-  // Stato dell'alimentazione in seriale ogni 10 s (solo con PMU): utile per seguire la carica.
+  battery.update(now);
+
+  // Stato dell'alimentazione in seriale ogni 10 s: utile per seguire la carica.
   static uint32_t lastPmuLogMs = 0;
-  if (pmu.present() && now - lastPmuLogMs >= 10000) {
+  if (now - lastPmuLogMs >= 10000) {
     lastPmuLogMs = now;
-    pmu.logStatus();
+    if (pmu.present()) {
+      pmu.logStatus();
+    } else {
+      Serial.printf("[batteria] %.2f V\n", static_cast<double>(battery.volts()));
+    }
   }
 
   node->tick(now);
   audio.loop(now);
-  ui.loop(now, node->state(), audio.volumeStep(), static_cast<int>(radio.lastRssi()), radio.lastSnr());
+  ui.loop(now, node->state(), audio.volumeStep(), static_cast<int>(radio.lastRssi()), radio.lastSnr(),
+          battery.volts());
   delay(1);
 }

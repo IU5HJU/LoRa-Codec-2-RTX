@@ -56,3 +56,8 @@ surriscaldamento): meglio **sostituirla** con una cella nuova, di qualità, pref
 1. Estrai la cella e misura la tensione con un tester. Con meno di circa 2,5 V, sostituiscila.
 2. Con una cella buona (almeno 3,3-3,7 V) premi **PWR** e verifica se la scheda parte a batteria.
 3. Carica il firmware aggiornato e leggi in seriale le righe `[pmu]`: con l'USB collegata ogni 10 secondi stampa batteria, tensione, percentuale e stato di carica.
+
+## Indicazione sul display
+
+La tensione della batteria compare in basso a destra sull'OLED come `(Batt=4.12V)`, sotto 3,40 V in negativo; vedi [display.md](display.md).
+Sulla T-Beam il valore viene dall'AXP2101, sulla T3 dall'ADC di GPIO35.

@@ -19,7 +19,9 @@ class UiNotifier : public lcr::INotifier {
   void showMessage(const char* line1, const char* line2 = nullptr);  // schermata bloccante (avvio/errori)
 
   // Da chiamare nel loop: ridisegna a ~4 Hz e quando cambia qualcosa.
-  void loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb);
+  // batteryVolts: tensione della batteria in volt, negativa se non disponibile.
+  void loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb,
+            float batteryVolts);
 
   // lcr::INotifier
   void txStarted() override;
@@ -42,6 +44,9 @@ class UiNotifier : public lcr::INotifier {
   int volume_ = 0;
   int rssi_ = 0;
   float snr_ = 0;
+  float battery_ = -1.0f;        // ultima misura
+  float batteryShown_ = -1.0f;   // valore a schermo (con isteresi, per non ridisegnare di continuo)
+  uint32_t batteryShownMs_ = 0;
   uint32_t txStartMs_ = 0;
   bool limitHit_ = false;
   char rxCall_[lcr::kMaxCallsign + 1] = {0};

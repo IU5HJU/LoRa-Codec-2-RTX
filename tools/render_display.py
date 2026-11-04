@@ -38,6 +38,7 @@ class Oled:
         self.px = [[False] * W for _ in range(H)]
         self.cx = self.cy = 0
         self.size = 1
+        self.inverse = False
 
     def set_size(self, n):
         self.size = n
@@ -58,7 +59,7 @@ class Oled:
                             x = self.cx + i * self.size + dx
                             y = self.cy + j * self.size + dy
                             if 0 <= x < W and 0 <= y < H:
-                                self.px[y][x] = True
+                                self.px[y][x] = not self.inverse
                 line >>= 1
 
     def write(self, s, newline=False):
@@ -72,6 +73,12 @@ class Oled:
         if newline:
             self.cx = 0
             self.cy += self.size * 8
+
+    def fill_rect(self, x, y, w, h):
+        for yy in range(h):
+            for xx in range(w):
+                if 0 <= x + xx < W and 0 <= y + yy < H:
+                    self.px[y + yy][x + xx] = True
 
     def hline(self, x, y, w):
         for i in range(w):
@@ -96,7 +103,7 @@ def show_message(font, line1, line2=None, callsign=CALLSIGN):
 
 
 def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, notice=None,
-                last=None, volume=7, callsign=CALLSIGN):
+                last=None, volume=7, callsign=CALLSIGN, battery=4.12):
     """Come UiNotifier::draw(). last = (nominativo, persi, recuperati) oppure None."""
     o = Oled(font)
     o.set_size(1)
@@ -130,6 +137,16 @@ def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, n
 
     o.set_cursor(0, 56)
     o.write(f"Vol {volume}/10")
+
+    # Batteria in basso a destra, come src/ui.cpp: "(Batt=4.12V)"; se scarica, testo in negativo.
+    txt = "(Batt=--)" if battery < 0 else f"(Batt={battery:.2f}V)"
+    bx = W - 6 * len(txt)
+    if 0 <= battery < 3.40:
+        o.fill_rect(bx - 1, 55, W - bx + 1, 9)
+        o.inverse = True
+    o.set_cursor(bx, 56)
+    o.write(txt)
+    o.inverse = False
     return o
 
 
@@ -159,6 +176,10 @@ def screens(font):
          draw_screen(font, notice="IMPOSTA NOMINATIVO", callsign="N0CALL")),
         ("12  Errore all'avvio", "Il nome del blocco che non parte (radio, audio I2S, Codec2).",
          show_message(font, "ERRORE", "radio")),
+        ("13  Batteria scarica", "Sotto 3,40 V il testo della batteria va in negativo.",
+         draw_screen(font, battery=3.28)),
+        ("14  Batteria assente", "T-Beam senza batteria: nessun valore da mostrare.",
+         draw_screen(font, battery=-1.0)),
     ]
 
 

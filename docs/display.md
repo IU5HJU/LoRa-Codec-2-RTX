@@ -13,7 +13,7 @@ IU5HJU  433.900 MHz          riga 1: nominativo e frequenza (testo piccolo)
 ------------------------     linea di separazione
 ASCOLTO                      riga 2: stato (testo grande)
 Premi PTT per parlare        riga 3: informazioni o avvisi (testo piccolo)
-Vol 7/10                     ultima riga: volume
+Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 ```
 
 ## Schermate
@@ -32,8 +32,24 @@ Vol 7/10                     ultima riga: volume
 | 10 | Avvio con N0CALL | "SOLO RX" e "Imposta il nominativo" |
 | 11 | PTT con N0CALL | Avviso "IMPOSTA NOMINATIVO" |
 | 12 | Errore all'avvio | "ERRORE" e il nome del blocco: `radio`, `audio I2S`, `Codec2`, `nominativo non valido` |
+| 13 | Batteria sotto 3,40 V | il testo `(Batt=x.xxV)` va in negativo (sfondo pieno) |
+| 14 | Batteria assente (T-Beam senza cella) | `(Batt=--)` |
 
 Gli avvisi 6, 7, 8 e 11 restano a schermo circa 1,5-2 secondi. Ogni trasmissione e ricezione termina anche con un bip.
+
+## Batteria (in basso a destra)
+
+Formato `(Batt=4.12V)`, come nel firmware LoRa APRS iGate di Guzman. Larghezza fissa di 12 caratteri (72 pixel): non tocca "Vol" a sinistra, nemmeno con "Vol 10/10".
+
+| Scheda | Come si misura |
+|---|---|
+| **T-Beam V1.2** | dal chip AXP2101 (tensione della batteria, come fa Guzman). Se la batteria non c'è mostra `(Batt=--)`. Letta ogni 2 secondi. |
+| **LoRa32 T3 V1.6.1** | ADC su GPIO35 con partitore 100k/100k (tensione letta × 2), con la calibrazione del chip, mediata su 16 letture raccolte senza fermare il programma (Guzman ne fa 20 con una pausa di 3 ms l'una). |
+
+- Sotto **3,40 V** il testo va in negativo per segnalare batteria scarica.
+- Il valore a schermo cambia solo se la misura si sposta di almeno 0,03 V (oppure ogni 10 secondi), per non ridisegnare di continuo il display.
+- **Sulla T3 senza batteria e con USB** la misura è quella della linea di carica (circa 4 V), non dei 5 V dell'USB.
+- Anche la seriale stampa la tensione ogni 10 secondi (`[pmu] ...` sulla T-Beam, `[batteria] x.xx V` sulla T3).
 
 ## Note
 

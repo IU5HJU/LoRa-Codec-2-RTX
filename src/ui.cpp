@@ -2,6 +2,10 @@
 
 #include <Wire.h>
 
+#include <cmath>
+
+#include "battery_info.h"
+
 #include "board_pins.h"
 #include "user_config.h"
 
@@ -90,12 +94,24 @@ void UiNotifier::rxEnded(const char* callsign, uint32_t lostFrames, uint32_t rec
   audio_.beep(800, 40);  // fine della trasmissione ricevuta (OVER)
 }
 
-void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb) {
+void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb,
+                      float batteryVolts) {
   if (state != state_ || volumeStep != volume_) dirty_ = true;
   state_ = state;
   volume_ = volumeStep;
   rssi_ = rssiDbm;
   snr_ = snrDb;
+  battery_ = batteryVolts;
+  // Il valore a schermo cambia solo se la misura si sposta di almeno 0,03 V (oppure passa da/a
+  // "non disponibile", oppure ogni 10 s): ridisegnare l'OLED costa circa 25 ms.
+  const bool availabilityChanged = (battery_ < 0) != (batteryShown_ < 0);
+  const bool moved = battery_ >= 0 && batteryShown_ >= 0 && fabsf(battery_ - batteryShown_) >= 0.03f;
+  const bool stale = nowMs - batteryShownMs_ >= 10000 && battery_ != batteryShown_;
+  if (availabilityChanged || moved || stale) {
+    batteryShown_ = battery_;
+    batteryShownMs_ = nowMs;
+    dirty_ = true;
+  }
   if (notice_ && nowMs > noticeUntilMs_) {
     notice_ = nullptr;
     dirty_ = true;
@@ -144,5 +160,18 @@ void UiNotifier::draw(uint32_t nowMs) {
 
   display_.setCursor(0, 56);
   display_.printf("Vol %d/10", volume_);
+
+  // Batteria in basso a destra, nel formato di Guzman: "(Batt=4.12V)". Se e' scarica il testo va in
+  // negativo (sfondo pieno): la larghezza resta la stessa (12 caratteri = 72 pixel, a sinistra c'e' "Vol").
+  char battText[20];
+  const size_t len = lcr::formatBatteryText(battText, sizeof(battText), batteryShown_);
+  const int battX = 128 - static_cast<int>(len) * 6;
+  if (lcr::isLowBattery(batteryShown_)) {
+    display_.fillRect(battX - 1, 55, 128 - battX + 1, 9, SSD1306_WHITE);
+    display_.setTextColor(SSD1306_BLACK);
+  }
+  display_.setCursor(battX, 56);
+  display_.print(battText);
+  display_.setTextColor(SSD1306_WHITE);
   display_.display();
 }
