@@ -161,6 +161,18 @@ void loop() {
     }
   }
 
+  // Livello del microfono in seriale (2 volte al secondo) finche' il PTT e' premuto.
+  static uint32_t lastMicLogMs = 0;
+  if (pttDown && now - lastMicLogMs >= 500) {
+    lastMicLogMs = now;
+    const float peak = audio.micPeakDb();
+    Serial.printf("[mic] livello %.0f dBFS, picco %.0f dBFS, offset %.1f%%, AGC %.0f dB, errori %u%s\n",
+                  static_cast<double>(audio.micRmsDb()), static_cast<double>(peak),
+                  static_cast<double>(audio.micDcPercent()), static_cast<double>(audio.micGainDb()),
+                  static_cast<unsigned>(audio.micErrors()),
+                  peak < -80.0f ? "  <- silenzio: controlla i cavi o prova LCR_MIC_SLOT 1" : (peak > -3.0f ? "  <- saturazione" : ""));
+  }
+
   node->tick(now);
   audio.loop(now);
   ui.loop(now, node->state(), audio.volumeStep(), static_cast<int>(radio.lastRssi()), radio.lastSnr(),

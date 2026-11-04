@@ -37,6 +37,13 @@ class AudioIo {
   uint32_t micErrors() const { return micErrors_; }
   uint32_t micOverruns() { return mic_.overruns(); }
 
+  // Livello del microfono (ultimo frame da 40 ms), per la diagnostica in seriale.
+  // Valori in dB rispetto al fondo scala dell'I2S (0 dBFS = massimo, circa -90 = silenzio digitale).
+  float micRmsDb() const { return micRmsDb_; }    // valore efficace, senza componente continua
+  float micPeakDb() const { return micPeakDb_; }  // picco
+  float micDcPercent() const { return micDcPct_; }  // offset continuo, % del fondo scala
+  float micGainDb() const { return front_.gainDb(); }  // guadagno attuale dell'AGC
+
  private:
   // Microfono con pre-roll protetto da mutex (task di cattura <-> loop principale).
   class SafeMic : public lcr::IAudioIn {
@@ -65,6 +72,7 @@ class AudioIo {
 
   static void captureTask(void* arg);
   void captureLoop();
+  void measureLevel();
   void playFrame(const int16_t* pcm);
   void playLost();
   void writeMono(const int16_t* samples, size_t n);
@@ -79,6 +87,9 @@ class AudioIo {
   bool ampOn_ = false;
   uint32_t lastPlayMs_ = 0;
   volatile uint32_t micErrors_ = 0;
+  volatile float micRmsDb_ = -120.0f;
+  volatile float micPeakDb_ = -120.0f;
+  volatile float micDcPct_ = 0.0f;
 
   // Buffer grandi come membri (non sullo stack).
   int32_t rxStereo_[2 * lcr::kMicSamplesPerFrame];

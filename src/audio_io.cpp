@@ -110,9 +110,31 @@ void AudioIo::captureLoop() {
       continue;
     }
     for (size_t i = 0; i < lcr::kMicSamplesPerFrame; i++) micMono_[i] = rxStereo_[2 * i + LCR_MIC_SLOT];
+    measureLevel();
     front_.processFrame(micMono_, micPcm_);
     mic_.feed(micPcm_);
   }
+}
+
+void AudioIo::measureLevel() {
+  // Parole I2S a 32 bit con 24 bit significativi allineati a sinistra: >>8 e fondo scala 2^23.
+  constexpr float kFullScale = 8388608.0f;
+  const size_t n = lcr::kMicSamplesPerFrame;
+  float sum = 0.0f;
+  for (size_t i = 0; i < n; i++) sum += static_cast<float>(micMono_[i] >> 8);
+  const float mean = sum / static_cast<float>(n);
+  float sq = 0.0f;
+  float peak = 0.0f;
+  for (size_t i = 0; i < n; i++) {
+    const float v = static_cast<float>(micMono_[i] >> 8) - mean;
+    sq += v * v;
+    const float a = v < 0 ? -v : v;
+    if (a > peak) peak = a;
+  }
+  const float rms = sqrtf(sq / static_cast<float>(n));
+  micRmsDb_ = 20.0f * log10f((rms + 1.0f) / kFullScale);
+  micPeakDb_ = 20.0f * log10f((peak + 1.0f) / kFullScale);
+  micDcPct_ = 100.0f * mean / kFullScale;
 }
 
 void AudioIo::setVolumeStep(int step) {
