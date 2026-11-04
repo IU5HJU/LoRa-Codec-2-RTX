@@ -145,6 +145,13 @@ void loop() {
     audio.beep(600, 40);
   }
 
+  // Stato dell'alimentazione in seriale ogni 10 s (solo con PMU): utile per seguire la carica.
+  static uint32_t lastPmuLogMs = 0;
+  if (pmu.present() && now - lastPmuLogMs >= 10000) {
+    lastPmuLogMs = now;
+    pmu.logStatus();
+  }
+
   node->tick(now);
   audio.loop(now);
   ui.loop(now, node->state(), audio.volumeStep(), static_cast<int>(radio.lastRssi()), radio.lastSnr());

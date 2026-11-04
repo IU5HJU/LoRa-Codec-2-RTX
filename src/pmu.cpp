@@ -57,10 +57,24 @@ bool Pmu::begin() {
   present_ = true;
   delay(100);  // la radio ha bisogno di qualche istante per alimentarsi prima di begin()
 
-  Serial.printf("[pmu] AXP2101 ok, batteria %s, %d mV, %d %%, USB %s, carica %s\n",
+  Serial.println("[pmu] AXP2101 ok");
+  // Configurazione letta dai registri del PMU: serve a capire perche' la scheda non parte a batteria.
+  Serial.printf("[pmu] soglia di spegnimento VOFF %u mV, DC1 (ESP32) %u mV %s, radio ALDO2 %u mV %s, GPS ALDO3 %s\n",
+                static_cast<unsigned>(g_pmu->getSysPowerDownVoltage()),
+                static_cast<unsigned>(g_pmu->getPowerChannelVoltage(XPOWERS_DCDC1)),
+                g_pmu->isPowerChannelEnable(XPOWERS_DCDC1) ? "acceso" : "SPENTO",
+                static_cast<unsigned>(g_pmu->getPowerChannelVoltage(XPOWERS_ALDO2)),
+                g_pmu->isPowerChannelEnable(XPOWERS_ALDO2) ? "acceso" : "SPENTO",
+                g_pmu->isPowerChannelEnable(XPOWERS_ALDO3) ? "acceso" : "spento");
+  logStatus();
+  return true;
+}
+
+void Pmu::logStatus() {
+  if (!g_pmu) return;
+  Serial.printf("[pmu] batteria %s, %d mV, %d %%, USB %s, carica %s\n",
                 g_pmu->isBatteryConnect() ? "presente" : "assente", batteryMillivolt(), batteryPercent(),
                 usbPresent() ? "si" : "no", charging() ? "in corso" : "no");
-  return true;
 }
 
 int Pmu::batteryMillivolt() {
@@ -84,5 +98,6 @@ int Pmu::batteryMillivolt() { return -1; }
 int Pmu::batteryPercent() { return -1; }
 bool Pmu::charging() { return false; }
 bool Pmu::usbPresent() { return false; }
+void Pmu::logStatus() {}
 
 #endif

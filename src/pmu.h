@@ -20,6 +20,9 @@ class Pmu {
   bool charging();
   bool usbPresent();
 
+  // Stampa in seriale lo stato dell'alimentazione (batteria, USB, carica). Nessun effetto senza PMU.
+  void logStatus();
+
  private:
   bool present_ = false;
 };
