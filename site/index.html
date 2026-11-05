@@ -28,6 +28,8 @@
   #status.err { color:var(--err); } #status.ok { color:var(--ok); }
   #log { background:var(--log-bg); color:var(--log-fg); font:12px/1.4 ui-monospace, monospace; padding:10px; border-radius:6px; height:11rem; overflow:auto; white-space:pre-wrap; margin-top:.8em; }
   #nosupport { display:none; }
+  #logtools { margin-top:.4em; }
+  #logtools button { padding:5px 12px; font-size:.9rem; }
   footer { font-size:.85rem; color:var(--muted); margin:20px 0; }
   a { color:var(--accent); }
 </style>
@@ -90,6 +92,11 @@
       <button id="reset" type="button" class="secondary" disabled>Valori di fabbrica</button>
     </form>
     <div id="status" role="status"></div>
+    <div id="logtools">
+      <button id="logCopy" type="button" class="secondary">Copia il registro</button>
+      <button id="logSave" type="button" class="secondary">Salva su file</button>
+      <button id="logClear" type="button" class="secondary">Pulisci</button>
+    </div>
     <div id="log" aria-label="Seriale della scheda"></div>
   </section>
 
@@ -126,9 +133,12 @@
   function log(line) {
     const el = $('log');
     el.textContent += line + '\n';
+    fullLog += line + '\n';
+    if (fullLog.length > 400000) fullLog = fullLog.slice(-300000);
     if (el.textContent.length > 20000) el.textContent = el.textContent.slice(-15000);
     el.scrollTop = el.scrollHeight;
   }
+  let fullLog = '';   // registro completo di questa sessione (la finestra mostra solo gli ultimi righi)
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
@@ -279,6 +289,18 @@
     } catch (e) { setStatus('Errore: ' + e.message, 'err'); }
   }
 
+  $('logCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(fullLog); setStatus('Registro copiato negli appunti.', 'ok'); }
+    catch (e) { setStatus('Copia non riuscita: seleziona il testo a mano.', 'err'); }
+  });
+  $('logSave').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([fullLog], { type: 'text/plain' }));
+    a.download = 'lora-codec2-seriale-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $('logClear').addEventListener('click', () => { $('log').textContent = ''; fullLog = ''; });
   $('connect').addEventListener('click', connect);
   $('disconnect').addEventListener('click', async () => { closing = true; await cleanup(); setStatus('Scollegato.', ''); });
   $('form').addEventListener('submit', save);
