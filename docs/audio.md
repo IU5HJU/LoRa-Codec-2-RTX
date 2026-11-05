@@ -26,7 +26,7 @@ I2S 32 bit @ 16 kHz (24 bit utili, allineati a sinistra)
   -> float normalizzato
   -> passa-alto 300 Hz (Butterworth, 2° ordine)
   -> decimazione per 2 con FIR passa-basso (31 tappe, taglio ~3,6 kHz)
-  -> AGC (target -24 dBFS RMS, guadagno da -20 a +36 dB, soglia di rumore -70 dBFS)
+  -> AGC (target -24 dBFS RMS, guadagno da -20 a +30 dB, soglia di rumore -54 dBFS, a riposo 12 dB)
   -> int16 @ 8 kHz, 320 campioni per 40 ms  ->  Codec2 1200
 ```
 
@@ -34,7 +34,7 @@ Motivi delle scelte:
 
 - **16 kHz e non 8 kHz:** il clock di bit dell'INMP441 deve stare sopra ~0,5 MHz; a 8 kHz con frame a 64 bit si è al limite. `esp32_loradv` segnala qualità scarsa a 8 kHz.
 - **Guadagno digitale alto:** il microfono ha sensibilità di circa -26 dBFS a 94 dB SPL, quindi la voce a distanza di parlato arriva intorno a -60 dBFS.
-- **Soglia di rumore dell'AGC:** sotto -70 dBFS il guadagno non sale, per non amplificare il fondo durante le pause.
+- **Soglia di rumore dell'AGC:** sotto la soglia il guadagno non sale e scende piano verso 12 dB, per non amplificare il fondo durante le pause. I valori della prima versione (36 dB e -70 dBFS) erano sbagliati con la voce vicina; misure e correzione in [taratura-microfono.md](taratura-microfono.md).
 - **Rampa del guadagno** dentro il frame, per evitare scalini udibili tra un frame e l'altro.
 
 I valori sono ragionati e verificati con segnali sintetici sul PC (`tests/test_audio.cpp`); vanno
@@ -54,6 +54,8 @@ vengono trasmessi per primi:
 aggiungere un mutex tra task di cattura e loop principale.
 
 ## Da fare con i microfoni in mano
+
+Fatto il 5 novembre per i livelli: vedi [taratura-microfono.md](taratura-microfono.md). Resta da fare l'ascolto.
 
 - Verificare il livello reale in ingresso e regolare `targetDbfs`, `maxGainDb` e `gateDbfs`.
 - Provare il clic del PTT sulla scheda e, se disturba, scartare i primi frame dopo la pressione.
