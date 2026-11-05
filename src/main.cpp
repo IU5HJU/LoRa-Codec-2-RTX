@@ -222,6 +222,18 @@ void loop() {
   }
 
   node->tick(now);
+
+  // Fine ricezione: riga di diagnostica sui pacchetti (vedi docs/prove.md).
+  static lcr::VoiceNode::State prevState = lcr::VoiceNode::State::Idle;
+  const lcr::VoiceNode::State st = node->state();
+  if (prevState == lcr::VoiceNode::State::Idle && st == lcr::VoiceNode::State::Receiving) radio.resetRxStats();
+  if (prevState == lcr::VoiceNode::State::Receiving && st != lcr::VoiceNode::State::Receiving) {
+    Serial.printf("[rx] pacchetti letti %u, errori CRC %u, sovrascritti %u, ritardo massimo di lettura %u ms\n",
+                  static_cast<unsigned>(radio.rxPackets()), static_cast<unsigned>(radio.rxCrcErrors()),
+                  static_cast<unsigned>(radio.rxOverwritten()), static_cast<unsigned>(radio.rxMaxDelayMs()));
+  }
+  prevState = st;
+
   audio.loop(now);
   ui.loop(now, node->state(), audio.volumeStep(), static_cast<int>(radio.lastRssi()), radio.lastSnr(),
           battery.volts());

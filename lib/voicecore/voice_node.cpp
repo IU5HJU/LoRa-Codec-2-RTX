@@ -40,6 +40,8 @@ void VoiceNode::startTx(uint32_t nowMs) {
   framesCaptured_ = 0;
   releasing_ = false;
   limitHit_ = false;
+  justSent_ = false;
+  nextSendMs_ = nowMs;
   state_ = State::Transmitting;
   // La bufferizzazione del microfono parte subito; il primo pacchetto
   // (nominativo) viene inviato al primo tick mentre l'audio si accumula.
@@ -69,7 +71,11 @@ void VoiceNode::tick(uint32_t nowMs) {
 }
 
 void VoiceNode::txTick(uint32_t nowMs) {
-  (void)nowMs;
+  // radio_.send() e' bloccante: al tick successivo la trasmissione e' finita, da qui conta la pausa.
+  if (justSent_) {
+    justSent_ = false;
+    nextSendMs_ = nowMs + kInterPacketGapMs;
+  }
   if (!releasing_) {
     int16_t pcm[kFrameSamples];
     uint8_t frame[kFrameBytes];
@@ -89,11 +95,15 @@ void VoiceNode::txTick(uint32_t nowMs) {
   }
 
   Packet p;
-  if (tx_.popPacket(p)) {
+  const bool gapOver = static_cast<int32_t>(nowMs - nextSendMs_) >= 0;
+  if (gapOver && tx_.popPacket(p)) {
     uint8_t buf[kMaxWireBytes];
     const size_t n = encodePacket(p, buf, sizeof(buf));
-    if (n) radio_.send(buf, n);
-  } else if (releasing_) {
+    if (n) {
+      radio_.send(buf, n);
+      justSent_ = true;
+    }
+  } else if (releasing_ && !tx_.hasPacket()) {
     radio_.startReceive();
     state_ = State::Idle;
     notify_.txEnded(limitHit_);

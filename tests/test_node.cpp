@@ -51,6 +51,21 @@ static std::vector<int> seq(int n) {
   return v;
 }
 
+static void testPacketSpacing() {
+  // Parita' e dati non devono partire attaccati: il ricevitore ha bisogno di tempo per leggere la radio.
+  Sim s;
+  s.air.clock = &s.clock;
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(7000);
+  s.a.node.pttReleased(s.clock);
+  s.run(3000);
+  const auto& t = s.air.sentAt[0];
+  CHECK(t.size() >= 12);  // START, dati, parita', END...
+  for (size_t i = 1; i < t.size(); i++) CHECK(t[i] - t[i - 1] >= kInterPacketGapMs);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle);  // la trasmissione si chiude comunque
+}
+
 static void testOneTurn() {
   Sim s;
   s.run(100);
@@ -177,6 +192,7 @@ static void testLossOnAir() {
 }
 
 int main() {
+  testPacketSpacing();
   testOneTurn();
   testReplyAfterWhite();
   testPttDenied();

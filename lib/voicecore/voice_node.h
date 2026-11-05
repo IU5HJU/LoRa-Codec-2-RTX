@@ -63,6 +63,8 @@ class VoiceNode {
   uint16_t fallbackSession_ = 1;
 
   uint32_t nextPlayMs_ = 0;
+  uint32_t nextSendMs_ = 0;  // non trasmettere prima di questo istante (pausa tra pacchetti)
+  bool justSent_ = false;
   bool callsignNotified_ = false;
   uint16_t notifiedSession_ = 0;
 };

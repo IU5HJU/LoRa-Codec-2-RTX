@@ -14,6 +14,12 @@ constexpr uint8_t kModeCodec2_1200 = 1;
 
 // Codec2 1200 bps: 48 bit (6 byte) ogni 40 ms, 320 campioni a 8 kHz.
 constexpr size_t kFrameBytes = 6;
+// Pausa tra la fine di un pacchetto trasmesso e l'inizio del successivo. Il ricevitore, dopo aver letto un
+// pacchetto, deve rileggere la radio, aggiornare il display e suonare l'audio: se il pacchetto seguente
+// (tipicamente la parita' subito dopo il quarto dato) parte troppo presto, quello precedente viene
+// sovrascritto nel FIFO della radio e va perso. Costa meno di un frame di voce (40 ms * 2).
+constexpr uint32_t kInterPacketGapMs = 80;
+
 constexpr size_t kFrameSamples = 320;
 constexpr uint32_t kFrameMs = 40;
 

@@ -1,15 +1,22 @@
 #include "radio_lora.h"
 
 #include <SPI.h>
+#include <esp_timer.h>
 
 #include "board_pins.h"
 #include "user_config.h"
 
 volatile bool RadioLora::rxFlag_ = false;
 volatile bool RadioLora::txActive_ = false;
+volatile uint32_t RadioLora::rxIsrUs_ = 0;
+volatile uint32_t RadioLora::rxIsrCount_ = 0;
 
 void IRAM_ATTR RadioLora::onPacketIsr() {
-  if (!txActive_) rxFlag_ = true;  // durante la TX DIO0 segnala "trasmesso", non "ricevuto"
+  if (!txActive_) {  // durante la TX DIO0 segnala "trasmesso", non "ricevuto"
+    rxIsrCount_ = rxIsrCount_ + 1;
+    if (!rxFlag_) rxIsrUs_ = static_cast<uint32_t>(esp_timer_get_time());
+    rxFlag_ = true;
+  }
 }
 
 bool RadioLora::begin(const lcr::Settings& settings) {
@@ -56,17 +63,25 @@ bool RadioLora::send(const uint8_t* data, size_t len) {
 size_t RadioLora::receive(uint8_t* buf, size_t cap, int* rssi) {
   if (!rxFlag_) return 0;
   rxFlag_ = false;
+  const uint32_t delayUs = static_cast<uint32_t>(esp_timer_get_time()) - rxIsrUs_;
+  if (delayUs > rxMaxDelayUs_) rxMaxDelayUs_ = delayUs;
+  // Piu' di un interrupt per un solo flag: l'altro pacchetto e' stato sovrascritto prima della lettura.
+  const uint32_t isrs = rxIsrCount_;
+  rxIsrCount_ = 0;
+  if (isrs > 1) rxOverwritten_ += isrs - 1;
   const size_t n = radio_->getPacketLength();
   size_t got = 0;
   if (n > 0 && n <= cap) {
     const int state = radio_->readData(buf, n);
     if (state == RADIOLIB_ERR_NONE) {
       got = n;
+      rxPackets_++;
       lastRssi_ = radio_->getRSSI();
       lastSnr_ = radio_->getSNR();
       if (rssi) *rssi = static_cast<int>(lastRssi_);
     } else {
       lastError_ = state;  // CRC errato o altro: il pacchetto e' scartato
+      if (state == RADIOLIB_ERR_CRC_MISMATCH) rxCrcErrors_++;
     }
   }
   // In ricezione continua la radio resta in RX, ma si riarma per sicurezza.

@@ -16,6 +16,8 @@ namespace fake {
 struct Air {
   std::deque<std::vector<uint8_t>> inbox[2];
   int sent[2] = {0, 0};
+  const uint32_t* clock = nullptr;           // se impostato, registra l'istante di ogni invio
+  std::vector<uint32_t> sentAt[2];
   bool busy = false;
   // Se ritorna true il pacchetto numero idx inviato da 'from' viene perso.
   std::function<bool(int from, int idx)> drop;
@@ -27,6 +29,7 @@ class Radio : public lcr::IRadio {
   bool channelBusy() override { return air_.busy; }
   bool send(const uint8_t* d, size_t n) override {
     const int idx = air_.sent[id_]++;
+    if (air_.clock) air_.sentAt[id_].push_back(*air_.clock);
     if (air_.drop && air_.drop(id_, idx)) return true;
     air_.inbox[1 - id_].push_back(std::vector<uint8_t>(d, d + n));
     return true;
