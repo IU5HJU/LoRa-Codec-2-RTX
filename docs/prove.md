@@ -160,3 +160,9 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - Firmware: `main`/`prova-iu5hju` con la prova di collegamento (`CFG TEST ON`); due schede, nessun microfono, amplificatore o altoparlante.
 - Risultato: la prova **funziona** nelle condizioni di prova (distanza ravvicinata): frame confrontati bit per bit, esito sull'OLED e risposta automatica del ricevitore. Valori numerici da aggiungere (RSSI, SNR, percentuale) alla prossima prova.
 - Da fare: ripetere allontanando le schede (portata) e nel verso opposto; autotest del codec e prova dell'altoparlante quando arriva l'hardware audio.
+
+### 2026-11-05, casa, IU5HJU (batteria T3, solo USB: il display passava di continuo da tensione a "--")
+
+- Problema: con il limite fisso a 4,35 V la lettura del caricatore (4,14-4,42 V, oscilla) attraversava il limite di continuo e la seriale mostrava `-1.00 V` alternato a `4.33 V`; l'OLED passava da tensione a lineette.
+- Correzione: dopo una lettura sopra 4,35 V il valore resta `--` per almeno 60 s dall'ultima lettura alta (`BatteryGuard`, testato sul PC con un caricatore simulato che oscilla per 10 minuti: al massimo un passaggio, poi stabile). La seriale ora stampa `[batteria] lettura 4.33 V, display (Batt=--)` invece di `-1.00 V`.
+- Da fare: confrontare la lettura della T3 con una LiPo collegata e il tester.

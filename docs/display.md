@@ -33,7 +33,7 @@ Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 | 11 | PTT con N0CALL | Avviso "IMPOSTA NOMINATIVO" |
 | 12 | Errore all'avvio | "ERRORE" e il nome del blocco: `radio`, `audio I2S`, `Codec2`, `nominativo non valido` |
 | 13 | Batteria sotto 3,40 V | il testo `(Batt=x.xxV)` va in negativo (sfondo pieno) |
-| 14 | Batteria assente (T-Beam senza cella) | `(Batt=--)`; sulla T3 compare anche con solo USB se la lettura supera 4,35 V (tensione del caricatore, non di una batteria) |
+| 14 | Batteria assente (T-Beam senza cella) | `(Batt=--)`; sulla T3 compare anche con solo USB se la lettura supera 4,35 V (tensione del caricatore, non di una batteria) e ci resta per almeno 60 s |
 | 15 | A riposo con la prova di collegamento attiva | "PROVA ON", "PTT = invia la prova" |
 | 16 | PTT premuto con la prova attiva | "TX" e nominativo, "Prova 5/12 s" |
 | 17 | Fine di una prova ricevuta | "PROVA 100%", "Ricevuta da" e nominativo, frame ok/persi/danneggiati, pacchetti recuperati, RSSI e SNR medi. Resta 15 s |
@@ -56,7 +56,7 @@ Formato `(Batt=4.12V)`, come nel firmware LoRa APRS iGate di Guzman. Larghezza f
 
 - Sotto **3,40 V** il testo va in negativo per segnalare batteria scarica.
 - Il valore a schermo cambia solo se la misura si sposta di almeno 0,03 V (oppure ogni 10 secondi), per non ridisegnare di continuo il display.
-- **Sulla T3 senza batteria e con USB** la misura è quella della linea di carica (misurati 4,24-4,42 V, oscilla), non della batteria: sopra 4,35 V il firmware mostra `(Batt=--)`; sotto quel valore la lettura resta mostrata perché non si può distinguere un caricatore da una batteria carica.
+- **Sulla T3 senza batteria e con USB** la misura è quella della linea di carica (misurati 4,24-4,42 V, oscilla), non della batteria: dopo una lettura sopra 4,35 V il firmware mostra `(Batt=--)` e **ci resta per almeno 60 s dall'ultima lettura alta**, così il display non passa di continuo da tensione a lineette quando il caricatore oscilla attorno al limite. Senza batteria e con USB in pratica compare `(Batt=--)` in modo stabile; con una batteria vera (sotto 4,35 V) la tensione resta mostrata.
 - Anche la seriale stampa la tensione ogni 10 secondi (`[pmu] ...` sulla T-Beam, `[batteria] x.xx V` sulla T3).
 
 ## Note

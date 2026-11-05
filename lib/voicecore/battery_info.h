@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 namespace lcr {
 
@@ -16,12 +17,22 @@ size_t formatBatteryText(char* out, size_t cap, float volts);
 bool isLowBattery(float volts);
 
 // Una LiPo/Li-ion non supera 4,2 V (4,35 V le celle ad alta tensione). Sulla T3 senza batteria, con l'USB
-// collegato, l'ADC legge la tensione del caricatore (misurati 4,24-4,42 V): sopra questo limite la lettura
-// non e' una batteria e va mostrata come non disponibile.
+// collegato, l'ADC legge la tensione del caricatore (misurati 4,14-4,42 V, che oscilla): una lettura sopra
+// questo limite non e' una batteria.
 constexpr float kMaxBatteryVolts = 4.35f;
+// Dopo una lettura sopra il limite la tensione resta "non disponibile" per almeno questo tempo: se il
+// caricatore oscilla attorno al limite il display non deve passare di continuo da tensione a "--".
+constexpr uint32_t kBatteryHoldMs = 60000;
 
-// volts se plausibile, altrimenti -1 (non disponibile). Valori negativi restano -1.
-float plausibleBatteryVolts(float volts);
+class BatteryGuard {
+ public:
+  // volts se plausibile, altrimenti -1 (non disponibile). Valori negativi restano -1.
+  float filter(float volts, uint32_t nowMs);
+
+ private:
+  bool seen_ = false;
+  uint32_t lastBadMs_ = 0;
+};
 
 // Media mobile delle ultime N letture, per smussare il rumore dell'ADC senza bloccare il ciclo
 // principale (Guzman prende 20 letture in 60 ms con delay: qui una lettura ogni tanto).
