@@ -61,3 +61,5 @@ surriscaldamento): meglio **sostituirla** con una cella nuova, di qualità, pref
 
 La tensione della batteria compare in basso a destra sull'OLED come `(Batt=4.12V)`, sotto 3,40 V in negativo; vedi [display.md](display.md).
 Sulla T-Beam il valore viene dall'AXP2101, sulla T3 dall'ADC di GPIO35.
+
+**T3 senza batteria (5 novembre):** con la scheda alimentata solo dall'USB e nessuna LiPo, l'ADC legge la tensione del caricatore: 4,24-4,42 V, che oscilla. Una LiPo non supera 4,2 V (4,35 V le celle ad alta tensione), quindi sopra 4,35 V il firmware mostra `(Batt=--)`. Sotto quel limite la lettura resta mostrata anche senza batteria (non esiste un modo affidabile per distinguere): per un valore vero serve la batteria collegata e il confronto col tester.

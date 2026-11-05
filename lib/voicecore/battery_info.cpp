@@ -21,4 +21,6 @@ size_t formatBatteryText(char* out, size_t cap, float volts) {
 
 bool isLowBattery(float volts) { return volts >= 0.0f && volts < kLowBatteryVolts; }
 
+float plausibleBatteryVolts(float volts) { return (volts < 0.0f || volts > kMaxBatteryVolts) ? -1.0f : volts; }
+
 }  // namespace lcr

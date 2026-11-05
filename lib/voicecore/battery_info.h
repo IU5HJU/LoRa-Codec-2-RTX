@@ -15,6 +15,14 @@ size_t formatBatteryText(char* out, size_t cap, float volts);
 
 bool isLowBattery(float volts);
 
+// Una LiPo/Li-ion non supera 4,2 V (4,35 V le celle ad alta tensione). Sulla T3 senza batteria, con l'USB
+// collegato, l'ADC legge la tensione del caricatore (misurati 4,24-4,42 V): sopra questo limite la lettura
+// non e' una batteria e va mostrata come non disponibile.
+constexpr float kMaxBatteryVolts = 4.35f;
+
+// volts se plausibile, altrimenti -1 (non disponibile). Valori negativi restano -1.
+float plausibleBatteryVolts(float volts);
+
 // Media mobile delle ultime N letture, per smussare il rumore dell'ADC senza bloccare il ciclo
 // principale (Guzman prende 20 letture in 60 ms con delay: qui una lettura ogni tanto).
 class AverageFilter {

@@ -23,6 +23,18 @@ static void testText() {
   CHECK(formatBatteryText(nullptr, 10, 4.0f) == 0 && formatBatteryText(t, 0, 4.0f) == 0);
 }
 
+static void testPlausible() {
+  CHECK(plausibleBatteryVolts(4.20f) == 4.20f);
+  CHECK(plausibleBatteryVolts(4.35f) == 4.35f);
+  CHECK(plausibleBatteryVolts(4.36f) == -1.0f);
+  CHECK(plausibleBatteryVolts(4.42f) == -1.0f);  // misurato sulla T3 con solo USB
+  CHECK(plausibleBatteryVolts(0.0f) == 0.0f);
+  CHECK(plausibleBatteryVolts(-1.0f) == -1.0f);
+  char t[24];
+  formatBatteryText(t, sizeof(t), plausibleBatteryVolts(4.42f));
+  CHECK(strcmp(t, "(Batt=--)") == 0);
+}
+
 static void testLow() {
   CHECK(isLowBattery(3.39f));
   CHECK(isLowBattery(1.84f));
@@ -53,6 +65,7 @@ static void testFilter() {
 int main() {
   testText();
   testLow();
+  testPlausible();
   testFilter();
   TEST_MAIN_END();
 }
