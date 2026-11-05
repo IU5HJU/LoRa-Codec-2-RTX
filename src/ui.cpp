@@ -124,12 +124,13 @@ void UiNotifier::drawTestReport() {
   display_.setCursor(0, 38);
   display_.printf("%s %s", testFromRemote_ ? "Risposta" : "Ricevuta da", testCall_[0] ? testCall_ : "-");
   display_.setCursor(0, 47);
-  display_.printf("ok %u persi %u dann. %u", r.framesOk, r.framesLost, r.framesBad);
+  display_.printf("ok %u pers %u dan %u", r.framesOk, r.framesLost, r.framesBad);  // max 21 caratteri
   display_.setCursor(0, 56);
+  // Al massimo 21 caratteri (128 px): "rec 12 -120dBm -15dB" ne usa 20, oltre andrebbe a capo.
   if (r.snrValid) {
-    display_.printf("rec %u RSSI %d SNR %d", r.recovered, r.rssiDbm, r.snrDb);
+    display_.printf("rec %u %ddBm %ddB", r.recovered, r.rssiDbm, r.snrDb);
   } else {
-    display_.printf("rec %u RSSI %d", r.recovered, r.rssiDbm);
+    display_.printf("rec %u %ddBm", r.recovered, r.rssiDbm);
   }
   display_.display();
 }

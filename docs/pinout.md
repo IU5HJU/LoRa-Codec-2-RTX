@@ -89,7 +89,7 @@ Collegare sempre l'antenna a 433 MHz **prima** di alimentare o trasmettere: senz
 
 ## LILYGO T-Beam V1.2 (AXP2101)
 
-**Fase 1: supporto scritto, compilato e provato sulla scheda (4 novembre 2026):** avvio, AXP2101, radio, tasto IO38 come PTT, trasmissione ricevuta da una T3 con SNR circa 11 dB. Ancora da provare: audio (microfono, amplificatore, altoparlante).
+**Fase 1: supporto scritto, compilato e provato sulla scheda (4-5 novembre 2026):** avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, trasmissione e ricezione con la T3 (SNR circa 11-12 dB a 1-2 m). Ancora da provare: audio (microfono, amplificatore, altoparlante) sulla T-Beam.
 Scheda riconosciuta dalla serigrafia **T-BEAM-AXP2101-V1.2** (2023-05-08): ESP32 con 4 MB di flash (e 8 MB di PSRAM, non usata),
 modulo LoRa "LORA32 433/470MHz" (famiglia SX127x come la T3; il primo avvio lo conferma, RadioLib controlla il chip),
 GPS u-blox NEO-6M, **OLED** SSD1306 montato, tasti PWR / IO38 / RST, pila a bottone per il GPS, vano per la batteria 18650.

@@ -29,7 +29,7 @@ Durata massima di un turno: **30 s** (750 frame). Al limite la trasmissione si c
 ## Formato del pacchetto
 
 ```
-byte 0     versione (4 bit alti, = 1) | modo Codec2 (4 bit bassi, 1 = 1200 bps)
+byte 0     versione (4 bit alti, = 1) | modo (4 bit bassi: 1 = Codec2 1200 bps, 2 = prova di collegamento, 3 = risposta alla prova)
 byte 1-2   ID di sessione (casuale per ogni PTT), big endian
 byte 3     numero di sequenza (0..127)
 byte 4     flag
@@ -45,6 +45,19 @@ Il payload dei pacchetti dati è una sequenza di frame Codec2 da 6 byte (0-12 fr
 Dimensione massima sul canale: 5 + 9 + 75 = 89 byte.
 
 Il nominativo viaggia in chiaro e il contenuto non è cifrato, come richiesto dalla normativa radioamatoriale.
+
+## Pausa tra i pacchetti
+
+Il trasmettitore lascia **80 ms** tra la fine di un pacchetto e l'inizio del successivo (`kInterPacketGapMs`). La radio SX127x ha un solo FIFO: se il pacchetto seguente
+(tipicamente la parità, subito dopo il quarto dato) arriva prima che il ricevitore abbia letto il precedente, lo sovrascrive. Il ricevitore impiega fino a circa 27 ms a leggere
+un pacchetto quando è occupato (misurato sulla T3); con l'altoparlante sarà di più.
+
+## Prova di collegamento (modi 2 e 3)
+
+Nel modo 2 i frame non sono voce ma una sequenza pseudocasuale determinata da (sessione, numero del frame): il ricevitore la rigenera e la confronta bit per bit, senza riprodurre audio.
+Una prova dura 300 frame (12 s) con gli stessi pacchetti e la stessa parità della voce. Con la prova attiva anche sul ricevitore, questo risponde dopo circa 0,7 s con un solo pacchetto di modo 3
+(`START`+`END`, nominativo, stessa sessione) che porta 12 byte: frame consegnati, ok, danneggiati, persi, pacchetti recuperati, RSSI e SNR medi. Un ricevitore con una versione precedente scarta i pacchetti di modo sconosciuto.
+Dettagli in [prova-collegamento.md](prova-collegamento.md).
 
 ## Parità XOR
 

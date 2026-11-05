@@ -1,11 +1,11 @@
 # Roadmap e decisioni
 
-Aggiornato il 3 novembre 2026. Ordine di lavoro concordato: prima la prima trasmissione,
-poi TOT e profili, poi la pagina web di configurazione.
+Aggiornato il 5 novembre 2026. Ordine di lavoro concordato: prima la voce a turni (manca l'hardware audio), poi TOT e profili.
+Già fatti, in anticipo: pagina web di installazione e configurazione, impostazioni nella scheda, prova di collegamento.
 
-## 1. Prima trasmissione (in corso)
+## 1. Prima trasmissione (fatta; resta la voce)
 
-Procedura in [firmware.md](firmware.md). Stato: schede arrivate; il firmware compila su GitHub Actions; la prima prova sulla scheda è in attesa (IU5HJU, Windows). Un collega si aggiunge alle prove.
+Procedura in [firmware.md](firmware.md). Stato al 5 novembre: **collegamento radio provato nei due versi** tra T-Beam e T3, microfono provato sulla T3, prova di collegamento funzionante. Manca la voce: servono amplificatore e altoparlante (spedizione parziale in attesa).
 Regola ferma: **mai alimentare una scheda senza antenna**, nemmeno via USB per caricare il firmware.
 
 ## 2. TOT fino a 3 minuti e profili (dopo la prima trasmissione)
@@ -45,16 +45,16 @@ Modifiche al codice previste:
 ospitata su GitHub Pages, insieme al flasher. Il Wi-Fi sulla scheda resta come seconda fase.
 Fatto: impostazioni nella memoria della scheda (nominativo, frequenza, potenza) e comandi `CFG` sulla
 seriale, con test sul PC ([firmware.md](firmware.md#impostazioni-senza-ricompilare)).
-Fatta anche la pagina (`site/index.html`, flasher e configurazione via Web Serial), pubblicata da Actions su GitHub Pages; da provare con le schede. 
+Fatta anche la pagina (`site/index.html`, flasher e configurazione via Web Serial), pubblicata da Actions su GitHub Pages; provata con Chrome su Linux. 
 
 - Entrata con pressione lunga (3 s) sul pulsante volume (GPIO15) a scheda ferma; in quella modalità la **trasmissione è disattivata**.
 - La scheda crea un Wi-Fi proprio (`LoRaCodec2-XXXX`, password sull'OLED); pagina su `192.168.4.1`; salvataggio in memoria non volatile e riavvio.
 - Impostazioni: nominativo, frequenza (limitata ai 70 cm), SF/BW/CR/potenza/sync, parità, **TOT**, livello/profilo, guadagno microfono, AGC, volume.
 - Regole di validazione nel core (testabili sul PC); server web con le librerie già incluse nell'ESP32.
 
-## Prova di collegamento (fatta nel nucleo, da provare)
+## Prova di collegamento (fatta e provata)
 
-Sequenza di frame noti confrontata bit per bit, con risposta automatica; vedi [prova-collegamento.md](prova-collegamento.md). Livelli 2 e 3 (autotest del codec, prova dell'altoparlante) da fare con l'hardware audio.
+Sequenza di frame noti confrontata bit per bit, con risposta automatica; vedi [prova-collegamento.md](prova-collegamento.md). Provata sulle schede il 5 novembre. Livelli 2 e 3 (autotest del codec, prova dell'altoparlante) da fare con l'hardware audio.
 
 ## 4. Flasher web (dopo la configurazione a runtime)
 
@@ -74,4 +74,4 @@ Sequenza di frame noti confrontata bit per bit, con risposta automatica; vedi [p
 
 - Frequenza di lavoro: ancora il segnaposto 433,900 MHz in `src/user_config.h`, da scegliere col band plan IARU R1 / ARI.
 - Licenza: scelta la **GPL-3.0** (file `LICENSE`), coerente con la libreria `esp32_codec2` (vedi [firmware.md](firmware.md)).
-- Prove su scheda: T3 con avvio, OLED, PTT e trasmissione (3 novembre); ricezione, audio e T-Beam ancora da provare (vedi [prove.md](prove.md)).
+- Prove su scheda: collegamento nei due versi tra T-Beam e T3, microfono, prova di collegamento (5 novembre); altoparlante e voce a turni ancora da provare (vedi [prove.md](prove.md)).

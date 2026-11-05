@@ -5,7 +5,7 @@ Schede supportate (un ambiente PlatformIO e un artefatto di Actions ciascuna):
 | Scheda | Ambiente | Artefatto di GitHub Actions | Stato |
 |---|---|---|---|
 | LILYGO LoRa32 T3 V1.6.1 | `lora32` | `firmware-t3-v161` | provata: avvio, OLED, PTT, trasmissione |
-| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **fase 1: provata** (avvio, AXP2101, radio, tasto IO38 come PTT, trasmissione); audio da provare |
+| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **fase 1: provata** (avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, trasmissione e ricezione, batteria sull'OLED); audio da provare |
 
 I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 
@@ -13,9 +13,9 @@ I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 > solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
 > carico si può danneggiare. Prima l'antenna, poi il cavo USB.
 
-**Stato (3 novembre 2026).** Compila con PlatformIO su GitHub Actions. **Provato sulla scheda**
-(una sola scheda, senza microfono né amplificatore): avvio fino a "ASCOLTO", OLED, PTT e
-trasmissione. **Ancora da provare:** ricezione tra due schede, microfono, altoparlante e voce a turni.
+**Stato (5 novembre 2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam, senza
+amplificatore né altoparlante): avvio fino a "ASCOLTO", OLED, PTT, trasmissione e ricezione nei due versi, microfono (livelli),
+impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da provare:** altoparlante e voce a turni (manca l'hardware).
 Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protocollo
 (`lib/voicecore/`) è testata sul PC. Il workflow `.github/workflows/build.yml` produce
 `web_factory.bin` e `ota_update.bin` come artefatti di ogni esecuzione.
@@ -30,8 +30,13 @@ Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protoco
 | `src/audio_io.*` | I2S full duplex a 16 kHz, task di cattura, pre-roll, amplificatore, toni (`IAudioIn`/`IAudioOut`) |
 | `src/ui.*` | OLED SSD1306 128x64 e segnali acustici (`INotifier`) |
 | `src/board_pins.h`, `src/board_pins_t3_v161.h`, `src/board_pins_tbeam_v12.h` | Pin per scheda: `board_pins.h` sceglie il file in base al flag di compilazione |
+| `src/settings_nvs.*` | Impostazioni salvate nella memoria non volatile (NVS): nominativo, frequenza, potenza, volume |
+| `src/battery.*` | Tensione della batteria: AXP2101 sulla T-Beam, ADC su GPIO35 sulla T3 |
+| `lib/voicecore/settings.*` | Validazione delle impostazioni e comandi `CFG` (testati sul PC) |
+| `lib/voicecore/link_test.*` | Prova di collegamento: sequenza nota, confronto, esito |
+| `site/index.html`, `tools/make_site.sh` | Pagina web di installazione e configurazione, pubblicata su GitHub Pages dal workflow |
 | `src/pmu.*` | Alimentazione: sulla T-Beam inizializza l'AXP2101 (radio e GPS); sulla T3 non fa nulla |
-| `src/user_config.h` | Impostazioni (nominativo, frequenza, SF/BW, parità) |
+| `src/user_config.h` | Valori predefiniti (nominativo N0CALL, frequenza, SF/BW, parità, AGC del microfono, volume): le impostazioni salvate nella scheda li sostituiscono |
 
 ## Compilazione
 
@@ -144,9 +149,9 @@ All'avvio la seriale stampa la riga `CFG GET` in fondo al log. Il resto dei para
 ## Prima di trasmettere
 
 1. **Frequenza:** `LCR_FREQUENCY_MHZ` in `src/user_config.h` è un segnaposto. Scegliere il canale col band plan IARU R1 / ARI per i modi digitali sui 70 cm.
-2. **Nominativo:** `LCR_CALLSIGN` in `src/user_config.h` vale di default **`N0CALL`**, il segnaposto "nessun nominativo": con N0CALL (o NOCALL) la scheda **riceve ma non trasmette**, e l'OLED mostra "SOLO RX" all'avvio e "IMPOSTA NOMINATIVO" se premi il PTT. Per trasmettere inserisci il tuo nominativo (A-Z, 0-9, `/`, massimo 8 caratteri) e ricompila. In futuro lo imposterà la pagina di configurazione.
+2. **Nominativo:** vale di default **`N0CALL`**, il segnaposto "nessun nominativo": con N0CALL (o NOCALL) la scheda **riceve ma non trasmette**, e l'OLED mostra "SOLO RX" all'avvio e "IMPOSTA NOMINATIVO" se premi il PTT. Per trasmettere imposta il tuo (A-Z, 0-9, `/`, massimo 8 caratteri) dalla [pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/) o con `CFG SET CALLSIGN` dalla seriale, senza ricompilare. Oppure cambia `LCR_CALLSIGN` in `src/user_config.h` e ricompila.
 3. **Antenna** collegata prima di alimentare la scheda.
-4. **Potenza:** `LCR_TX_POWER_DBM` parte da 10 dBm per i test.
+4. **Potenza:** parte da 10 dBm per i test (`CFG SET POWER`, o `LCR_TX_POWER_DBM`).
 
 ## Primo avvio, in ordine
 

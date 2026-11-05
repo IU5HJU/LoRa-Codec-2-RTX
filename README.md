@@ -10,9 +10,10 @@ Funzionamento in breve:
 3. Al rilascio del PTT (massimo 30 s) si invia l'ultimo audio e il segnale di fine turno (OVER).
 4. Tutte le stazioni in ascolto sulla frequenza ricevono e riproducono. Dopo 5-10 s di attesa si risponde.
 
-> **Progetto sperimentale.** Il firmware compila e la logica è testata sul PC, ma **non è ancora stato
-> provato su hardware**. Possono trasmettere solo radioamatori con il proprio nominativo, sulle
-> frequenze e con le potenze consentite. Il nominativo viaggia in chiaro e i contenuti non sono cifrati.
+> **Progetto sperimentale.** Il collegamento radio è **provato sulle schede** (T-Beam e T3, nei due versi),
+> così come il microfono e la prova di collegamento; **la voce non è ancora stata ascoltata** (amplificatore e
+> altoparlante non sono ancora stati collegati). Possono trasmettere solo radioamatori con il proprio
+> nominativo, sulle frequenze e con le potenze consentite. Il nominativo viaggia in chiaro e i contenuti non sono cifrati.
 
 ## Per provare il firmware
 
@@ -27,17 +28,17 @@ Funzionamento in breve:
 
 **Passi:**
 
-1. **Nominativo.** Il firmware predefinito ha `N0CALL` e **non trasmette** (riceve soltanto). Ogni stazione deve usare il proprio nominativo in `LCR_CALLSIGN` (`src/user_config.h`). Il modo più semplice: fai un **fork** del repository, modifica quella riga direttamente dal sito GitHub e lascia che GitHub Actions compili nel tuo fork. Non usare i rami di prova di altri, che contengono il loro nominativo.
-2. **Senza Linux né PlatformIO:** quando la pagina è attiva (`https://iu5hju.github.io/LoRa-Codec-2-RTX/`) installi il firmware e imposti nominativo, frequenza e potenza dal browser (Chrome o Edge, cavo USB), senza i passi 1 e 3. Altrimenti, **scarica i binari** dall'esecuzione di GitHub Actions: artefatto `firmware-t3-v161` (T3) o `firmware-tbeam-v12` (T-Beam), serve essere loggati. Contiene `web_factory.bin` e `ota_update.bin`.
-3. **Carica `web_factory.bin` all'indirizzo `0x0`** sulla scheda: istruzioni per Windows in [docs/firmware.md](docs/firmware.md). In alternativa compila in locale con PlatformIO.
-4. **Frequenza.** Il valore predefinito in `src/user_config.h` è un **segnaposto**: scegli il canale con il band plan IARU R1 / ARI. Le stazioni che si ascoltano devono avere gli **stessi** parametri LoRa e la stessa frequenza.
+1. **Dal browser (il modo più semplice, anche senza Linux).** Apri la [pagina di installazione](https://iu5hju.github.io/LoRa-Codec-2-RTX/) con Chrome, Edge od Opera, collega la scheda con il cavo USB e premi "Installa il firmware". Poi, nel passo 2 della stessa pagina, imposta **nominativo**, frequenza, potenza e volume: restano salvati nella scheda. Il firmware pubblico ha `N0CALL` e **non trasmette** (riceve soltanto) finché non imposti il tuo nominativo.
+2. **In alternativa.** Scarica i binari dall'esecuzione di GitHub Actions (artefatto `firmware-t3-v161` o `firmware-tbeam-v12`, serve essere loggati; contengono `web_factory.bin` e `ota_update.bin`) e caricali con `web_factory.bin` all'indirizzo `0x0` ([docs/firmware.md](docs/firmware.md), anche per Windows), oppure compila in locale con PlatformIO. Per un firmware con il nominativo già dentro: fai un **fork**, cambia `LCR_CALLSIGN` in `src/user_config.h` dal sito GitHub e lascia compilare Actions. Non usare i rami di prova di altri, che contengono il loro nominativo. Dalla seriale si cambia tutto con i comandi `CFG` ([docs/firmware.md](docs/firmware.md)).
+3. **Frequenza.** Il valore predefinito è un **segnaposto**: scegli il canale con il band plan IARU R1 / ARI. Le stazioni che si ascoltano devono avere gli **stessi** parametri LoRa e la stessa frequenza.
+4. **Prova di collegamento (senza microfono né altoparlante).** Su due schede attiva la prova (pulsante nella pagina o `CFG TEST ON`) e premi il PTT: la scheda ricevente confronta una sequenza nota bit per bit, mostra l'esito sul display e risponde. Dettagli in [docs/prova-collegamento.md](docs/prova-collegamento.md).
 
 ## Per chi collabora
 
 - **`main` è il punto comune di partenza**: è sempre compilabile (GitHub Actions deve essere verde) e ha come nominativo `N0CALL`, quindi non trasmette finché non imposti il tuo.
 - **Come contribuire:** fai un fork, lavora su un ramo tuo e proponi le modifiche con una pull request. Prima di proporle esegui `make test`.
 - **Prove:** annota ogni prova in [docs/prove.md](docs/prove.md) con il modello indicato. Per un problema da risolvere apri una segnalazione (Issues).
-- **Decisioni e ordine dei lavori:** [docs/roadmap.md](docs/roadmap.md). Prossimi passi: ricezione tra due schede, voce a turni, TOT fino a 3 minuti con i profili, pagina web di configurazione, flasher web.
+- **Decisioni e ordine dei lavori:** [docs/roadmap.md](docs/roadmap.md). Prossimi passi: audio (altoparlante, voce a turni), TOT fino a 3 minuti con i profili, pagina web servita dalla scheda via Wi-Fi.
 
 ## Licenza
 
@@ -52,15 +53,18 @@ Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e colleg
 
 | Parte | Stato |
 |---|---|
-| Formato pacchetti, parità XOR, sessioni TX/RX | fatto, testato sul PC |
+| Formato pacchetti, parità XOR, sessioni TX/RX, pausa tra i pacchetti | fatto, testato sul PC |
 | Antirimbalzo del pulsante PTT (pin configurabile in `user_config.h`) | fatto, testato sul PC |
-| Catena audio del microfono (passa-alto, decimazione, AGC) e pre-roll | fatta, testata sul PC con segnali sintetici |
-| Blocco di uscita audio (AGC, volume, limitatore, raddoppio) | fatto, testato sul PC con segnali sintetici |
-| Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC con radio e audio simulati |
-| Mappa dei pin della T3 V1.6.1 e della T-Beam V1.2 con test dei conflitti | fatta (`src/board_pins*.h`, `docs/pinout.md`) |
-| Supporto T-Beam V1.2, fase 1 (alimentazione AXP2101, tasto IO38 come PTT, pin audio propri) | scritto, compilato e **provato sulla scheda** (avvio, AXP2101, radio, tasto IO38, trasmissione ricevuta da una T3). Audio da provare; GPS e batteria sull'OLED: fase successiva |
-| Adattatori hardware (RadioLib, Codec2, I2S, OLED, PTT, volume) | scritti, **compilano su GitHub Actions**; provati sulla scheda: avvio, OLED, PTT e trasmissione. Da provare: ricezione, microfono, altoparlante, voce (`docs/firmware.md`, `docs/prove.md`) |
-| Test radio reale, misura di portata e airtime | in corso: primo collegamento T-Beam -> T3 il 4 novembre (SNR circa 11 dB a 1-2 m); mancano il verso opposto e la voce |
+| Catena audio del microfono (passa-alto, decimazione, AGC) e pre-roll | fatta; **microfono INMP441 provato sulla T3** (livelli, soglia e guadagno dell'AGC tarati, vedi `docs/taratura-microfono.md`); audio non ancora ascoltato |
+| Blocco di uscita audio (AGC, volume, limitatore, raddoppio) | fatto, testato sul PC con segnali sintetici; amplificatore e altoparlante non ancora collegati |
+| Macchina a stati (PTT, CAD, TX, RX, limite 30 s) | fatta, testata sul PC e **provata sulle schede** (trasmissione nei due versi) |
+| Mappa dei pin della T3 V1.6.1 e della T-Beam V1.2 con test dei conflitti | fatta (`src/board_pins*.h`, `docs/pinout.md`), con schemi dei collegamenti di entrambe |
+| Supporto T-Beam V1.2, fase 1 (alimentazione AXP2101, tasto IO38 come PTT, batteria sull'OLED) | **provato sulla scheda** (avvio anche a batteria, radio, tasto, tensione batteria confrontata col tester). GPS: fase successiva |
+| Impostazioni nella scheda (nominativo, frequenza, potenza, volume) e comandi `CFG` | fatti e provati; salvate in NVS |
+| Pagina web di installazione e configurazione (GitHub Pages, Web Serial) | **online** e provata con Chrome su Linux |
+| Prova di collegamento (frame noti, confronto bit per bit, risposta automatica) | fatta e **provata sulle schede**: funziona; vedi `docs/prova-collegamento.md` |
+| Collegamento radio tra le schede | **provato nei due versi** (T-Beam <-> T3, RSSI e SNR in `docs/prove.md`); nessuna perdita a 1-2 m in prove da 30 s |
+| Altoparlante, voce a turni, misure di portata | in attesa dell'hardware (amplificatore e altoparlante) |
 
 ## Struttura
 

@@ -103,7 +103,7 @@ def show_message(font, line1, line2=None, callsign=CALLSIGN):
 
 
 def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, notice=None,
-                last=None, volume=7, callsign=CALLSIGN, battery=4.12):
+                last=None, volume=7, callsign=CALLSIGN, battery=4.12, test_mode=False):
     """Come UiNotifier::draw(). last = (nominativo, persi, recuperati) oppure None."""
     o = Oled(font)
     o.set_size(1)
@@ -114,7 +114,7 @@ def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, n
     o.set_size(2)
     o.set_cursor(0, 16)
     if state == "idle":
-        o.write("ASCOLTO")
+        o.write("PROVA ON" if test_mode else "ASCOLTO")
     elif state == "rx":
         o.write(f"RX {rx_call}")
     else:
@@ -125,7 +125,7 @@ def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, n
     if notice:
         o.write(notice)
     elif state == "tx":
-        o.write(f"Trasmissione {tx_seconds}/30 s")
+        o.write(f"Prova {tx_seconds}/12 s" if test_mode else f"Trasmissione {tx_seconds}/30 s")
     elif state == "rx":
         o.write(f"RSSI {rssi}  SNR {snr:.1f}")
     elif last:
@@ -133,7 +133,7 @@ def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, n
         o.set_cursor(0, 47)  # come src/ui.cpp
         o.write(f"persi {last[1]}  recup. {last[2]}")
     else:
-        o.write("Premi PTT per parlare")
+        o.write("PTT = invia la prova" if test_mode else "Premi PTT per parlare")
 
     o.set_cursor(0, 56)
     o.write(f"Vol {volume}/10")
@@ -147,6 +147,27 @@ def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, n
     o.set_cursor(bx, 56)
     o.write(txt)
     o.inverse = False
+    return o
+
+
+def draw_test_report(font, frames_ok, lost, bad, recovered, rssi, snr, call, remote=False, callsign=CALLSIGN):
+    """Come UiNotifier::drawTestReport(): esito della prova di collegamento (15 s)."""
+    pct = min(100, (100 * frames_ok + 150) // 300)
+    o = Oled(font)
+    o.set_size(1)
+    o.set_cursor(0, 0)
+    o.write(f"{callsign}  {FREQ} MHz")
+    o.hline(0, 10, 128)
+    o.set_size(2)
+    o.set_cursor(0, 16)
+    o.write(f"PROVA {pct}%")
+    o.set_size(1)
+    o.set_cursor(0, 38)
+    o.write(f"{'Risposta' if remote else 'Ricevuta da'} {call or '-'}")
+    o.set_cursor(0, 47)
+    o.write(f"ok {frames_ok} pers {lost} dan {bad}")  # max 21 caratteri
+    o.set_cursor(0, 56)
+    o.write(f"rec {recovered} {rssi}dBm {snr}dB")
     return o
 
 
@@ -180,6 +201,16 @@ def screens(font):
          draw_screen(font, battery=3.28)),
         ("14  Batteria assente", "T-Beam senza batteria: nessun valore da mostrare.",
          draw_screen(font, battery=-1.0)),
+        ("15  Prova di collegamento attiva", "A riposo con la prova attiva (CFG TEST ON): il PTT invia la prova.",
+         draw_screen(font, test_mode=True)),
+        ("16  Prova in trasmissione", "PTT premuto con la prova attiva: 12 secondi di frame noti.",
+         draw_screen(font, "tx", tx_seconds=5, test_mode=True)),
+        ("17  Esito della prova", "Ricevuta da un'altra scheda: frame ok, persi, danneggiati, pacchetti recuperati, RSSI e SNR medi. Resta 15 s.",
+         draw_test_report(font, 300, 0, 0, 0, -34, 12, "IU5HJU")),
+        ("18  Esito con perdite", "Con perdite (qui il caso peggiore: RSSI -120, SNR -15): 24 frame persi, 1 danneggiato.",
+         draw_test_report(font, 276, 24, 1, 12, -120, -15, "IU5HJU/P")),
+        ("19  Risposta alla prova", "Il ricevitore ha risposto con il suo risultato, mostrato sulla scheda che ha trasmesso.",
+         draw_test_report(font, 300, 0, 0, 0, -41, 11, "IZ5ABC", remote=True)),
     ]
 
 
