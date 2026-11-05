@@ -14,7 +14,7 @@ Per un problema da risolvere apri invece una segnalazione (Issues) e collega la 
 |---|---|
 | Data e luogo | 2026-11-03, casa |
 | Chi | IU5HJU |
-| Versione del firmware | commit `0466536`, artefatto di Actions, ramo `prova-iu5hju` |
+| Versione del firmware | commit `0466536`, artefatto di Actions o pagina web, ramo `main` |
 | Schede | 2 × LoRa32 T3 V1.6.1 |
 | Collegato | solo radio / microfono / altoparlante / tutto |
 | Frequenza e parametri | 433,900 MHz, SF8, BW250, CR 4/5, 10 dBm, parità on |
@@ -67,6 +67,8 @@ Ogni livello presuppone che il precedente funzioni.
 ```
 
 ### Prove effettuate
+
+> **Nota sul ramo `prova-iu5hju`.** Le prove fino al 5 novembre 2026 citano il ramo `prova-iu5hju`: era `main` con il nominativo dell'autore compilato nel firmware. Dal 5 novembre il nominativo si imposta dalla pagina web e il ramo, come `tbeam-fase1`, è stato eliminato: la sola differenza con `main` era quella riga. Le voci seguenti restano com'erano scritte.
 
 ### 2026-11-03, casa, IU5HJU (prova con una sola scheda)
 

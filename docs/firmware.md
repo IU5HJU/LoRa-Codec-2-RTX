@@ -62,7 +62,8 @@ Il workflow di GitHub Actions compila a ogni modifica. Per averlo col **proprio 
    - `ota_update.bin`: solo l'applicazione, per gli aggiornamenti futuri;
    - `SHA256SUMS`: somme di controllo.
 
-Non usare i rami di prova di altri radioamatori (per esempio `prova-iu5hju`): contengono il loro nominativo.
+Il firmware di `main` ha il nominativo `N0CALL` e non trasmette: il tuo lo imposti **dalla [pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/) o con `CFG SET CALLSIGN`, senza ricompilare**, e resta salvato nella scheda anche dopo un aggiornamento. Non serve più un ramo personale con il nominativo dentro.
+Se fai un fork con un nominativo compilato in `src/user_config.h`, non usare i binari di altri radioamatori che ne contengono uno diverso dal tuo.
 
 ## Caricare il firmware sulla scheda (Linux, provato su Ubuntu 24.04)
 
