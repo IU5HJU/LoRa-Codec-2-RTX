@@ -213,9 +213,10 @@ void loop() {
   if (pttDown && now - lastMicLogMs >= 500) {
     lastMicLogMs = now;
     const float peak = audio.micPeakDb();
-    Serial.printf("[mic] livello %.0f dBFS, picco %.0f dBFS, offset %.1f%%, AGC %.0f dB, errori %u%s\n",
+    Serial.printf("[mic] livello %.0f dBFS, picco %.0f dBFS, offset %.1f%%, AGC in %.0f dBFS, guadagno %.0f dB, errori %u%s\n",
                   static_cast<double>(audio.micRmsDb()), static_cast<double>(peak),
-                  static_cast<double>(audio.micDcPercent()), static_cast<double>(audio.micGainDb()),
+                  static_cast<double>(audio.micDcPercent()), static_cast<double>(audio.micAgcInDb()),
+                  static_cast<double>(audio.micGainDb()),
                   static_cast<unsigned>(audio.micErrors()),
                   peak < -80.0f ? "  <- silenzio: controlla i cavi o prova LCR_MIC_SLOT 1" : (peak > -3.0f ? "  <- saturazione" : ""));
   }

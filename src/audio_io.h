@@ -43,6 +43,7 @@ class AudioIo {
   float micPeakDb() const { return micPeakDb_; }  // picco
   float micDcPercent() const { return micDcPct_; }  // offset continuo, % del fondo scala
   float micGainDb() const { return front_.gainDb(); }  // guadagno attuale dell'AGC
+  float micAgcInDb() const { return front_.agcInputDb(); }  // livello visto dall'AGC (dopo il passa-alto)
 
  private:
   // Microfono con pre-roll protetto da mutex (task di cattura <-> loop principale).

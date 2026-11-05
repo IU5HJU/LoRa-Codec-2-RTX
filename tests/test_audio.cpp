@@ -124,6 +124,7 @@ static void testAgcIgnoresNoise() {
     fe.processFrame(in, out);
   }
   CHECK(std::fabs(fe.gainDb() - g0) < 0.1);
+  CHECK(fe.agcInputDb() < -70.0f);  // il livello letto dall'AGC e' quello del rumore
 }
 
 static void testClipsWithoutWrapping() {

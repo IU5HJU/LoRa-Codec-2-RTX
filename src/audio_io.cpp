@@ -17,6 +17,13 @@ lcr::BackEndConfig backConfig() {
   c.upsample2x = true;  // il microfono e l'I2S lavorano a 16 kHz
   return c;
 }
+
+lcr::FrontEndConfig frontConfig() {
+  lcr::FrontEndConfig c;
+  c.agc.maxGainDb = LCR_MIC_AGC_MAX_GAIN_DB;
+  c.agc.gateDbfs = LCR_MIC_AGC_GATE_DBFS;
+  return c;
+}
 }  // namespace
 
 // ---- SafeMic ----
@@ -57,7 +64,7 @@ uint32_t AudioIo::SafeMic::overruns() {
 
 // ---- AudioIo ----
 
-AudioIo::AudioIo() : speaker_(*this), back_(backConfig()) {
+AudioIo::AudioIo() : speaker_(*this), front_(frontConfig()), back_(backConfig()) {
   memset(rxStereo_, 0, sizeof(rxStereo_));
   memset(micMono_, 0, sizeof(micMono_));
   memset(micPcm_, 0, sizeof(micPcm_));

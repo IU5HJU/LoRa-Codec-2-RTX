@@ -39,3 +39,10 @@
 
 // OLED SSD1306 (128x64, indirizzo 0x3C) sulla T3 V1.6.1.
 #define LCR_OLED_ADDRESS 0x3C
+
+// Sensibilita' del microfono (AGC). In silenzio l'AGC alza il guadagno fino al massimo: se il fondo
+// e' piu' alto della soglia lo amplifica come fosse voce. Con il PTT premuto la seriale stampa
+// "AGC in" (livello visto dall'AGC, dopo il passa-alto): la soglia va messa 3-6 dB sopra quello
+// che si legge in silenzio e sotto quello che si legge parlando.
+#define LCR_MIC_AGC_MAX_GAIN_DB 30.0f  // guadagno massimo (era 36)
+#define LCR_MIC_AGC_GATE_DBFS -70.0f   // sotto questo livello il guadagno non sale

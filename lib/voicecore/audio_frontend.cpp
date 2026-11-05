@@ -78,6 +78,7 @@ void Agc::process(float* x, size_t n) {
   for (size_t i = 0; i < n; i++) sumSq += static_cast<double>(x[i]) * x[i];
   const float rms = static_cast<float>(std::sqrt(sumSq / static_cast<double>(n)));
   const float rmsDb = 20.0f * std::log10(rms + 1e-9f);
+  inputDb_ = rmsDb;
 
   const float before = gainDb_;
   if (rmsDb > cfg_.gateDbfs) {

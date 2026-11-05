@@ -62,11 +62,18 @@ class Agc {
   // Normalizza il frame (campioni float in [-1, 1]) con guadagno interpolato.
   void process(float* x, size_t n);
   float gainDb() const { return gainDb_; }
-  void reset() { gainDb_ = cfg_.initialGainDb; }
+  // Livello RMS (dBFS) dell'ultimo frame all'ingresso dell'AGC, cioe' dopo il passa-alto: e' il valore
+  // che l'AGC confronta con la soglia (gateDbfs).
+  float inputDb() const { return inputDb_; }
+  void reset() {
+    gainDb_ = cfg_.initialGainDb;
+    inputDb_ = -120.0f;
+  }
 
  private:
   AgcConfig cfg_;
   float gainDb_;
+  float inputDb_ = -120.0f;
 };
 
 struct FrontEndConfig {
@@ -83,6 +90,7 @@ class AudioFrontEnd {
   // out: kFrameSamples campioni int16 a 8 kHz.
   void processFrame(const int32_t* in, int16_t* out);
   float gainDb() const { return cfg_.agcEnabled ? agc_.gainDb() : cfg_.fixedGainDb; }
+  float agcInputDb() const { return agc_.inputDb(); }
   void reset();
 
  private:
