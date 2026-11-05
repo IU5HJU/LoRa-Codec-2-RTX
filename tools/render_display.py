@@ -217,6 +217,10 @@ def screens(font):
          draw_test_report(font, 300, 0, 0, 0, -41, 11, "IZ5ABC", remote=True)),
         ("20  Prova interrotta (parziale)", "PTT rilasciato presto: i 7 frame arrivati sono perfetti (100%), ma la prova non e' completa.",
          draw_test_report(font, 7, 0, 0, 0, -33, 12, "IU5HJU")),
+        ("21  Tre clic: prova attivata", "Tre pressioni veloci del PTT attivano la prova (due bip acuti). L'avviso resta 1,5 s.",
+         draw_screen(font, notice="PROVA ATTIVA", test_mode=True)),
+        ("22  Tre clic: prova spenta", "Altri tre clic la disattivano (un bip grave).",
+         draw_screen(font, notice="PROVA SPENTA")),
     ]
 
 

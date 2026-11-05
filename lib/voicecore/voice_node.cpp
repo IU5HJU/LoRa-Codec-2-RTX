@@ -14,24 +14,58 @@ uint16_t VoiceNode::makeSessionId() {
 }
 
 void VoiceNode::pttPressed(uint32_t nowMs) {
-  // Senza un nominativo reale (N0CALL) non si trasmette: la ricezione funziona.
-  if (isPlaceholderCallsign(cfg_.callsign)) {
-    notify_.pttDenied(DenyReason::NoCallsign);
-    return;
-  }
   if (state_ == State::Transmitting) {
     notify_.pttDenied(DenyReason::Transmitting);
     return;
   }
   if (state_ == State::Receiving) {
+    clickCount_ = 0;
+    notify_.pttDenied(DenyReason::Receiving);
+    return;
+  }
+  // A riposo la pressione e' un clic oppure l'inizio di una trasmissione: lo si capisce da quanto dura.
+  if (clickCount_ > 0 && nowMs - lastClickMs_ > kPttClickGapMs) clickCount_ = 0;
+  if (clickCount_ >= 2) {
+    // Terzo clic veloce: attiva o disattiva la prova di collegamento, senza trasmettere.
+    clickCount_ = 0;
+    testMode_ = !testMode_;
+    notify_.testModeChanged(testMode_);
+    return;
+  }
+  pendingStart_ = true;
+  pressMs_ = nowMs;
+  // Il microfono si bufferizza subito, cosi' l'inizio della frase non si perde.
+  if (!testMode_ && !micStarted_) {
+    in_.start();
+    micStarted_ = true;
+  }
+}
+
+void VoiceNode::beginPtt(uint32_t nowMs) {
+  // Senza un nominativo reale (N0CALL) non si trasmette: la ricezione funziona.
+  if (isPlaceholderCallsign(cfg_.callsign)) {
+    stopMic();
+    notify_.pttDenied(DenyReason::NoCallsign);
+    return;
+  }
+  if (state_ == State::Receiving) {
+    stopMic();
     notify_.pttDenied(DenyReason::Receiving);
     return;
   }
   if (radio_.channelBusy()) {
+    stopMic();
     notify_.pttDenied(DenyReason::ChannelBusy);
     return;
   }
   startTx(nowMs);
+}
+
+void VoiceNode::stopMic() {
+  if (micStarted_) {
+    in_.stop();
+    micStarted_ = false;
+  }
 }
 
 void VoiceNode::startTx(uint32_t nowMs) {
@@ -53,24 +87,40 @@ void VoiceNode::startTx(uint32_t nowMs) {
   state_ = State::Transmitting;
   // La bufferizzazione del microfono parte subito; il primo pacchetto
   // (nominativo) viene inviato al primo tick mentre l'audio si accumula.
-  if (!txTest_) in_.start();  // nella prova non serve il microfono
+  if (!txTest_ && !micStarted_) {  // nella prova non serve il microfono
+    in_.start();
+    micStarted_ = true;
+  }
   tx_.begin();
   notify_.txStarted();
 }
 
 void VoiceNode::pttReleased(uint32_t nowMs) {
-  (void)nowMs;
+  if (pendingStart_) {
+    // Pressione breve: un clic. Non si e' trasmesso nulla; tre clic veloci cambiano il modo prova.
+    pendingStart_ = false;
+    stopMic();
+    if (clickCount_ < 2) clickCount_++;
+    lastClickMs_ = nowMs;
+    return;
+  }
   if (state_ == State::Transmitting && !releasing_) finishCapture(false);
 }
 
 void VoiceNode::finishCapture(bool limit) {
-  if (!txTest_) in_.stop();
+  stopMic();
   tx_.finish();
   releasing_ = true;
   limitHit_ = limit;
 }
 
 void VoiceNode::tick(uint32_t nowMs) {
+  // PTT rimasto premuto oltre la durata di un clic: inizia la trasmissione (o il rifiuto, con il motivo).
+  if (pendingStart_ && static_cast<int32_t>(nowMs - pressMs_) >= static_cast<int32_t>(kPttClickMaxMs)) {
+    pendingStart_ = false;
+    clickCount_ = 0;
+    beginPtt(nowMs);
+  }
   if (state_ == State::Transmitting) {
     txTick(nowMs);
   } else {

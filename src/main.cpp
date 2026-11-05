@@ -164,7 +164,6 @@ static void serviceConsole() {
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio
-      ui.setTestMode(console->testMode());
       if (r == lcr::ConsoleResult::Reboot) {
         Serial.flush();
         delay(100);
@@ -225,6 +224,15 @@ void loop() {
   }
 
   node->tick(now);
+
+  // Modo prova cambiato (comando CFG TEST o tre clic sul PTT): lo stato del nodo e' quello che vale.
+  static bool lastTestMode = false;
+  if (node->testMode() != lastTestMode) {
+    lastTestMode = node->testMode();
+    console->setTestMode(lastTestMode);
+    ui.setTestMode(lastTestMode);
+    Serial.printf("[prova] modo prova %s\n", lastTestMode ? "ATTIVO" : "spento");
+  }
 
   // Fine ricezione: riga di diagnostica sui pacchetti (vedi docs/prove.md).
   static lcr::VoiceNode::State prevState = lcr::VoiceNode::State::Idle;

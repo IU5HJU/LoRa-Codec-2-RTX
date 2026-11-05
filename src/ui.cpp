@@ -115,6 +115,19 @@ void UiNotifier::linkTestReport(bool fromRemote, const char* callsign, const lcr
   }
 }
 
+void UiNotifier::testModeChanged(bool on) {
+  notice_ = on ? "PROVA ATTIVA" : "PROVA SPENTA";
+  noticeUntilMs_ = millis() + 1500;
+  testMode_ = on;
+  dirty_ = true;
+  if (on) {
+    audio_.beep(1000, 60);
+    audio_.beep(1400, 60);
+  } else {
+    audio_.beep(500, 120);
+  }
+}
+
 void UiNotifier::drawTestReport() {
   const lcr::TestReport& r = testRep_;
   display_.setTextSize(2);

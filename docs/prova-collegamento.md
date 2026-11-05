@@ -20,12 +20,18 @@ Misurare frequenza e ampiezza dopo il decodificatore darebbe falsi allarmi sul c
 
 ## Come si usa
 
-1. Su **entrambe** le schede: `CFG TEST ON` dalla seriale, oppure il pulsante "Attiva la prova" nella [pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/). Sull'OLED a riposo compare "PROVA ON".
+1. Su **entrambe** le schede attiva la prova in uno di questi tre modi: **tre pressioni veloci del PTT** (due bip acuti e avviso "PROVA ATTIVA"; altre tre la spengono con un bip grave), `CFG TEST ON` dalla seriale, oppure il pulsante "Attiva la prova" nella [pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/). Sull'OLED a riposo compare "PROVA ON".
    La prova **non è salvata**: all'accensione è sempre spenta, così nessuna scheda resta in prova per errore.
 2. Premi il PTT su una scheda (serve un nominativo vero: con N0CALL il PTT è bloccato). Dura 12 s, o meno se rilasci prima.
 3. Sul ricevitore compare la schermata "PROVA 99%" per 15 s, con la riga sulla seriale:
    `PROVA ricevuta da IU5HJU: ok 296/300 (99%), danneggiati 1, persi 3, pacchetti recuperati 5, RSSI -92 dBm, SNR 6 dB`.
    Sul trasmettitore, se risponde, la stessa schermata con "Risposta" e la riga `PROVA risposta da IZ5ABC: ...`. Due bip acuti = nessuna perdita tra i frame arrivati, un bip grave = c'è stata qualche perdita.
+
+## Tre clic sul PTT
+
+Una pressione del PTT più breve di **0,3 s** è un "clic" e non trasmette: la trasmissione parte solo se il PTT resta premuto oltre 0,3 s (il microfono è comunque bufferizzato dalla pressione, quindi non si perde l'inizio della frase;
+il nominativo parte con 0,3 s di ritardo). Tre clic, ciascuno entro 0,5 s dal precedente, attivano o disattivano la prova. Funziona anche con N0CALL (si riceve e si misura, ma non si risponde). Con una scheda che sta ricevendo i clic sono ignorati.
+Una terza pressione subito dopo due clic è sempre il terzo clic, anche se tenuta premuta: per trasmettere dopo due clic basta aspettare mezzo secondo.
 
 ## Prova parziale
 

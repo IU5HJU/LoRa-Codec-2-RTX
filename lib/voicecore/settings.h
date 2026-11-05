@@ -82,6 +82,8 @@ class SettingsConsole {
 
   // Prova di collegamento: NON viene salvata, all'accensione e' sempre spenta.
   bool testMode() const { return testMode_; }
+  // Allinea lo stato quando la prova viene attivata o disattivata da tre clic sul PTT.
+  void setTestMode(bool on) { testMode_ = on; }
 
  private:
   ConsoleResult get(char* reply, size_t cap);

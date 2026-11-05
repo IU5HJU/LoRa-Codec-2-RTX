@@ -34,6 +34,7 @@ class UiNotifier : public lcr::INotifier {
   void rxStarted() override;
   void rxCallsign(const char* callsign) override;
   void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) override;
+  void testModeChanged(bool on) override;
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
 
   // Prova di collegamento attiva: lo schermo a riposo lo dice.

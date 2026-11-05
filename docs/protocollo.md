@@ -7,8 +7,8 @@ Nessun indirizzamento, nessun ACK: chiunque sia in ascolto sulla frequenza decod
 
 | # | Evento |
 |---|---|
-| 1 | Pressione del PTT. Se il canale è occupato (CAD) o si sta ricevendo, il PTT è rifiutato. |
-| 2 | Il microfono viene bufferizzato **subito**. |
+| 1 | Pressione del PTT. Una pressione più breve di 0,3 s è un "clic" e non trasmette (tre clic veloci attivano la prova di collegamento); se il PTT resta premuto oltre 0,3 s e il canale è occupato (CAD) o si sta ricevendo, il PTT è rifiutato. |
+| 2 | Il microfono viene bufferizzato **subito** (dalla pressione, anche durante i 0,3 s di attesa). |
 | 3 | Primo pacchetto: `START` + nominativo (nessun frame audio). |
 | 4 | Codifica Codec2 e trasmissione man mano, con la bufferizzazione che continua. |
 | 5 | Rilascio del PTT (o 30 s): stop del microfono, si svuota il buffer residuo e si invia `END` + nominativo (OVER) e l'ultima parità. |

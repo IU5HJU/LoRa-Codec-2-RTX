@@ -117,6 +117,8 @@ class Notifier : public lcr::INotifier {
     lostFrames = lost;
     recovered = rec;
   }
+  void testModeChanged(bool on) override { testModeChanges.push_back(on); }
+  std::vector<bool> testModeChanges;
   void linkTestReport(bool fromRemote, const char* cs, const lcr::TestReport& r) override {
     reports.push_back({fromRemote, cs, r});
   }

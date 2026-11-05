@@ -65,6 +65,8 @@ class INotifier {
     (void)lostFrames;
     (void)recoveredPackets;
   }
+  // La prova di collegamento e' stata attivata o disattivata da tre clic sul PTT.
+  virtual void testModeChanged(bool on) { (void)on; }
   // Esito di una prova di collegamento. fromRemote = false: misurato qui sul pacchetti ricevuti;
   // true: risposta della stazione 'callsign' alla prova trasmessa da questa scheda.
   virtual void linkTestReport(bool fromRemote, const char* callsign, const TestReport& r) {

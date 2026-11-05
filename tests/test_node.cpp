@@ -70,13 +70,15 @@ static void testOneTurn() {
   Sim s;
   s.run(100);
   s.a.node.pttPressed(s.clock);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle);  // la trasmissione parte solo se il PTT resta premuto
+  s.run(kPttClickMaxMs + 50);
   CHECK(s.a.node.state() == VoiceNode::State::Transmitting);
   s.run(3000);
   s.a.node.pttReleased(s.clock);
   s.run(6000);
 
   const int n = static_cast<int>(s.a.mic.produced());
-  CHECK(n >= 70 && n <= 76);  // ~3 s di voce
+  CHECK(n >= 80 && n <= 88);  // ~3,35 s: il microfono e' bufferizzato dalla pressione, non dalla partenza della TX
   CHECK(s.b.spk.played == seq(n));
   CHECK(s.b.note.callsign == "IU5HJU");
   CHECK(s.b.note.rxStarts == 1 && s.b.note.rxEnds == 1);
@@ -84,6 +86,107 @@ static void testOneTurn() {
   CHECK(s.a.node.state() == VoiceNode::State::Idle);
   CHECK(s.b.node.state() == VoiceNode::State::Idle);
   CHECK(s.a.spk.played.empty());  // chi trasmette non riproduce
+}
+
+// Premi e rilascia il PTT dopo 'holdMs'; poi attende 'gapMs'.
+static void click(Sim& s, uint32_t holdMs, uint32_t gapMs) {
+  s.a.node.pttPressed(s.clock);
+  s.run(holdMs);
+  s.a.node.pttReleased(s.clock);
+  s.run(gapMs);
+}
+
+static void testTripleClickTogglesTestMode() {
+  Sim s;
+  s.run(100);
+  CHECK(!s.a.node.testMode());
+  click(s, 100, 150);
+  click(s, 100, 150);
+  CHECK(!s.a.node.testMode());  // dopo due clic non cambia ancora nulla
+  s.a.node.pttPressed(s.clock);  // terzo clic
+  CHECK(s.a.node.testMode());
+  CHECK(s.a.note.testModeChanges.size() == 1 && s.a.note.testModeChanges[0]);
+  s.run(120);
+  s.a.node.pttReleased(s.clock);
+  s.run(1000);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle);
+  CHECK(s.air.sent[0] == 0 && s.a.note.txStarts == 0);  // nessuna trasmissione per i clic
+
+  // Altri tre clic la disattivano.
+  click(s, 100, 150);
+  click(s, 100, 150);
+  s.a.node.pttPressed(s.clock);
+  CHECK(!s.a.node.testMode());
+  CHECK(s.a.note.testModeChanges.size() == 2 && !s.a.note.testModeChanges[1]);
+  s.a.node.pttReleased(s.clock);
+  s.run(1000);
+  CHECK(s.air.sent[0] == 0);
+}
+
+static void testSlowClicksDoNothing() {
+  Sim s;
+  s.run(100);
+  const uint32_t slow = kPttClickGapMs + 200;
+  click(s, 100, slow);  // pausa troppo lunga tra un clic e l'altro: il conteggio riparte
+  click(s, 100, slow);
+  click(s, 100, slow);
+  CHECK(!s.a.node.testMode());
+  // Due clic veloci, pausa, due clic veloci: mai tre di seguito.
+  click(s, 100, 150);
+  click(s, 100, slow);
+  click(s, 100, 150);
+  click(s, 100, slow);
+  CHECK(!s.a.node.testMode());
+  CHECK(s.air.sent[0] == 0 && s.a.note.testModeChanges.empty());
+}
+
+static void testShortTapDoesNotTransmit() {
+  Sim s;
+  s.run(100);
+  click(s, 100, 1500);
+  CHECK(s.air.sent[0] == 0 && s.a.note.txStarts == 0 && s.a.note.denied == 0);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle);
+}
+
+static void testClicksWorkWithoutCallsign() {
+  // La prova si attiva anche con N0CALL (si riceve e si misura, ma non si trasmette).
+  fake::Air air;
+  uint32_t clock = 0;
+  Station n0(air, 0, "N0CALL", clock);
+  auto step = [&](uint32_t ms) { for (uint32_t t = 0; t < ms; t += 10, clock += 10) n0.node.tick(clock); };
+  for (int i = 0; i < 2; i++) {
+    n0.node.pttPressed(clock);
+    step(100);
+    n0.node.pttReleased(clock);
+    step(150);
+  }
+  n0.node.pttPressed(clock);
+  CHECK(n0.node.testMode());
+  n0.node.pttReleased(clock);
+  CHECK(n0.note.denied == 0);
+}
+
+static void testLongPressAfterClicks() {
+  // Due clic, una pausa lunga, poi un PTT tenuto premuto: e' una trasmissione, non cambia il modo prova.
+  Sim s;
+  s.run(100);
+  s.a.node.setTestMode(true);
+  click(s, 100, 100);
+  click(s, 100, kPttClickGapMs + 200);
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 100);
+  CHECK(s.a.node.state() == VoiceNode::State::Transmitting);
+  s.a.node.pttReleased(s.clock);
+  s.run(5000);
+  CHECK(s.a.node.testMode() && s.a.note.testModeChanges.empty());
+  // Terza pressione subito dopo due clic, anche se tenuta premuta: e' il terzo clic e non trasmette.
+  Sim t;
+  t.run(100);
+  click(t, 100, 100);
+  click(t, 100, 100);
+  t.a.node.pttPressed(t.clock);
+  t.run(kPttClickMaxMs + 200);
+  CHECK(t.a.node.testMode() && t.a.node.state() == VoiceNode::State::Idle && t.air.sent[0] == 0);
 }
 
 static void testReplyAfterWhite() {
@@ -96,6 +199,7 @@ static void testReplyAfterWhite() {
   CHECK(s.b.spk.played == seq(n1));
 
   s.b.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50);
   CHECK(s.b.node.state() == VoiceNode::State::Transmitting);
   s.run(2000);
   s.b.node.pttReleased(s.clock);
@@ -121,6 +225,7 @@ static void testPttDenied() {
   // Canale occupato da un'altra stazione.
   s.air.busy = true;
   s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50);
   CHECK(s.a.node.state() == VoiceNode::State::Idle);
   CHECK(s.a.note.denied == 1 && s.a.note.lastDeny == DenyReason::ChannelBusy);
   s.air.busy = false;
@@ -158,11 +263,13 @@ static void testPlaceholderCallsignBlocksTx() {
   Station silent(air, 0, "N0CALL", clock);
   Station talker(air, 1, "IU5HJU", clock);
   silent.node.pttPressed(clock);
+  for (uint32_t t = 0; t < kPttClickMaxMs + 50; t += 10, clock += 10) silent.node.tick(clock);
   CHECK(silent.node.state() == VoiceNode::State::Idle);
   CHECK(silent.note.denied == 1 && silent.note.lastDeny == DenyReason::NoCallsign);
   CHECK(silent.note.txStarts == 0 && air.sent[0] == 0);
   Station other(air, 0, "NOCALL", clock);
   other.node.pttPressed(clock);
+  for (uint32_t t = 0; t < kPttClickMaxMs + 50; t += 10, clock += 10) other.node.tick(clock);
   CHECK(other.note.lastDeny == DenyReason::NoCallsign && air.sent[0] == 0);
 
   // Riceve la voce di un'altra stazione.
@@ -193,6 +300,11 @@ static void testLossOnAir() {
 
 int main() {
   testPacketSpacing();
+  testTripleClickTogglesTestMode();
+  testSlowClicksDoNothing();
+  testShortTapDoesNotTransmit();
+  testClicksWorkWithoutCallsign();
+  testLongPressAfterClicks();
   testOneTurn();
   testReplyAfterWhite();
   testPttDenied();

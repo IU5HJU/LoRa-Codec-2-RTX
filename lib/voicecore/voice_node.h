@@ -32,6 +32,8 @@ class VoiceNode {
 
   VoiceNode(const NodeConfig& cfg, IRadio& radio, ICodec& codec, IAudioIn& in, IAudioOut& out, INotifier& notify);
 
+  // PTT: una pressione breve (meno di kPttClickMaxMs) e' un clic; tre clic veloci attivano o disattivano la
+  // prova di collegamento. La trasmissione parte se il PTT resta premuto, con il microfono gia' bufferizzato.
   void pttPressed(uint32_t nowMs);
   void pttReleased(uint32_t nowMs);
   // Da chiamare spesso (almeno ogni ~10 ms).
@@ -47,6 +49,8 @@ class VoiceNode {
 
  private:
   void startTx(uint32_t nowMs);
+  void beginPtt(uint32_t nowMs);
+  void stopMic();
   void finishCapture(bool limit);
   void txTick(uint32_t nowMs);
   void rxTick(uint32_t nowMs);
@@ -74,6 +78,13 @@ class VoiceNode {
   uint32_t nextSendMs_ = 0;  // non trasmettere prima di questo istante (pausa tra pacchetti)
   bool justSent_ = false;
   bool callsignNotified_ = false;
+
+  // PTT: clic e attesa prima di trasmettere
+  bool pendingStart_ = false;  // PTT premuto, in attesa di capire se e' un clic o l'inizio di una trasmissione
+  uint32_t pressMs_ = 0;
+  uint8_t clickCount_ = 0;
+  uint32_t lastClickMs_ = 0;
+  bool micStarted_ = false;
 
   // Prova di collegamento
   bool testMode_ = false;
