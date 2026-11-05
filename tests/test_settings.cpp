@@ -89,7 +89,7 @@ void testNotCommand() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 board=T3 reboot=0") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 board=T3 reboot=0 test=0") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -165,6 +165,21 @@ void testSetVolume() {
   CHECK(f.st.data.volume == 10);
 }
 
+void testTestMode() {
+  Fixture f;
+  CHECK(!f.con.testMode());
+  CHECK(f.run("CFG TEST ON") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK test=on") == 0 && f.con.testMode());
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "test=1"));
+  CHECK(f.st.saves == 0 && !f.st.has);  // non si salva: all'accensione e' sempre spenta
+  CHECK(f.run("cfg test off") == ConsoleResult::Ok && !f.con.testMode() && strcmp(f.reply, "CFG OK test=off") == 0);
+  CHECK(f.run("CFG TEST") == ConsoleResult::Error);
+  CHECK(f.run("CFG TEST MAYBE") == ConsoleResult::Error && strncmp(f.reply, "CFG ERR test", 12) == 0);
+  CHECK(f.run("CFG TEST ON") == ConsoleResult::Ok);
+  CHECK(f.run("CFG RESET") == ConsoleResult::Ok && f.con.testMode());  // il reset non tocca la prova
+  Fixture g;  // un nuovo avvio parte spento
+  CHECK(!g.con.testMode());
+}
+
 void testOther() {
   Fixture f;
   CHECK(f.run("CFG") == ConsoleResult::Error);
@@ -215,6 +230,7 @@ int main() {
   testSetFreq();
   testSetPower();
   testSetVolume();
+  testTestMode();
   testOther();
   testSmallBuffer();
   TEST_MAIN_END();

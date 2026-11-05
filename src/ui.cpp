@@ -94,6 +94,46 @@ void UiNotifier::rxEnded(const char* callsign, uint32_t lostFrames, uint32_t rec
   audio_.beep(800, 40);  // fine della trasmissione ricevuta (OVER)
 }
 
+void UiNotifier::linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) {
+  testFromRemote_ = fromRemote;
+  strncpy(testCall_, callsign ? callsign : "", lcr::kMaxCallsign);
+  testCall_[lcr::kMaxCallsign] = 0;
+  testRep_ = r;
+  testShown_ = true;
+  testUntilMs_ = millis() + 15000;
+  // Riga per il registro delle prove (docs/prove.md).
+  Serial.printf("PROVA %s %s: ok %u/%u (%d%%), danneggiati %u, persi %u, pacchetti recuperati %u, RSSI %d dBm, SNR %s%d dB\n",
+                fromRemote ? "risposta da" : "ricevuta da", testCall_[0] ? testCall_ : "-", r.framesOk,
+                static_cast<unsigned>(lcr::kTestFrames), r.percentOk(), r.framesBad, r.framesLost, r.recovered,
+                r.rssiDbm, r.snrValid ? "" : "n.d. ", r.snrValid ? r.snrDb : 0);
+  dirty_ = true;
+  if (r.perfect()) {
+    audio_.beep(1000, 60);
+    audio_.beep(1400, 60);
+  } else {
+    audio_.beep(300, 200);
+  }
+}
+
+void UiNotifier::drawTestReport() {
+  const lcr::TestReport& r = testRep_;
+  display_.setTextSize(2);
+  display_.setCursor(0, 16);
+  display_.printf("PROVA %d%%", r.percentOk());
+  display_.setTextSize(1);
+  display_.setCursor(0, 38);
+  display_.printf("%s %s", testFromRemote_ ? "Risposta" : "Ricevuta da", testCall_[0] ? testCall_ : "-");
+  display_.setCursor(0, 47);
+  display_.printf("ok %u persi %u dann. %u", r.framesOk, r.framesLost, r.framesBad);
+  display_.setCursor(0, 56);
+  if (r.snrValid) {
+    display_.printf("rec %u RSSI %d SNR %d", r.recovered, r.rssiDbm, r.snrDb);
+  } else {
+    display_.printf("rec %u RSSI %d", r.recovered, r.rssiDbm);
+  }
+  display_.display();
+}
+
 void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb,
                       float batteryVolts) {
   if (state != state_ || volumeStep != volume_) dirty_ = true;
@@ -110,6 +150,10 @@ void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeSte
   if (availabilityChanged || moved || stale) {
     batteryShown_ = battery_;
     batteryShownMs_ = nowMs;
+    dirty_ = true;
+  }
+  if (testShown_ && nowMs > testUntilMs_) {
+    testShown_ = false;
     dirty_ = true;
   }
   if (notice_ && nowMs > noticeUntilMs_) {
@@ -133,10 +177,15 @@ void UiNotifier::draw(uint32_t nowMs) {
   display_.printf("%s  %.3f MHz", settings_.callsign, static_cast<double>(settings_.freqMhz()));
   display_.drawFastHLine(0, 10, 128, SSD1306_WHITE);
 
+  if (testShown_ && state_ == lcr::VoiceNode::State::Idle) {
+    drawTestReport();
+    return;
+  }
+
   display_.setTextSize(2);
   display_.setCursor(0, 16);
   switch (state_) {
-    case lcr::VoiceNode::State::Idle: display_.print("ASCOLTO"); break;
+    case lcr::VoiceNode::State::Idle: display_.print(testMode_ ? "PROVA ON" : "ASCOLTO"); break;
     case lcr::VoiceNode::State::Receiving: display_.printf("RX %s", rxCall_); break;
     case lcr::VoiceNode::State::Transmitting: display_.printf("TX %s", settings_.callsign); break;
   }
@@ -146,7 +195,8 @@ void UiNotifier::draw(uint32_t nowMs) {
   if (notice_) {
     display_.print(notice_);
   } else if (state_ == lcr::VoiceNode::State::Transmitting) {
-    display_.printf("Trasmissione %lu/30 s", static_cast<unsigned long>((nowMs - txStartMs_) / 1000));
+    display_.printf(testMode_ ? "Prova %lu/12 s" : "Trasmissione %lu/30 s",
+                    static_cast<unsigned long>((nowMs - txStartMs_) / 1000));
   } else if (state_ == lcr::VoiceNode::State::Receiving) {
     display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
   } else if (haveLast_) {
@@ -155,7 +205,7 @@ void UiNotifier::draw(uint32_t nowMs) {
     display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
                     static_cast<unsigned long>(lastRecovered_));
   } else {
-    display_.print("Premi PTT per parlare");
+    display_.print(testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare");
   }
 
   display_.setCursor(0, 56);

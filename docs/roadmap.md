@@ -52,6 +52,10 @@ Fatta anche la pagina (`site/index.html`, flasher e configurazione via Web Seria
 - Impostazioni: nominativo, frequenza (limitata ai 70 cm), SF/BW/CR/potenza/sync, parità, **TOT**, livello/profilo, guadagno microfono, AGC, volume.
 - Regole di validazione nel core (testabili sul PC); server web con le librerie già incluse nell'ESP32.
 
+## Prova di collegamento (fatta nel nucleo, da provare)
+
+Sequenza di frame noti confrontata bit per bit, con risposta automatica; vedi [prova-collegamento.md](prova-collegamento.md). Livelli 2 e 3 (autotest del codec, prova dell'altoparlante) da fare con l'hardware audio.
+
 ## 4. Flasher web (dopo la configurazione a runtime)
 
 - Pagina statica con `esp-web-tools`, un manifest per versione e tipo (installazione di fabbrica, aggiornamento), come nell'esempio di CA2RXU.

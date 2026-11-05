@@ -117,6 +117,15 @@ class Notifier : public lcr::INotifier {
     lostFrames = lost;
     recovered = rec;
   }
+  void linkTestReport(bool fromRemote, const char* cs, const lcr::TestReport& r) override {
+    reports.push_back({fromRemote, cs, r});
+  }
+  struct Rep {
+    bool fromRemote;
+    std::string callsign;
+    lcr::TestReport r;
+  };
+  std::vector<Rep> reports;
   int txStarts = 0, txEnds = 0, denied = 0, rxStarts = 0, rxEnds = 0;
   bool limitHit = false;
   lcr::DenyReason lastDeny = lcr::DenyReason::Receiving;

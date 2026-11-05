@@ -34,9 +34,17 @@ class UiNotifier : public lcr::INotifier {
   void rxStarted() override;
   void rxCallsign(const char* callsign) override;
   void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) override;
+  void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
+
+  // Prova di collegamento attiva: lo schermo a riposo lo dice.
+  void setTestMode(bool on) {
+    if (on != testMode_) dirty_ = true;
+    testMode_ = on;
+  }
 
  private:
   void draw(uint32_t nowMs);
+  void drawTestReport();
 
   AudioIo& audio_;
   lcr::Settings settings_;
@@ -58,6 +66,12 @@ class UiNotifier : public lcr::INotifier {
   uint32_t lastLost_ = 0;
   uint32_t lastRecovered_ = 0;
   bool haveLast_ = false;
+  bool testMode_ = false;
+  bool testShown_ = false;        // schermata con l'esito della prova
+  uint32_t testUntilMs_ = 0;
+  bool testFromRemote_ = false;
+  char testCall_[lcr::kMaxCallsign + 1] = {0};
+  lcr::TestReport testRep_;
   const char* notice_ = nullptr;
   uint32_t noticeUntilMs_ = 0;
 };

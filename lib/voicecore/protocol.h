@@ -11,6 +11,10 @@ constexpr uint8_t kProtocolVersion = 1;
 
 // Modo Codec2 trasportato (nibble basso del primo byte dell'header).
 constexpr uint8_t kModeCodec2_1200 = 1;
+// Prova di collegamento: i frame sono una sequenza nota (non voce) che il ricevitore confronta bit per bit.
+constexpr uint8_t kModeTest = 2;
+// Risposta del ricevitore alla prova (un solo pacchetto con il risultato).
+constexpr uint8_t kModeTestReport = 3;
 
 // Codec2 1200 bps: 48 bit (6 byte) ogni 40 ms, 320 campioni a 8 kHz.
 constexpr size_t kFrameBytes = 6;
@@ -41,6 +45,12 @@ constexpr size_t kMaxCallsign = 8;
 // Un turno da 30 s usa circa 80 pacchetti; il limite TX lascia margine.
 constexpr size_t kMaxPackets = 128;
 constexpr size_t kTxSeqLimit = 120;
+
+// Durata della prova di collegamento: 300 frame = 12 s, circa 25 pacchetti dati piu' la parita'.
+constexpr uint32_t kTestFrames = 300;
+
+// Attesa prima che il ricevitore risponda alla prova: chi ha trasmesso deve tornare in ascolto.
+constexpr uint32_t kTestReplyDelayMs = 700;
 
 // Durata massima di un turno di trasmissione.
 constexpr uint32_t kMaxTurnMs = 30000;

@@ -7,11 +7,12 @@
 // La console e' un protocollo a righe sulla seriale, pensato per la pagina web di
 // configurazione (Web Serial) ma usabile anche a mano:
 //
-//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 power=10 volume=7 board=t3 reboot=0
+//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 power=10 volume=7 board=t3 reboot=0 test=0
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
 //   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000)
 //   CFG SET POWER 10             -> CFG OK power=10            (dBm, 2-17)
 //   CFG SET VOLUME 7             -> CFG OK volume=7            (0 = muto, 1-10 in passi da 3 dB)
+//   CFG TEST ON                  -> CFG OK test=on             (prova di collegamento, solo fino al riavvio; OFF la spegne)
 //   CFG RESET                    -> CFG OK reset               (torna ai valori compilati)
 //   CFG REBOOT                   -> riavvia la scheda
 //
@@ -79,11 +80,17 @@ class SettingsConsole {
   // Valori salvati (quelli che saranno attivi al prossimo avvio).
   const Settings& stored() const { return stored_; }
 
+  // Prova di collegamento: NON viene salvata, all'accensione e' sempre spenta.
+  bool testMode() const { return testMode_; }
+
  private:
   ConsoleResult get(char* reply, size_t cap);
   ConsoleResult set(const char* key, const char* value, char* reply, size_t cap);
   ConsoleResult reset(char* reply, size_t cap);
 
+  ConsoleResult test(const char* value, char* reply, size_t cap);
+
+  bool testMode_ = false;
   Settings active_;
   Settings defaults_;
   Settings stored_;

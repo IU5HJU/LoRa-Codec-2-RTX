@@ -4,7 +4,8 @@
 
 namespace lcr {
 
-TxSession::TxSession(const char* callsign, uint16_t session, bool fec) : session_(session), fec_(fec) {
+TxSession::TxSession(const char* callsign, uint16_t session, bool fec, uint8_t mode)
+    : session_(session), fec_(fec), mode_(mode) {
   if (callsign) {
     strncpy(callsign_, callsign, kMaxCallsign);
     callsign_[kMaxCallsign] = 0;
@@ -32,6 +33,7 @@ bool TxSession::popPacket(Packet& out) {
 
 bool TxSession::emitData(uint8_t extraFlags) {
   Packet p;
+  p.mode = mode_;
   p.session = session_;
   p.seq = seq_;
   p.flags = extraFlags | (fec_ ? 0 : kFlagNoFec) | (seq_ == 0 ? kFlagStart : 0);
@@ -58,7 +60,7 @@ bool TxSession::emitData(uint8_t extraFlags) {
 
 void TxSession::emitParity() {
   Packet p;
-  parity_.build(p, session_, kModeCodec2_1200, seq_);
+  parity_.build(p, session_, mode_, seq_);
   if (enqueue(p)) seq_++;
   parity_.reset();
 }

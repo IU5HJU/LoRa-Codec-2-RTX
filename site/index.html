@@ -12,6 +12,7 @@
   main { max-width:760px; margin:0 auto; padding:16px; }
   h1 { font-size:1.5rem; margin:.4em 0 .2em; }
   h2 { font-size:1.15rem; margin:0 0 .6em; }
+  h3 { font-size:1rem; margin:1.2em 0 .3em; }
   p { margin:.4em 0; }
   .muted { color:var(--muted); font-size:.92rem; }
   section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:14px 0; }
@@ -95,6 +96,11 @@
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
       <button id="reset" type="button" class="secondary" disabled>Valori di fabbrica</button>
     </form>
+    <h3>Prova di collegamento</h3>
+    <p class="muted">Con la prova attiva il PTT non trasmette voce ma 12 secondi di frame di prova noti: la scheda che li riceve li confronta bit per bit, mostra l'esito sul display e <strong>risponde</strong> alla prima con il risultato (se anche lì la prova è attiva). Serve il tuo nominativo. Non è salvata: allo spegnimento torna spenta.</p>
+    <button id="testOn" type="button" class="secondary" disabled>Attiva la prova</button>
+    <button id="testOff" type="button" class="secondary" disabled>Disattiva la prova</button>
+    <span id="testState" class="muted"></span>
     <div id="status" role="status"></div>
     <div id="logtools">
       <button id="logCopy" type="button" class="secondary">Copia il registro</button>
@@ -146,7 +152,7 @@
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
-    for (const id of ['callsign', 'freq', 'power', 'volume', 'save', 'reload', 'reset']) $(id).disabled = !on;
+    for (const id of ['callsign', 'freq', 'power', 'volume', 'save', 'reload', 'reset', 'testOn', 'testOff']) $(id).disabled = !on;
   }
 
   function onLine(line) {
@@ -157,6 +163,7 @@
       if (m.callsign) {
         $('callsign').value = m.callsign; $('freq').value = m.freq; $('power').value = m.power;
         if (m.volume !== undefined) $('volume').value = m.volume;
+        $('testState').textContent = m.test === '1' ? 'Prova ATTIVA' : 'Prova spenta';
         lastBoard = m.board || '';
       }
     }
@@ -317,6 +324,15 @@
   $('form').addEventListener('submit', save);
   $('reload').addEventListener('click', () => refresh(false));
   $('reset').addEventListener('click', reset);
+  async function setTest(on) {
+    try {
+      await send('CFG TEST ' + (on ? 'ON' : 'OFF'), /^CFG (OK|ERR)/);
+      $('testState').textContent = on ? 'Prova ATTIVA' : 'Prova spenta';
+      setStatus(on ? 'Prova attiva: premi il PTT per inviarla.' : 'Prova disattivata.', 'ok');
+    } catch (e) { setStatus('Errore: ' + e.message, 'err'); }
+  }
+  $('testOn').addEventListener('click', () => setTest(true));
+  $('testOff').addEventListener('click', () => setTest(false));
   if (!supported) $('connect').disabled = true;
 })();
 </script>

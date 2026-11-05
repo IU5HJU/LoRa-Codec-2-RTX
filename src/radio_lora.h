@@ -20,7 +20,8 @@ class RadioLora : public lcr::IRadio {
   size_t receive(uint8_t* buf, size_t cap, int* rssi) override;
 
   float lastRssi() const { return lastRssi_; }
-  float lastSnr() const { return lastSnr_; }
+  bool hasSnr() const override { return true; }
+  float lastSnr() const override { return lastSnr_; }
   int lastError() const { return lastError_; }
 
   // Diagnostica della ricezione, azzerata da resetRxStats(): quanto tempo passa tra l'arrivo di un

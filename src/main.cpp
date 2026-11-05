@@ -163,6 +163,8 @@ static void serviceConsole() {
       char reply[128];
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
+      node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio
+      ui.setTestMode(console->testMode());
       if (r == lcr::ConsoleResult::Reboot) {
         Serial.flush();
         delay(100);

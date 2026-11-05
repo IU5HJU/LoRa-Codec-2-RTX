@@ -19,7 +19,7 @@ namespace lcr {
 class TxSession {
  public:
   TxSession() = default;
-  TxSession(const char* callsign, uint16_t session, bool fec);
+  TxSession(const char* callsign, uint16_t session, bool fec, uint8_t mode = kModeCodec2_1200);
 
   // Accoda il pacchetto iniziale col nominativo. Chiamato in automatico da pushFrame.
   void begin();
@@ -34,6 +34,7 @@ class TxSession {
   bool finished() const { return finished_; }
   bool overflowed() const { return overflow_; }
   uint8_t nextSeq() const { return seq_; }
+  uint16_t session() const { return session_; }
 
  private:
   bool emitData(uint8_t extraFlags);
@@ -45,6 +46,7 @@ class TxSession {
   char callsign_[kMaxCallsign + 1] = {0};
   uint16_t session_ = 0;
   bool fec_ = true;
+  uint8_t mode_ = kModeCodec2_1200;
   bool begun_ = false;
   bool finished_ = false;
   bool overflow_ = false;

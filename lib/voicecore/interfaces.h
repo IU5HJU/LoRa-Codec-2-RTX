@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "link_test.h"
+
 namespace lcr {
 
 class IRadio {
@@ -18,6 +20,9 @@ class IRadio {
   virtual void startReceive() = 0;
   // Non bloccante. Ritorna i byte copiati in buf, 0 se non c'e' nulla.
   virtual size_t receive(uint8_t* buf, size_t cap, int* rssi) = 0;
+  // SNR (dB) dell'ultimo pacchetto ricevuto, se la radio lo fornisce.
+  virtual bool hasSnr() const { return false; }
+  virtual float lastSnr() const { return 0.0f; }
 };
 
 class ICodec {
@@ -59,6 +64,13 @@ class INotifier {
     (void)callsign;
     (void)lostFrames;
     (void)recoveredPackets;
+  }
+  // Esito di una prova di collegamento. fromRemote = false: misurato qui sul pacchetti ricevuti;
+  // true: risposta della stazione 'callsign' alla prova trasmessa da questa scheda.
+  virtual void linkTestReport(bool fromRemote, const char* callsign, const TestReport& r) {
+    (void)fromRemote;
+    (void)callsign;
+    (void)r;
   }
 };
 

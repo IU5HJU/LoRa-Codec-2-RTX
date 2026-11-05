@@ -125,6 +125,7 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
   if (equalsIgnoreCase(tok[1], "GET") && n == 2) return get(reply, cap);
   if (equalsIgnoreCase(tok[1], "SET") && n == 4) return set(tok[2], tok[3], reply, cap);
   if (equalsIgnoreCase(tok[1], "RESET") && n == 2) return reset(reply, cap);
+  if (equalsIgnoreCase(tok[1], "TEST") && n == 3) return test(tok[2], reply, cap);
   if (equalsIgnoreCase(tok[1], "REBOOT") && n == 2) {
     say(reply, cap, "CFG OK reboot");
     return ConsoleResult::Reboot;
@@ -135,9 +136,9 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
 
 ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
   if (reply && cap > 0) {
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d board=%s reboot=%d", stored_.callsign,
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d board=%s reboot=%d test=%d", stored_.callsign,
              static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
-             stored_.powerDbm, stored_.volume, board_, stored_ != active_ ? 1 : 0);
+             stored_.powerDbm, stored_.volume, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
   }
   return ConsoleResult::Ok;
 }
@@ -193,6 +194,19 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
   }
   stored_ = next;
   say(reply, cap, "CFG OK %s", shown);
+  return ConsoleResult::Ok;
+}
+
+ConsoleResult SettingsConsole::test(const char* value, char* reply, size_t cap) {
+  if (equalsIgnoreCase(value, "ON")) {
+    testMode_ = true;
+  } else if (equalsIgnoreCase(value, "OFF")) {
+    testMode_ = false;
+  } else {
+    say(reply, cap, "CFG ERR test usa ON oppure OFF");
+    return ConsoleResult::Error;
+  }
+  say(reply, cap, testMode_ ? "CFG OK test=on" : "CFG OK test=off");
   return ConsoleResult::Ok;
 }
 
