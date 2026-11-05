@@ -32,8 +32,7 @@ void Battery::begin(Pmu&) {
     filter_.add(static_cast<float>(analogReadMilliVolts(pins::kBatteryAdc)));
     delay(3);
   }
-  rawVolts_ = filter_.average() * kDividerRatio / 1000.0f;
-  volts_ = guard_.filter(rawVolts_, millis());
+  volts_ = smoother_.update(filter_.average() * kDividerRatio / 1000.0f);
 }
 
 void Battery::update(uint32_t nowMs) {
@@ -41,8 +40,7 @@ void Battery::update(uint32_t nowMs) {
   lastMs_ = nowMs;
   // analogReadMilliVolts usa la calibrazione del chip (eFuse), come l'esp_adc_cal di Guzman.
   filter_.add(static_cast<float>(analogReadMilliVolts(pins::kBatteryAdc)));
-  rawVolts_ = filter_.average() * kDividerRatio / 1000.0f;
-  volts_ = guard_.filter(rawVolts_, nowMs);
+  volts_ = smoother_.update(filter_.average() * kDividerRatio / 1000.0f);
 }
 
 #endif

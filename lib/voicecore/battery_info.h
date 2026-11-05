@@ -16,22 +16,27 @@ size_t formatBatteryText(char* out, size_t cap, float volts);
 
 bool isLowBattery(float volts);
 
-// Una LiPo/Li-ion non supera 4,2 V (4,35 V le celle ad alta tensione). Sulla T3 senza batteria, con l'USB
-// collegato, l'ADC legge la tensione del caricatore (misurati 4,14-4,42 V, che oscilla): una lettura sopra
-// questo limite non e' una batteria.
-constexpr float kMaxBatteryVolts = 4.35f;
-// Dopo una lettura sopra il limite la tensione resta "non disponibile" per almeno questo tempo: se il
-// caricatore oscilla attorno al limite il display non deve passare di continuo da tensione a "--".
-constexpr uint32_t kBatteryHoldMs = 60000;
-
-class BatteryGuard {
+// Media esponenziale lenta per la tensione mostrata sulla T3: con l'USB e senza batteria l'ADC legge la linea
+// del caricatore, che oscilla (misurati 4,14-4,42 V); senza questa media il valore a schermo cambierebbe di continuo.
+// alpha e' per ogni lettura (una ogni 50 ms): 0,02 = costante di tempo di circa 2,5 s.
+class BatterySmoother {
  public:
-  // volts se plausibile, altrimenti -1 (non disponibile). Valori negativi restano -1.
-  float filter(float volts, uint32_t nowMs);
+  explicit BatterySmoother(float alpha = 0.02f) : alpha_(alpha) {}
+  float update(float volts) {
+    if (!init_) {
+      value_ = volts;
+      init_ = true;
+    } else {
+      value_ += (volts - value_) * alpha_;
+    }
+    return value_;
+  }
+  float value() const { return value_; }
 
  private:
-  bool seen_ = false;
-  uint32_t lastBadMs_ = 0;
+  float alpha_;
+  float value_ = 0.0f;
+  bool init_ = false;
 };
 
 // Media mobile delle ultime N letture, per smussare il rumore dell'ADC senza bloccare il ciclo

@@ -164,5 +164,5 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 ### 2026-11-05, casa, IU5HJU (batteria T3, solo USB: il display passava di continuo da tensione a "--")
 
 - Problema: con il limite fisso a 4,35 V la lettura del caricatore (4,14-4,42 V, oscilla) attraversava il limite di continuo e la seriale mostrava `-1.00 V` alternato a `4.33 V`; l'OLED passava da tensione a lineette.
-- Correzione: dopo una lettura sopra 4,35 V il valore resta `--` per almeno 60 s dall'ultima lettura alta (`BatteryGuard`, testato sul PC con un caricatore simulato che oscilla per 10 minuti: al massimo un passaggio, poi stabile). La seriale ora stampa `[batteria] lettura 4.33 V, display (Batt=--)` invece di `-1.00 V`.
+- Decisione: sulla T3 la tensione si mostra **sempre**, senza lineette; la lettura è mediata (circa 2,5 s) per non far ballare le cifre e il testo va in negativo sotto 3,40 V come sulla T-Beam. La soglia a 4,35 V con "--" è stata scartata. Test sul PC con un caricatore simulato che oscilla per 10 minuti: il valore mostrato resta in una banda di meno di 0,06 V.
 - Da fare: confrontare la lettura della T3 con una LiPo collegata e il tester.

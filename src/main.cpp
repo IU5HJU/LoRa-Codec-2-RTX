@@ -206,12 +206,7 @@ void loop() {
     if (pmu.present()) {
       pmu.logStatus();
     } else {
-      // Lettura grezza e cio' che mostra il display ("--" se la lettura non e' una batteria, vedi battery_info.h).
-      if (battery.volts() >= 0) {
-        Serial.printf("[batteria] %.2f V\n", static_cast<double>(battery.volts()));
-      } else {
-        Serial.printf("[batteria] lettura %.2f V, display (Batt=--)\n", static_cast<double>(battery.rawVolts()));
-      }
+      Serial.printf("[batteria] %.2f V\n", static_cast<double>(battery.volts()));
     }
   }
 

@@ -21,14 +21,4 @@ size_t formatBatteryText(char* out, size_t cap, float volts) {
 
 bool isLowBattery(float volts) { return volts >= 0.0f && volts < kLowBatteryVolts; }
 
-float BatteryGuard::filter(float volts, uint32_t nowMs) {
-  if (volts < 0.0f) return -1.0f;
-  if (volts > kMaxBatteryVolts) {
-    seen_ = true;
-    lastBadMs_ = nowMs;
-  }
-  if (seen_ && nowMs - lastBadMs_ < kBatteryHoldMs) return -1.0f;
-  return volts;
-}
-
 }  // namespace lcr

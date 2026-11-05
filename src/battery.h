@@ -21,14 +21,11 @@ class Battery {
   void update(uint32_t nowMs);
   // Tensione in volt; negativa se non disponibile.
   float volts() const { return volts_; }
-  // Lettura grezza (T3), prima del controllo di plausibilita': per la diagnostica in seriale. Negativa se non disponibile.
-  float rawVolts() const { return rawVolts_; }
 
  private:
   Pmu* pmu_ = nullptr;
   float volts_ = -1.0f;
-  float rawVolts_ = -1.0f;
   uint32_t lastMs_ = 0;
   lcr::AverageFilter filter_;
-  lcr::BatteryGuard guard_;  // T3: una lettura sopra 4,35 V non e' una batteria (vedi battery_info.h)
+  lcr::BatterySmoother smoother_;  // T3: media lenta, il caricatore oscilla
 };

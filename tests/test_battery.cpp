@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstring>
 
 #include "battery_info.h"
@@ -23,50 +24,31 @@ static void testText() {
   CHECK(formatBatteryText(nullptr, 10, 4.0f) == 0 && formatBatteryText(t, 0, 4.0f) == 0);
 }
 
-static void testGuard() {
-  BatteryGuard g;
-  CHECK(g.filter(4.20f, 0) == 4.20f);
-  CHECK(g.filter(4.35f, 1000) == 4.35f);
-  CHECK(g.filter(-1.0f, 2000) == -1.0f);
-  CHECK(g.filter(4.42f, 3000) == -1.0f);  // misurato sulla T3 con solo USB
-  // Subito dopo, anche una lettura bassa resta "non disponibile".
-  CHECK(g.filter(4.20f, 4000) == -1.0f);
-  CHECK(g.filter(4.20f, 3000 + kBatteryHoldMs - 1) == -1.0f);
-  CHECK(g.filter(4.20f, 3000 + kBatteryHoldMs) == 4.20f);
-  CHECK(g.filter(0.0f, 3000 + kBatteryHoldMs + 10) == 0.0f);
-  char t[24];
-  BatteryGuard h;
-  formatBatteryText(t, sizeof(t), h.filter(4.42f, 0));
-  CHECK(strcmp(t, "(Batt=--)") == 0);
-}
+static void testSmoother() {
+  BatterySmoother m;
+  CHECK(m.update(4.00f) == 4.00f);  // la prima lettura parte da se stessa
+  // Un gradino: tende al nuovo valore senza saltare.
+  float v = 0;
+  for (int i = 0; i < 20; i++) v = m.update(3.50f);
+  CHECK(v > 3.50f && v < 4.00f);
+  for (int i = 0; i < 600; i++) v = m.update(3.50f);  // 30 s
+  CHECK(std::fabs(v - 3.50f) < 0.01f);
 
-// Il caso che aveva dato un display instabile: il caricatore oscilla attorno al limite.
-static void testNoFlapping() {
-  BatteryGuard g;
+  // Caricatore che oscilla 4,14-4,42 V (T3 con solo USB): il valore mostrato resta in una banda stretta.
+  BatterySmoother c;
   uint32_t seed = 4242;
-  int transitions = 0;
-  bool lastShown = true;
-  bool first = true;
-  for (uint32_t t = 0; t < 10 * 60 * 1000; t += 50) {  // 10 minuti, una lettura ogni 50 ms
+  float lo = 9.0f, hi = 0.0f;
+  for (int i = 0; i < 12000; i++) {  // 10 minuti
     seed = seed * 1664525u + 1013904223u;
-    const float v = 4.14f + 0.28f * static_cast<float>(seed >> 8) / 16777216.0f;  // 4,14...4,42 V come sulla T3
-    const bool shown = g.filter(v, t) >= 0.0f;
-    if (!first && shown != lastShown) transitions++;
-    first = false;
-    lastShown = shown;
+    const float raw = 4.14f + 0.28f * static_cast<float>(seed >> 8) / 16777216.0f;
+    const float shown = c.update(raw);
+    if (i > 400) {  // dopo l'assestamento
+      if (shown < lo) lo = shown;
+      if (shown > hi) hi = shown;
+    }
   }
-  CHECK(transitions <= 1);  // al massimo un passaggio da tensione a "--" all'avvio, poi stabile
-  CHECK(!lastShown);
-
-  // Una batteria vera (3,9 V con un po' di rumore) e' sempre mostrata.
-  BatteryGuard b;
-  bool always = true;
-  for (uint32_t t = 0; t < 600000; t += 50) {
-    seed = seed * 1664525u + 1013904223u;
-    const float v = 3.90f + 0.04f * (static_cast<float>(seed >> 8) / 16777216.0f - 0.5f);
-    always = always && b.filter(v, t) > 0.0f;
-  }
-  CHECK(always);
+  CHECK(hi - lo < 0.06f);          // contro 0,28 V del segnale grezzo
+  CHECK(lo > 4.20f && hi < 4.35f);  // sempre mostrata, sempre un numero
 }
 
 static void testLow() {
@@ -99,8 +81,7 @@ static void testFilter() {
 int main() {
   testText();
   testLow();
-  testGuard();
-  testNoFlapping();
+  testSmoother();
   testFilter();
   TEST_MAIN_END();
 }
