@@ -87,6 +87,9 @@ void Agc::process(float* x, size_t n) {
     if (desired < cfg_.minGainDb) desired = cfg_.minGainDb;
     const float alpha = desired < gainDb_ ? cfg_.attackAlpha : cfg_.releaseAlpha;
     gainDb_ += (desired - gainDb_) * alpha;
+  } else {
+    // Solo rumore: non lasciare il guadagno alto di prima (amplificherebbe il fondo come fosse voce).
+    gainDb_ += (cfg_.idleGainDb - gainDb_) * cfg_.idleAlpha;
   }
   // Rampa lineare del guadagno nel frame, per evitare scalini udibili.
   const float g0 = std::pow(10.0f, before / 20.0f);

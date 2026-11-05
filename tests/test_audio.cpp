@@ -127,6 +127,27 @@ static void testAgcIgnoresNoise() {
   CHECK(fe.agcInputDb() < -70.0f);  // il livello letto dall'AGC e' quello del rumore
 }
 
+static void testAgcIdlesAfterSpeech() {
+  // Dopo la voce il guadagno e' alto; con solo rumore sotto la soglia deve tornare verso 12 dB.
+  FrontEndConfig c;
+  c.agc.gateDbfs = -54.0f;
+  AudioFrontEnd fe(c);
+  runTone(fe, 800, -45, 80, 10);  // voce debole sopra la soglia: guadagno alto (circa 21 dB)
+  CHECK(fe.gainDb() > 18.0f);
+  uint32_t seed = 777;
+  for (int f = 0; f < 200; f++) {  // 8 s di rumore a circa -70 dBFS
+    int32_t in[kMicSamplesPerFrame];
+    for (size_t i = 0; i < kMicSamplesPerFrame; i++) {
+      seed = seed * 1664525u + 1013904223u;
+      in[i] = i2sWord((static_cast<double>(seed >> 8) / 16777216.0 - 0.5) * dbToLin(-65));
+    }
+    int16_t out[kFrameSamples];
+    fe.processFrame(in, out);
+  }
+  CHECK(fe.agcInputDb() < -54.0f);
+  CHECK(fe.gainDb() < 14.0f && fe.gainDb() >= 11.9f);
+}
+
 static void testClipsWithoutWrapping() {
   // Guadagno enorme su un'onda quadra forte: l'uscita satura ai limiti.
   AudioFrontEnd fe(fixedGain(36));
@@ -199,6 +220,7 @@ int main() {
   testAgcRaisesQuietSignal();
   testAgcLowersLoudSignal();
   testAgcIgnoresNoise();
+  testAgcIdlesAfterSpeech();
   testClipsWithoutWrapping();
   testPrerollMic();
   testPrerollOverrun();

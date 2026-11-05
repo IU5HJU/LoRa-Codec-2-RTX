@@ -22,6 +22,7 @@ lcr::FrontEndConfig frontConfig() {
   lcr::FrontEndConfig c;
   c.agc.maxGainDb = LCR_MIC_AGC_MAX_GAIN_DB;
   c.agc.gateDbfs = LCR_MIC_AGC_GATE_DBFS;
+  c.agc.idleGainDb = 12.0f;
   return c;
 }
 }  // namespace

@@ -44,5 +44,6 @@
 // e' piu' alto della soglia lo amplifica come fosse voce. Con il PTT premuto la seriale stampa
 // "AGC in" (livello visto dall'AGC, dopo il passa-alto): la soglia va messa 3-6 dB sopra quello
 // che si legge in silenzio e sotto quello che si legge parlando.
+// Misurato il 5 novembre sulla T3: silenzio circa -61 dBFS, voce normale circa -36...-44 dBFS.
 #define LCR_MIC_AGC_MAX_GAIN_DB 30.0f  // guadagno massimo (era 36)
-#define LCR_MIC_AGC_GATE_DBFS -70.0f   // sotto questo livello il guadagno non sale
+#define LCR_MIC_AGC_GATE_DBFS -54.0f   // sotto questo livello il guadagno scende verso 12 dB (era -70)

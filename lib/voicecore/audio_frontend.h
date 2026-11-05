@@ -51,6 +51,8 @@ struct AgcConfig {
   float maxGainDb = 36.0f;     // il microfono a distanza di parlato e' intorno a -60 dBFS
   float minGainDb = -20.0f;
   float gateDbfs = -70.0f;     // sotto questo livello (rumore) il guadagno non sale
+  float idleGainDb = 12.0f;    // sotto la soglia il guadagno scende piano verso questo valore
+  float idleAlpha = 0.02f;     // per frame da 40 ms: costante di tempo circa 2 s
   float initialGainDb = 12.0f;
   float attackAlpha = 0.6f;    // riduzione del guadagno (segnale forte): veloce
   float releaseAlpha = 0.15f;  // aumento del guadagno: piu' lento
