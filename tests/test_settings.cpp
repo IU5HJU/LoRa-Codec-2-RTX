@@ -30,11 +30,12 @@ struct FakeStorage : ISettingsStorage {
   }
 };
 
-Settings make(const char* cs, uint32_t khz, int dbm) {
+Settings make(const char* cs, uint32_t khz, int dbm, int vol = kDefaultVolume) {
   Settings s;
   memcpy(s.callsign, cs, strlen(cs) < kMaxCallsign ? strlen(cs) : kMaxCallsign);
   s.freqKhz = khz;
   s.powerDbm = dbm;
+  s.volume = vol;
   return s;
 }
 
@@ -58,6 +59,10 @@ void testValidate() {
   CHECK(!isValidSettings(make("N0CALL", 440001, 10)));
   CHECK(!isValidSettings(make("N0CALL", 433900, 1)));
   CHECK(!isValidSettings(make("N0CALL", 433900, 18)));
+  CHECK(isValidSettings(make("N0CALL", 433900, 10, 0)));
+  CHECK(isValidSettings(make("N0CALL", 433900, 10, 10)));
+  CHECK(!isValidSettings(make("N0CALL", 433900, 10, -1)));
+  CHECK(!isValidSettings(make("N0CALL", 433900, 10, 11)));
 }
 
 void testLoad() {
@@ -84,7 +89,7 @@ void testNotCommand() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 board=T3 reboot=0") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 board=T3 reboot=0") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -145,6 +150,21 @@ void testSetPower() {
   CHECK(f.st.data.powerDbm == 17);
 }
 
+void testSetVolume() {
+  Fixture f;
+  CHECK(f.run("CFG SET VOLUME 3") == ConsoleResult::Ok && f.st.data.volume == 3);
+  CHECK(strcmp(f.reply, "CFG OK volume=3") == 0);
+  CHECK(f.run("CFG SET VOLUME 0") == ConsoleResult::Ok && f.st.data.volume == 0);
+  CHECK(f.run("CFG SET VOLUME 10") == ConsoleResult::Ok && f.st.data.volume == 10);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "volume=10") && strstr(f.reply, "reboot=1"));
+  const char* bad[] = {"CFG SET VOLUME 11", "CFG SET VOLUME -1", "CFG SET VOLUME x", "CFG SET VOLUME 5.5"};
+  for (const char* b : bad) {
+    CHECK(f.run(b) == ConsoleResult::Error);
+    CHECK(strncmp(f.reply, "CFG ERR volume", 14) == 0);
+  }
+  CHECK(f.st.data.volume == 10);
+}
+
 void testOther() {
   Fixture f;
   CHECK(f.run("CFG") == ConsoleResult::Error);
@@ -194,6 +214,7 @@ int main() {
   testSetCallsign();
   testSetFreq();
   testSetPower();
+  testSetVolume();
   testOther();
   testSmallBuffer();
   TEST_MAIN_END();

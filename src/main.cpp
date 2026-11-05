@@ -123,6 +123,7 @@ void setup() {
   ui.showMessage("AUDIO");
   Serial.println("[avvio] audio I2S...");
   if (!audio.begin()) fatal("audio I2S");
+  audio.setVolumeStep(settings.volume);
   Serial.printf("[avvio] audio ok, heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
 
   ui.showMessage("RADIO");

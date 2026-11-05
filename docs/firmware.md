@@ -103,7 +103,7 @@ in Gestione dispositivi, sotto "Porte (COM e LPT)", deve comparire la porta dell
 
 ## Pagina web di installazione e configurazione
 
-La pagina in `site/index.html` installa il firmware (esp-web-tools) e imposta nominativo, frequenza e potenza con i
+La pagina in `site/index.html` installa il firmware (esp-web-tools) e imposta nominativo, frequenza, potenza e volume con i
 comandi `CFG` della sezione seguente, tutto dal browser (Chrome, Edge od Opera, cavo USB). Il workflow
 `.github/workflows/build.yml` la pubblica su **GitHub Pages** a ogni push su `main` e a ogni tag `v*`, insieme ai
 binari appena compilati (`tools/make_site.sh`). Una volta sola, nel repository: **Settings -> Pages -> Source: GitHub Actions**.
@@ -121,10 +121,11 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 
 | Comando | Risposta | Note |
 |---|---|---|
-| `CFG GET` | `CFG callsign=IU5HJU freq=433.900 power=10 board=t3 reboot=0` | `reboot=1` se i valori salvati differiscono da quelli in uso |
+| `CFG GET` | `CFG callsign=IU5HJU freq=433.900 power=10 volume=7 board=t3 reboot=0` | `reboot=1` se i valori salvati differiscono da quelli in uso |
 | `CFG SET CALLSIGN iu5hju` | `CFG OK callsign=IU5HJU` | solo A-Z, 0-9 e `/`, massimo 8 caratteri |
 | `CFG SET FREQ 433.900` | `CFG OK freq=433.900` | MHz, da 430.000 a 440.000 (70 cm); **segnaposto**: scegli il canale col band plan IARU R1 / ARI |
 | `CFG SET POWER 10` | `CFG OK power=10` | dBm, da 2 a 17 |
+| `CFG SET VOLUME 7` | `CFG OK volume=7` | volume iniziale dell'altoparlante: 0 muto, 1-10 in passi da 3 dB (10 = massimo); il pulsante su GPIO15 lo cambia poi a scheda accesa, ma allo spegnimento torna a questo valore |
 | `CFG RESET` | `CFG OK reset` | cancella i valori salvati e torna a quelli di `user_config.h` |
 | `CFG REBOOT` | `CFG OK reboot` | riavvia la scheda |
 

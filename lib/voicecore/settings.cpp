@@ -10,12 +10,13 @@ namespace lcr {
 
 bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz &&
-         a.powerDbm == b.powerDbm;
+         a.powerDbm == b.powerDbm && a.volume == b.volume;
 }
 
 bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz &&
-         s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm;
+         s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
+         s.volume <= kMaxVolume;
 }
 
 Settings loadSettings(ISettingsStorage& storage, const Settings& defaults) {
@@ -134,9 +135,9 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
 
 ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
   if (reply && cap > 0) {
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d board=%s reboot=%d", stored_.callsign,
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d board=%s reboot=%d", stored_.callsign,
              static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
-             stored_.powerDbm, board_, stored_ != active_ ? 1 : 0);
+             stored_.powerDbm, stored_.volume, board_, stored_ != active_ ? 1 : 0);
   }
   return ConsoleResult::Ok;
 }
@@ -173,6 +174,14 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.powerDbm = dbm;
     snprintf(shown, sizeof(shown), "power=%d", dbm);
+  } else if (equalsIgnoreCase(key, "VOLUME")) {
+    int vol = 0;
+    if (!parseInt(value, vol) || vol < kMinVolume || vol > kMaxVolume) {
+      say(reply, cap, "CFG ERR volume %s", "da 0 (muto) a 10");
+      return ConsoleResult::Error;
+    }
+    next.volume = vol;
+    snprintf(shown, sizeof(shown), "volume=%d", vol);
   } else {
     say(reply, cap, "CFG ERR %s parametro sconosciuto", key);
     return ConsoleResult::Error;

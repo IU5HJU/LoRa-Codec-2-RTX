@@ -47,3 +47,7 @@
 // Misurato il 5 novembre sulla T3: silenzio circa -61 dBFS, voce normale circa -36...-44 dBFS.
 #define LCR_MIC_AGC_MAX_GAIN_DB 30.0f  // guadagno massimo (era 36)
 #define LCR_MIC_AGC_GATE_DBFS -54.0f   // sotto questo livello il guadagno scende verso 12 dB (era -70)
+
+// Volume iniziale dell'altoparlante (0 = muto, 1-10 in passi da 3 dB, 10 = massimo). Si cambia anche
+// dalla configurazione (CFG SET VOLUME) e, a scheda accesa, con il pulsante volume su GPIO15.
+#define LCR_VOLUME_STEP 7

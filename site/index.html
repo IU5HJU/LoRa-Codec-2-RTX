@@ -87,6 +87,10 @@
       <input id="power" type="number" min="2" max="17" step="1" placeholder="10" disabled required>
       <p class="hint">Da 2 a 17 dBm.</p>
 
+      <label for="volume">Volume iniziale dell'altoparlante</label>
+      <input id="volume" type="number" min="0" max="10" step="1" placeholder="7" disabled required>
+      <p class="hint">Da 0 (muto) a 10, in passi da 3 dB. Con il pulsante volume (GPIO15) si cambia poi a scheda accesa; allo spegnimento torna a questo valore.</p>
+
       <button id="save" type="submit" disabled>Salva e riavvia</button>
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
       <button id="reset" type="button" class="secondary" disabled>Valori di fabbrica</button>
@@ -142,7 +146,7 @@
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
-    for (const id of ['callsign', 'freq', 'power', 'save', 'reload', 'reset']) $(id).disabled = !on;
+    for (const id of ['callsign', 'freq', 'power', 'volume', 'save', 'reload', 'reset']) $(id).disabled = !on;
   }
 
   function onLine(line) {
@@ -152,6 +156,7 @@
       for (const kv of line.slice(4).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = kv.slice(i + 1); }
       if (m.callsign) {
         $('callsign').value = m.callsign; $('freq').value = m.freq; $('power').value = m.power;
+        if (m.volume !== undefined) $('volume').value = m.volume;
         lastBoard = m.board || '';
       }
     }
@@ -252,7 +257,9 @@
     if (khz < LIMITS.freqMin || khz > LIMITS.freqMax) return { err: 'La frequenza deve essere tra 430.000 e 440.000 MHz.' };
     const pw = Number($('power').value);
     if (!Number.isInteger(pw) || pw < LIMITS.pwrMin || pw > LIMITS.pwrMax) return { err: 'La potenza deve essere un numero intero da 2 a 17 dBm.' };
-    return { cs, freq: fm, pw };
+    const vol = Number($('volume').value);
+    if ($('volume').value === '' || !Number.isInteger(vol) || vol < 0 || vol > 10) return { err: 'Il volume deve essere un numero intero da 0 a 10.' };
+    return { cs, freq: fm, pw, vol };
   }
 
   async function save(ev) {
@@ -261,12 +268,16 @@
     if (v.err) { setStatus(v.err, 'err'); return; }
     setStatus('Salvataggio…', '');
     try {
-      await send('CFG SET CALLSIGN ' + v.cs, /^CFG (OK|ERR)/);
-      await send('CFG SET FREQ ' + v.freq, /^CFG (OK|ERR)/);
-      const last = await send('CFG SET POWER ' + v.pw, /^CFG (OK|ERR)/);
+      const replies = [];
+      replies.push(await send('CFG SET CALLSIGN ' + v.cs, /^CFG (OK|ERR)/));
+      replies.push(await send('CFG SET FREQ ' + v.freq, /^CFG (OK|ERR)/));
+      replies.push(await send('CFG SET POWER ' + v.pw, /^CFG (OK|ERR)/));
+      replies.push(await send('CFG SET VOLUME ' + v.vol, /^CFG (OK|ERR)/));
+      const bad = replies.find(r => r.startsWith('CFG ERR'));
+      if (bad) throw new Error(bad);
       const state = await send('CFG GET', /^CFG callsign=/);
       if (!state.includes('callsign=' + v.cs)) throw new Error('la scheda non ha salvato i valori');
-      if (last.startsWith('CFG ERR')) throw new Error(last);
+      if (!state.includes('volume=' + v.vol)) throw new Error('la scheda non ha salvato il volume');
       setStatus('Salvato. Riavvio della scheda…', 'ok');
       await send('CFG REBOOT', /^CFG OK reboot/);
       setTimeout(async () => {

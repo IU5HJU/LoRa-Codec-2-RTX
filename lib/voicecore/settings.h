@@ -7,10 +7,11 @@
 // La console e' un protocollo a righe sulla seriale, pensato per la pagina web di
 // configurazione (Web Serial) ma usabile anche a mano:
 //
-//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 power=10 board=T3 reboot=0
+//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 power=10 volume=7 board=t3 reboot=0
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
 //   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000)
 //   CFG SET POWER 10             -> CFG OK power=10            (dBm, 2-17)
+//   CFG SET VOLUME 7             -> CFG OK volume=7            (0 = muto, 1-10 in passi da 3 dB)
 //   CFG RESET                    -> CFG OK reset               (torna ai valori compilati)
 //   CFG REBOOT                   -> riavvia la scheda
 //
@@ -28,11 +29,15 @@ constexpr uint32_t kMinFreqKhz = 430000;  // banda dei 70 cm, IARU Regione 1: 43
 constexpr uint32_t kMaxFreqKhz = 440000;
 constexpr int kMinPowerDbm = 2;   // limiti dell'SX1278 senza PA_BOOST
 constexpr int kMaxPowerDbm = 17;
+constexpr int kMinVolume = 0;  // muto
+constexpr int kMaxVolume = 10;  // 0 dB
+constexpr int kDefaultVolume = 7;
 
 struct Settings {
   char callsign[kMaxCallsign + 1] = {0};
   uint32_t freqKhz = 0;
   int powerDbm = 0;
+  int volume = kDefaultVolume;  // volume iniziale dell'altoparlante
 
   float freqMhz() const { return static_cast<float>(freqKhz) / 1000.0f; }
 };
@@ -40,7 +45,7 @@ struct Settings {
 bool operator==(const Settings& a, const Settings& b);
 inline bool operator!=(const Settings& a, const Settings& b) { return !(a == b); }
 
-// true se nominativo, frequenza e potenza sono nei limiti.
+// true se nominativo, frequenza, potenza e volume sono nei limiti.
 bool isValidSettings(const Settings& s);
 
 // Memoria delle impostazioni (NVS sulla scheda, finta nei test).
