@@ -33,6 +33,13 @@
   .floorrow { display:flex; flex-wrap:wrap; gap:.4em; align-items:center; }
   .floorrow button { margin:0; }
   .floorrow input { width:7rem; max-width:7rem; text-align:center; }
+  .hwout { margin-top:.6em; min-height:1.2em; font-weight:600; }
+  .hwout.ok { color:var(--ok); } .hwout.err { color:var(--err); }
+  .hwout table { border-collapse:collapse; margin:.4em 0; font-weight:400; font-size:.92rem; }
+  .hwout th, .hwout td { border:1px solid var(--line); padding:3px 8px; text-align:right; }
+  .hwout td:last-child, .hwout th:last-child { text-align:left; }
+  .falsi { margin-top:1em; font-size:.92rem; }
+  .falsi summary { cursor:pointer; font-weight:600; }
   #logtools { margin-top:.4em; }
   #logtools button { padding:5px 12px; font-size:.9rem; }
   footer { font-size:.85rem; color:var(--muted); margin:20px 0; }
@@ -125,6 +132,28 @@
     <div id="log" aria-label="Seriale della scheda"></div>
   </section>
 
+  <section id="hw">
+    <h2>3. Verifica dell'hardware audio</h2>
+    <p class="muted">Per controllare il montaggio di microfono, amplificatore e altoparlante con <strong>una sola scheda</strong>, senza strumenti. Collega prima la scheda nel passo 2.</p>
+
+    <h3>Microfono</h3>
+    <p class="muted">Prima 3 secondi di silenzio, poi 3 secondi in cui parli vicino al microfono (per esempio: "prova, uno, due, tre"). La pagina confronta i due livelli.</p>
+    <button id="hwMic" type="button" disabled>Prova il microfono</button>
+    <div id="hwMicOut" class="hwout" role="status"></div>
+
+    <h3>Altoparlante e microfono insieme</h3>
+    <p class="muted">La scheda suona tre toni (grave, medio e acuto) a volume basso e fisso. <strong>Ascoltali</strong>: dovresti sentire tre toni distinti, chiari e senza fruscio. Nello stesso tempo il microfono misura se li sente.</p>
+    <button id="hwTones" type="button" disabled>Suona i toni</button>
+    <div id="hwTonesOut" class="hwout" role="status"></div>
+
+    <details class="falsi">
+      <summary>Come leggere il risultato: falsi positivi e falsi negativi</summary>
+      <p><strong>Falso positivo:</strong> il microfono "sente" i toni anche senza che l'altoparlante li emetta, perché il rumore dell'amplificatore entra nel microfono dai fili o dall'alimentazione. <em>Controllo:</em> ripeti la prova <strong>con l'altoparlante scollegato</strong>: se il microfono sente lo stesso, il collegamento è elettrico, non acustico, e il risultato non vale.</p>
+      <p><strong>Falso negativo:</strong> l'altoparlante suona ma il microfono non sente i toni, perché è lontano, coperto o il volume è troppo basso. <em>Controllo:</em> se hai sentito i toni a orecchio, l'altoparlante funziona; avvicina il microfono all'altoparlante e ripeti.</p>
+      <p>La prova è <strong>indicativa</strong>: dice se la catena è viva, non com'è la qualità della voce, che si giudica ascoltando.</p>
+    </details>
+  </section>
+
   <footer>
     Codice sorgente e licenza GPL-3.0: <a id="src" href="https://github.com/IU5HJU/LoRa-Codec-2-RTX">github.com/IU5HJU/LoRa-Codec-2-RTX</a>.
     La pagina funziona solo in locale nel tuo browser: nessun dato viene inviato altrove.
@@ -167,11 +196,13 @@
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
-    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff']) $(id).disabled = !on;
+    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
   }
 
+  const sinks = [];   // ascoltatori di righe (prove che raccolgono piu' risposte)
   function onLine(line) {
     log(line);
+    sinks.forEach(f => f(line));
     if (line.startsWith('CFG ')) {
       const m = {};
       for (const kv of line.slice(4).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = kv.slice(i + 1); }
@@ -343,6 +374,73 @@
   $('form').addEventListener('submit', save);
   $('reload').addEventListener('click', () => refresh(false));
   $('reset').addEventListener('click', reset);
+
+  // ---- Verifica dell'hardware audio ----
+  function showHw(id, html, cls) { const el = $(id); el.innerHTML = html; el.className = 'hwout ' + (cls || ''); }
+  async function micLevels() {   // misura 3 s (come "Misura il fondo", ma senza salvare nulla)
+    const ack = await send('CFG MIC MEASURE', /^CFG (OK|ERR) mic/);
+    if (ack.startsWith('CFG ERR')) throw new Error(ack);
+    const line = await waitFor(/^CFG MIC /, 8000);
+    const m = {};
+    for (const kv of line.slice(8).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = Number(kv.slice(i + 1)); }
+    if (line.includes('ERR') || !Number.isFinite(m.fondo) || !(m.frames >= 50)) throw new Error('nessun dato dal microfono');
+    return m;
+  }
+  let hwBusy = false;
+  async function hwRun(fn) {
+    if (hwBusy || measuring) return;
+    hwBusy = true;
+    const ids = ['hwMic', 'hwTones', 'measure', 'floorDown', 'floorUp', 'micfloor', 'save'];
+    ids.forEach(id => { $(id).disabled = true; });
+    try { await fn(); } finally { hwBusy = false; ids.forEach(id => { $(id).disabled = !port; }); }
+  }
+  $('hwMic').addEventListener('click', () => hwRun(async () => {
+    try {
+      showHw('hwMicOut', 'Resta in silenzio e non toccare il microfono… (3 s)');
+      const silence = await micLevels();
+      showHw('hwMicOut', 'Ora parla vicino al microfono, per esempio: <em>prova, uno, due, tre</em> (3 s)');
+      const voice = await micLevels();
+      const diff = voice.fondo - silence.fondo;
+      const levels = 'Silenzio ' + silence.fondo + ' dBFS, voce ' + voice.fondo + ' dBFS (differenza ' + (diff >= 0 ? '+' : '') + diff + ' dB).';
+      if (silence.max - silence.min > 12) {
+        showHw('hwMicOut', 'Il silenzio non era stabile (da ' + silence.min + ' a ' + silence.max + ' dBFS): hai parlato o toccato il microfono? Ripeti la prova. ' + levels, 'err');
+      } else if (diff >= 15) {
+        showHw('hwMicOut', 'Il microfono sente: la voce sta ' + diff + ' dB sopra il silenzio. ' + levels, 'ok');
+      } else if (diff >= 6) {
+        showHw('hwMicOut', 'Differenza piccola (' + diff + ' dB): avvicina il microfono, parla più forte o controlla i collegamenti. ' + levels, 'err');
+      } else {
+        showHw('hwMicOut', 'Il microfono non distingue la voce dal silenzio. Controlla VDD a 3,3 V, GND, L/R a GND, SCK/WS/SD e, se non si sente nulla, prova `LCR_MIC_SLOT 1`. ' + levels, 'err');
+      }
+    } catch (e) { showHw('hwMicOut', 'Errore: ' + e.message, 'err'); }
+  }));
+  $('hwTones').addEventListener('click', () => hwRun(async () => {
+    const got = [];
+    const sink = l => { if (l.startsWith('CFG AUDIO f=')) got.push(l); };
+    sinks.push(sink);
+    try {
+      showHw('hwTonesOut', 'Ascolta i toni… (circa 4 secondi)');
+      const ack = await send('CFG TEST AUDIO', /^CFG (OK|ERR) audio/);
+      if (ack.startsWith('CFG ERR')) throw new Error(ack);
+      await waitFor(/^CFG AUDIO fine/, 12000);
+      const rows = got.map(l => {
+        const m = {};
+        for (const kv of l.slice(10).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = Number(kv.slice(i + 1)); }
+        const d = m.tone - m.base;
+        const verdict = d >= 10 ? 'sentito' : d >= 3 ? 'dubbio' : 'non sentito';
+        return { f: m.f, base: m.base, tone: m.tone, d, verdict };
+      });
+      if (rows.length < 3) throw new Error('risposta incompleta dalla scheda');
+      const heard = rows.filter(r => r.verdict === 'sentito').length;
+      const table = '<table><tr><th>Tono</th><th>Pausa</th><th>Tono</th><th>Differenza</th><th>Esito</th></tr>' +
+        rows.map(r => '<tr><td>' + r.f + ' Hz</td><td>' + r.base.toFixed(1) + ' dBFS</td><td>' + r.tone.toFixed(1) + ' dBFS</td><td>' + (r.d >= 0 ? '+' : '') + r.d.toFixed(1) + ' dB</td><td>' + r.verdict + '</td></tr>').join('') + '</table>';
+      let txt, cls;
+      if (heard >= 2) { txt = 'Il microfono ha sentito i toni: microfono, I2S, amplificatore e altoparlante sembrano vivi. Se non li hai sentiti a orecchio, o il microfono li sente anche con l\'altoparlante scollegato, vedi "falso positivo" qui sotto.'; cls = 'ok'; }
+      else if (heard === 0 && rows.every(r => r.d < 3)) { txt = 'Il microfono non ha sentito i toni. Se li hai sentiti a orecchio, l\'altoparlante funziona e il microfono è lontano o coperto ("falso negativo"). Se non li hai sentiti, controlla l\'amplificatore: VIN a 5 V, SD su GPIO25, DIN su GPIO4, BCLK e LRC (GPIO14 e 13) e l\'altoparlante ai morsetti.'; cls = 'err'; }
+      else { txt = 'Risultato dubbio: ripeti la prova avvicinando il microfono all\'altoparlante, e confrontala con l\'ascolto a orecchio.'; cls = 'err'; }
+      showHw('hwTonesOut', table + txt, cls);
+    } catch (e) { showHw('hwTonesOut', 'Errore: ' + e.message, 'err'); }
+    finally { const i = sinks.indexOf(sink); if (i >= 0) sinks.splice(i, 1); }
+  }));
 
   // ---- Fondo del microfono: si misura una volta in silenzio, poi si corregge a mano ----
   let lastFloor = null;   // ultimo fondo salvato nella scheda

@@ -148,6 +148,26 @@ void setup() {
   Serial.println(reply);  // la pagina di configurazione legge questa riga
 }
 
+// Prova dell'hardware audio (CFG TEST AUDIO): tre toni a volume fisso e basso, con il livello del microfono a ogni
+// frequenza. Bloccante per circa 3,5 s. I risultati tornano alla pagina di configurazione; il giudizio e' dell'operatore.
+static void runAudioTest() {
+  constexpr int kTestVolumeStep = 5;  // -15 dB: udibile ma non forte
+  ui.showMessage("PROVA AUDIO", "ascolta i toni");
+  const int savedVolume = audio.volumeStep();
+  audio.setVolumeStep(kTestVolumeStep);
+  static const float kFreqs[] = {500.0f, 1000.0f, 2000.0f};
+  for (float f : kFreqs) {
+    float pauseDb = 0, toneDb = 0;
+    audio.toneTest(f, pauseDb, toneDb);
+    Serial.printf("CFG AUDIO f=%d base=%.1f tone=%.1f\n", static_cast<int>(f), static_cast<double>(pauseDb),
+                  static_cast<double>(toneDb));
+    delay(150);
+  }
+  audio.setVolumeStep(savedVolume);
+  Serial.println("CFG AUDIO fine");
+  ui.refresh();
+}
+
 // Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
 static void serviceConsole() {
   static char line[96];
@@ -165,6 +185,7 @@ static void serviceConsole() {
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);
+      if (r == lcr::ConsoleResult::AudioTest) runAudioTest();
       audio.setMicFloor(console->stored().micFloorDb);  // il fondo si applica subito (CFG SET MICFLOOR)
       node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio
       if (r == lcr::ConsoleResult::Reboot) {

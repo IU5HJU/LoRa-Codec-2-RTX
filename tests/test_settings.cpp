@@ -179,6 +179,9 @@ void testTestMode() {
   CHECK(f.run("cfg test off") == ConsoleResult::Ok && !f.con.testMode() && strcmp(f.reply, "CFG OK test=off") == 0);
   CHECK(f.run("CFG TEST") == ConsoleResult::Error);
   CHECK(f.run("CFG TEST MAYBE") == ConsoleResult::Error && strncmp(f.reply, "CFG ERR test", 12) == 0);
+  CHECK(f.run("CFG TEST AUDIO") == ConsoleResult::AudioTest && strncmp(f.reply, "CFG OK audio", 12) == 0);
+  CHECK(f.run("cfg test audio") == ConsoleResult::AudioTest);
+  CHECK(!f.con.testMode());  // la prova audio non cambia il modo prova di collegamento
   CHECK(f.run("CFG TEST ON") == ConsoleResult::Ok);
   CHECK(f.run("CFG RESET") == ConsoleResult::Ok && f.con.testMode());  // il reset non tocca la prova
   Fixture g;  // un nuovo avvio parte spento

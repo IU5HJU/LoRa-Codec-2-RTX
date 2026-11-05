@@ -37,6 +37,9 @@ class UiNotifier : public lcr::INotifier {
   void testModeChanged(bool on) override;
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
 
+  // Forza il ridisegno dello schermo (dopo una schermata temporanea).
+  void refresh() { dirty_ = true; }
+
   // Prova di collegamento attiva: lo schermo a riposo lo dice.
   void setTestMode(bool on) {
     if (on != testMode_) dirty_ = true;

@@ -120,6 +120,7 @@ void AudioIo::captureLoop() {
     }
     for (size_t i = 0; i < lcr::kMicSamplesPerFrame; i++) micMono_[i] = rxStereo_[2 * i + LCR_MIC_SLOT];
     measureLevel();
+    if (toneActive_) toneMeter_.addBlock(micMono_, lcr::kMicSamplesPerFrame);
     front_.processFrame(micMono_, micPcm_);
     mic_.feed(micPcm_);
     if (measuring_) {  // "Misura il fondo": livello visto dall'AGC, dopo il passa-alto
@@ -152,6 +153,24 @@ void AudioIo::measureLevel() {
   micRmsDb_ = 20.0f * log10f((rms + 1.0f) / kFullScale);
   micPeakDb_ = 20.0f * log10f((peak + 1.0f) / kFullScale);
   micDcPct_ = 100.0f * mean / kFullScale;
+}
+
+void AudioIo::toneTest(float freqHz, float& pauseDb, float& toneDb) {
+  // Pausa: il microfono ascolta alla frequenza del tono senza che l'altoparlante suoni.
+  toneMeter_.begin(freqHz, static_cast<float>(lcr::kMicRate));
+  toneActive_ = true;
+  delay(400);
+  toneActive_ = false;
+  delay(60);
+  pauseDb = toneMeter_.maxDb();
+  // Tono: la finestra di misura copre il tono e la coda ancora nei buffer I2S.
+  toneMeter_.begin(freqHz, static_cast<float>(lcr::kMicRate));
+  toneActive_ = true;
+  beep(freqHz, 500);
+  delay(150);
+  toneActive_ = false;
+  delay(60);
+  toneDb = toneMeter_.maxDb();
 }
 
 void AudioIo::setMicFloor(int floorDb) { front_.setGateDbfs(lcr::micGateFromFloor(floorDb)); }
@@ -218,7 +237,7 @@ void AudioIo::playLost() {
 
 void AudioIo::beep(float freqHz, uint32_t durationMs) {
   if (back_.muted()) return;
-  if (durationMs > 300) durationMs = 300;
+  if (durationMs > 600) durationMs = 600;
   ampOn();
   const float amp = 0.25f * std::pow(10.0f, back_.volumeDb() / 20.0f) * 32767.0f;
   const size_t total = static_cast<size_t>(kSampleRate / 1000) * durationMs;

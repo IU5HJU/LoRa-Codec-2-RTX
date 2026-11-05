@@ -33,6 +33,7 @@ Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protoco
 | `src/settings_nvs.*` | Impostazioni salvate nella memoria non volatile (NVS): nominativo, frequenza, potenza, volume |
 | `src/battery.*` | Tensione della batteria: AXP2101 sulla T-Beam, ADC su GPIO35 sulla T3 |
 | `lib/voicecore/settings.*` | Validazione delle impostazioni e comandi `CFG` (testati sul PC) |
+| `lib/voicecore/tone_meter.*`, `level_stats.*` | Misura di un tono (Goertzel) e statistiche di livello per le prove audio |
 | `lib/voicecore/link_test.*` | Prova di collegamento: sequenza nota, confronto, esito |
 | `site/index.html`, `tools/make_site.sh` | Pagina web di installazione e configurazione, pubblicata su GitHub Pages dal workflow |
 | `src/pmu.*` | Alimentazione: sulla T-Beam inizializza l'AXP2101 (radio e GPS); sulla T3 non fa nulla |
@@ -133,6 +134,7 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | `CFG SET VOLUME 7` | `CFG OK volume=7` | volume iniziale dell'altoparlante: 0 muto, 1-10 in passi da 3 dB (10 = massimo); il pulsante su GPIO15 lo cambia poi a scheda accesa, ma allo spegnimento torna a questo valore |
 | `CFG SET MICFLOOR -60` | `CFG OK micfloor=-60` | **fondo del microfono** in dBFS (da -80 a -36): livello in silenzio visto dall'AGC; l'AGC lavora sopra fondo + 6 dB. Vale subito e resta salvato; standard -60 |
 | `CFG MIC MEASURE` | `CFG OK mic misura in corso...`, dopo 3 s `CFG MIC fondo=-61 min=-63 max=-58 frames=75` | misura il fondo (stare in silenzio): `fondo` è il livello sotto cui sta il 90% dei campioni. Non salva da solo: lo fa la pagina con `CFG SET MICFLOOR` |
+| `CFG TEST AUDIO` | `CFG OK audio prova in corso...`, poi `CFG AUDIO f=500 base=-90.1 tone=-52.3` (e 1000, 2000 Hz) e `CFG AUDIO fine` | suona tre toni a volume basso e fisso e misura il microfono alla frequenza del tono ([verifica-hardware-audio.md](verifica-hardware-audio.md)); blocca la scheda per circa 3,5 s |
 | `CFG TEST ON` / `CFG TEST OFF` | `CFG OK test=on` | prova di collegamento ([prova-collegamento.md](prova-collegamento.md)), attivabile anche con tre clic veloci sul PTT; non viene salvata, all'accensione è sempre spenta |
 | `CFG RESET` | `CFG OK reset` | cancella i valori salvati e torna a quelli di `user_config.h` |
 | `CFG REBOOT` | `CFG OK reboot` | riavvia la scheda |

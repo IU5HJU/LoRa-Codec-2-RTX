@@ -15,6 +15,7 @@
 //   CFG MIC MEASURE              -> misura il fondo per 3 s (stare in silenzio), poi: CFG MIC fondo=-61 min=-63 max=-58 frames=75
 //   CFG SET VOLUME 7             -> CFG OK volume=7            (0 = muto, 1-10 in passi da 3 dB)
 //   CFG TEST ON                  -> CFG OK test=on             (prova di collegamento, solo fino al riavvio; OFF la spegne)
+//   CFG TEST AUDIO               -> suona 500, 1000 e 2000 Hz e misura il microfono: CFG AUDIO f=500 base=-90.1 tone=-52.3 ... CFG AUDIO fine
 //   CFG RESET                    -> CFG OK reset               (torna ai valori compilati)
 //   CFG REBOOT                   -> riavvia la scheda
 //
@@ -80,6 +81,7 @@ enum class ConsoleResult {
   Error,
   Reboot,  // risposta pronta; il chiamante deve riavviare la scheda
   MicMeasure,  // risposta pronta; il chiamante deve misurare il fondo per 3 s e stampare il risultato
+  AudioTest,   // risposta pronta; il chiamante deve suonare i toni di prova e stampare i livelli del microfono
 };
 
 class SettingsConsole {
