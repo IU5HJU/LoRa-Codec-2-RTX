@@ -29,6 +29,7 @@
   #status.err { color:var(--err); } #status.ok { color:var(--ok); }
   #log { background:var(--log-bg); color:var(--log-fg); font:12px/1.4 ui-monospace, monospace; padding:10px; border-radius:6px; height:11rem; overflow:auto; white-space:pre-wrap; margin-top:.8em; }
   #nosupport { display:none; }
+  .floorhint { margin:.2em 0 .6em; }
   .floorrow { display:flex; flex-wrap:wrap; gap:.4em; align-items:center; }
   .floorrow button { margin:0; }
   .floorrow input { width:7rem; max-width:7rem; text-align:center; }
@@ -96,15 +97,15 @@
       <p class="hint">Da 0 (muto) a 10, in passi da 3 dB. Con il pulsante volume (GPIO15) si cambia poi a scheda accesa; allo spegnimento torna a questo valore.</p>
 
       <label for="micfloor">Fondo del microfono (dBFS)</label>
+      <p class="hint floorhint"><strong>Per misurarlo: resta in silenzio, non toccare il microfono e premi "Misura il fondo"</strong> (3 secondi). Il valore trovato viene salvato e vale subito.
+      Poi lo puoi correggere a mano con &minus; e +: <strong>più alto</strong> = l'AGC taglia più rumore (ma può tagliare la voce debole), <strong>più basso</strong> = più sensibile (ma amplifica il fondo).
+      Standard &minus;60 dBFS (stanza silenziosa); in auto o all'aperto il fondo sarà più alto. Da &minus;80 a &minus;36.</p>
       <div class="floorrow">
         <button id="floorDown" type="button" class="secondary" disabled aria-label="Abbassa il fondo di 1 dB">&minus;</button>
         <input id="micfloor" type="number" min="-80" max="-36" step="1" placeholder="-60" disabled required>
         <button id="floorUp" type="button" class="secondary" disabled aria-label="Alza il fondo di 1 dB">+</button>
         <button id="measure" type="button" disabled>Misura il fondo</button>
       </div>
-      <p class="hint"><strong>Per misurarlo: resta in silenzio, non toccare il microfono e premi "Misura il fondo"</strong> (3 secondi). Il valore trovato viene salvato e vale subito.
-      Poi lo puoi correggere a mano con &minus; e +: <strong>più alto</strong> = l'AGC taglia più rumore (ma può tagliare la voce debole), <strong>più basso</strong> = più sensibile (ma amplifica il fondo).
-      Standard &minus;60 dBFS (stanza silenziosa); in auto o all'aperto il fondo sarà più alto. Da &minus;80 a &minus;36.</p>
 
       <button id="save" type="submit" disabled>Salva e riavvia</button>
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
