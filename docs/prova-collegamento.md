@@ -25,7 +25,13 @@ Misurare frequenza e ampiezza dopo il decodificatore darebbe falsi allarmi sul c
 2. Premi il PTT su una scheda (serve un nominativo vero: con N0CALL il PTT è bloccato). Dura 12 s, o meno se rilasci prima.
 3. Sul ricevitore compare la schermata "PROVA 99%" per 15 s, con la riga sulla seriale:
    `PROVA ricevuta da IU5HJU: ok 296/300 (99%), danneggiati 1, persi 3, pacchetti recuperati 5, RSSI -92 dBm, SNR 6 dB`.
-   Sul trasmettitore, se risponde, la stessa schermata con "Risposta" e la riga `PROVA risposta da IZ5ABC: ...`. Due bip acuti = prova perfetta, un bip grave = c'è stata qualche perdita.
+   Sul trasmettitore, se risponde, la stessa schermata con "Risposta" e la riga `PROVA risposta da IZ5ABC: ...`. Due bip acuti = nessuna perdita tra i frame arrivati, un bip grave = c'è stata qualche perdita.
+
+## Prova parziale
+
+La percentuale è calcolata sui frame **arrivati**, non sui 300 previsti: una prova interrotta con il PTT dopo 7 frame, tutti perfetti, vale 100%. La scheda la segnala come **parziale**
+(sull'OLED "Parz.7/300", in seriale `PARZIALE (prova interrotta o coda persa)`). Il ricevitore non può distinguere un PTT rilasciato presto dalla perdita degli ultimi pacchetti:
+per misurare la portata tieni premuto il PTT fino in fondo (12 s) e cerca "ok 300/300".
 
 ## Come leggere l'esito
 

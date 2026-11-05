@@ -18,7 +18,8 @@ void testFramePattern(uint16_t session, uint32_t index, uint8_t* out) {
 }
 
 int TestReport::percentOk() const {
-  const int p = static_cast<int>((100u * framesOk + kTestFrames / 2) / kTestFrames);
+  if (framesOut == 0) return 0;
+  const int p = static_cast<int>((100u * framesOk + framesOut / 2u) / framesOut);
   return p > 100 ? 100 : p;
 }
 

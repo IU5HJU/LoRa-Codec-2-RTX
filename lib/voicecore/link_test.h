@@ -29,10 +29,16 @@ struct TestReport {
   int snrDb = 0;             // media degli SNR (0 se la radio non lo fornisce)
   bool snrValid = false;
 
-  // Percentuale di frame ok rispetto a kTestFrames, 0-100.
+  // Percentuale di frame ok sui frame consegnati (0 se non ne e' arrivato nessuno), 0-100.
+  // Una prova interrotta dal PTT dopo pochi frame perfetti vale quindi 100%, ma non e' "completa".
   int percentOk() const;
-  // "Collegamento buono": nessun frame perso o danneggiato e prova completa.
-  bool perfect() const { return framesOk >= kTestFrames && framesBad == 0 && framesLost == 0; }
+  // Prova arrivata fino in fondo (kTestFrames frame). Se manca la coda non si sa se il PTT e' stato
+  // rilasciato prima o se sono andati persi gli ultimi pacchetti: per questo si segnala "parziale".
+  bool complete() const { return framesOut >= kTestFrames; }
+  // Nessun frame perso o danneggiato tra quelli consegnati.
+  bool clean() const { return framesOut > 0 && framesBad == 0 && framesLost == 0; }
+  // "Collegamento buono": prova completa e pulita.
+  bool perfect() const { return complete() && clean(); }
 };
 
 // Il risultato viaggia in un pacchetto kModeTestReport con 12 byte di payload (2 "frame").

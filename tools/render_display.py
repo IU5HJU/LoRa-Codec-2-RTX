@@ -151,8 +151,9 @@ def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, n
 
 
 def draw_test_report(font, frames_ok, lost, bad, recovered, rssi, snr, call, remote=False, callsign=CALLSIGN):
+    frames_out = frames_ok + lost + bad
     """Come UiNotifier::drawTestReport(): esito della prova di collegamento (15 s)."""
-    pct = min(100, (100 * frames_ok + 150) // 300)
+    pct = 0 if frames_out == 0 else min(100, (100 * frames_ok + frames_out // 2) // frames_out)
     o = Oled(font)
     o.set_size(1)
     o.set_cursor(0, 0)
@@ -163,7 +164,10 @@ def draw_test_report(font, frames_ok, lost, bad, recovered, rssi, snr, call, rem
     o.write(f"PROVA {pct}%")
     o.set_size(1)
     o.set_cursor(0, 38)
-    o.write(f"{'Risposta' if remote else 'Ricevuta da'} {call or '-'}")
+    if frames_out >= 300:
+        o.write(f"{'Risposta' if remote else 'Ricevuta da'} {call or '-'}")
+    else:
+        o.write(f"Parz.{frames_out}/300 {call or '-'}")
     o.set_cursor(0, 47)
     o.write(f"ok {frames_ok} pers {lost} dan {bad}")  # max 21 caratteri
     o.set_cursor(0, 56)
@@ -211,6 +215,8 @@ def screens(font):
          draw_test_report(font, 276, 24, 1, 12, -120, -15, "IU5HJU/P")),
         ("19  Risposta alla prova", "Il ricevitore ha risposto con il suo risultato, mostrato sulla scheda che ha trasmesso.",
          draw_test_report(font, 300, 0, 0, 0, -41, 11, "IZ5ABC", remote=True)),
+        ("20  Prova interrotta (parziale)", "PTT rilasciato presto: i 7 frame arrivati sono perfetti (100%), ma la prova non e' completa.",
+         draw_test_report(font, 7, 0, 0, 0, -33, 12, "IU5HJU")),
     ]
 
 

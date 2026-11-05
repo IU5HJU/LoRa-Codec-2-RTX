@@ -102,12 +102,12 @@ void UiNotifier::linkTestReport(bool fromRemote, const char* callsign, const lcr
   testShown_ = true;
   testUntilMs_ = millis() + 15000;
   // Riga per il registro delle prove (docs/prove.md).
-  Serial.printf("PROVA %s %s: ok %u/%u (%d%%), danneggiati %u, persi %u, pacchetti recuperati %u, RSSI %d dBm, SNR %s%d dB\n",
-                fromRemote ? "risposta da" : "ricevuta da", testCall_[0] ? testCall_ : "-", r.framesOk,
-                static_cast<unsigned>(lcr::kTestFrames), r.percentOk(), r.framesBad, r.framesLost, r.recovered,
-                r.rssiDbm, r.snrValid ? "" : "n.d. ", r.snrValid ? r.snrDb : 0);
+  Serial.printf("PROVA %s %s: ok %u/%u (%d%%)%s, danneggiati %u, persi %u, pacchetti recuperati %u, RSSI %d dBm, SNR %s%d dB\n",
+                fromRemote ? "risposta da" : "ricevuta da", testCall_[0] ? testCall_ : "-", r.framesOk, r.framesOut,
+                r.percentOk(), r.complete() ? "" : " PARZIALE (prova interrotta o coda persa)", r.framesBad, r.framesLost,
+                r.recovered, r.rssiDbm, r.snrValid ? "" : "n.d. ", r.snrValid ? r.snrDb : 0);
   dirty_ = true;
-  if (r.perfect()) {
+  if (r.clean()) {
     audio_.beep(1000, 60);
     audio_.beep(1400, 60);
   } else {
@@ -122,7 +122,11 @@ void UiNotifier::drawTestReport() {
   display_.printf("PROVA %d%%", r.percentOk());
   display_.setTextSize(1);
   display_.setCursor(0, 38);
-  display_.printf("%s %s", testFromRemote_ ? "Risposta" : "Ricevuta da", testCall_[0] ? testCall_ : "-");
+  if (r.complete()) {
+    display_.printf("%s %s", testFromRemote_ ? "Risposta" : "Ricevuta da", testCall_[0] ? testCall_ : "-");
+  } else {
+    display_.printf("Parz.%u/%u %s", r.framesOut, static_cast<unsigned>(lcr::kTestFrames), testCall_[0] ? testCall_ : "-");
+  }
   display_.setCursor(0, 47);
   display_.printf("ok %u pers %u dan %u", r.framesOk, r.framesLost, r.framesBad);  // max 21 caratteri
   display_.setCursor(0, 56);

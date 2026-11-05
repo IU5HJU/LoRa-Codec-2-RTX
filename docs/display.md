@@ -39,6 +39,7 @@ Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 | 17 | Fine di una prova ricevuta | "PROVA 100%", "Ricevuta da" e nominativo, frame ok/persi/danneggiati, pacchetti recuperati, RSSI e SNR medi. Resta 15 s |
 | 18 | Come la 17 ma con perdite | percentuale più bassa; le righe stanno nei 21 caratteri anche nel caso peggiore (RSSI -120 dBm, SNR -15 dB) |
 | 19 | Risposta alla prova trasmessa da qui | come la 17 con "Risposta" e il nominativo dell'altra stazione |
+| 20 | Prova interrotta o incompleta | come la 17, ma la riga sotto la percentuale dice "Parz.7/300" e il nominativo: la percentuale è sui frame arrivati, non su 300 |
 
 Gli avvisi 6, 7, 8 e 11 restano a schermo circa 1,5-2 secondi; l'esito della prova (17-19) 15 secondi, senza volume e batteria. Due bip acuti a prova perfetta, un bip grave se ci sono state perdite. Ogni trasmissione e ricezione termina anche con un bip.
 

@@ -83,10 +83,22 @@ static void testReportCodec() {
   CHECK(q.recovered == 5 && q.rssiDbm == -92 && q.snrDb == -7 && q.snrValid);
   CHECK(!decodeTestReport(b, sizeof(b) - 1, q));
   CHECK(q.percentOk() == 99);  // 296/300
+  CHECK(q.complete() && !q.clean());
   CHECK(!q.perfect());
   r.framesOk = 300;
   r.framesBad = r.framesLost = 0;
   CHECK(r.perfect() && r.percentOk() == 100);
+}
+
+static void testPartial() {
+  TestReport r;
+  CHECK(r.percentOk() == 0 && !r.clean() && !r.complete());  // niente ricevuto
+  r.framesOut = r.framesOk = 7;  // prova interrotta dopo 7 frame, tutti perfetti
+  CHECK(r.percentOk() == 100 && r.clean() && !r.complete() && !r.perfect());
+  r.framesOut = 10;
+  r.framesOk = 9;
+  r.framesLost = 1;
+  CHECK(r.percentOk() == 90 && !r.clean());
 }
 
 static void testRxAccumulator() {
@@ -174,6 +186,7 @@ static void testReleaseEarly() {
   CHECK(s.b.note.reports.size() == 1);
   CHECK(s.b.note.reports[0].r.framesBad == 0 && s.b.note.reports[0].r.framesLost == 0);
   CHECK(s.b.note.reports[0].r.framesOut > 0 && s.b.note.reports[0].r.framesOut < kTestFrames);
+  CHECK(s.b.note.reports[0].r.clean() && !s.b.note.reports[0].r.complete() && s.b.note.reports[0].r.percentOk() == 100);
 }
 
 static void testVoiceUnaffected() {
@@ -207,6 +220,7 @@ static void testOnlyOwnReply() {
 int main() {
   testPattern();
   testReportCodec();
+  testPartial();
   testRxAccumulator();
   testEndToEnd();
   testNoReplyWhenTestOff();
