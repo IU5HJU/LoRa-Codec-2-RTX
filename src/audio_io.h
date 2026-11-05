@@ -16,6 +16,7 @@
 #include "audio_backend.h"
 #include "audio_frontend.h"
 #include "interfaces.h"
+#include "level_stats.h"
 #include "preroll_mic.h"
 
 class AudioIo {
@@ -43,6 +44,12 @@ class AudioIo {
   float micPeakDb() const { return micPeakDb_; }  // picco
   float micDcPercent() const { return micDcPct_; }  // offset continuo, % del fondo scala
   float micGainDb() const { return front_.gainDb(); }  // guadagno attuale dell'AGC
+  // Fondo del microfono (dBFS): l'AGC lavora sopra fondo + 6 dB.
+  void setMicFloor(int floorDb);
+  // "Misura il fondo": raccoglie per 'ms' il livello visto dall'AGC; il risultato si ritira con takeMeasureResult().
+  void startMeasure(uint32_t ms);
+  bool takeMeasureResult(lcr::LevelStats& out);  // true una volta sola a misura finita
+
   float micAgcInDb() const { return front_.agcInputDb(); }  // livello visto dall'AGC (dopo il passa-alto)
 
  private:
@@ -88,6 +95,10 @@ class AudioIo {
   bool ampOn_ = false;
   uint32_t lastPlayMs_ = 0;
   volatile uint32_t micErrors_ = 0;
+  volatile bool measuring_ = false;
+  volatile bool measureDone_ = false;
+  volatile uint32_t measureUntilMs_ = 0;
+  lcr::LevelStats stats_;
   volatile float micRmsDb_ = -120.0f;
   volatile float micPeakDb_ = -120.0f;
   volatile float micDcPct_ = 0.0f;

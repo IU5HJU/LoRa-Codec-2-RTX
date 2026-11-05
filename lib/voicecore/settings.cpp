@@ -10,13 +10,14 @@ namespace lcr {
 
 bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz &&
-         a.powerDbm == b.powerDbm && a.volume == b.volume;
+         a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb;
 }
 
 bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
-         s.volume <= kMaxVolume;
+         s.volume <= kMaxVolume &&
+         s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb;
 }
 
 Settings loadSettings(ISettingsStorage& storage, const Settings& defaults) {
@@ -126,6 +127,7 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
   if (equalsIgnoreCase(tok[1], "SET") && n == 4) return set(tok[2], tok[3], reply, cap);
   if (equalsIgnoreCase(tok[1], "RESET") && n == 2) return reset(reply, cap);
   if (equalsIgnoreCase(tok[1], "TEST") && n == 3) return test(tok[2], reply, cap);
+  if (equalsIgnoreCase(tok[1], "MIC") && n == 3) return mic(tok[2], reply, cap);
   if (equalsIgnoreCase(tok[1], "REBOOT") && n == 2) {
     say(reply, cap, "CFG OK reboot");
     return ConsoleResult::Reboot;
@@ -136,9 +138,9 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
 
 ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
   if (reply && cap > 0) {
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d board=%s reboot=%d test=%d", stored_.callsign,
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d micfloor=%d board=%s reboot=%d test=%d", stored_.callsign,
              static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
-             stored_.powerDbm, stored_.volume, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
+             stored_.powerDbm, stored_.volume, stored_.micFloorDb, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
   }
   return ConsoleResult::Ok;
 }
@@ -183,6 +185,14 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.volume = vol;
     snprintf(shown, sizeof(shown), "volume=%d", vol);
+  } else if (equalsIgnoreCase(key, "MICFLOOR")) {
+    int fl = 0;
+    if (!parseInt(value, fl) || fl < kMinMicFloorDb || fl > kMaxMicFloorDb) {
+      say(reply, cap, "CFG ERR micfloor %s", "in dBFS, da -80 a -36");
+      return ConsoleResult::Error;
+    }
+    next.micFloorDb = fl;
+    snprintf(shown, sizeof(shown), "micfloor=%d", fl);
   } else {
     say(reply, cap, "CFG ERR %s parametro sconosciuto", key);
     return ConsoleResult::Error;
@@ -193,6 +203,7 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     return ConsoleResult::Error;
   }
   stored_ = next;
+  active_.micFloorDb = next.micFloorDb;  // il fondo del microfono si applica subito: non richiede il riavvio
   say(reply, cap, "CFG OK %s", shown);
   return ConsoleResult::Ok;
 }
@@ -208,6 +219,15 @@ ConsoleResult SettingsConsole::test(const char* value, char* reply, size_t cap) 
   }
   say(reply, cap, testMode_ ? "CFG OK test=on" : "CFG OK test=off");
   return ConsoleResult::Ok;
+}
+
+ConsoleResult SettingsConsole::mic(const char* value, char* reply, size_t cap) {
+  if (equalsIgnoreCase(value, "MEASURE")) {
+    say(reply, cap, "CFG OK mic misura in corso: stare in silenzio per 3 s");
+    return ConsoleResult::MicMeasure;
+  }
+  say(reply, cap, "CFG ERR mic usa MEASURE");
+  return ConsoleResult::Error;
 }
 
 ConsoleResult SettingsConsole::reset(char* reply, size_t cap) {

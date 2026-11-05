@@ -124,6 +124,7 @@ void setup() {
   Serial.println("[avvio] audio I2S...");
   if (!audio.begin()) fatal("audio I2S");
   audio.setVolumeStep(settings.volume);
+  audio.setMicFloor(settings.micFloorDb);
   Serial.printf("[avvio] audio ok, heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
 
   ui.showMessage("RADIO");
@@ -163,6 +164,8 @@ static void serviceConsole() {
       char reply[128];
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
+      if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);
+      audio.setMicFloor(console->stored().micFloorDb);  // il fondo si applica subito (CFG SET MICFLOOR)
       node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio
       if (r == lcr::ConsoleResult::Reboot) {
         Serial.flush();
@@ -224,6 +227,17 @@ void loop() {
   }
 
   node->tick(now);
+
+  // Fine della misura del fondo (CFG MIC MEASURE): il risultato torna alla pagina di configurazione.
+  lcr::LevelStats levels;
+  if (audio.takeMeasureResult(levels)) {
+    if (levels.count() == 0) {
+      Serial.println("CFG MIC ERR nessun dato dal microfono");
+    } else {
+      Serial.printf("CFG MIC fondo=%d min=%d max=%d frames=%u\n", levels.percentile(90), levels.minDb(), levels.maxDb(),
+                    static_cast<unsigned>(levels.count()));
+    }
+  }
 
   // Modo prova cambiato (comando CFG TEST o tre clic sul PTT): lo stato del nodo e' quello che vale.
   static bool lastTestMode = false;

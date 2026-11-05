@@ -14,6 +14,7 @@ lcr::Settings compileTimeSettings() {
   s.freqKhz = static_cast<uint32_t>(LCR_FREQUENCY_MHZ * 1000.0f + 0.5f);
   s.powerDbm = LCR_TX_POWER_DBM;
   s.volume = LCR_VOLUME_STEP;
+  s.micFloorDb = LCR_MIC_FLOOR_DBFS;
   return s;
 }
 
@@ -27,6 +28,7 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.freqKhz = p.getUInt("freq", 0);
     out.powerDbm = p.getInt("pwr", 0);
     out.volume = p.getInt("vol", lcr::kDefaultVolume);  // assente nelle versioni precedenti
+    out.micFloorDb = p.getInt("floor", lcr::kDefaultMicFloorDb);
   }
   p.end();
   return all;
@@ -36,7 +38,8 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
   Preferences p;
   if (!p.begin(kNamespace, false)) return false;
   const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
-                    p.putInt("vol", s.volume) > 0;
+                    p.putInt("vol", s.volume) > 0 &&
+                    p.putInt("floor", s.micFloorDb) > 0;
   p.end();
   return ok;
 }

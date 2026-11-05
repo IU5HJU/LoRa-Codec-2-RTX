@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "board_pins.h"
+#include "settings.h"
 #include "user_config.h"
 
 namespace {
@@ -21,7 +22,7 @@ lcr::BackEndConfig backConfig() {
 lcr::FrontEndConfig frontConfig() {
   lcr::FrontEndConfig c;
   c.agc.maxGainDb = LCR_MIC_AGC_MAX_GAIN_DB;
-  c.agc.gateDbfs = LCR_MIC_AGC_GATE_DBFS;
+  c.agc.gateDbfs = lcr::micGateFromFloor(LCR_MIC_FLOOR_DBFS);  // poi sostituita dal valore salvato (setMicFloor)
   c.agc.idleGainDb = 12.0f;
   return c;
 }
@@ -121,6 +122,14 @@ void AudioIo::captureLoop() {
     measureLevel();
     front_.processFrame(micMono_, micPcm_);
     mic_.feed(micPcm_);
+    if (measuring_) {  // "Misura il fondo": livello visto dall'AGC, dopo il passa-alto
+      if (millis() >= measureUntilMs_) {
+        measuring_ = false;
+        measureDone_ = true;
+      } else {
+        stats_.add(front_.agcInputDb());
+      }
+    }
   }
 }
 
@@ -143,6 +152,22 @@ void AudioIo::measureLevel() {
   micRmsDb_ = 20.0f * log10f((rms + 1.0f) / kFullScale);
   micPeakDb_ = 20.0f * log10f((peak + 1.0f) / kFullScale);
   micDcPct_ = 100.0f * mean / kFullScale;
+}
+
+void AudioIo::setMicFloor(int floorDb) { front_.setGateDbfs(lcr::micGateFromFloor(floorDb)); }
+
+void AudioIo::startMeasure(uint32_t ms) {
+  stats_.reset();
+  measureDone_ = false;
+  measureUntilMs_ = millis() + ms;
+  measuring_ = true;
+}
+
+bool AudioIo::takeMeasureResult(lcr::LevelStats& out) {
+  if (!measureDone_) return false;
+  measureDone_ = false;
+  out = stats_;
+  return true;
 }
 
 void AudioIo::setVolumeStep(int step) {

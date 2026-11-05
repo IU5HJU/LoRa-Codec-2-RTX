@@ -40,13 +40,12 @@
 // OLED SSD1306 (128x64, indirizzo 0x3C) sulla T3 V1.6.1.
 #define LCR_OLED_ADDRESS 0x3C
 
-// Sensibilita' del microfono (AGC). In silenzio l'AGC alza il guadagno fino al massimo: se il fondo
-// e' piu' alto della soglia lo amplifica come fosse voce. Con il PTT premuto la seriale stampa
-// "AGC in" (livello visto dall'AGC, dopo il passa-alto): la soglia va messa 3-6 dB sopra quello
-// che si legge in silenzio e sotto quello che si legge parlando.
-// Misurato il 5 novembre sulla T3: silenzio circa -61 dBFS, voce normale circa -36...-44 dBFS.
-#define LCR_MIC_AGC_MAX_GAIN_DB 30.0f  // guadagno massimo (era 36)
-#define LCR_MIC_AGC_GATE_DBFS -54.0f   // sotto questo livello il guadagno scende verso 12 dB (era -70)
+// Microfono (AGC). Il guadagno sale solo sopra il livello del fondo + 6 dB; in silenzio scende verso 12 dB, cosi' il rumore
+// non viene amplificato come voce. Il fondo e' il livello "AGC in" misurato in silenzio: standard -60 dBFS (stanza
+// silenziosa con l'INMP441). Ognuno lo misura con "Misura il fondo" nella pagina di configurazione e lo corregge a mano
+// (CFG SET MICFLOOR, da -80 a -36 dBFS); il valore salvato nella scheda sostituisce questo.
+#define LCR_MIC_FLOOR_DBFS -60
+#define LCR_MIC_AGC_MAX_GAIN_DB 30.0f  // guadagno massimo
 
 // Volume iniziale dell'altoparlante (0 = muto, 1-10 in passi da 3 dB, 10 = massimo). Si cambia anche
 // dalla configurazione (CFG SET VOLUME) e, a scheda accesa, con il pulsante volume su GPIO15.

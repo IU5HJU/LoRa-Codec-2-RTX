@@ -5,7 +5,7 @@ CXXFLAGS ?= -std=c++17 -Wall -Wextra -O1 -g -fsanitize=address,undefined -Ilib/v
 
 CORE := $(wildcard lib/voicecore/*.cpp)
 HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
-TESTS := packet stream node button audio output pins battery settings link
+TESTS := packet stream node button audio output pins battery settings link level
 
 .PHONY: test clean
 test: $(addprefix build/test_,$(TESTS))

@@ -67,6 +67,7 @@ class Agc {
   // Livello RMS (dBFS) dell'ultimo frame all'ingresso dell'AGC, cioe' dopo il passa-alto: e' il valore
   // che l'AGC confronta con la soglia (gateDbfs).
   float inputDb() const { return inputDb_; }
+  void setGateDbfs(float db) { cfg_.gateDbfs = db; }
   void reset() {
     gainDb_ = cfg_.initialGainDb;
     inputDb_ = -120.0f;
@@ -93,6 +94,10 @@ class AudioFrontEnd {
   void processFrame(const int32_t* in, int16_t* out);
   float gainDb() const { return cfg_.agcEnabled ? agc_.gainDb() : cfg_.fixedGainDb; }
   float agcInputDb() const { return agc_.inputDb(); }
+  void setGateDbfs(float db) {
+    cfg_.agc.gateDbfs = db;
+    agc_.setGateDbfs(db);
+  }
   void reset();
 
  private:

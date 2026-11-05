@@ -30,12 +30,13 @@ struct FakeStorage : ISettingsStorage {
   }
 };
 
-Settings make(const char* cs, uint32_t khz, int dbm, int vol = kDefaultVolume) {
+Settings make(const char* cs, uint32_t khz, int dbm, int vol = kDefaultVolume, int floorDb = kDefaultMicFloorDb) {
   Settings s;
   memcpy(s.callsign, cs, strlen(cs) < kMaxCallsign ? strlen(cs) : kMaxCallsign);
   s.freqKhz = khz;
   s.powerDbm = dbm;
   s.volume = vol;
+  s.micFloorDb = floorDb;
   return s;
 }
 
@@ -63,6 +64,10 @@ void testValidate() {
   CHECK(isValidSettings(make("N0CALL", 433900, 10, 10)));
   CHECK(!isValidSettings(make("N0CALL", 433900, 10, -1)));
   CHECK(!isValidSettings(make("N0CALL", 433900, 10, 11)));
+  CHECK(isValidSettings(make("N0CALL", 433900, 10, 7, -80)));
+  CHECK(isValidSettings(make("N0CALL", 433900, 10, 7, -36)));
+  CHECK(!isValidSettings(make("N0CALL", 433900, 10, 7, -81)));
+  CHECK(!isValidSettings(make("N0CALL", 433900, 10, 7, -35)));
 }
 
 void testLoad() {
@@ -89,7 +94,7 @@ void testNotCommand() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 board=T3 reboot=0 test=0") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 micfloor=-60 board=T3 reboot=0 test=0") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -180,6 +185,30 @@ void testTestMode() {
   CHECK(!g.con.testMode());
 }
 
+void testMicFloor() {
+  Fixture f;
+  CHECK(f.run("CFG SET MICFLOOR -58") == ConsoleResult::Ok && f.st.data.micFloorDb == -58);
+  CHECK(strcmp(f.reply, "CFG OK micfloor=-58") == 0);
+  CHECK(f.run("CFG SET MICFLOOR -80") == ConsoleResult::Ok && f.st.data.micFloorDb == -80);
+  CHECK(f.run("CFG SET MICFLOOR -36") == ConsoleResult::Ok && f.st.data.micFloorDb == -36);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "micfloor=-36") && strstr(f.reply, "reboot=0"));  // vale subito
+  CHECK(f.con.stored().micFloorDb == -36);
+  CHECK(f.run("CFG SET POWER 12") == ConsoleResult::Ok && f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=1"));  // il resto dal riavvio
+  const char* bad[] = {"CFG SET MICFLOOR -81", "CFG SET MICFLOOR -35", "CFG SET MICFLOOR 0", "CFG SET MICFLOOR x",
+                       "CFG SET MICFLOOR -60.5", "CFG SET MICFLOOR"};
+  for (const char* b : bad) CHECK(f.run(b) == ConsoleResult::Error);
+  CHECK(strncmp((f.run("CFG SET MICFLOOR -99"), f.reply), "CFG ERR micfloor", 16) == 0);
+  CHECK(f.st.data.micFloorDb == -36);
+  // la soglia dell'AGC e' il fondo + 6 dB
+  CHECK(micGateFromFloor(-60) == -54.0f && micGateFromFloor(-80) == -74.0f && micGateFromFloor(-36) == -30.0f);
+  // misura del fondo: risponde subito e chiede al chiamante di misurare
+  CHECK(f.run("CFG MIC MEASURE") == ConsoleResult::MicMeasure && strncmp(f.reply, "CFG OK mic", 10) == 0);
+  CHECK(f.run("cfg mic measure") == ConsoleResult::MicMeasure);
+  CHECK(f.run("CFG MIC") == ConsoleResult::Error);
+  CHECK(f.run("CFG MIC FOO") == ConsoleResult::Error);
+  CHECK(f.st.data.micFloorDb == -36);  // la misura non salva nulla da sola
+}
+
 void testOther() {
   Fixture f;
   CHECK(f.run("CFG") == ConsoleResult::Error);
@@ -231,6 +260,7 @@ int main() {
   testSetPower();
   testSetVolume();
   testTestMode();
+  testMicFloor();
   testOther();
   testSmallBuffer();
   TEST_MAIN_END();

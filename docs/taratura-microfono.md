@@ -12,7 +12,7 @@ Catena e collegamenti in [audio.md](audio.md); registro delle prove in [prove.md
 - La regolazione automatica del guadagno (AGC) era pensata per un parlante lontano. Con la bocca vicina e una stanza non silenziosa
   **amplificava il rumore di fondo fino a livelli quasi da voce**. Corretto con tre interventi: guadagno massimo ridotto, soglia di rumore alzata, ritorno del guadagno a riposo in assenza di voce.
 - Il fondo grezzo è alto (circa -30 dBFS) ma quasi tutto **sotto i 300 Hz**, dove il filtro passa-alto lo elimina. Resta da capire se sia ambiente, cablaggio o alimentazione.
-- Soglia e guadagno massimo sono ora due costanti in `src/user_config.h`. Per un altro microfono basta rifare tre misure e scegliere due numeri (procedura più sotto).
+- Il fondo si misura e si regola dalla pagina web (e il guadagno massimo è in `src/user_config.h`). Per un altro microfono basta rifare tre misure e scegliere due numeri (procedura più sotto).
 
 ## Catena di elaborazione e punti di misura
 
@@ -75,7 +75,7 @@ Con la trasmissione disattivata (nominativo N0CALL) la riga si stampa lo stesso:
 | Parametro | Valore | Dove |
 |---|---|---|
 | Guadagno massimo AGC | 30 dB (era 36) | `LCR_MIC_AGC_MAX_GAIN_DB` in `src/user_config.h` |
-| Soglia di rumore AGC | -54 dBFS (era -70) | `LCR_MIC_AGC_GATE_DBFS` |
+| Fondo del microfono (soglia AGC = fondo + 6 dB) | -60 dBFS standard, quindi soglia -54 (era -70) | pagina di configurazione o `CFG SET MICFLOOR`; standard in `LCR_MIC_FLOOR_DBFS` |
 | Guadagno a riposo | 12 dB, costante di tempo circa 2 s | `AgcConfig::idleGainDb`, `idleAlpha` |
 | Target | -24 dBFS RMS | `AgcConfig::targetDbfs` |
 | Guadagno minimo | -20 dB | `AgcConfig::minGainDb` |
@@ -93,7 +93,7 @@ Servono la scheda, il cavo USB e un monitor seriale; la radio non trasmette (nom
 2. **Silenzio.** Scheda ferma su un piano, senza toccare i cavi, PTT premuto 10 secondi. Annotare il valore tipico di **AGC in** (non il livello grezzo).
 3. **Voce.** Frasi normali alla distanza d'uso reale (per esempio 5, 15, 30 cm). Annotare **AGC in** e il **picco** grezzo: non deve avvicinarsi a 0 dBFS.
 4. **Scelta.**
-   - `LCR_MIC_AGC_GATE_DBFS`: tra il silenzio e la voce più debole che deve passare, circa 6 dB sopra il silenzio. Con meno di 15 dB di distanza tra i due, il microfono o il cablaggio sono troppo rumorosi.
+   - **Fondo:** si misura dalla [pagina di configurazione](https://iu5hju.github.io/LoRa-Codec-2-RTX/) con "Misura il fondo" (silenzio, 3 s) e si corregge a mano con − e +. La soglia dell'AGC è il fondo più 6 dB e deve stare sotto la voce più debole che deve passare: con meno di 15 dB tra fondo e voce, il microfono o il cablaggio sono troppo rumorosi.
    - `LCR_MIC_AGC_MAX_GAIN_DB`: quanto serve a portare la voce più debole a -24 dBFS, quindi `-24 - (AGC in della voce debole)`, con un po' di margine.
 5. **Verifica.** Ripetere 2 e 3: in silenzio il guadagno deve scendere verso 12 dB e `AGC in` restare sotto la soglia; parlando deve salire sopra e il guadagno stabilizzarsi.
 6. **Ascolto.** Con amplificatore e altoparlante: fruscio nelle pause, sillabe tagliate all'inizio dopo una pausa lunga (il guadagno risale in circa mezzo secondo), pompaggio.

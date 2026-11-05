@@ -56,16 +56,14 @@ Fatta anche la pagina (`site/index.html`, flasher e configurazione via Web Seria
 
 Sequenza di frame noti confrontata bit per bit, con risposta automatica; vedi [prova-collegamento.md](prova-collegamento.md). Provata sulle schede il 5 novembre. Livelli 2 e 3 (autotest del codec, prova dell'altoparlante) da fare con l'hardware audio.
 
-## Fondo del microfono: misura a cura dell'operatore (deciso il 5 novembre, da fare)
+## Fondo del microfono: misura a cura dell'operatore (fatto il 5 novembre, da provare)
 
-Il rumore di fondo cambia con l'ambiente (casa, auto, portatile, strada): la soglia dell'AGC non può essere una costante sola né, per ora, un automatismo. Decisione: **valore standard di partenza (-54 dBFS, stanza silenziosa)
-da cambiare a bisogno**, e un modo per il singolo radioamatore di **misurare il proprio fondo e capire a che punto è**; l'automatico (calibrazione a comando o adattamento continuo) viene dopo.
+Il rumore di fondo cambia con l'ambiente (casa, auto, portatile, strada): la soglia dell'AGC non può essere una costante né, per ora, un automatismo. Soluzione semplice: **un valore standard (-60 dBFS) che ognuno misura e corregge**.
 
-- Pagina web: misuratore in diretta del livello "AGC in" con la linea della soglia; "Misura il fondo" (3 s di silenzio: media e massimo, soglia proposta = massimo + 6 dB); "Misura la voce" (3 s parlando: livello tipico e sillabe deboli);
-  giudizio dalla distanza voce-fondo (oltre 15 dB buono, 8-15 al limite, sotto 8 la soglia non separa: avvicinare il microfono); valore manuale con cursore e "Salva nella scheda".
-- Range proposto: soglia da -75 a -30 dBFS (passo 1 dB, standard -54); guadagno massimo da 12 a 36 dB (standard 30).
-- Firmware: livello letto a richiesta senza PTT; soglia e guadagno massimo nelle impostazioni salvate (`CFG SET MICGATE`, `CFG SET MICGAIN`), applicati subito.
-- Da decidere dopo l'ascolto della voce (serve l'altoparlante): se serve anche la calibrazione automatica o l'adattamento continuo. Vedi [taratura-microfono.md](taratura-microfono.md).
+- Nella pagina di configurazione il pulsante **"Misura il fondo"**: stare in silenzio, 3 secondi; il valore trovato (90° percentile del livello dell'ingresso dell'AGC) viene salvato e vale subito. Una misura instabile (colpo, voce) non viene salvata.
+- Poi **− e +** (e il campo numerico) alzano o abbassano il fondo di 1 dB per adattare l'AGC al proprio hardware, con effetto immediato. Range da -80 a -36 dBFS, standard -60; la soglia dell'AGC è il fondo + 6 dB.
+- Firmware: `CFG MIC MEASURE`, `CFG SET MICFLOOR`, impostazione salvata in NVS. Il guadagno massimo (30 dB) resta in `user_config.h`.
+- **Da decidere dopo l'ascolto della voce** (serve l'altoparlante): se serve anche la calibrazione automatica o l'adattamento continuo. Vedi [taratura-microfono.md](taratura-microfono.md).
 
 ## 4. Flasher web (dopo la configurazione a runtime)
 

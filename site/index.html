@@ -29,6 +29,9 @@
   #status.err { color:var(--err); } #status.ok { color:var(--ok); }
   #log { background:var(--log-bg); color:var(--log-fg); font:12px/1.4 ui-monospace, monospace; padding:10px; border-radius:6px; height:11rem; overflow:auto; white-space:pre-wrap; margin-top:.8em; }
   #nosupport { display:none; }
+  .floorrow { display:flex; flex-wrap:wrap; gap:.4em; align-items:center; }
+  .floorrow button { margin:0; }
+  .floorrow input { width:7rem; max-width:7rem; text-align:center; }
   #logtools { margin-top:.4em; }
   #logtools button { padding:5px 12px; font-size:.9rem; }
   footer { font-size:.85rem; color:var(--muted); margin:20px 0; }
@@ -92,6 +95,17 @@
       <input id="volume" type="number" min="0" max="10" step="1" placeholder="7" disabled required>
       <p class="hint">Da 0 (muto) a 10, in passi da 3 dB. Con il pulsante volume (GPIO15) si cambia poi a scheda accesa; allo spegnimento torna a questo valore.</p>
 
+      <label for="micfloor">Fondo del microfono (dBFS)</label>
+      <div class="floorrow">
+        <button id="floorDown" type="button" class="secondary" disabled aria-label="Abbassa il fondo di 1 dB">&minus;</button>
+        <input id="micfloor" type="number" min="-80" max="-36" step="1" placeholder="-60" disabled required>
+        <button id="floorUp" type="button" class="secondary" disabled aria-label="Alza il fondo di 1 dB">+</button>
+        <button id="measure" type="button" disabled>Misura il fondo</button>
+      </div>
+      <p class="hint"><strong>Per misurarlo: resta in silenzio, non toccare il microfono e premi "Misura il fondo"</strong> (3 secondi). Il valore trovato viene salvato e vale subito.
+      Poi lo puoi correggere a mano con &minus; e +: <strong>più alto</strong> = l'AGC taglia più rumore (ma può tagliare la voce debole), <strong>più basso</strong> = più sensibile (ma amplifica il fondo).
+      Standard &minus;60 dBFS (stanza silenziosa); in auto o all'aperto il fondo sarà più alto. Da &minus;80 a &minus;36.</p>
+
       <button id="save" type="submit" disabled>Salva e riavvia</button>
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
       <button id="reset" type="button" class="secondary" disabled>Valori di fabbrica</button>
@@ -152,7 +166,7 @@
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
-    for (const id of ['callsign', 'freq', 'power', 'volume', 'save', 'reload', 'reset', 'testOn', 'testOff']) $(id).disabled = !on;
+    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff']) $(id).disabled = !on;
   }
 
   function onLine(line) {
@@ -163,6 +177,7 @@
       if (m.callsign) {
         $('callsign').value = m.callsign; $('freq').value = m.freq; $('power').value = m.power;
         if (m.volume !== undefined) $('volume').value = m.volume;
+        if (m.micfloor !== undefined) { $('micfloor').value = m.micfloor; lastFloor = Number(m.micfloor); }
         $('testState').textContent = m.test === '1' ? 'Prova ATTIVA' : 'Prova spenta';
         lastBoard = m.board || '';
       }
@@ -266,7 +281,9 @@
     if (!Number.isInteger(pw) || pw < LIMITS.pwrMin || pw > LIMITS.pwrMax) return { err: 'La potenza deve essere un numero intero da 2 a 17 dBm.' };
     const vol = Number($('volume').value);
     if ($('volume').value === '' || !Number.isInteger(vol) || vol < 0 || vol > 10) return { err: 'Il volume deve essere un numero intero da 0 a 10.' };
-    return { cs, freq: fm, pw, vol };
+    const fl = Number($('micfloor').value);
+    if ($('micfloor').value === '' || !Number.isInteger(fl) || fl < -80 || fl > -36) return { err: 'Il fondo del microfono deve essere un intero da -80 a -36 dBFS.' };
+    return { cs, freq: fm, pw, vol, fl };
   }
 
   async function save(ev) {
@@ -280,6 +297,7 @@
       replies.push(await send('CFG SET FREQ ' + v.freq, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET POWER ' + v.pw, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET VOLUME ' + v.vol, /^CFG (OK|ERR)/));
+      replies.push(await send('CFG SET MICFLOOR ' + v.fl, /^CFG (OK|ERR)/));
       const bad = replies.find(r => r.startsWith('CFG ERR'));
       if (bad) throw new Error(bad);
       const state = await send('CFG GET', /^CFG callsign=/);
@@ -324,6 +342,56 @@
   $('form').addEventListener('submit', save);
   $('reload').addEventListener('click', () => refresh(false));
   $('reset').addEventListener('click', reset);
+
+  // ---- Fondo del microfono: si misura una volta in silenzio, poi si corregge a mano ----
+  let lastFloor = null;   // ultimo fondo salvato nella scheda
+  async function setFloor(v) {
+    if (!Number.isInteger(v) || v < -80 || v > -36) {
+      if (lastFloor !== null) $('micfloor').value = lastFloor;  // il campo torna al valore che la scheda ha davvero
+      setStatus('Il fondo deve essere un intero da -80 a -36 dBFS: resta ' + lastFloor + ' dBFS.', 'err');
+      return false;
+    }
+    try {
+      const r = await send('CFG SET MICFLOOR ' + v, /^CFG (OK|ERR)/);
+      if (r.startsWith('CFG ERR')) throw new Error(r);
+      $('micfloor').value = v;
+      lastFloor = v;
+      setStatus('Fondo del microfono ' + v + ' dBFS salvato (vale subito).', 'ok');
+      return true;
+    } catch (e) { setStatus('Errore: ' + e.message, 'err'); return false; }
+  }
+  $('floorDown').addEventListener('click', () => setFloor(Number($('micfloor').value) - 1));
+  $('floorUp').addEventListener('click', () => setFloor(Number($('micfloor').value) + 1));
+  $('micfloor').addEventListener('change', () => setFloor(Number($('micfloor').value)));
+  let measuring = false;
+  $('measure').addEventListener('click', async () => {
+    if (measuring) return;
+    measuring = true;
+    const ids = ['measure', 'floorDown', 'floorUp', 'micfloor', 'save'];
+    ids.forEach(id => { $(id).disabled = true; });
+    try {
+      const ack = await send('CFG MIC MEASURE', /^CFG (OK|ERR) mic/);
+      if (ack.startsWith('CFG ERR')) throw new Error(ack);
+      let left = 3;
+      setStatus('Resta in silenzio e non toccare il microfono… ' + left, '');
+      const tick = setInterval(() => { left = Math.max(0, left - 1); if (left) setStatus('Resta in silenzio e non toccare il microfono… ' + left, ''); }, 1000);
+      let line;
+      try { line = await waitFor(/^CFG MIC /, 8000); } finally { clearInterval(tick); }
+      const m = {};
+      for (const kv of line.slice(8).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = Number(kv.slice(i + 1)); }
+      if (line.includes('ERR') || !Number.isFinite(m.fondo) || !(m.frames >= 50)) throw new Error('misura non riuscita: nessun dato dal microfono');
+      // Una misura rovinata (colpo, voce, microfono toccato) non si salva: il fondo precedente resta com'e'.
+      if (m.max - m.min > 12) {
+        setStatus('Misura non salvata: il livello non era stabile (da ' + m.min + ' a ' + m.max + ' dBFS). Hai parlato o toccato il microfono? Resta in silenzio e riprova.', 'err');
+      } else if (m.fondo > -36) {
+        setStatus('Misura non salvata: il fondo (' + m.fondo + ' dBFS) è troppo alto per il campo ammesso (fino a -36). Avvicina il microfono o cambia posto e riprova.', 'err');
+      } else {
+        const v = Math.max(-80, Math.min(-36, m.fondo));
+        if (await setFloor(v)) setStatus('Fondo misurato: ' + m.fondo + ' dBFS (da ' + m.min + ' a ' + m.max + ') e salvato. Puoi correggerlo con − e +.', 'ok');
+      }
+    } catch (e) { setStatus('Errore: ' + e.message, 'err'); }
+    finally { measuring = false; ids.forEach(id => { $(id).disabled = !port; }); }
+  });
   async function setTest(on) {
     try {
       await send('CFG TEST ' + (on ? 'ON' : 'OFF'), /^CFG (OK|ERR)/);
