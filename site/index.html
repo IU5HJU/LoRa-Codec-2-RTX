@@ -433,7 +433,9 @@
       const voice = await micLevels();
       const diff = voice.fondo - silence.fondo;
       const levels = 'Silenzio ' + silence.fondo + ' dBFS, voce ' + voice.fondo + ' dBFS (differenza ' + (diff >= 0 ? '+' : '') + diff + ' dB).';
-      if (silence.max - silence.min > 12) {
+      if (silence.max <= -100 && voice.max <= -100) {
+        showHw('hwMicOut', 'Il microfono non dà nessun segnale (silenzio digitale assoluto, ' + silence.max + ' dBFS): non è collegato, o mancano alimentazione VDD a 3,3 V, massa o i pin SD, SCK e WS. Controlla i collegamenti.', 'err');
+      } else if (silence.max - silence.min > 12) {
         showHw('hwMicOut', 'Il silenzio non era stabile (da ' + silence.min + ' a ' + silence.max + ' dBFS): hai parlato o toccato il microfono? Ripeti la prova. ' + levels, 'err');
       } else if (diff >= 15) {
         showHw('hwMicOut', 'Il microfono sente: la voce sta ' + diff + ' dB sopra il silenzio. ' + levels, 'ok');
@@ -510,14 +512,19 @@
       const m = {};
       for (const kv of line.slice(8).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = Number(kv.slice(i + 1)); }
       if (line.includes('ERR') || !Number.isFinite(m.fondo) || !(m.frames >= 50)) throw new Error('misura non riuscita: nessun dato dal microfono');
-      // Una misura rovinata (colpo, voce, microfono toccato) non si salva: il fondo precedente resta com'e'.
-      if (m.max - m.min > 12) {
-        setStatus('MISURA NON SALVATA. Durante i 3 secondi il livello è cambiato troppo (da ' + m.min + ' a ' + m.max + ' dBFS): probabilmente c\'era un rumore, una voce o un tocco sul microfono. Resta in silenzio e premi di nuovo "Misura il fondo". Il fondo resta ' + (lastFloor !== null ? lastFloor + ' dBFS' : 'quello di prima') + '.', 'err');
+      // Una misura sbagliata non si salva: il fondo precedente resta com'e'.
+      const resta = 'Il fondo resta ' + (lastFloor !== null ? lastFloor + ' dBFS' : 'quello di prima') + '.';
+      if (m.max <= -100) {
+        setStatus('MISURA NON SALVATA. Il microfono non dà nessun segnale (' + m.max + ' dBFS è silenzio digitale assoluto: un microfono collegato non scende mai così in basso). Controlla che il microfono sia collegato: alimentazione VDD a 3,3 V, massa, pin SD, SCK e WS (vedi lo schema dei collegamenti nella documentazione). ' + resta, 'err');
+      } else if (m.max - m.min > 12) {
+        setStatus('MISURA NON SALVATA. Durante i 3 secondi il livello è cambiato troppo (da ' + m.min + ' a ' + m.max + ' dBFS): probabilmente c\'era un rumore, una voce o un tocco sul microfono. Resta in silenzio e premi di nuovo "Misura il fondo". ' + resta, 'err');
       } else if (m.fondo > -36) {
-        setStatus('MISURA NON SALVATA. Il fondo misurato (' + m.fondo + ' dBFS) è troppo alto: il valore massimo ammesso è -36 dBFS. Allontanati da rumori e ventole, avvicina il microfono alla bocca e riprova. Il fondo resta ' + (lastFloor !== null ? lastFloor + ' dBFS' : 'quello di prima') + '.', 'err');
+        setStatus('MISURA NON SALVATA. Il fondo misurato (' + m.fondo + ' dBFS) è troppo alto: il valore massimo ammesso è -36 dBFS. Allontanati da rumori e ventole, avvicina il microfono alla bocca e riprova. ' + resta, 'err');
       } else {
         const v = Math.max(-80, Math.min(-36, m.fondo));
-        if (await setFloor(v)) setStatus('Fondo misurato: ' + m.fondo + ' dBFS (da ' + m.min + ' a ' + m.max + ') e salvato. Puoi correggerlo con − e +.', 'ok');
+        if (await setFloor(v)) {
+          setStatus('Fondo misurato: ' + m.fondo + ' dBFS (da ' + m.min + ' a ' + m.max + ')' + (v !== m.fondo ? '. Il minimo ammesso è -80: salvato -80 dBFS.' : ' e salvato.') + ' Puoi correggerlo con − e +.', 'ok');
+        }
       }
     } catch (e) { setStatus('Errore: ' + e.message, 'err'); }
     finally { measuring = false; ids.forEach(id => { $(id).disabled = !port; }); }
