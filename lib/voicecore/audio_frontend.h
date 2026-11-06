@@ -94,6 +94,8 @@ class AudioFrontEnd {
   void processFrame(const int32_t* in, int16_t* out);
   float gainDb() const { return cfg_.agcEnabled ? agc_.gainDb() : cfg_.fixedGainDb; }
   float agcInputDb() const { return agc_.inputDb(); }
+  // Livello RMS (dBFS) dell'ultimo frame all'uscita, cioe' quello che va al codec (dopo AGC e saturazione).
+  float outputDb() const { return outDb_; }
   void setGateDbfs(float db) {
     cfg_.agc.gateDbfs = db;
     agc_.setGateDbfs(db);
@@ -105,6 +107,7 @@ class AudioFrontEnd {
   Biquad hpf_;
   Decimator2 dec_;
   Agc agc_;
+  float outDb_ = -120.0f;
   float tmp_[kMicSamplesPerFrame];
   float dec_out_[kFrameSamples];
 };

@@ -63,6 +63,11 @@ class AudioBackEnd {
   bool muted() const { return muted_; }
 
   void processFrame(const int16_t* in, int16_t* out);
+  // Livelli dell'ultimo frame (dBFS, RMS): decodificato prima dell'AGC e in uscita dopo AGC, volume e limitatore.
+  float inputDb() const { return inDb_; }
+  float outputDb() const { return outDb_; }
+  float agcGainDb() const { return agc_.gainDb(); }
+  bool limited() const { return limited_; }  // il limitatore e' intervenuto nell'ultimo frame
   // Frame perso e non recuperabile: silenzio, senza toccare AGC e filtri.
   void processLost(int16_t* out);
   void reset();
@@ -73,6 +78,9 @@ class AudioBackEnd {
   bool muted_ = false;
   Agc agc_;
   Interpolator2 up_;
+  float inDb_ = -120.0f;
+  float outDb_ = -120.0f;
+  bool limited_ = false;
   float buf_[kFrameSamples];
   float up_buf_[2 * kFrameSamples];
 };

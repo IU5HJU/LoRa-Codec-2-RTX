@@ -226,7 +226,37 @@ void AudioIo::writeMono(const int16_t* samples, size_t n) {
 void AudioIo::playFrame(const int16_t* pcm) {
   ampOn();
   back_.processFrame(pcm, spkPcm_);
+  playFrames_++;
+  playInPow_ += std::pow(10.0, back_.inputDb() / 10.0);
+  playOutPow_ += std::pow(10.0, back_.outputDb() / 10.0);
+  if (back_.inputDb() > playInMax_) playInMax_ = back_.inputDb();
+  if (back_.outputDb() > playOutMax_) playOutMax_ = back_.outputDb();
+  if (back_.agcGainDb() < playGainMin_) playGainMin_ = back_.agcGainDb();
+  if (back_.agcGainDb() > playGainMax_) playGainMax_ = back_.agcGainDb();
+  if (back_.limited()) playLimited_++;
   writeMono(spkPcm_, back_.outputSamplesPerFrame());
+}
+
+void AudioIo::resetPlayStats() {
+  playFrames_ = playLimited_ = 0;
+  playInPow_ = playOutPow_ = 0;
+  playInMax_ = playOutMax_ = -120.0f;
+  playGainMin_ = 99.0f;
+  playGainMax_ = -99.0f;
+}
+
+void AudioIo::playStatsLine(char* buf, size_t cap) const {
+  if (cap == 0) return;
+  buf[0] = 0;
+  if (playFrames_ == 0) return;
+  const float inMean = 10.0f * log10f(static_cast<float>(playInPow_ / playFrames_) + 1e-12f);
+  const float outMean = 10.0f * log10f(static_cast<float>(playOutPow_ / playFrames_) + 1e-12f);
+  snprintf(buf, cap,
+           "[rx-audio] %u frame: decodificato rms %.0f dBFS (max %.0f), uscita rms %.0f dBFS (max %.0f), guadagno AGC %.0f...%.0f dB, "
+           "limitatore su %u frame, volume %.0f dB",
+           static_cast<unsigned>(playFrames_), static_cast<double>(inMean), static_cast<double>(playInMax_),
+           static_cast<double>(outMean), static_cast<double>(playOutMax_), static_cast<double>(playGainMin_),
+           static_cast<double>(playGainMax_), static_cast<unsigned>(playLimited_), static_cast<double>(back_.volumeDb()));
 }
 
 void AudioIo::playLost() {

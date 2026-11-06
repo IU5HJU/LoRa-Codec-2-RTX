@@ -126,12 +126,15 @@ void AudioFrontEnd::processFrame(const int32_t* in, int16_t* out) {
     for (size_t i = 0; i < kFrameSamples; i++) dec_out_[i] *= g;
   }
 
+  double sq = 0;
   for (size_t i = 0; i < kFrameSamples; i++) {
     float v = dec_out_[i] * 32768.0f;
     if (v > 32767.0f) v = 32767.0f;
     if (v < -32768.0f) v = -32768.0f;
     out[i] = static_cast<int16_t>(std::lrintf(v));
+    sq += static_cast<double>(v) * v;
   }
+  outDb_ = 10.0f * std::log10(static_cast<float>(sq / kFrameSamples) / (32768.0f * 32768.0f) + 1e-12f);
 }
 
 }  // namespace lcr

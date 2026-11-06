@@ -60,7 +60,12 @@ void AudioBackEnd::reset() {
 void AudioBackEnd::processLost(int16_t* out) { memset(out, 0, outputSamplesPerFrame() * sizeof(int16_t)); }
 
 void AudioBackEnd::processFrame(const int16_t* in, int16_t* out) {
-  for (size_t i = 0; i < kFrameSamples; i++) buf_[i] = static_cast<float>(in[i]) / 32768.0f;
+  double sqIn = 0;
+  for (size_t i = 0; i < kFrameSamples; i++) {
+    buf_[i] = static_cast<float>(in[i]) / 32768.0f;
+    sqIn += static_cast<double>(buf_[i]) * buf_[i];
+  }
+  inDb_ = 10.0f * std::log10(static_cast<float>(sqIn / kFrameSamples) + 1e-12f);
 
   if (cfg_.agcEnabled) agc_.process(buf_, kFrameSamples);
 
@@ -78,10 +83,13 @@ void AudioBackEnd::processFrame(const int16_t* in, int16_t* out) {
   // Limitatore morbido: identita' fino alla soglia, poi tanh verso maxPeak.
   const float thr = cfg_.limiterThreshold;
   const float span = cfg_.maxPeak - thr;
+  double sqOut = 0;
+  limited_ = false;
   for (size_t i = 0; i < n; i++) {
     float x = src[i];
     const float a = std::fabs(x);
     if (a > thr && span > 0.0f) {
+      limited_ = true;
       const float y = thr + span * std::tanh((a - thr) / span);
       x = x < 0 ? -y : y;
     }
@@ -89,7 +97,9 @@ void AudioBackEnd::processFrame(const int16_t* in, int16_t* out) {
     if (v > 32767.0f) v = 32767.0f;
     if (v < -32768.0f) v = -32768.0f;
     out[i] = static_cast<int16_t>(std::lrintf(v));
+    sqOut += static_cast<double>(v) * v;
   }
+  outDb_ = 10.0f * std::log10(static_cast<float>(sqOut / n) / (32768.0f * 32768.0f) + 1e-12f);
 }
 
 }  // namespace lcr

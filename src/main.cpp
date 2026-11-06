@@ -239,10 +239,10 @@ void loop() {
   if (pttDown && now - lastMicLogMs >= 500) {
     lastMicLogMs = now;
     const float peak = audio.micPeakDb();
-    Serial.printf("[mic] livello %.0f dBFS, picco %.0f dBFS, offset %.1f%%, AGC in %.0f dBFS, guadagno %.0f dB, errori %u%s\n",
+    Serial.printf("[mic] livello %.0f dBFS, picco %.0f dBFS, offset %.1f%%, AGC in %.0f dBFS, guadagno %.0f dB, uscita al codec %.0f dBFS, errori %u%s\n",
                   static_cast<double>(audio.micRmsDb()), static_cast<double>(peak),
                   static_cast<double>(audio.micDcPercent()), static_cast<double>(audio.micAgcInDb()),
-                  static_cast<double>(audio.micGainDb()),
+                  static_cast<double>(audio.micGainDb()), static_cast<double>(audio.micOutDb()),
                   static_cast<unsigned>(audio.micErrors()),
                   peak < -80.0f ? "  <- silenzio: controlla i cavi o prova LCR_MIC_SLOT 1" : (peak > -3.0f ? "  <- saturazione" : ""));
   }
@@ -272,11 +272,17 @@ void loop() {
   // Fine ricezione: riga di diagnostica sui pacchetti (vedi docs/prove.md).
   static lcr::VoiceNode::State prevState = lcr::VoiceNode::State::Idle;
   const lcr::VoiceNode::State st = node->state();
-  if (prevState == lcr::VoiceNode::State::Idle && st == lcr::VoiceNode::State::Receiving) radio.resetRxStats();
+  if (prevState == lcr::VoiceNode::State::Idle && st == lcr::VoiceNode::State::Receiving) {
+    radio.resetRxStats();
+    audio.resetPlayStats();
+  }
   if (prevState == lcr::VoiceNode::State::Receiving && st != lcr::VoiceNode::State::Receiving) {
     Serial.printf("[rx] pacchetti letti %u, errori CRC %u, sovrascritti %u, ritardo massimo di lettura %u ms\n",
                   static_cast<unsigned>(radio.rxPackets()), static_cast<unsigned>(radio.rxCrcErrors()),
                   static_cast<unsigned>(radio.rxOverwritten()), static_cast<unsigned>(radio.rxMaxDelayMs()));
+    char line[200];
+    audio.playStatsLine(line, sizeof(line));  // livelli del parlato decodificato: vedi docs/prove.md
+    if (line[0]) Serial.println(line);
   }
   prevState = st;
 

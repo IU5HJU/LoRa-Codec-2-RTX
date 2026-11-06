@@ -56,6 +56,13 @@ class AudioIo {
   void startMeasure(uint32_t ms);
   bool takeMeasureResult(lcr::LevelStats& out);  // true una volta sola a misura finita
 
+  float micOutDb() const { return front_.outputDb(); }  // livello che va al codec (dopo l'AGC)
+
+  // Diagnostica della riproduzione: livelli del parlato decodificato durante l'ultima ricezione.
+  void resetPlayStats();
+  // Scrive una riga di riepilogo in buf (vuota se non c'e' stato audio).
+  void playStatsLine(char* buf, size_t cap) const;
+
   float micAgcInDb() const { return front_.agcInputDb(); }  // livello visto dall'AGC (dopo il passa-alto)
 
  private:
@@ -101,6 +108,10 @@ class AudioIo {
   bool ampOn_ = false;
   uint32_t lastPlayMs_ = 0;
   volatile uint32_t micErrors_ = 0;
+  // statistiche di riproduzione (loop principale)
+  uint32_t playFrames_ = 0, playLimited_ = 0;
+  double playInPow_ = 0, playOutPow_ = 0;
+  float playInMax_ = -120.0f, playOutMax_ = -120.0f, playGainMin_ = 99.0f, playGainMax_ = -99.0f;
   volatile bool toneActive_ = false;
   lcr::ToneMeter toneMeter_;
   volatile bool measuring_ = false;

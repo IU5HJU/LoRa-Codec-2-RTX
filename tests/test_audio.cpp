@@ -148,6 +148,26 @@ static void testAgcIdlesAfterSpeech() {
   CHECK(fe.gainDb() < 14.0f && fe.gainDb() >= 11.9f);
 }
 
+static void testFrontEndOutputLevel() {
+  // L'uscita verso il codec si legge in dBFS RMS: con l'AGC attivo un parlato debole va verso il target (-24 dBFS).
+  AudioFrontEnd fe;
+  runTone(fe, 800, -45, 100, 10);
+  CHECK(std::fabs(fe.outputDb() - (-24.0f)) < 3.0f);
+  // Rumore sotto la soglia: l'uscita resta bassa.
+  AudioFrontEnd quiet;
+  uint32_t seed = 3;
+  for (int f = 0; f < 100; f++) {
+    int32_t in[kMicSamplesPerFrame];
+    for (size_t i = 0; i < kMicSamplesPerFrame; i++) {
+      seed = seed * 1664525u + 1013904223u;
+      in[i] = i2sWord((static_cast<double>(seed >> 8) / 16777216.0 - 0.5) * dbToLin(-80));
+    }
+    int16_t out[kFrameSamples];
+    quiet.processFrame(in, out);
+  }
+  CHECK(quiet.outputDb() < -50.0f);
+}
+
 static void testClipsWithoutWrapping() {
   // Guadagno enorme su un'onda quadra forte: l'uscita satura ai limiti.
   AudioFrontEnd fe(fixedGain(36));
@@ -221,6 +241,7 @@ int main() {
   testAgcLowersLoudSignal();
   testAgcIgnoresNoise();
   testAgcIdlesAfterSpeech();
+  testFrontEndOutputLevel();
   testClipsWithoutWrapping();
   testPrerollMic();
   testPrerollOverrun();

@@ -129,6 +129,32 @@ static void testAgcLevelsStations() {
   CHECK(std::fabs(l - (-24.0)) < 3.0);
 }
 
+static void testLevelReadout() {
+  // Senza AGC e a 0 dB il livello in uscita e' quello in ingresso; un seno di picco -20 dBFS ha RMS -23 dBFS.
+  AudioBackEnd be(plain());
+  runTone(be, 440.0, -20.0, 20);
+  CHECK(std::fabs(be.inputDb() - (-23.0)) < 0.6);
+  CHECK(std::fabs(be.outputDb() - (-23.0)) < 0.8);
+  CHECK(!be.limited());
+  // Con il volume a -12 dB l'uscita scende di 12 dB, l'ingresso resta.
+  BackEndConfig c = plain();
+  c.volumeDb = -12.0f;
+  AudioBackEnd quiet(c);
+  runTone(quiet, 440.0, -20.0, 20);
+  CHECK(std::fabs(quiet.inputDb() - (-23.0)) < 0.6);
+  CHECK(std::fabs(quiet.outputDb() - (-35.0)) < 0.8);
+  // Segnale forte: interviene il limitatore e l'uscita e' sotto l'ingresso.
+  AudioBackEnd loud(plain());
+  runTone(loud, 440.0, -1.0, 20);
+  CHECK(loud.limited() && loud.outputDb() < loud.inputDb());
+  // Con l'AGC il guadagno e' leggibile e porta il parlato debole verso il target di -24 dBFS.
+  BackEndConfig a;
+  a.volumeDb = 0.0f;
+  AudioBackEnd agc(a);
+  runTone(agc, 440.0, -45.0, 80);
+  CHECK(agc.agcGainDb() > 10.0f && std::fabs(agc.outputDb() - (-24.0)) < 4.0);
+}
+
 static void testUpsample() {
   BackEndConfig c = plain();
   c.upsample2x = true;
@@ -175,6 +201,7 @@ int main() {
   testVolume();
   testLimiter();
   testAgcLevelsStations();
+  testLevelReadout();
   testUpsample();
   testLostFrameIsSilence();
   TEST_MAIN_END();
