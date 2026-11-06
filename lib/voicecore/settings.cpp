@@ -92,8 +92,8 @@ bool parseInt(const char* t, int& v) {
 }  // namespace
 
 SettingsConsole::SettingsConsole(const Settings& active, const Settings& defaults, ISettingsStorage& storage,
-                                 const char* board)
-    : active_(active), defaults_(defaults), stored_(active), storage_(storage), board_(board ? board : "") {}
+                                 const char* board, const char* version)
+    : active_(active), defaults_(defaults), stored_(active), storage_(storage), board_(board ? board : ""), version_(version ? version : "") {}
 
 ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t cap) {
   if (reply && cap > 0) reply[0] = 0;
@@ -124,6 +124,7 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
     return ConsoleResult::Error;
   }
   if (equalsIgnoreCase(tok[1], "GET") && n == 2) return get(reply, cap);
+  if (equalsIgnoreCase(tok[1], "VERSION") && n == 2) return versionInfo(reply, cap);
   if (equalsIgnoreCase(tok[1], "SET") && n == 4) return set(tok[2], tok[3], reply, cap);
   if (equalsIgnoreCase(tok[1], "RESET") && n == 2) return reset(reply, cap);
   if (equalsIgnoreCase(tok[1], "TEST") && n == 3) return test(tok[2], reply, cap);
@@ -142,6 +143,11 @@ ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
              static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
              stored_.powerDbm, stored_.volume, stored_.micFloorDb, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
   }
+  return ConsoleResult::Ok;
+}
+
+ConsoleResult SettingsConsole::versionInfo(char* reply, size_t cap) {
+  if (reply && cap > 0) snprintf(reply, cap, "CFG VERSION fw=%s board=%s", version_, board_);
   return ConsoleResult::Ok;
 }
 

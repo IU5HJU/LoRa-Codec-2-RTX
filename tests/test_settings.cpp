@@ -45,7 +45,7 @@ const Settings kDefaults = make("N0CALL", 433900, 10);
 struct Fixture {
   FakeStorage st;
   Settings active = kDefaults;
-  SettingsConsole con{active, kDefaults, st, "T3"};
+  SettingsConsole con{active, kDefaults, st, "T3", "v0.1.0-3-gabc1234"};
   char reply[160];
   ConsoleResult run(const char* line) { return con.handleLine(line, reply, sizeof(reply)); }
 };
@@ -212,6 +212,18 @@ void testMicFloor() {
   CHECK(f.st.data.micFloorDb == -36);  // la misura non salva nulla da sola
 }
 
+void testVersion() {
+  Fixture f;
+  CHECK(f.run("CFG VERSION") == ConsoleResult::Ok && strcmp(f.reply, "CFG VERSION fw=v0.1.0-3-gabc1234 board=T3") == 0);
+  CHECK(f.run("cfg version") == ConsoleResult::Ok);
+  CHECK(f.run("CFG VERSION x") == ConsoleResult::Error);
+  FakeStorage st2;
+  Settings a = kDefaults;
+  SettingsConsole d(a, kDefaults, st2, "tbeam");  // senza versione: "dev"
+  char r[80];
+  CHECK(d.handleLine("CFG VERSION", r, sizeof(r)) == ConsoleResult::Ok && strcmp(r, "CFG VERSION fw=dev board=tbeam") == 0);
+}
+
 void testOther() {
   Fixture f;
   CHECK(f.run("CFG") == ConsoleResult::Error);
@@ -263,6 +275,7 @@ int main() {
   testSetPower();
   testSetVolume();
   testTestMode();
+  testVersion();
   testMicFloor();
   testOther();
   testSmallBuffer();

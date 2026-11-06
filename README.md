@@ -15,6 +15,8 @@ Funzionamento in breve:
 > altoparlante non sono ancora stati collegati). Possono trasmettere solo radioamatori con il proprio
 > nominativo, sulle frequenze e con le potenze consentite. Il nominativo viaggia in chiaro e i contenuti non sono cifrati.
 
+> **Nuovo? Parti dalla [guida rapida](docs/guida-rapida.md).** Indice della documentazione: [docs/README.md](docs/README.md).
+
 ## Per provare il firmware
 
 **Occorrente per ogni stazione:**

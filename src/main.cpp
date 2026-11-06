@@ -81,12 +81,12 @@ static bool pttPinUnstable() {
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Serial.printf("[avvio] scheda %s\n", kBoardName);
+  Serial.printf("[avvio] scheda %s, firmware %s\n", kBoardName, LCR_VERSION);
 
   // Impostazioni dell'operatore: salvate nella scheda, altrimenti quelle di user_config.h.
   const lcr::Settings defaults = compileTimeSettings();
   settings = lcr::loadSettings(settingsStorage, defaults);
-  console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort);
+  console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort, LCR_VERSION);
   ui.setSettings(settings);
 
   // L'alimentazione va per prima: sulla T-Beam senza il PMU la radio non e' alimentata.

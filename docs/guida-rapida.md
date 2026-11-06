@@ -1,0 +1,14 @@
+# Guida rapida per un collega
+
+Dalla scheda appena arrivata alla prima prova di collegamento, in sei passi. Serve **Chrome, Edge od Opera** su un computer (anche Windows) e il cavo USB dati.
+
+> **Prima di tutto:** collega l'**antenna a 433 MHz** prima del cavo USB. Una scheda LoRa senza antenna o carico fittizio si può danneggiare. Togli la microSD. Trasmetti solo con il tuo nominativo, sulle frequenze e con le potenze consentite.
+
+1. **Apri la [pagina di installazione](https://iu5hju.github.io/LoRa-Codec-2-RTX/)**, scegli la tua scheda (T3 V1.6.1 o T-Beam V1.2) e premi **"Installa il firmware"**. Segui la finestra del browser per scegliere la porta. Su Windows può servire il driver USB della scheda ([firmware.md](firmware.md#caricare-il-firmware-sulla-scheda-windows)).
+2. **Passo 2 della pagina, "Collega":** scegli la stessa porta. Compare "Impostazioni lette" con la versione del firmware. Imposta il tuo **nominativo** (finché è `N0CALL` la scheda riceve ma non trasmette), la **frequenza** (il valore predefinito è un segnaposto: scegli il canale con il band plan IARU R1 / ARI; le due stazioni devono usare la stessa), la potenza e il volume, poi **"Salva e riavvia"**.
+3. **Microfono e altoparlante** (se li hai montati): sezione 3 della pagina, "Prova il microfono" e "Suona i toni". Spiegazione, soglie e falsi esiti in [verifica-hardware-audio.md](verifica-hardware-audio.md). Collegamenti in [pinout.md](pinout.md).
+4. **Fondo del microfono:** in silenzio premi **"Misura il fondo"** e, se serve, correggilo con − e + ([taratura-microfono.md](taratura-microfono.md)).
+5. **Prova di collegamento tra due schede:** su entrambe tre pressioni veloci del PTT (o il pulsante nella pagina), poi PTT premuto per 12 secondi su una. L'altra mostra l'esito e risponde. Dettagli in [prova-collegamento.md](prova-collegamento.md).
+6. **Voce:** con la prova spenta, PTT premuto e parla; l'altra scheda riproduce. Rilascia per finire il turno (massimo 30 s).
+
+**Se qualcosa non va:** la sezione "Aiuto per la diagnosi" di [prove.md](prove.md), il registro della seriale in fondo alla pagina ("Copia il registro" o "Salva su file") e le segnalazioni su GitHub (Issues). Annota le prove nello stesso [prove.md](prove.md).

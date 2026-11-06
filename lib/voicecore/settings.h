@@ -7,6 +7,7 @@
 // La console e' un protocollo a righe sulla seriale, pensato per la pagina web di
 // configurazione (Web Serial) ma usabile anche a mano:
 //
+//   CFG VERSION                  -> CFG VERSION fw=abc1234 board=t3
 //   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 power=10 volume=7 micfloor=-60 board=t3 reboot=0 test=0
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
 //   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000)
@@ -87,7 +88,9 @@ enum class ConsoleResult {
 class SettingsConsole {
  public:
   // active: valori in uso (letti all'avvio). board: nome breve per CFG GET.
-  SettingsConsole(const Settings& active, const Settings& defaults, ISettingsStorage& storage, const char* board);
+  // version: versione del firmware (git describe), mostrata da CFG VERSION.
+  SettingsConsole(const Settings& active, const Settings& defaults, ISettingsStorage& storage, const char* board,
+                  const char* version = "dev");
 
   // Elabora una riga (senza il fine riga). In reply scrive la risposta, senza fine riga.
   ConsoleResult handleLine(const char* line, char* reply, size_t cap);
@@ -102,6 +105,7 @@ class SettingsConsole {
 
  private:
   ConsoleResult get(char* reply, size_t cap);
+  ConsoleResult versionInfo(char* reply, size_t cap);
   ConsoleResult set(const char* key, const char* value, char* reply, size_t cap);
   ConsoleResult reset(char* reply, size_t cap);
   ConsoleResult mic(const char* value, char* reply, size_t cap);
@@ -114,6 +118,7 @@ class SettingsConsole {
   Settings stored_;
   ISettingsStorage& storage_;
   const char* board_;
+  const char* version_;
 };
 
 }  // namespace lcr
