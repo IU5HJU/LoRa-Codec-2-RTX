@@ -33,17 +33,20 @@ jobs:
   page:
     name: Prova della pagina web
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Installa Playwright e Chromium
+      - name: Installa Playwright (senza scaricare browser)
+        run: npm install --no-save playwright@1.49.1
+      - name: Prova la pagina con un dispositivo seriale finto (Chrome del runner)
+        env:
+          PW_CHANNEL: chrome
         run: |
-          npm install --no-save playwright@1.49.1
-          npx playwright install --with-deps chromium
-      - name: Prova la pagina con un dispositivo seriale finto
-        run: node tests/page/run.js
+          test -x /opt/google/chrome/chrome || { echo "Chrome non trovato sul runner"; exit 1; }
+          node tests/page/run.js
 
   firmware:
     name: Firmware ${{ matrix.board }}

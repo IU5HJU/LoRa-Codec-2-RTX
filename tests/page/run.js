@@ -68,7 +68,8 @@ async function scenario(name, fn) {
 (async () => {
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   baseUrl = 'http://127.0.0.1:' + server.address().port;
-  browser = await chromium.launch();
+  // In CI si usa il Chrome gia' installato sul runner (PW_CHANNEL=chrome): niente download ne' pacchetti di sistema.
+  browser = await chromium.launch(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {});
 
   await scenario('lettura delle impostazioni e versione del firmware', async (p) => {
     check('versione pubblicata mostrata', (await p.textContent('#ver')).includes('test-1'));
