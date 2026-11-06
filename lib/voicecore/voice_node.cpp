@@ -291,7 +291,7 @@ void VoiceNode::sendTestReply(uint32_t nowMs) {
   p.session = replySession_;
   p.seq = 0;
   p.flags = kFlagStart | kFlagEnd;
-  strncpy(p.callsign, cfg_.callsign, kMaxCallsign);
+  memcpy(p.callsign, cfg_.callsign, strnlen(cfg_.callsign, kMaxCallsign));
   p.payloadLen = kTestReportBytes;
   encodeTestReport(replyReport_, p.payload);
   uint8_t buf[kMaxWireBytes];

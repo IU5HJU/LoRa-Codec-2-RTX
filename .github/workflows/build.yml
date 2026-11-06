@@ -29,6 +29,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: make test
         run: make test
+      - name: Parte Python del ricevitore SDR
+        run: make test-py
 
   page:
     name: Prova della pagina web
