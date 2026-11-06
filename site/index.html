@@ -25,8 +25,10 @@
   button.secondary { background:transparent; color:var(--accent); }
   button:disabled { opacity:.45; cursor:not-allowed; }
   .hint { font-size:.85rem; color:var(--muted); margin:.2em 0 0; }
-  #status { margin-top:.8em; min-height:1.4em; font-weight:600; }
-  #status.err { color:var(--err); } #status.ok { color:var(--ok); }
+  #status { margin:.8em 0 0; font-weight:600; }
+  #status:not(:empty) { padding:.7em .9em; border-left:5px solid var(--muted); border-radius:6px; background:rgba(128,128,128,.14); }
+  #status.err { color:var(--err); border-left-color:var(--err); background:rgba(179,38,30,.12); }
+  #status.ok { color:var(--ok); border-left-color:var(--ok); background:rgba(26,127,55,.12); }
   #log { background:var(--log-bg); color:var(--log-fg); font:12px/1.4 ui-monospace, monospace; padding:10px; border-radius:6px; height:11rem; overflow:auto; white-space:pre-wrap; margin-top:.8em; }
   #nosupport { display:none; }
   .floorhint { margin:.2em 0 .6em; }
@@ -118,13 +120,13 @@
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
       <button id="reset" type="button" class="secondary" disabled>Valori di fabbrica</button>
     </form>
+    <div id="status" role="status" aria-live="polite"></div>
     <h3>Prova di collegamento</h3>
     <p class="muted">Con la prova attiva il PTT non trasmette voce ma 12 secondi di frame di prova noti: la scheda che li riceve li confronta bit per bit, mostra l'esito sul display e <strong>risponde</strong> alla prima con il risultato (se anche lì la prova è attiva). Serve il tuo nominativo. Non è salvata: allo spegnimento torna spenta.</p>
     <p class="muted"><strong>Senza computer:</strong> la prova si attiva e si disattiva anche con <strong>tre pressioni veloci del PTT</strong> sulla scheda (ognuna entro mezzo secondo dalla precedente): due bip acuti e "PROVA ATTIVA" sul display per attivarla, un bip grave e "PROVA SPENTA" per spegnerla. Con la prova attiva, tieni premuto il PTT per i 12 secondi della prova.</p>
     <button id="testOn" type="button" class="secondary" disabled>Attiva la prova</button>
     <button id="testOff" type="button" class="secondary" disabled>Disattiva la prova</button>
     <span id="testState" class="muted"></span>
-    <div id="status" role="status"></div>
     <div id="logtools">
       <button id="logCopy" type="button" class="secondary">Copia il registro</button>
       <button id="logSave" type="button" class="secondary">Salva su file</button>
@@ -184,7 +186,10 @@
   let waiters = [];   // risposte attese: { re, resolve, timer }
   let lastBoard = '';
 
-  function setStatus(msg, cls) { const s = $('status'); s.textContent = msg || ''; s.className = cls || ''; }
+  function setStatus(msg, cls) {
+    const s = $('status'); s.textContent = msg || ''; s.className = cls || '';
+    if (msg && cls) s.scrollIntoView({ block: 'nearest', behavior: 'smooth' });   // errori e conferme non devono restare fuori schermo
+  }
   function log(line) {
     const el = $('log');
     el.textContent += line + '\n';
@@ -482,9 +487,9 @@
       if (line.includes('ERR') || !Number.isFinite(m.fondo) || !(m.frames >= 50)) throw new Error('misura non riuscita: nessun dato dal microfono');
       // Una misura rovinata (colpo, voce, microfono toccato) non si salva: il fondo precedente resta com'e'.
       if (m.max - m.min > 12) {
-        setStatus('Misura non salvata: il livello non era stabile (da ' + m.min + ' a ' + m.max + ' dBFS). Hai parlato o toccato il microfono? Resta in silenzio e riprova.', 'err');
+        setStatus('MISURA NON SALVATA. Durante i 3 secondi il livello è cambiato troppo (da ' + m.min + ' a ' + m.max + ' dBFS): probabilmente c\'era un rumore, una voce o un tocco sul microfono. Resta in silenzio e premi di nuovo "Misura il fondo". Il fondo resta ' + (lastFloor !== null ? lastFloor + ' dBFS' : 'quello di prima') + '.', 'err');
       } else if (m.fondo > -36) {
-        setStatus('Misura non salvata: il fondo (' + m.fondo + ' dBFS) è troppo alto per il campo ammesso (fino a -36). Avvicina il microfono o cambia posto e riprova.', 'err');
+        setStatus('MISURA NON SALVATA. Il fondo misurato (' + m.fondo + ' dBFS) è troppo alto: il valore massimo ammesso è -36 dBFS. Allontanati da rumori e ventole, avvicina il microfono alla bocca e riprova. Il fondo resta ' + (lastFloor !== null ? lastFloor + ' dBFS' : 'quello di prima') + '.', 'err');
       } else {
         const v = Math.max(-80, Math.min(-36, m.fondo));
         if (await setFloor(v)) setStatus('Fondo misurato: ' + m.fondo + ' dBFS (da ' + m.min + ' a ' + m.max + ') e salvato. Puoi correggerlo con − e +.', 'ok');
