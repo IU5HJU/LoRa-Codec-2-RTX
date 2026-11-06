@@ -136,7 +136,7 @@ def draw_t3():
     global els
     els = []
     header("LoRa32 T3 V1.6.1: collegamenti audio e pulsanti",
-           "Scheda vista con l'USB in alto. I nomi dei pin sono quelli stampati sulla scheda.")
+           "Faccia dei componenti (modulo LoRa e chip ESP32), USB in alto: e' la faccia con le sigle dei pin. L'OLED e' sull'altra faccia.")
 
     BX0, BX1, BY0, BY1 = 220, 580, 100, 900
     PIN_Y = [170 + 56 * i for i in range(13)]
@@ -149,12 +149,16 @@ def draw_t3():
     text(400, BY0 + 22, "micro USB", 13, "middle", "bold", "#111827")
     text(400, 190, "LILYGO", 22, "middle", "bold", "#e5e7eb")
     text(400, 218, "LoRa32 T3 V1.6.1", 17, "middle", "normal", "#e5e7eb")
+    # dall'USB verso il basso, come sulla scheda: radio, poi ESP32, in fondo l'antenna Wi-Fi stampata
+    text(400, 246, "ON/OFF, RST, batteria (JST), SMA e U.FL vicino all'USB", 11, "middle", "normal", "#9ca3af")
     rect(290, 270, 220, 120, "#374151", "#4b5563", rx=8)
-    text(400, 318, "ESP32-PICO-D4", 15, "middle", "bold", "#e5e7eb")
-    text(400, 342, "+ OLED integrato", 13, "middle", "normal", "#d1d5db")
+    text(400, 318, "Radio SX1278", 15, "middle", "bold", "#e5e7eb")
+    text(400, 342, "LILYGO LORA32 433/470 MHz", 12, "middle", "normal", "#d1d5db")
     rect(290, 430, 220, 90, "#374151", "#4b5563", rx=8)
-    text(400, 470, "Radio SX1278", 15, "middle", "bold", "#e5e7eb")
-    text(400, 494, "433 MHz, antenna SMA", 13, "middle", "normal", "#d1d5db")
+    text(400, 470, "ESP32-PICO-D4", 15, "middle", "bold", "#e5e7eb")
+    text(400, 494, "OLED sull'altra faccia", 13, "middle", "normal", "#d1d5db")
+    rect(300, 850, 200, 36, "#374151", "#4b5563", rx=6)
+    text(400, 873, "antenna Wi-Fi (stampata)", 12, "middle", "normal", "#d1d5db")
 
     MX0, MX1 = 1180, 1440
     AMP = {"VIN": 186, "GND": 230, "SD": 274, "GAIN": 318, "DIN": 362, "BCLK": 406, "LRC": 450}
