@@ -173,6 +173,10 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+      - name: Attendi che l'artefatto del sito sia visibile
+        # L'elenco degli artefatti di GitHub a volte non mostra subito quello appena caricato
+        # ("No artifacts named github-pages were found"): una breve pausa evita il falso errore.
+        run: sleep 30
       - name: Pubblica
         id: deploy
         uses: actions/deploy-pages@v4
