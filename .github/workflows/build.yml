@@ -30,6 +30,21 @@ jobs:
       - name: make test
         run: make test
 
+  page:
+    name: Prova della pagina web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Installa Playwright e Chromium
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Prova la pagina con un dispositivo seriale finto
+        run: node tests/page/run.js
+
   firmware:
     name: Firmware ${{ matrix.board }}
     runs-on: ubuntu-latest
@@ -125,7 +140,7 @@ jobs:
   pages:
     name: Pubblica su GitHub Pages
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    needs: firmware
+    needs: [firmware, page]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -85,6 +85,8 @@ make test
 
 Serve solo un compilatore C++17 (g++ o clang++).
 
+La pagina web di installazione e configurazione ha una prova a parte (`make test-page`, che richiede Node e Playwright con Chromium): apre `site/index.html` in un browser con un dispositivo seriale finto e controlla lettura e scrittura delle impostazioni, misura del fondo, verifica audio, messaggi di errore e tema scuro. In GitHub Actions gira a ogni modifica e **blocca la pubblicazione su Pages** se fallisce.
+
 ## Note per l'uso in aria
 
 - Il nominativo è trasmesso in chiaro e i contenuti non sono cifrati.

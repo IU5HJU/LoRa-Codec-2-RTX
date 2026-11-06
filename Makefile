@@ -7,7 +7,7 @@ CORE := $(wildcard lib/voicecore/*.cpp)
 HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
 TESTS := packet stream node button audio output pins battery settings link level tone
 
-.PHONY: test clean
+.PHONY: test test-page clean
 test: $(addprefix build/test_,$(TESTS))
 	@for t in $^; do ./$$t || exit 1; done
 
@@ -17,3 +17,7 @@ build/test_%: tests/test_%.cpp $(CORE) $(HDRS)
 
 clean:
 	rm -rf build
+
+# Prova della pagina web con un dispositivo seriale finto (serve Node e il modulo playwright con Chromium).
+test-page:
+	node tests/page/run.js
