@@ -216,92 +216,149 @@ def draw_t3():
 
 # =============================================================================== T-Beam V1.2
 def draw_tbeam():
+    """Scheda disegnata come si tiene in mano e come si legge la serigrafia: OLED a sinistra, antenna in alto,
+    i 13 pin sul bordo inferiore da VP (sinistra) a 5V (destra), micro USB e tre tasti a destra dei pin.
+    I moduli stanno sotto la scheda e i fili scendono dai pin."""
     global els
     els = []
     header("T-Beam V1.2 (AXP2101): collegamenti audio e pulsanti",
-           "Scheda con l'OLED in alto. Connettore a 13 pin con l'ordine stampato sulla scheda: VP in alto, 5V in basso.")
+           "Scheda come nella foto: OLED a sinistra, antenna in alto, 13 pin sul bordo inferiore da VP (sinistra) a 5V (destra).")
 
-    BX0, BX1, BY0, BY1 = 220, 580, 100, 900
-    PIN_Y = [170 + 56 * i for i in range(13)]
+    BX0, BX1, BY0, BY1 = 60, 1010, 170, 462
+    YH = 452                                   # centro dei pin
     PINS = ["VP", "VN", "RST", "15", "35", "32", "33", "25", "14", "13", "2", "GND", "5V"]
-    ry = dict(zip(PINS, PIN_Y))
+    px = {name: 130 + 42 * i for i, name in enumerate(PINS)}
 
-    # scheda
+    # antenna e scheda
+    rect(700, 112, 44, 56, "#111827", "#000000", rx=14, sw=1)
+    text(722, 104, "antenna 433 MHz", 13, "middle", "bold", "#111827")
+    rect(710, 160, 24, 14, "#b08d1e", rx=3, sw=0)
     rect(BX0, BY0, BX1 - BX0, BY1 - BY0, "#1f2937", "#111827", rx=18)
-    rect(280, 118, 240, 118, "#1d4ed8", "#93c5fd", rx=8)
-    rect(300, 134, 200, 86, "#0f172a", "#334155", rx=4)
-    text(400, 168, "OLED 0,96\"", 15, "middle", "bold", "#e5e7eb")
-    text(400, 190, "(sul connettore I2C 21/22)", 12, "middle", "normal", "#9ca3af")
-    text(400, 280, "LILYGO T-Beam V1.2", 19, "middle", "bold", "#e5e7eb")
-    text(400, 304, "TBeam-AXP2101", 14, "middle", "normal", "#d1d5db")
-    rect(290, 330, 220, 64, "#374151", "#4b5563", rx=8)
-    text(400, 358, "Radio SX127x 433 MHz", 14, "middle", "bold", "#e5e7eb")
-    text(400, 378, "antenna SMA", 12, "middle", "normal", "#d1d5db")
-    rect(290, 410, 220, 64, "#374151", "#4b5563", rx=8)
-    text(400, 438, "AXP2101", 14, "middle", "bold", "#e5e7eb")
-    text(400, 458, "batteria 18650 e carica", 12, "middle", "normal", "#d1d5db")
-    rect(290, 490, 220, 64, "#374151", "#4b5563", rx=8)
-    text(400, 518, "GPS u-blox NEO-6M", 14, "middle", "bold", "#e5e7eb")
-    text(400, 538, "RX 34 / TX 12 (non usato)", 12, "middle", "normal", "#d1d5db")
-    # tasti di bordo
-    for bx, label, hl in ((260, "PWR", False), (340, "IO38", True), (420, "RST", False)):
-        rect(bx, 800, 66, 34, "#fff7ed" if hl else "#374151", C["ptt"] if hl else "#4b5563", rx=6, sw=3 if hl else 1)
-        text(bx + 33, 822, label, 14, "middle", "bold", C["ptt"] if hl else "#d1d5db")
-    text(400, 854, "IO38 = tasto PTT (sulla scheda)", 14, "middle", "bold", C["ptt"])
-    rect(350, BY1 - 34, 100, 26, "#9ca3af", rx=5, sw=0)
-    text(400, BY1 - 16, "micro USB", 13, "middle", "bold", "#111827")
+    rect(74, 226, 100, 112, "#6b7280", "#9ca3af", rx=6)                 # ESP32 (schermo metallico)
+    text(124, 286, "ESP32", 16, "middle", "bold", "#f3f4f6")
+    rect(200, 190, 220, 126, "#1d4ed8", "#93c5fd", rx=8)                 # OLED
+    rect(222, 214, 176, 78, "#0f172a", "#334155", rx=4)
+    text(310, 246, "OLED 0,96\"", 15, "middle", "bold", "#e5e7eb")
+    text(310, 268, "(I2C 21/22)", 12, "middle", "normal", "#9ca3af")
+    text(310, 207, "VCC  GND  SCL  SDA", 10, "middle", "bold", "#e5e7eb")
+    rect(446, 226, 66, 56, "#374151", "#4b5563", rx=6)
+    text(479, 258, "AXP2101", 12, "middle", "bold", "#e5e7eb")
+    rect(560, 196, 190, 150, "#e5e7eb", "#9ca3af", rx=6)                 # modulo LoRa
+    text(655, 254, "LILYGO", 16, "middle", "bold", "#111827")
+    text(655, 276, "433/470 MHz LORA32", 12, "middle", "normal", "#111827")
+    text(655, 296, "SX127x, antenna SMA", 11, "middle", "normal", "#374151")
+    rect(780, 196, 150, 150, "#d1d5db", "#9ca3af", rx=6)                 # GPS
+    text(855, 262, "GPS u-blox", 14, "middle", "bold", "#111827")
+    text(855, 282, "NEO-6M", 14, "middle", "bold", "#111827")
+    text(855, 302, "RX 34 / TX 12 (non usato)", 10, "middle", "normal", "#374151")
+    rect(690, 438, 86, 24, "#9ca3af", rx=5, sw=0)                        # micro USB
+    text(733, 455, "micro USB", 12, "middle", "bold", "#111827")
+    for bx, label, hl in ((796, "PWR", False), (858, "IO38", True), (920, "RST", False)):
+        rect(bx, 410, 56, 34, "#fff7ed" if hl else "#374151", C["ptt"] if hl else "#4b5563", rx=6, sw=3 if hl else 1)
+        text(bx + 28, 432, label, 13, "middle", "bold", C["ptt"] if hl else "#d1d5db")
+    text(886, 398, "IO38 = tasto PTT (sulla scheda)", 13, "middle", "bold", C["ptt"])
 
-    MX0, MX1 = 1180, 1440
-    MIC = {"SD": 170, "SCK": 204, "WS": 238, "L/R": 272, "VDD": 306, "GND": 340}
-    AMP = {"VIN": 474, "GND": 518, "SD": 562, "GAIN": 606, "DIN": 650, "BCLK": 694, "LRC": 738}
+    used = {"VP": C["mic"], "15": C["vol"], "25": C["sd"], "14": C["bclk"], "13": C["ws"], "2": C["din"],
+            "GND": C["gnd"], "5V": C["5v"]}
+    blocked = {"35", "32", "33"}
 
-    # fili. Ordine di disegno: chi viene dopo scavalca chi viene prima.
-    wire([(BX1, ry["VP"]), (MX0, MIC["SD"])], C["mic"])
-    wire([(BX1, ry["25"]), (MX0, AMP["SD"])], C["sd"])
-    wire([(BX1, ry["2"]), (860, ry["2"]), (860, AMP["DIN"]), (MX0, AMP["DIN"])], C["din"])
-    wire([(BX1, ry["14"]), (900, ry["14"]), (900, MIC["SCK"]), (MX0, MIC["SCK"])], C["bclk"])
-    wire([(900, ry["14"]), (900, AMP["BCLK"]), (MX0, AMP["BCLK"])], C["bclk"])
-    wire([(BX1, ry["13"]), (940, ry["13"]), (940, MIC["WS"]), (MX0, MIC["WS"])], C["ws"])
-    wire([(940, ry["13"]), (940, AMP["LRC"]), (MX0, AMP["LRC"])], C["ws"])
-    wire([(BX1, ry["15"]), (700, ry["15"])], C["vol"])
-    dot(900, ry["14"], C["bclk"], 6, "#ffffff")
-    dot(940, ry["13"], C["ws"], 6, "#ffffff")
+    # moduli sotto la scheda
+    MIC_X = {"SD": 130, "SCK": 200, "WS": 270, "L/R": 340, "VDD": 410, "GND": 480}
+    AMP_X = {"VIN": 640, "GND": 705, "SD": 770, "GAIN": 835, "DIN": 900, "BCLK": 965, "LRC": 1030}
+    MY = 780                                    # quota dei pin dei moduli (bordo superiore)
+    L = {"VP": 520, "2": 620, "25": 645, "14": 672, "13": 700}   # corsie orizzontali dei fili
 
-    rect(660, ry["15"] - 52, 210, 86, "#fff7ed", "#fdba74", rx=10)
-    button(700, ry["15"], "Volume (opzionale)", "vol")
+    # fili (l'ordine decide chi scavalca chi)
+    wire([(px["VP"], YH), (px["VP"], MY)], C["mic"])
+    wire([(px["2"], YH), (px["2"], L["2"]), (AMP_X["DIN"], L["2"]), (AMP_X["DIN"], MY)], C["din"])
+    wire([(px["25"], YH), (px["25"], L["25"]), (AMP_X["SD"], L["25"]), (AMP_X["SD"], MY)], C["sd"])
+    wire([(px["14"], YH), (px["14"], L["14"]), (MIC_X["SCK"], L["14"]), (MIC_X["SCK"], MY)], C["bclk"])
+    wire([(px["14"], L["14"]), (AMP_X["BCLK"], L["14"]), (AMP_X["BCLK"], MY)], C["bclk"])
+    wire([(px["13"], YH), (px["13"], L["13"]), (MIC_X["WS"], L["13"]), (MIC_X["WS"], MY)], C["ws"])
+    wire([(px["13"], L["13"]), (AMP_X["LRC"], L["13"]), (AMP_X["LRC"], MY)], C["ws"])
+    dot(px["14"], L["14"], C["bclk"], 6)
+    dot(px["13"], L["13"], C["ws"], 6)
 
-    mic_box(MX0, MX1, MIC, 130, 366, vdd_label="3,3 V *")
-    amp_box(MX0, MX1, AMP, 434, 778, out_plus=530, out_minus=610)
-    speaker(MX1, 530, 610)
+    # pin del connettore: etichetta sopra il pin, come sulla scheda
+    for name in PINS:
+        x = px[name]
+        col = used.get(name, C["grey"])
+        on = name in used
+        dot(x, YH, col, 7, "#ffffff" if on else "#6b7280")
+        text(x, YH - 16, name, 13, "middle", "bold", "#e5e7eb" if on else "#9ca3af")
+    text(px["35"] + 40, 398, "35, 32, 33: occupati (AXP2101 e radio)", 12, "middle", "normal", "#9ca3af")
+    text(px["GND"] + 22, 478, "GND -> massa comune", 13, "start", "bold", C["gnd"])
+    text(px["5V"] + 8, 498, "5V -> VIN amplificatore", 13, "start", "bold", C["5v"])
 
-    used = {"VP": (C["mic"], "SD: dati microfono (GPIO36)"), "25": (C["sd"], "SD: shutdown ampl."),
-            "2": (C["din"], "DIN: dati altoparlante"), "14": (C["bclk"], "BCLK: clock di bit"),
-            "13": (C["ws"], "WS: word select"), "15": (C["vol"], "")}
-    busy = {"35": "occupato: interrupt dell'AXP2101", "32": "occupato: DIO2 della radio",
-            "33": "occupato: DIO1 della radio", "VN": "libero", "RST": "reset"}
-    for name, y in ry.items():
-        color, note = used.get(name, (C["grey"], ""))
-        if name == "GND":
-            color = C["gnd"]
-        if name == "5V":
-            color = C["5v"]
-        dot(BX1, y, color, 7, "#ffffff" if (name in used or name in ("GND", "5V")) else "#6b7280")
-        text(BX1 - 16, y + 5, name, 14, "end", "bold",
-             "#e5e7eb" if (name in used or name in ("GND", "5V")) else "#9ca3af")
-        if note:
-            text(BX1 + 14, y - 9, note, 12, "start", "bold", color)
-        elif name in busy:
-            text(BX1 + 14, y + 5, busy[name], 12, "start", "normal", "#9ca3af")
-    text(BX1 + 14, ry["GND"] + 5, "GND  ->  massa comune", 13, "start", "bold", C["gnd"])
-    text(BX1 + 14, ry["5V"] + 5, "5V  ->  VIN amplificatore", 13, "start", "bold", C["5v"])
+    # volume (opzionale)
+    rect(196, 520, 232, 82, "#fff7ed", "#fdba74", rx=10)
+    wire([(px["15"], YH), (px["15"], 566)], C["vol"])
+    button(px["15"], 566, "", "vol")
+    text(px["15"] + 16, 538, "Volume (opzionale)", 13, weight="bold", fill=C["vol"])
+
+    # microfono
+    rect(60, MY, 460, 92, "#f3f4f6", "#374151", rx=10)
+    text(60, MY + 116, "INMP441", 20, weight="bold")
+    text(172, MY + 116, "microfono I2S (modulo a 6 pin)", 14, fill="#4b5563")
+    for n, x in MIC_X.items():
+        col = {"SCK": C["bclk"], "WS": C["ws"], "SD": C["mic"]}.get(n, C["grey"])
+        dot(x, MY, col)
+        text(x, MY + 28, n, 13, "middle", "bold")
+    for n, label, col in (("L/R", "GND", C["gnd"]), ("VDD", "3,3 V *", C["3v3"]), ("GND", "GND", C["gnd"])):
+        x = MIC_X[n]
+        w = 14 + 9 * len(label)
+        rect(x - w / 2, MY - 40, w, 22, col, rx=11, sw=0)
+        text(x, MY - 24, label, 12, "middle", "bold", "#ffffff")
+        add(f'<line x1="{x}" y1="{MY - 18}" x2="{x}" y2="{MY}" stroke="{col}" stroke-width="3"/>')
+    # amplificatore
+    rect(600, MY, 500, 92, "#f3f4f6", "#374151", rx=10)
+    text(600, MY + 116, "MAX98357A", 20, weight="bold")
+    text(752, MY + 116, "amplificatore I2S classe D", 14, fill="#4b5563")
+    for n, x in AMP_X.items():
+        col = {"SD": C["sd"], "DIN": C["din"], "BCLK": C["bclk"], "LRC": C["ws"]}.get(n, C["grey"])
+        dot(x, MY, col)
+        text(x, MY + 28, n, 13, "middle", "bold")
+    for n, label, col in (("VIN", "5V", C["5v"]), ("GND", "GND", C["gnd"]), ("GAIN", "libero", "#9ca3af")):
+        x = AMP_X[n]
+        w = 14 + 9 * len(label)
+        rect(x - w / 2, MY - 40, w, 22, col, rx=11, sw=0)
+        text(x, MY - 24, label, 12, "middle", "bold", "#ffffff")
+        add(f'<line x1="{x}" y1="{MY - 18}" x2="{x}" y2="{MY}" stroke="{col}" stroke-width="3"/>')
+    # altoparlante
+    for yy, lab in ((832, "+"), (860, "-")):
+        wire([(1100, yy), (1250, yy)], C["spk"], 5)
+        dot(1100, yy, C["spk"])
+        dot(1250, yy, C["spk"])
+        text(1090, yy + 4, "OUT " + lab, 13, "end", "bold")
+        text(1266, yy + 5, lab, 16, weight="bold", fill="#92400e")
+    rect(1250, 790, 160, 100, "#fffbeb", "#d97706", rx=10)
+    text(1345, 810, "Altoparlante", 15, "middle", "bold", "#92400e")
+    text(1345, 827, "8 ohm 3 W", 13, "middle", fill="#92400e")
+    add('<polygon points="1320,858 1340,858 1362,838 1362,880 1340,858" fill="#92400e"/>')
+    add('<path d="M1372,850 q12,10 0,20 M1382,842 q20,18 0,36" fill="none" stroke="#92400e" stroke-width="3" stroke-linecap="round"/>')
+
+    # legenda dei fili
+    rect(1060, 130, 590, 330, "#f9fafb", "#e5e7eb", rx=10)
+    text(1080, 160, "Fili, dal pin della scheda al modulo", 15, weight="bold")
+    rows = [("VP (GPIO36)", "SD del microfono", C["mic"]), ("25", "SD dell'amplificatore (shutdown)", C["sd"]),
+            ("14", "SCK del microfono e BCLK dell'amplificatore", C["bclk"]),
+            ("13", "WS del microfono e LRC dell'amplificatore", C["ws"]),
+            ("2", "DIN dell'amplificatore (dati altoparlante)", C["din"]), ("15", "pulsante volume (opzionale) a GND", C["vol"]),
+            ("GND", "massa comune a tutti i moduli", C["gnd"]), ("5V", "VIN dell'amplificatore", C["5v"])]
+    for i, (pin, what, col) in enumerate(rows):
+        y = 192 + 32 * i
+        add(f'<line x1="1080" y1="{y - 5}" x2="1128" y2="{y - 5}" stroke="{col}" stroke-width="6" stroke-linecap="round"/>')
+        text(1142, y, pin, 14, weight="bold")
+        text(1250, y, what, 14, fill="#374151")
+    text(1080, 192 + 32 * 8 + 6, "Non toccati: 35 (AXP2101), 32 e 33 (radio), GPS 34/12, LED di bordo GPIO4.", 12, fill="#6b7280")
 
     notes_panel([
         "Alimentazione: il pin 5V del connettore va a VIN dell'amplificatore (da verificare con il tester se c'e' anche a batteria; altrimenti usare 3,3 V). GND in comune per tutti i moduli.",
         "* Il connettore a 13 pin NON ha un pin 3,3 V: il 3,3 V per VDD del microfono va preso da un punto a 3,3 V della scheda (per esempio il VCC del connettore dell'OLED), verificato con il tester. Mai oltre 3,6 V.",
-        "Elettrolitico da circa 100 uF tra VIN e GND dell'amplificatore. GAIN libero (9 dB). INMP441: L/R a GND (canale sinistro); SCK e WS sono in comune con l'amplificatore. Fili corti, lontani dall'antenna.",
+        "Elettrolitico da circa 100 uF tra VIN e GND dell'amplificatore. GAIN libero (9 dB; a GND 12 dB). INMP441: L/R a GND (canale sinistro); SCK e WS sono in comune con l'amplificatore. Fili corti, lontani dall'antenna.",
         "PTT: il tasto IO38 di bordo (nessun filo). Se l'OLED mostra \"PTT? pin instabile\" serve un pull-up da 10 kohm tra IO38 e 3,3 V. Volume: pulsante opzionale tra il pin 15 e GND.",
-        "Non toccati: GPS (GPIO34 e 12), interrupt AXP2101 (GPIO35), DIO della radio (32 e 33), LED di bordo (GPIO4). Antenna a 433 MHz sempre collegata prima dell'USB.",
-        "Fonte: docs/pinout.md e src/board_pins_tbeam_v12.h. Fase 1: non ancora provato con l'audio. Generato da tools/render_wiring.py.",
+        "Antenna a 433 MHz sempre collegata prima dell'USB. Il disegno non e' in scala: l'ordine dei pin e quello stampato sulla scheda (foto in docs/pinout.md).",
+        "Fonte: docs/pinout.md e src/board_pins_tbeam_v12.h. Generato da tools/render_wiring.py.",
     ])
     return els
 

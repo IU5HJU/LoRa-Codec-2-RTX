@@ -125,7 +125,7 @@ Il collegamento fisso del microfono (`VDD` a 3,3 V, `GND`, `L/R` a GND) e dell'a
 
 ![Collegamenti della T-Beam V1.2](images/collegamenti-tbeam.png)
 
-Versione vettoriale: [collegamenti-tbeam.svg](images/collegamenti-tbeam.svg), generata da `tools/render_wiring.py tbeam`. Il connettore a 13 pin non ha un pin 3,3 V: per `VDD` del microfono prendere i 3,3 V da un punto della scheda (per esempio il VCC del connettore dell'OLED) e verificarli con il tester.
+**Orientamento:** lo schema mostra la scheda come si tiene in mano e come si legge la serigrafia: OLED a sinistra, antenna in alto, i **13 pin sul bordo inferiore da `VP` (a sinistra) a `5V` (a destra)** e il micro USB con i tre tasti a destra dei pin. Il disegno non è in scala, ma l'ordine dei pin è quello stampato sulla scheda. Versione vettoriale: [collegamenti-tbeam.svg](images/collegamenti-tbeam.svg), generata da `tools/render_wiring.py tbeam`. Il connettore a 13 pin non ha un pin 3,3 V: per `VDD` del microfono prendere i 3,3 V da un punto della scheda (per esempio il VCC del connettore dell'OLED) e verificarli con il tester.
 
 ### Da verificare con la scheda in mano
 
