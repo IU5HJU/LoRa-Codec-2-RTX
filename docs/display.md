@@ -41,6 +41,8 @@ Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 | 19 | Risposta alla prova trasmessa da qui | come la 17 con "Risposta" e il nominativo dell'altra stazione |
 | 21 | Tre clic veloci sul PTT: prova attivata | avviso "PROVA ATTIVA" (1,5 s), due bip acuti |
 | 22 | Altri tre clic: prova spenta | avviso "PROVA SPENTA", un bip grave |
+| 23 | Nominativo di 8 caratteri (per esempio `IU5HJU/P`) | "TX IU5HJU/P" o "RX IU5HJU/P": la riga grande passa al testo piccolo, perché a testo grande entrano solo 10 caratteri |
+| 24 | "Suona i toni" della pagina | "PROVA TONI" e "ascolta i toni" per circa 4 secondi |
 | 20 | Prova interrotta o incompleta | come la 17, ma la riga sotto la percentuale dice "Parz.7/300" e il nominativo: la percentuale è sui frame arrivati, non su 300 |
 
 Gli avvisi 6, 7, 8 e 11 restano a schermo circa 1,5-2 secondi; l'esito della prova (17-19) 15 secondi, senza volume e batteria. Due bip acuti a prova perfetta, un bip grave se ci sono state perdite. Ogni trasmissione e ricezione termina anche con un bip.
@@ -64,6 +66,7 @@ Formato `(Batt=4.12V)`, come nel firmware LoRa APRS iGate di Guzman. Larghezza f
 - Il "12" di "Prova 5/12 s" è la durata fissa della prova (300 frame).
 - Il "30" di "Trasmissione 12/30 s" e di "LIMITE 30 s" oggi è fisso. Quando il TOT diventerà un'impostazione
   (vedi [roadmap](roadmap.md)) seguirà il valore scelto.
+- A testo grande (12 pixel per carattere) entrano **10 caratteri** sui 128 pixel: le righe grandi più lunghe passano al testo piccolo. `tools/render_display.py` segnala e rifiuta ogni testo che andrebbe a capo.
 - Se l'OLED non risponde il sistema funziona comunque, con bip e riga seriale.
 - Per rigenerare l'immagine dopo una modifica a `src/ui.cpp`: aggiorna le funzioni di `tools/render_display.py` e lancia
   `python3 tools/render_display.py PERCORSO/glcdfont.c docs/images/display.png`. Il file `glcdfont.c` è nel

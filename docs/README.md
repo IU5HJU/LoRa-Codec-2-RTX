@@ -11,7 +11,7 @@
 | [audio.md](audio.md) | Collegamenti e catena audio del microfono, amplificatore e altoparlante |
 | [pinout.md](pinout.md) | Pin e schemi dei collegamenti della T3 V1.6.1 e della T-Beam V1.2 |
 | [alimentazione.md](alimentazione.md) | Batteria e alimentazione, T-Beam AXP2101, lettura della tensione |
-| [display.md](display.md) | Le schermate dell'OLED (22 mockup) |
+| [display.md](display.md) | Le schermate dell'OLED (24 mockup) |
 | [prove.md](prove.md) | Registro delle prove sulle schede e aiuto per la diagnosi |
 | [roadmap.md](roadmap.md) | Decisioni e prossimi lavori |
 | [progetti-simili.md](progetti-simili.md) | Altri progetti LoRa e Codec2 e scelte che ne derivano |

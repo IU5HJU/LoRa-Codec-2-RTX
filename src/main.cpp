@@ -152,7 +152,7 @@ void setup() {
 // frequenza. Bloccante per circa 3,5 s. I risultati tornano alla pagina di configurazione; il giudizio e' dell'operatore.
 static void runAudioTest() {
   constexpr int kTestVolumeStep = 5;  // -15 dB: udibile ma non forte
-  ui.showMessage("PROVA AUDIO", "ascolta i toni");
+  ui.showMessage("PROVA TONI", "ascolta i toni");
   const int savedVolume = audio.volumeStep();
   audio.setVolumeStep(kTestVolumeStep);
   static const float kFreqs[] = {500.0f, 1000.0f, 2000.0f};

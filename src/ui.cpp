@@ -9,6 +9,17 @@
 #include "board_pins.h"
 #include "user_config.h"
 
+namespace {
+// Riga grande (testo 2: 12 px per carattere, 128 px = 10 caratteri). Se il testo e' piu' lungo (per esempio "RX IU5HJU/P")
+// scende al testo piccolo invece di andare a capo sulla riga sotto.
+void bigText(Adafruit_SSD1306& d, int y, const char* text) {
+  const bool fits = strlen(text) <= 10;
+  d.setTextSize(fits ? 2 : 1);
+  d.setCursor(0, fits ? y : y + 4);
+  d.print(text);
+}
+}  // namespace
+
 bool UiNotifier::begin() {
   Wire.begin(pins::kOledSda, pins::kOledScl);
   ok_ = display_.begin(SSD1306_SWITCHCAPVCC, LCR_OLED_ADDRESS);
@@ -26,9 +37,7 @@ void UiNotifier::showMessage(const char* line1, const char* line2) {
   display_.setTextSize(1);
   display_.setCursor(0, 0);
   display_.println(settings_.callsign);
-  display_.setTextSize(2);
-  display_.setCursor(0, 20);
-  display_.println(line1);
+  bigText(display_, 20, line1);
   if (line2) {
     display_.setTextSize(1);
     display_.setCursor(0, 52);
@@ -200,13 +209,13 @@ void UiNotifier::draw(uint32_t nowMs) {
     return;
   }
 
-  display_.setTextSize(2);
-  display_.setCursor(0, 16);
+  char big[24];
   switch (state_) {
-    case lcr::VoiceNode::State::Idle: display_.print(testMode_ ? "PROVA ON" : "ASCOLTO"); break;
-    case lcr::VoiceNode::State::Receiving: display_.printf("RX %s", rxCall_); break;
-    case lcr::VoiceNode::State::Transmitting: display_.printf("TX %s", settings_.callsign); break;
+    case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", testMode_ ? "PROVA ON" : "ASCOLTO"); break;
+    case lcr::VoiceNode::State::Receiving: snprintf(big, sizeof(big), "RX %s", rxCall_); break;
+    default: snprintf(big, sizeof(big), "TX %s", settings_.callsign); break;
   }
+  bigText(display_, 16, big);
 
   display_.setTextSize(1);
   display_.setCursor(0, 38);

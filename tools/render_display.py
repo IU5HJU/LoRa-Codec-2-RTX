@@ -62,10 +62,13 @@ class Oled:
                                 self.px[y][x] = not self.inverse
                 line >>= 1
 
+    wraps = []   # testi che vanno a capo da soli (difetto da correggere): (testo, dimensione)
+
     def write(self, s, newline=False):
         for c in s:
             # stesso comportamento di Adafruit_GFX::write con textwrap attivo
             if self.cx + self.size * 6 > W:
+                Oled.wraps.append((s, self.size))
                 self.cx = 0
                 self.cy += self.size * 8
             self._char(c)
@@ -86,15 +89,22 @@ class Oled:
                 self.px[y][x + i] = True
 
 
+def big_text(o, y, text):
+    """Come bigText() di src/ui.cpp: testo 2 fino a 10 caratteri, altrimenti testo 1 (niente a capo)."""
+    fits = len(text) <= 10
+    o.set_size(2 if fits else 1)
+    o.set_cursor(0, y if fits else y + 4)
+    o.write(text)
+
+
 def show_message(font, line1, line2=None, callsign=CALLSIGN):
     """Come UiNotifier::showMessage()."""
     o = Oled(font)
     o.set_size(1)
     o.set_cursor(0, 0)
     o.write(callsign, newline=True)
-    o.set_size(2)
-    o.set_cursor(0, 20)
-    o.write(line1, newline=True)
+    big_text(o, 20, line1)
+    o.cy += 0
     if line2:
         o.set_size(1)
         o.set_cursor(0, 52)
@@ -111,14 +121,13 @@ def draw_screen(font, state="idle", rx_call="", rssi=0, snr=0.0, tx_seconds=0, n
     o.write(f"{callsign}  {FREQ} MHz")
     o.hline(0, 10, 128)
 
-    o.set_size(2)
-    o.set_cursor(0, 16)
     if state == "idle":
-        o.write("PROVA ON" if test_mode else "ASCOLTO")
+        big = "PROVA ON" if test_mode else "ASCOLTO"
     elif state == "rx":
-        o.write(f"RX {rx_call}")
+        big = f"RX {rx_call}"
     else:
-        o.write(f"TX {callsign}")
+        big = f"TX {callsign}"
+    big_text(o, 16, big)
 
     o.set_size(1)
     o.set_cursor(0, 38)
@@ -221,6 +230,10 @@ def screens(font):
          draw_screen(font, notice="PROVA ATTIVA", test_mode=True)),
         ("22  Tre clic: prova spenta", "Altri tre clic la disattivano (un bip grave).",
          draw_screen(font, notice="PROVA SPENTA")),
+        ("23  Nominativo di 8 caratteri", "Con un nominativo lungo (per esempio IU5HJU/P) la riga grande passa al testo piccolo invece di andare a capo.",
+         draw_screen(font, "tx", callsign="IU5HJU/P", tx_seconds=12)),
+        ("24  Verifica dell'audio", "Durante \"Suona i toni\" della pagina: tre toni a volume basso (circa 4 secondi).",
+         show_message(font, "PROVA TONI", "ascolta i toni")),
     ]
 
 
@@ -252,6 +265,10 @@ def main():
         title_font = cap_font = ImageFont.load_default()
 
     items = screens(font)
+    if Oled.wraps:
+        for t, sz in Oled.wraps:
+            print(f"ATTENZIONE: il testo {t!r} (dimensione {sz}) va a capo")
+        raise SystemExit(1)
     cols = 3
     rows = (len(items) + cols - 1) // cols
     panels = [render_panel(o) for _, _, o in items]
