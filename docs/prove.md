@@ -175,3 +175,18 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - Risultato: con tre clic veloci sul PTT (prova di collegamento attivata) **si sentono i bip** descritti (due acuti all'attivazione). L'amplificatore e l'altoparlante funzionano.
 - Livello raggiunto della scaletta: **4 (altoparlante)**, a livello di bip. Da annotare: volume, fruscio a riposo, distorsione.
 - Da fare: tabella di "Suona i toni" (sezione 3 della pagina) e prova senza altoparlante per i falsi positivi; poi la voce a turni con il secondo microfono.
+
+### 2026-11-07, casa, IU5HJU (verifica dell'hardware audio sulla T3: microfono e toni)
+
+- Firmware: `main` (pagina web, sezione 3). LoRa32 T3 V1.6.1 con INMP441, MAX98357A e altoparlante 8 ohm 3 W (senza contenitore).
+- **Prova del microfono:** silenzio -61 dBFS, voce -24 dBFS, differenza **+37 dB** (il microfono sente).
+- **Prova dei toni** (volume fisso, passo 5):
+
+| Tono | Pausa | Tono | Differenza | Esito |
+|---|---|---|---|---|
+| 500 Hz | -63,3 dBFS | -44,3 dBFS | +19,0 dB | sentito |
+| 1000 Hz | -68,8 dBFS | -25,1 dBFS | +43,7 dB | sentito |
+| 2000 Hz | -76,4 dBFS | -38,2 dBFS | +38,2 dB | sentito |
+
+- Osservazione: la risposta non è piatta: il tono a 1 kHz arriva 19 dB sopra quello a 500 Hz e 13 dB sopra quello a 2 kHz. È tipico di un altoparlante piccolo senza contenitore (poca resa sui bassi) e della risposta del microfono a breve distanza; per la voce (300-3400 Hz) conviene un contenitore chiuso (vedi [audio.md](audio.md)).
+- Da fare: ripetere "Suona i toni" **con l'altoparlante scollegato** (controllo del falso positivo) e annotare se i toni si sentivano a orecchio.
