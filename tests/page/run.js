@@ -11,11 +11,12 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const SITE = path.join(ROOT, 'site');
 const FAKE = path.join(__dirname, 'fake_serial.js');
 
+let publishedVersion = 'test-1';   // modificabile dai test
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url === '/version.json') {
     res.setHeader('Content-Type', 'application/json');
-    return res.end(JSON.stringify({ version: 'test-1', commit: 'abc1234def5678900000000000000000000000ff' }));
+    return res.end(JSON.stringify({ version: publishedVersion, commit: 'abc1234def5678900000000000000000000000ff' }));
   }
   const file = path.join(SITE, url === '/' ? 'index.html' : url);
   if (!file.startsWith(SITE) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.statusCode = 404; return res.end('no'); }
@@ -83,6 +84,31 @@ async function scenario(name, fn) {
     check('firmware riconosciuto come quello pubblicato', (await p.textContent('#fwinfo')).includes('pubblicata su questo sito'));
     check('stato di conferma', (await status(p)).includes('Impostazioni lette') && (await p.getAttribute('#status', 'class')) === 'ok');
     check('il messaggio di stato sta subito sotto il modulo', await p.evaluate(() => !!document.querySelector('#form + #status')));
+  });
+
+  await scenario('versione beta pubblicata e firmware beta installato', async (p) => {
+    publishedVersion = 'v0.1.0-beta.1';
+    await p.reload();
+    await until(p, () => document.getElementById('ver').textContent.includes('v0.1.0-beta.1'));
+    check('la pagina dice che la versione pubblicata e\' di prova', (await p.textContent('#ver')).includes('BETA'), await p.textContent('#ver'));
+    await p.evaluate(() => { window.__st.fw = 'v0.1.0-beta.1'; });
+    await connect(p);
+    await until(p, () => document.getElementById('fwinfo').textContent.includes('beta'));
+    const t = await p.textContent('#fwinfo');
+    check('firmware beta riconosciuto, con il protocollo', t.includes('BETA') && t.includes('protocollo 1') && t.includes('pubblicata su questo sito'), t);
+    publishedVersion = 'v0.1.0-rc.1';
+    await p.reload();
+    await until(p, () => document.getElementById('ver').textContent.includes('v0.1.0-rc.1'));
+    check('release candidate', (await p.textContent('#ver')).includes('RC'));
+    publishedVersion = 'v0.1.0';
+    await p.reload();
+    await until(p, () => document.getElementById('ver').textContent.includes('v0.1.0'));
+    check('versione stabile senza etichetta di prova', !/BETA|RC|sviluppo/.test(await p.textContent('#ver')), await p.textContent('#ver'));
+    publishedVersion = 'main-20261107';
+    await p.reload();
+    await until(p, () => document.getElementById('ver').textContent.includes('main-20261107'));
+    check('versione di sviluppo', (await p.textContent('#ver')).includes('sviluppo'));
+    publishedVersion = 'test-1';
   });
 
   await scenario('firmware vecchio senza CFG VERSION: la pagina funziona lo stesso', async (p) => {

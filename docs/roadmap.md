@@ -70,6 +70,10 @@ Il rumore di fondo cambia con l'ambiente (casa, auto, portatile, strada): la sog
 Per un collega con una sola scheda: prova del microfono (silenzio contro voce) e prova combinata di altoparlante e microfono (tre toni misurati con Goertzel), dalla pagina di configurazione, con la spiegazione di falsi positivi e negativi.
 Vedi [verifica-hardware-audio.md](verifica-hardware-audio.md). Le soglie vanno messe a punto sulle schede vere.
 
+## Versioni (deciso il 7 novembre)
+
+Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etichetta, `v0.1.0-beta.1`, si mette quando la voce passa da una scheda all'altra ed e' comprensibile all'ascolto.
+
 ## 4. Flasher web (dopo la configurazione a runtime)
 
 - Pagina statica con `esp-web-tools`, un manifest per versione e tipo (installazione di fabbrica, aggiornamento), come nell'esempio di CA2RXU.

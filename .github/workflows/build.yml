@@ -137,10 +137,14 @@ jobs:
             cp "$d/ota_update.bin" "release/${n}-ota_update.bin"
           done
           (cd release && sha256sum *.bin > SHA256SUMS)
+          # Un tag con un trattino (v0.1.0-beta.1, v0.1.0-rc.1) e' una versione di prova: pre-release su GitHub,
+          # cosi' non diventa la "ultima versione" per chi non vuole le beta (docs/versioni.md).
+          flags=""
+          case "$GITHUB_REF_NAME" in *-*) flags="--prerelease" ;; esac
           gh release create "$GITHUB_REF_NAME" release/* \
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
-            --generate-notes
+            --generate-notes $flags
 
   pages:
     name: Pubblica su GitHub Pages

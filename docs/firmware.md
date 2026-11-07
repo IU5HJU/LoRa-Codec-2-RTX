@@ -129,7 +129,7 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | Comando | Risposta | Note |
 |---|---|---|
 | `CFG GET` | `CFG callsign=IU5HJU freq=433.900 power=10 volume=7 micfloor=-60 board=t3 reboot=0 test=0` | `reboot=1` se i valori salvati differiscono da quelli in uso |
-| `CFG VERSION` | `CFG VERSION fw=v0.1.0-3-gabc1234 board=t3` | versione del firmware (da `git describe`, "dev" se compilato senza git) e scheda; la pagina web la confronta con quella pubblicata |
+| `CFG VERSION` | `CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=1` | versione del firmware (da `git describe`, "dev" se compilato senza git), scheda e **versione del protocollo** ([versioni.md](versioni.md)); la pagina web la confronta con quella pubblicata |
 | `CFG SET CALLSIGN iu5hju` | `CFG OK callsign=IU5HJU` | solo A-Z, 0-9 e `/`, massimo 8 caratteri |
 | `CFG SET FREQ 433.900` | `CFG OK freq=433.900` | MHz, da 430.000 a 440.000 (70 cm); **segnaposto**: scegli il canale col band plan IARU R1 / ARI |
 | `CFG SET POWER 10` | `CFG OK power=10` | dBm, da 2 a 17 |

@@ -7,7 +7,7 @@
 // La console e' un protocollo a righe sulla seriale, pensato per la pagina web di
 // configurazione (Web Serial) ma usabile anche a mano:
 //
-//   CFG VERSION                  -> CFG VERSION fw=abc1234 board=t3
+//   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=1   (versione del firmware e del protocollo)
 //   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 power=10 volume=7 micfloor=-60 board=t3 reboot=0 test=0
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
 //   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000)

@@ -12,6 +12,7 @@
 | [pinout.md](pinout.md) | Pin e schemi dei collegamenti della T3 V1.6.1 e della T-Beam V1.2 |
 | [alimentazione.md](alimentazione.md) | Batteria e alimentazione, T-Beam AXP2101, lettura della tensione |
 | [display.md](display.md) | Le schermate dell'OLED (24 mockup) |
+| [versioni.md](versioni.md) | Numerazione delle versioni (SemVer con beta e rc), firmware e protocollo, come si pubblica una versione |
 | [sdr.md](sdr.md) | Ricevere e decodificare le trasmissioni con un SDR (NESDR / RTL-SDR, GNU Radio, `lcr_decode`) |
 | [prove.md](prove.md) | Registro delle prove sulle schede e aiuto per la diagnosi |
 | [roadmap.md](roadmap.md) | Decisioni e prossimi lavori |

@@ -147,7 +147,7 @@ ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
 }
 
 ConsoleResult SettingsConsole::versionInfo(char* reply, size_t cap) {
-  if (reply && cap > 0) snprintf(reply, cap, "CFG VERSION fw=%s board=%s", version_, board_);
+  if (reply && cap > 0) snprintf(reply, cap, "CFG VERSION fw=%s board=%s proto=%d", version_, board_, static_cast<int>(kProtocolVersion));
   return ConsoleResult::Ok;
 }
 

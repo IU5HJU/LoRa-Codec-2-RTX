@@ -171,11 +171,20 @@
   const supported = 'serial' in navigator;
   if (!supported) $('nosupport').style.display = 'block';
 
+  // Fase di una versione (docs/versioni.md): v0.1.0-beta.1 e v0.1.0-rc.1 sono versioni di prova, main-AAAAMMGG e' lo sviluppo.
+  function versionKind(v) {
+    v = String(v || '');
+    if (/-beta(\.|$)/.test(v)) return ' — BETA: versione di prova';
+    if (/-rc(\.|$)/.test(v)) return ' — RC: candidata al rilascio, ancora in prova';
+    if (/^main-/.test(v)) return ' — versione di sviluppo (ultima di main)';
+    return '';
+  }
+
   // Versione pubblicata e link al sorgente.
   let published = null;   // versione pubblicata su questo sito (version.json)
   fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(v => {
     published = v;
-    $('ver').textContent = 'Versione: ' + v.version + ' (' + String(v.commit).slice(0, 7) + ')';
+    $('ver').textContent = 'Versione: ' + v.version + ' (' + String(v.commit).slice(0, 7) + ')' + versionKind(v.version);
     if (/^[0-9a-f]{7,40}$/.test(v.commit)) $('src').href = 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/tree/' + v.commit;
   }).catch(() => { $('ver').textContent = 'Versione: non disponibile'; });
 
@@ -203,13 +212,13 @@
   }
   let fullLog = '';   // registro completo di questa sessione (la finestra mostra solo gli ultimi righi)
   // Confronta il firmware installato (git describe, per esempio "abc1234" o "v0.1.0-3-gabc1234") con quello pubblicato.
-  function fwDescription(fw) {
+  function fwDescription(fw, proto) {
     if (!fw || fw === 'dev') return 'Firmware compilato in locale, senza numero di versione.';
     const dirty = /-dirty$/.test(fw);
     const base = fw.replace(/-dirty$/, '');
     const m = base.match(/-g([0-9a-f]+)$/);
     const sha = m ? m[1] : (/^[0-9a-f]{7,}$/.test(base) ? base : null);
-    let txt = 'Firmware installato: ' + fw + '.';
+    let txt = 'Firmware installato: ' + fw + versionKind(fw.replace(/-\d+-g[0-9a-f]+$/, '')) + (proto ? ' (protocollo ' + proto + ')' : '') + '.';
     if (published) {
       const same = (sha && String(published.commit).startsWith(sha)) || base === published.version;
       txt += same ? ' È la versione pubblicata su questo sito.'
@@ -324,7 +333,8 @@
         try {
           const v = await send('CFG VERSION', /^CFG VERSION /, 2000);
           const m = /fw=(\S+)/.exec(v);
-          $('fwinfo').textContent = fwDescription(m ? m[1] : '');
+          const pm = /proto=(\d+)/.exec(v);
+          $('fwinfo').textContent = fwDescription(m ? m[1] : '', pm ? pm[1] : '');
         } catch (e) { $('fwinfo').textContent = 'Versione del firmware non disponibile (firmware più vecchio).'; }
         return true;
       } catch (e) { if (!writer) return false; }

@@ -32,7 +32,7 @@
     const cmd = t[1];
     if (cmd === 'GET') out(get());
     else if (cmd === 'VERSION' && st.noVersion) out('CFG ERR comando sconosciuto');   // firmware vecchio
-    else if (cmd === 'VERSION') out(`CFG VERSION fw=${st.fw} board=${st.board}`);
+    else if (cmd === 'VERSION') out(`CFG VERSION fw=${st.fw} board=${st.board} proto=1`);
     else if (cmd === 'SET') {
       const key = t[2], v = t[3];
       if (st.reject === key) return out('CFG ERR ' + key.toLowerCase() + ' rifiutato dal firmware');
