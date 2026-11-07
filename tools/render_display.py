@@ -234,6 +234,8 @@ def screens(font):
          draw_screen(font, "tx", callsign="IU5HJU/P", tx_seconds=12)),
         ("24  Verifica dell'audio", "Durante \"Suona i toni\" della pagina: tre toni a volume basso (circa 4 secondi).",
          show_message(font, "PROVA TONI", "ascolta i toni")),
+        ("25  Prova radio", "Subito dopo i toni la scheda trasmette qualche pacchetto di controllo (circa 1 secondo) e il microfono misura se la radio lo disturba.",
+         show_message(font, "PROVA RF", "scheda in TX")),
     ]
 
 

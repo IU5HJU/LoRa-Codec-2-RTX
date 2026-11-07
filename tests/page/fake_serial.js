@@ -64,7 +64,8 @@
     } else if (cmd === 'TEST' && t[2] === 'AUDIO') {
       out('CFG OK audio prova in corso: ascolta i toni (circa 4 secondi)');
       st.audio.forEach((a, i) => setTimeout(() => out(`CFG AUDIO f=${a.f} base=${a.base.toFixed(1)} tone=${a.tone.toFixed(1)}`), st.delay * (i + 1)));
-      setTimeout(() => out('CFG AUDIO fine'), st.delay * (st.audio.length + 1));
+      if (st.rf) setTimeout(() => out(st.rf), st.delay * (st.audio.length + 1));
+      setTimeout(() => out('CFG AUDIO fine'), st.delay * (st.audio.length + 2));
     } else if (cmd === 'MIC' && t[2] === 'MEASURE') {
       out('CFG OK mic misura in corso: stare in silenzio per 3 s');
       const m = st.measureSeq && st.measureSeq.length ? st.measureSeq.shift() : st.measure;

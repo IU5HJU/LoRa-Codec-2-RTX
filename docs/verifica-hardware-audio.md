@@ -24,6 +24,12 @@ Nello stesso tempo il microfono misura quanto sente ogni tono, **solo a quella f
 La tabella mostra pausa, tono e differenza in dB. Esito per tono: **sentito** (almeno +10 dB), **dubbio** (da +3 a +10), **non sentito** (sotto +3).
 Giudizio complessivo: due o tre toni sentiti = catena viva; nessuno = vedi sotto; altro = dubbio, ripeti avvicinando il microfono all'altoparlante.
 
+### Prova radio: la radiofrequenza rientra nel microfono?
+
+Subito dopo i toni la scheda **trasmette 4 pacchetti di controllo** (circa 1 secondo, modo 15 del protocollo: i ricevitori li ignorano) e il microfono, con l'altoparlante muto, misura il proprio segnale a riposo e durante la trasmissione. **Serve l'antenna collegata e un nominativo vero** (con N0CALL la prova radio è saltata, come ogni trasmissione). Non parlare e non toccare il microfono finché la prova non è finita.
+
+La pagina confronta i due livelli (prima e dopo il filtro passa-alto) e l'offset: **sale di 10 dB o più** = la RF rientra nei fili del microfono (accorcia i fili, allontanali dall'antenna, intrecciali o schermali; prova una potenza più bassa); **da 5 a 10 dB** = dubbio, ripeti; **sotto 5 dB** = nessun rientro. Le soglie sono provvisorie: annota i valori in [prove.md](prove.md).
+
 ## Falsi positivi e falsi negativi
 
 - **Falso positivo:** il microfono "sente" i toni anche senza che l'altoparlante li emetta, perché il rumore dell'amplificatore (classe D) entra nel microfono dai fili o dall'alimentazione (condividono 5 V, massa e i clock BCLK/WS). **Controllo:** ripeti la prova **con l'altoparlante scollegato**: se il microfono sente lo stesso, il collegamento è elettrico, non acustico, e il risultato non vale.

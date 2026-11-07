@@ -123,6 +123,12 @@ void AudioIo::captureLoop() {
     if (toneActive_) toneMeter_.addBlock(micMono_, lcr::kMicSamplesPerFrame);
     front_.processFrame(micMono_, micPcm_);
     mic_.feed(micPcm_);
+    if (rfWatching_) {
+      if (micRmsDb_ > rfRmsMax_) rfRmsMax_ = micRmsDb_;
+      if (front_.agcInputDb() > rfAgcMax_) rfAgcMax_ = front_.agcInputDb();
+      const float dc = micDcPct_ < 0 ? -micDcPct_ : micDcPct_;
+      if (dc > rfDcMax_) rfDcMax_ = dc;
+    }
     if (measuring_) {  // "Misura il fondo": livello visto dall'AGC, dopo il passa-alto
       if (millis() >= measureUntilMs_) {
         measuring_ = false;
@@ -171,6 +177,17 @@ void AudioIo::toneTest(float freqHz, float& pauseDb, float& toneDb) {
   toneActive_ = false;
   delay(60);
   toneDb = toneMeter_.maxDb();
+}
+
+void AudioIo::rfWatchBegin() {
+  rfRmsMax_ = rfAgcMax_ = -120.0f;
+  rfDcMax_ = 0.0f;
+  rfWatching_ = true;
+}
+
+AudioIo::RfWatch AudioIo::rfWatchEnd() {
+  rfWatching_ = false;
+  return {rfRmsMax_, rfAgcMax_, rfDcMax_};
 }
 
 void AudioIo::setMicFloor(int floorDb) { front_.setGateDbfs(lcr::micGateFromFloor(floorDb)); }

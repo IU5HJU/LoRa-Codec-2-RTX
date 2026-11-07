@@ -148,6 +148,47 @@ void setup() {
   Serial.println(reply);  // la pagina di configurazione legge questa riga
 }
 
+// Rientro di radiofrequenza nel microfono: si misura il microfono a riposo e poi mentre la scheda trasmette qualche
+// pacchetto di controllo (ignorato dai ricevitori). Una differenza forte vuol dire che l'RF entra nei fili del microfono.
+// Come ogni trasmissione, richiede un nominativo vero e l'antenna collegata.
+static void runRfCheck() {
+  if (lcr::isPlaceholderCallsign(settings.callsign)) {
+    Serial.println("CFG AUDIO rf skip=nominativo");
+    return;
+  }
+  if (node->state() != lcr::VoiceNode::State::Idle) {
+    Serial.println("CFG AUDIO rf skip=occupata");
+    return;
+  }
+  ui.showMessage("PROVA RF", "scheda in TX");
+  audio.rfWatchBegin();
+  delay(500);
+  const AudioIo::RfWatch base = audio.rfWatchEnd();
+
+  constexpr int kPackets = 4;
+  const uint16_t session = static_cast<uint16_t>(esp_random());
+  audio.rfWatchBegin();
+  for (int i = 0; i < kPackets; i++) {
+    lcr::Packet p;
+    p.mode = lcr::kModeRfCheck;
+    p.session = session;
+    p.seq = static_cast<uint8_t>(i);
+    strncpy(p.callsign, settings.callsign, lcr::kMaxCallsign);
+    p.payloadLen = lcr::kMaxDataPayload;
+    for (size_t k = 0; k < lcr::kMaxDataPayload; k++) p.payload[k] = static_cast<uint8_t>(0x55 ^ (k * 37));
+    uint8_t buf[lcr::kMaxWireBytes];
+    const size_t n = lcr::encodePacket(p, buf, sizeof(buf));
+    if (n) radio.send(buf, n);
+    delay(lcr::kInterPacketGapMs);
+  }
+  delay(100);
+  const AudioIo::RfWatch tx = audio.rfWatchEnd();
+  radio.startReceive();
+  Serial.printf("CFG AUDIO rf base=%.1f tx=%.1f agcbase=%.1f agctx=%.1f dcbase=%.1f dctx=%.1f pkts=%d\n",
+                static_cast<double>(base.rmsDb), static_cast<double>(tx.rmsDb), static_cast<double>(base.agcInDb),
+                static_cast<double>(tx.agcInDb), static_cast<double>(base.dcPct), static_cast<double>(tx.dcPct), kPackets);
+}
+
 // Prova dell'hardware audio (CFG TEST AUDIO): tre toni a volume fisso e basso, con il livello del microfono a ogni
 // frequenza. Bloccante per circa 3,5 s. I risultati tornano alla pagina di configurazione; il giudizio e' dell'operatore.
 static void runAudioTest() {
@@ -164,6 +205,7 @@ static void runAudioTest() {
     delay(150);
   }
   audio.setVolumeStep(savedVolume);
+  runRfCheck();
   Serial.println("CFG AUDIO fine");
   ui.refresh();
 }

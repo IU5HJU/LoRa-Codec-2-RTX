@@ -15,6 +15,9 @@ constexpr uint8_t kModeCodec2_1200 = 1;
 constexpr uint8_t kModeTest = 2;
 // Risposta del ricevitore alla prova (un solo pacchetto con il risultato).
 constexpr uint8_t kModeTestReport = 3;
+// Pacchetto di controllo dell'hardware (CFG TEST AUDIO): la scheda trasmette per misurare se la radiofrequenza
+// rientra nel microfono. I ricevitori lo ignorano come ogni modo sconosciuto.
+constexpr uint8_t kModeRfCheck = 15;
 
 // Codec2 1200 bps: 48 bit (6 byte) ogni 40 ms, 320 campioni a 8 kHz.
 constexpr size_t kFrameBytes = 6;

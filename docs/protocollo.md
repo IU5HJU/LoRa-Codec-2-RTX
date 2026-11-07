@@ -59,6 +59,10 @@ Una prova dura 300 frame (12 s) con gli stessi pacchetti e la stessa parità del
 (`START`+`END`, nominativo, stessa sessione) che porta 12 byte: frame consegnati, ok, danneggiati, persi, pacchetti recuperati, RSSI e SNR medi. Un ricevitore con una versione precedente scarta i pacchetti di modo sconosciuto.
 Dettagli in [prova-collegamento.md](prova-collegamento.md).
 
+## Controllo hardware (modo 15)
+
+Il modo 15 è usato solo da "Suona i toni" della pagina (`CFG TEST AUDIO`): la scheda trasmette 4 pacchetti dati con payload fisso e il nominativo, per vedere se la radiofrequenza rientra nel microfono. Non è audio e nessun ricevitore lo elabora: i modi sconosciuti vengono scartati.
+
 ## Parità XOR
 
 Sequenza con parità attiva: `D D D D P D D D D P ...`, cioè i pacchetti con `seq % 5 == 4`

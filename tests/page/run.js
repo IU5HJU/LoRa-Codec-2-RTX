@@ -261,6 +261,20 @@ async function scenario(name, fn) {
     await until(p, () => document.getElementById('hwTonesOut').textContent.includes('dubbio'), null, 12000);
   });
 
+  const rfScenario = async (name, rf, expect, notExpect) => scenario(name, async (p) => {
+    await connect(p);
+    await p.evaluate((l) => { window.__st.rf = l; }, rf);
+    await p.click('#hwTones');
+    await until(p, () => document.getElementById('hwTonesOut').textContent.includes('Prova radio non eseguita') || document.getElementById('hwTonesOut').textContent.includes('rientr') || document.getElementById('hwTonesOut').textContent.includes('Rientr'), null, 12000);
+    const t = await p.textContent('#hwTonesOut');
+    check(name + ': esito', t.includes(expect), t);
+    if (notExpect) check(name + ': non confonde', !t.includes(notExpect), t);
+  });
+  await rfScenario('prova radio: nessun rientro', 'CFG AUDIO rf base=-60.0 tx=-59.0 agcbase=-72.0 agctx=-71.0 dcbase=0.5 dctx=0.8 pkts=4', 'Nessun rientro di RF', 'rientra nel microfono');
+  await rfScenario('prova radio: rientro forte', 'CFG AUDIO rf base=-60.0 tx=-10.0 agcbase=-72.0 agctx=-12.0 dcbase=0.5 dctx=40.0 pkts=4', 'La radiofrequenza rientra nel microfono', 'Nessun rientro');
+  await rfScenario('prova radio: rientro dubbio', 'CFG AUDIO rf base=-60.0 tx=-53.0 agcbase=-72.0 agctx=-66.0 dcbase=0.5 dctx=1.0 pkts=4', 'dubbio');
+  await rfScenario('prova radio: senza nominativo', 'CFG AUDIO rf skip=nominativo', 'non eseguita');
+
   await scenario('registro: salvataggio su file', async (p) => {
     await connect(p);
     const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#logSave')]);

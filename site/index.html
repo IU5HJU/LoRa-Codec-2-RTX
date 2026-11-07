@@ -459,13 +459,14 @@
   }));
   $('hwTones').addEventListener('click', () => hwRun(async () => {
     const got = [];
-    const sink = l => { if (l.startsWith('CFG AUDIO f=')) got.push(l); };
+    let rfLine = null;
+    const sink = l => { if (l.startsWith('CFG AUDIO f=')) got.push(l); else if (l.startsWith('CFG AUDIO rf ')) rfLine = l; };
     sinks.push(sink);
     try {
-      showHw('hwTonesOut', 'Ascolta i toni… (circa 4 secondi)');
+      showHw('hwTonesOut', 'Ascolta i toni… (circa 6 secondi; poi la scheda trasmette per un attimo: antenna collegata)');
       const ack = await send('CFG TEST AUDIO', /^CFG (OK|ERR) audio/);
       if (ack.startsWith('CFG ERR')) throw new Error(ack);
-      await waitFor(/^CFG AUDIO fine/, 12000);
+      await waitFor(/^CFG AUDIO fine/, 15000);
       const rows = got.map(l => {
         const m = {};
         for (const kv of l.slice(10).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = Number(kv.slice(i + 1)); }
@@ -481,7 +482,30 @@
       if (heard >= 2) { txt = 'Il microfono ha sentito i toni: microfono, I2S, amplificatore e altoparlante sembrano vivi. Se non li hai sentiti a orecchio, o il microfono li sente anche con l\'altoparlante scollegato, vedi "falso positivo" qui sotto.'; cls = 'ok'; }
       else if (heard === 0 && rows.every(r => r.d < 3)) { txt = 'Il microfono non ha sentito i toni. Se li hai sentiti a orecchio, l\'altoparlante funziona e il microfono è lontano o coperto ("falso negativo"). Se non li hai sentiti, controlla l\'amplificatore: VIN a 5 V, SD su GPIO25, DIN su GPIO4, BCLK e LRC (GPIO14 e 13) e l\'altoparlante ai morsetti.'; cls = 'err'; }
       else { txt = 'Risultato dubbio: ripeti la prova avvicinando il microfono all\'altoparlante, e confrontala con l\'ascolto a orecchio.'; cls = 'err'; }
-      showHw('hwTonesOut', table + txt, cls);
+      let rfHtml = '';
+      if (rfLine) {
+        const m = {};
+        for (const kv of rfLine.slice(13).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = kv.slice(i + 1); }
+        if (m.skip === 'nominativo') {
+          rfHtml = '<p><strong>Prova radio non eseguita:</strong> serve un nominativo vero (non N0CALL) e l\'antenna collegata, perché la scheda trasmette qualche pacchetto.</p>';
+        } else if (m.skip) {
+          rfHtml = '<p><strong>Prova radio non eseguita:</strong> la scheda stava ricevendo o trasmettendo. Ripeti la prova.</p>';
+        } else {
+          const n = k => Number(m[k]);
+          const dLevel = Math.max(n('tx') - n('base'), n('agctx') - n('agcbase'));
+          const dDc = n('dctx') - n('dcbase');
+          const nums = 'A riposo ' + n('base').toFixed(1) + ' dBFS (dopo il filtro ' + n('agcbase').toFixed(1) + '), offset ' + n('dcbase').toFixed(1) + '%; in trasmissione ' + n('tx').toFixed(1) + ' dBFS (dopo il filtro ' + n('agctx').toFixed(1) + '), offset ' + n('dctx').toFixed(1) + '%.';
+          if (dLevel >= 10 || dDc >= 10) {
+            rfHtml = '<p class="err"><strong>La radiofrequenza rientra nel microfono:</strong> mentre la scheda trasmette il segnale del microfono sale di ' + Math.max(dLevel, 0).toFixed(0) + ' dB (offset +' + Math.max(dDc, 0).toFixed(0) + ' punti). Accorcia i fili del microfono, allontanali dall\'antenna, intrecciali o schermali; prova una potenza più bassa. ' + nums + '</p>';
+            cls = 'err';
+          } else if (dLevel >= 5 || dDc >= 5) {
+            rfHtml = '<p><strong>Rientro di RF dubbio:</strong> il microfono sale di ' + Math.max(dLevel, 0).toFixed(0) + ' dB in trasmissione. Ripeti la prova e controlla che nessuno parli o tocchi il microfono. ' + nums + '</p>';
+          } else {
+            rfHtml = '<p><strong>Nessun rientro di RF nel microfono:</strong> in trasmissione il segnale resta quello a riposo. ' + nums + '</p>';
+          }
+        }
+      }
+      showHw('hwTonesOut', table + txt + rfHtml, cls);
     } catch (e) { showHw('hwTonesOut', 'Errore: ' + e.message, 'err'); }
     finally { const i = sinks.indexOf(sink); if (i >= 0) sinks.splice(i, 1); }
   }));

@@ -62,6 +62,12 @@ class AudioIo {
   void resetPlayStats();
   // Scrive una riga di riepilogo in buf (vuota se non c'e' stato audio).
   void playStatsLine(char* buf, size_t cap) const;
+
+  // Sorveglianza del microfono durante la trasmissione radio (CFG TEST AUDIO): massimi di livello (dBFS, prima e dopo il
+  // passa-alto) e di offset (%) visti tra rfWatchBegin() e rfWatchEnd().
+  struct RfWatch { float rmsDb, agcInDb, dcPct; };
+  void rfWatchBegin();
+  RfWatch rfWatchEnd();
   void playTimingLine(char* buf, size_t cap) const;
 
   float micAgcInDb() const { return front_.agcInputDb(); }  // livello visto dall'AGC (dopo il passa-alto)
@@ -114,6 +120,8 @@ class AudioIo {
   double playInPow_ = 0, playOutPow_ = 0;
   float playInMax_ = -120.0f, playOutMax_ = -120.0f, playGainMin_ = 99.0f, playGainMax_ = -99.0f;
   uint32_t lastPlayUs_ = 0, playGapMaxUs_ = 0, playGapsLate_ = 0, playWriteMaxUs_ = 0, playProcMaxUs_ = 0;
+  volatile bool rfWatching_ = false;
+  volatile float rfRmsMax_ = -120.0f, rfAgcMax_ = -120.0f, rfDcMax_ = 0.0f;
   volatile bool toneActive_ = false;
   lcr::ToneMeter toneMeter_;
   volatile bool measuring_ = false;

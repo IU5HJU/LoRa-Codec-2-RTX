@@ -43,6 +43,7 @@ Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 | 22 | Altri tre clic: prova spenta | avviso "PROVA SPENTA", un bip grave |
 | 23 | Nominativo di 8 caratteri (per esempio `IU5HJU/P`) | "TX IU5HJU/P" o "RX IU5HJU/P": la riga grande passa al testo piccolo, perché a testo grande entrano solo 10 caratteri |
 | 24 | "Suona i toni" della pagina | "PROVA TONI" e "ascolta i toni" per circa 4 secondi |
+| 25 | Subito dopo i toni (prova radio) | "PROVA RF" e "scheda in TX" per circa 1,5 secondi |
 | 20 | Prova interrotta o incompleta | come la 17, ma la riga sotto la percentuale dice "Parz.7/300" e il nominativo: la percentuale è sui frame arrivati, non su 300 |
 
 Gli avvisi 6, 7, 8 e 11 restano a schermo circa 1,5-2 secondi; l'esito della prova (17-19) 15 secondi, senza volume e batteria. Due bip acuti a prova perfetta, un bip grave se ci sono state perdite. Ogni trasmissione e ricezione termina anche con un bip.
