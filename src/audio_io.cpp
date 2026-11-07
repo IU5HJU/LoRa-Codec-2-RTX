@@ -225,7 +225,16 @@ void AudioIo::writeMono(const int16_t* samples, size_t n) {
 
 void AudioIo::playFrame(const int16_t* pcm) {
   ampOn();
+  const uint32_t t0 = micros();
+  if (playFrames_ > 0) {  // intervallo tra due frame consecutivi: sopra 80 ms il buffer I2S si svuota
+    const uint32_t gap = t0 - lastPlayUs_;
+    if (gap > playGapMaxUs_) playGapMaxUs_ = gap;
+    if (gap > 80000) playGapsLate_++;
+  }
+  lastPlayUs_ = t0;
   back_.processFrame(pcm, spkPcm_);
+  const uint32_t procUs = micros() - t0;
+  if (procUs > playProcMaxUs_) playProcMaxUs_ = procUs;
   playFrames_++;
   playInPow_ += std::pow(10.0, back_.inputDb() / 10.0);
   playOutPow_ += std::pow(10.0, back_.outputDb() / 10.0);
@@ -234,10 +243,14 @@ void AudioIo::playFrame(const int16_t* pcm) {
   if (back_.agcGainDb() < playGainMin_) playGainMin_ = back_.agcGainDb();
   if (back_.agcGainDb() > playGainMax_) playGainMax_ = back_.agcGainDb();
   if (back_.limited()) playLimited_++;
+  const uint32_t t1 = micros();
   writeMono(spkPcm_, back_.outputSamplesPerFrame());
+  const uint32_t wUs = micros() - t1;
+  if (wUs > playWriteMaxUs_) playWriteMaxUs_ = wUs;
 }
 
 void AudioIo::resetPlayStats() {
+  lastPlayUs_ = playGapMaxUs_ = playGapsLate_ = playWriteMaxUs_ = playProcMaxUs_ = 0;
   playFrames_ = playLimited_ = 0;
   playInPow_ = playOutPow_ = 0;
   playInMax_ = playOutMax_ = -120.0f;
@@ -257,6 +270,15 @@ void AudioIo::playStatsLine(char* buf, size_t cap) const {
            static_cast<unsigned>(playFrames_), static_cast<double>(inMean), static_cast<double>(playInMax_),
            static_cast<double>(outMean), static_cast<double>(playOutMax_), static_cast<double>(playGainMin_),
            static_cast<double>(playGainMax_), static_cast<unsigned>(playLimited_), static_cast<double>(back_.volumeDb()));
+}
+
+void AudioIo::playTimingLine(char* buf, size_t cap) const {
+  if (cap == 0) return;
+  buf[0] = 0;
+  if (playFrames_ == 0) return;
+  snprintf(buf, cap, "[rx-tempi] intervallo massimo tra frame %u ms (ritardi oltre 80 ms: %u), elaborazione audio max %u ms, scrittura I2S max %u ms",
+           static_cast<unsigned>(playGapMaxUs_ / 1000), static_cast<unsigned>(playGapsLate_),
+           static_cast<unsigned>(playProcMaxUs_ / 1000), static_cast<unsigned>(playWriteMaxUs_ / 1000));
 }
 
 void AudioIo::playLost() {

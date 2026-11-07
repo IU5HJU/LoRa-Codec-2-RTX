@@ -283,6 +283,12 @@ void loop() {
     char line[200];
     audio.playStatsLine(line, sizeof(line));  // livelli del parlato decodificato: vedi docs/prove.md
     if (line[0]) Serial.println(line);
+    audio.playTimingLine(line, sizeof(line));
+    if (line[0]) Serial.println(line);
+    if (codec.decodeAvgUs() > 0)
+      Serial.printf("[rx-codec] decodifica Codec2: media %u ms, massimo %u ms per frame (limite 40 ms)\n",
+                    static_cast<unsigned>(codec.decodeAvgUs() / 1000), static_cast<unsigned>(codec.decodeMaxUs() / 1000));
+    codec.resetTiming();
   }
   prevState = st;
 

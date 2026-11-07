@@ -62,6 +62,7 @@ class AudioIo {
   void resetPlayStats();
   // Scrive una riga di riepilogo in buf (vuota se non c'e' stato audio).
   void playStatsLine(char* buf, size_t cap) const;
+  void playTimingLine(char* buf, size_t cap) const;
 
   float micAgcInDb() const { return front_.agcInputDb(); }  // livello visto dall'AGC (dopo il passa-alto)
 
@@ -112,6 +113,7 @@ class AudioIo {
   uint32_t playFrames_ = 0, playLimited_ = 0;
   double playInPow_ = 0, playOutPow_ = 0;
   float playInMax_ = -120.0f, playOutMax_ = -120.0f, playGainMin_ = 99.0f, playGainMax_ = -99.0f;
+  uint32_t lastPlayUs_ = 0, playGapMaxUs_ = 0, playGapsLate_ = 0, playWriteMaxUs_ = 0, playProcMaxUs_ = 0;
   volatile bool toneActive_ = false;
   lcr::ToneMeter toneMeter_;
   volatile bool measuring_ = false;
