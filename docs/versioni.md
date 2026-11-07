@@ -17,7 +17,7 @@ Il numero che sale è sempre più recente; la fase si legge dall'etichetta. Finc
 ## Dove si vede
 
 - **Sulla scheda:** `CFG VERSION` risponde `CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=1`, e all'avvio la seriale stampa `firmware ...`. Fra un tag e l'altro il firmware compilato da git mostra, per esempio, `v0.1.0-beta.1-3-gabc1234` (3 commit dopo il tag) oppure solo il codice del commit prima del primo tag; `dev` se compilato senza git.
-- **Sulla pagina web:** la versione pubblicata (`v0.1.0-beta.1`, `main-AAAAMMGG` per lo sviluppo) con la fase scritta accanto ("BETA: versione di prova", "RC", "versione di sviluppo"), e la stessa etichetta per il firmware letto dalla scheda collegata.
+- **Sulla pagina web:** la versione pubblicata (`v0.1.0-beta.1`, `main-GG/MM/AAAA` per lo sviluppo, con la data della pubblicazione in ora italiana) con la fase scritta accanto ("BETA: versione di prova", "RC", "versione di sviluppo"), e la stessa etichetta per il firmware letto dalla scheda collegata.
 - **Su GitHub:** una release per ogni tag `v*`, con i binari. I tag con un trattino (`-beta`, `-rc`) sono marcati **pre-release**, quindi non diventano la "ultima versione" per chi non vuole le beta.
 
 ## Firmware e protocollo sono due numeri diversi

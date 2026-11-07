@@ -171,7 +171,7 @@
   const supported = 'serial' in navigator;
   if (!supported) $('nosupport').style.display = 'block';
 
-  // Fase di una versione (docs/versioni.md): v0.1.0-beta.1 e v0.1.0-rc.1 sono versioni di prova, main-AAAAMMGG e' lo sviluppo.
+  // Fase di una versione (docs/versioni.md): v0.1.0-beta.1 e v0.1.0-rc.1 sono versioni di prova, main-GG/MM/AAAA e' lo sviluppo.
   function versionKind(v) {
     v = String(v || '');
     if (/-beta(\.|$)/.test(v)) return ' — BETA: versione di prova';
@@ -405,7 +405,8 @@
   $('logSave').addEventListener('click', () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([fullLog], { type: 'text/plain' }));
-    a.download = 'lora-codec2-seriale-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.txt';
+    const d = new Date(), z = (n) => String(n).padStart(2, '0');   // data e ora locali, giorno-mese-anno
+    a.download = 'lora-codec2-seriale-' + z(d.getDate()) + '-' + z(d.getMonth() + 1) + '-' + d.getFullYear() + '_' + z(d.getHours()) + '-' + z(d.getMinutes()) + '-' + z(d.getSeconds()) + '.txt';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });

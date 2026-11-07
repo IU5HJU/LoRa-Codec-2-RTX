@@ -104,9 +104,9 @@ async function scenario(name, fn) {
     await p.reload();
     await until(p, () => document.getElementById('ver').textContent.includes('v0.1.0'));
     check('versione stabile senza etichetta di prova', !/BETA|RC|sviluppo/.test(await p.textContent('#ver')), await p.textContent('#ver'));
-    publishedVersion = 'main-20261107';
+    publishedVersion = 'main-07/11/2026';
     await p.reload();
-    await until(p, () => document.getElementById('ver').textContent.includes('main-20261107'));
+    await until(p, () => document.getElementById('ver').textContent.includes('main-07/11/2026'));
     check('versione di sviluppo', (await p.textContent('#ver')).includes('sviluppo'));
     publishedVersion = 'test-1';
   });
@@ -264,7 +264,7 @@ async function scenario(name, fn) {
   await scenario('registro: salvataggio su file', async (p) => {
     await connect(p);
     const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#logSave')]);
-    check('nome del file', dl.suggestedFilename().startsWith('lora-codec2-seriale-'), dl.suggestedFilename());
+    check('nome del file con la data giorno-mese-anno', /^lora-codec2-seriale-\d{2}-\d{2}-\d{4}_\d{2}-\d{2}-\d{2}\.txt$/.test(dl.suggestedFilename()), dl.suggestedFilename());
     await p.click('#logClear');
     check('registro svuotato', (await p.textContent('#log')) === '');
   });

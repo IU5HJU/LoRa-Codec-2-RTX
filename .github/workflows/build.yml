@@ -170,7 +170,7 @@ jobs:
       - name: Assembla il sito
         run: |
           set -euo pipefail
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME}"; else v="main-$(date -u +%Y%m%d)"; fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME}"; else v="main-$(TZ=Europe/Rome date +%d/%m/%Y)"; fi
           tools/make_site.sh dist _site "$v" "$GITHUB_SHA"
           find _site -type f | sort
       - uses: actions/configure-pages@v5

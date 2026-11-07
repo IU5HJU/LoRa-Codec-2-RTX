@@ -12,7 +12,7 @@ Per un problema da risolvere apri invece una segnalazione (Issues) e collega la 
 
 | Voce | Esempio |
 |---|---|
-| Data e luogo | 2026-11-03, casa |
+| Data e luogo | 03/11/2026, casa |
 | Chi | IU5HJU |
 | Versione del firmware | commit `0466536`, artefatto di Actions o pagina web, ramo `main` |
 | Schede | 2 × LoRa32 T3 V1.6.1 |
@@ -55,7 +55,7 @@ Ogni livello presuppone che il precedente funzioni.
 ### Modello da copiare
 
 ```
-### AAAA-MM-GG, luogo, chi
+### GG/MM/AAAA, luogo, chi
 - Firmware: (commit o artefatto)
 - Schede e collegamenti:
 - Parametri radio (frequenza, SF, BW, CR, potenza, parità, TOT):
@@ -71,7 +71,7 @@ Ogni livello presuppone che il precedente funzioni.
 
 > **Nota sul ramo `prova-iu5hju`.** Le prove fino al 5 novembre 2026 citano il ramo `prova-iu5hju`: era `main` con il nominativo dell'autore compilato nel firmware. Dal 5 novembre il nominativo si imposta dalla pagina web e il ramo, come `tbeam-fase1`, è stato eliminato: la sola differenza con `main` era quella riga. Le voci seguenti restano com'erano scritte.
 
-### 2026-11-03, casa, IU5HJU (prova con una sola scheda)
+### 03/11/2026, casa, IU5HJU (prova con una sola scheda)
 
 - Firmware: ramo `prova-iu5hju`, prima versione (avvio bloccato) e poi commit `4e8395a` (con stack a 32 kB).
 - Schede e collegamenti: **una** LoRa32 T3 V1.6.1, antenna a 433 MHz, OLED integrato. Nessun microfono, amplificatore o altoparlante collegato. PTT simulato con un filo tra IO0 e GND.
@@ -84,7 +84,7 @@ Ogni livello presuppone che il precedente funzioni.
 - Problemi: nessuno rimasto aperto con una sola scheda.
 - Da fare: seconda scheda in arrivo (4 novembre) con microfono, amplificatore e altoparlante; poi provare ricezione, RSSI, SNR, "persi" e "recup."
 
-### 2026-11-04, casa, IU5HJU (T-Beam V1.2 trasmette, LoRa32 T3 riceve)
+### 04/11/2026, casa, IU5HJU (T-Beam V1.2 trasmette, LoRa32 T3 riceve)
 
 - Firmware: ramo `prova-iu5hju` (commit `c110c7c`). T-Beam compilata e caricata in locale con PlatformIO (`pio run -e tbeam -t upload`) da un portatile Ubuntu; firmware della T3 da confermare.
 - Schede e collegamenti: T-Beam V1.2 (AXP2101, OLED montato, antenna a 433 MHz) e LoRa32 T3 V1.6.1; nessun microfono, amplificatore o altoparlante collegato. Distanza: 1-2 m.
@@ -97,13 +97,13 @@ Ogni livello presuppone che il precedente funzioni.
 - Problemi: la batteria risulta "presente, 1837 mV, 0 %, carica in corso": valore anomalo per una Li-ion (cella molto scarica o lettura spuria), da controllare.
 - Da fare: annotare l'RSSI e i valori "persi"/"recup." dopo la ricezione; provare il verso opposto (T3 -> T-Beam); aggiungere microfono, amplificatore e altoparlante.
 
-### 2026-11-04, casa, IU5HJU (video della prova, T-Beam -> T3)
+### 04/11/2026, casa, IU5HJU (video della prova, T-Beam -> T3)
 
 - Dal video: la T-Beam passa da "ASCOLTO" a "TX IU5HJU" con "Trasmissione 0/30 s" premendo IO38; la T3 mostra "RX IU5HJU" con **RSSI circa -28 dBm** e **SNR circa 9,3 dB** e, a fine ricezione, "Ultimo IU5HJU" con **"persi 0, recup. 3"**.
 - Osservazione: a 1-2 m il segnale è fortissimo ma **tre pacchetti sono andati persi e sono stati recuperati dalla parità**. La parità funziona, ma le perdite a distanza così breve vanno spiegate. Ipotesi da verificare: i pacchetti di parità partono quasi attaccati al pacchetto dati precedente, e la T3 dopo ogni ricezione riarma la radio e può aver perso l'inizio del pacchetto successivo; oppure il ciclo principale della T3 era occupato (display, riproduzione) quando è arrivato il pacchetto.
 - Problema aperto: la T-Beam V1.2 non si accende a batteria, solo da USB (cella a 1837 mV). Analisi in [alimentazione.md](alimentazione.md).
 
-### 2026-11-04, casa, IU5HJU (batteria della T-Beam: lettura e carica)
+### 04/11/2026, casa, IU5HJU (batteria della T-Beam: lettura e carica)
 
 - Firmware: ramo `prova-iu5hju` con la batteria sul display (`(Batt=x.xxV)` in basso a destra).
 - **Lettura confermata dal tester:** la T-Beam mostra **2,90 V** e il tester sulla cella misura **2,90 V**. La misura dell'AXP2101 è accurata.
@@ -111,20 +111,20 @@ Ogni livello presuppone che il precedente funzioni.
 - Sotto 3,40 V il testo della batteria è in negativo, come previsto.
 - Da fare: attendere la carica completa e provare l'avvio a batteria (tasto PWR); se non parte con una cella carica, leggere la soglia VOFF dalla seriale (`[pmu] soglia di spegnimento VOFF ...`).
 
-### 2026-11-04, casa, IU5HJU (T-Beam V1.2: avvio a batteria)
+### 04/11/2026, casa, IU5HJU (T-Beam V1.2: avvio a batteria)
 
 - Cella carica (circa 4,2 V). **La T-Beam parte anche a batteria**, premendo PWR con l'USB scollegata: il mancato avvio era dovuto alla cella scarica (1,84 V), non al firmware.
 - **La tensione mostrata sul display coincide con quella del tester**, anche a cella carica.
 - Da fare: prova di durata della batteria in standby (radio in ascolto, OLED acceso), da interrompere quando il testo della batteria va in negativo (sotto 3,40 V) per non scaricare di nuovo la cella; provare una trasmissione col tasto IO38 a batteria; confrontare la lettura della LoRa32 T3 (ADC GPIO35) con il tester.
 
-### 2026-11-04, casa, IU5HJU (verso opposto, T3 -> T-Beam)
+### 04/11/2026, casa, IU5HJU (verso opposto, T3 -> T-Beam)
 
 - Schede e collegamenti: LoRa32 T3 V1.6.1 trasmette, T-Beam V1.2 riceve; microfono INMP441 arrivato e cablato sulla T3 (amplificatore e altoparlante non ancora arrivati).
 - Livello raggiunto della scaletta: **2 (solo radio) completo nei due versi**. La T-Beam riceve correttamente dalla T3.
 - Da annotare: RSSI, SNR, "persi" e "recup." di questa prova.
 - Da fare: prova del microfono (livello 3); per sentire la voce serve ancora amplificatore e altoparlante.
 
-### 2026-11-05, casa, IU5HJU (microfono INMP441 sulla T3, livelli e AGC)
+### 05/11/2026, casa, IU5HJU (microfono INMP441 sulla T3, livelli e AGC)
 
 - Firmware: `main`/`prova-iu5hju` dopo il commit "AGC: sotto la soglia il guadagno torna verso 12 dB", installato dalla pagina web (Chrome su Ubuntu; Chromium snap non vede la porta, serve Chrome `.deb`).
 - Schede e collegamenti: LoRa32 T3 V1.6.1 con microfono INMP441 (BCLK 14, WS 13, dati 34, L/R a GND), senza amplificatore e altoparlante. PTT premuto, trasmissione disattivata.
@@ -136,7 +136,7 @@ Ogni livello presuppone che il precedente funzioni.
 - Problemi: rumore a bassa frequenza alla sorgente, da capire (massa comune, VDD, lunghezza dei fili).
 - Da fare: ascoltare la voce con amplificatore e altoparlante (in arrivo); verificare il rumore a bassa frequenza con fili più corti o un condensatore su VDD.
 
-### 2026-11-05, analisi del codice (nessuna prova): perdite a distanza ravvicinata
+### 05/11/2026, analisi del codice (nessuna prova): perdite a distanza ravvicinata
 
 Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno una spiegazione probabile, non ancora verificata sulle schede:
 
@@ -146,7 +146,7 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Strumenti per verificare:** a fine ricezione la seriale stampa `[rx] pacchetti letti N, errori CRC N, sovrascritti N, ritardo massimo di lettura N ms`. Per la prova si ripete la trasmissione T-Beam -> T3 a 1-2 m: prima con il firmware vecchio se disponibile (sovrascritti > 0 conferma l'ipotesi), poi con quello nuovo (sovrascritti 0).
 - Possibile seconda fase se non basta: leggere la radio da un task separato invece che dal ciclo principale.
 
-### 2026-11-05, casa, IU5HJU (perdite a 1-2 m: T-Beam trasmette muta, T3 riceve con la diagnostica)
+### 05/11/2026, casa, IU5HJU (perdite a 1-2 m: T-Beam trasmette muta, T3 riceve con la diagnostica)
 
 - Schede: T-Beam V1.2 trasmette senza microfono (PTT fino al TOT di 30 s); LoRa32 T3 V1.6.1 riceve, alimentata dall'USB del portatile, senza amplificatore e altoparlante.
 - Risultato (T3, firmware con diagnostica):
@@ -158,26 +158,26 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 
 - Chiarimenti del 5 novembre: sulla T-Beam c'era il firmware con la pausa di 80 ms tra i pacchetti (nessuna perdita in 30 s, 79 pacchetti, nessuna sovrascrittura); la T3 era alimentata solo dall'USB, senza batteria, quindi i 4,24-4,42 V letti sono la tensione del caricatore e non una batteria. Il firmware ora mostra `(Batt=--)` sopra 4,35 V.
 
-### 2026-11-05, casa, IU5HJU (prova di collegamento T-Beam <-> T3)
+### 05/11/2026, casa, IU5HJU (prova di collegamento T-Beam <-> T3)
 
 - Firmware: `main`/`prova-iu5hju` con la prova di collegamento (`CFG TEST ON`); due schede, nessun microfono, amplificatore o altoparlante.
 - Risultato: la prova **funziona** nelle condizioni di prova (distanza ravvicinata): frame confrontati bit per bit, esito sull'OLED e risposta automatica del ricevitore. Valori numerici da aggiungere (RSSI, SNR, percentuale) alla prossima prova.
 - Da fare: ripetere allontanando le schede (portata) e nel verso opposto; autotest del codec e prova dell'altoparlante quando arriva l'hardware audio.
 
-### 2026-11-05, casa, IU5HJU (batteria T3, solo USB: il display passava di continuo da tensione a "--")
+### 05/11/2026, casa, IU5HJU (batteria T3, solo USB: il display passava di continuo da tensione a "--")
 
 - Problema: con il limite fisso a 4,35 V la lettura del caricatore (4,14-4,42 V, oscilla) attraversava il limite di continuo e la seriale mostrava `-1.00 V` alternato a `4.33 V`; l'OLED passava da tensione a lineette.
 - Decisione: sulla T3 la tensione si mostra **sempre**, senza lineette; la lettura è mediata (circa 2,5 s) per non far ballare le cifre e il testo va in negativo sotto 3,40 V come sulla T-Beam. La soglia a 4,35 V con "--" è stata scartata. Test sul PC con un caricatore simulato che oscilla per 10 minuti: il valore mostrato resta in una banda di meno di 0,06 V.
 - Da fare: confrontare la lettura della T3 con una LiPo collegata e il tester.
 
-### 2026-11-06, casa, IU5HJU (altoparlante e amplificatore sulla T3: bip)
+### 06/11/2026, casa, IU5HJU (altoparlante e amplificatore sulla T3: bip)
 
 - Firmware: `main`. LoRa32 T3 V1.6.1 con microfono INMP441, amplificatore MAX98357A e altoparlante 8 ohm collegati.
 - Risultato: con tre clic veloci sul PTT (prova di collegamento attivata) **si sentono i bip** descritti (due acuti all'attivazione). L'amplificatore e l'altoparlante funzionano.
 - Livello raggiunto della scaletta: **4 (altoparlante)**, a livello di bip. Da annotare: volume, fruscio a riposo, distorsione.
 - Da fare: tabella di "Suona i toni" (sezione 3 della pagina) e prova senza altoparlante per i falsi positivi; poi la voce a turni con il secondo microfono.
 
-### 2026-11-07, casa, IU5HJU (verifica dell'hardware audio sulla T3: microfono e toni)
+### 07/11/2026, casa, IU5HJU (verifica dell'hardware audio sulla T3: microfono e toni)
 
 - Firmware: `main` (pagina web, sezione 3). LoRa32 T3 V1.6.1 con INMP441, MAX98357A e altoparlante 8 ohm 3 W (senza contenitore).
 - **Prova del microfono:** silenzio -61 dBFS, voce -24 dBFS, differenza **+37 dB** (il microfono sente).
