@@ -220,7 +220,7 @@ ConsoleResult SettingsConsole::test(const char* value, char* reply, size_t cap) 
   } else if (equalsIgnoreCase(value, "OFF")) {
     testMode_ = false;
   } else if (equalsIgnoreCase(value, "AUDIO")) {
-    say(reply, cap, "CFG OK audio prova in corso: ascolta i toni (circa 4 secondi)");
+    say(reply, cap, "CFG OK audio prova in corso: ascolta i toni due volte, senza e con la radio (circa 10 secondi)");
     return ConsoleResult::AudioTest;
   } else {
     say(reply, cap, "CFG ERR test usa ON, OFF oppure AUDIO");

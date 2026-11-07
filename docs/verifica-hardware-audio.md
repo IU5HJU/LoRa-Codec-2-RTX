@@ -24,11 +24,12 @@ Nello stesso tempo il microfono misura quanto sente ogni tono, **solo a quella f
 La tabella mostra pausa, tono e differenza in dB. Esito per tono: **sentito** (almeno +10 dB), **dubbio** (da +3 a +10), **non sentito** (sotto +3).
 Giudizio complessivo: due o tre toni sentiti = catena viva; nessuno = vedi sotto; altro = dubbio, ripeti avvicinando il microfono all'altoparlante.
 
-### Prova radio: la radiofrequenza rientra nel microfono?
+### Fase 2: gli stessi toni con la radio in trasmissione
 
-Subito dopo i toni la scheda **trasmette 4 pacchetti di controllo** (circa 1 secondo, modo 15 del protocollo: i ricevitori li ignorano) e il microfono, con l'altoparlante muto, misura il proprio segnale a riposo e durante la trasmissione. **Serve l'antenna collegata e un nominativo vero** (con N0CALL la prova radio è saltata, come ogni trasmissione). Non parlare e non toccare il microfono finché la prova non è finita.
+La prova ha **due fasi**. La fase 1 è quella appena descritta: tre toni, senza radio. Nella **fase 2** la scheda suona **gli stessi tre toni mentre trasmette in continuo** (pacchetti di controllo, modo 15 del protocollo: i ricevitori li ignorano). Se la radiofrequenza rientra nel microfono, nei fili dell'amplificatore o nell'alimentazione, lo senti **a orecchio** (ronzii, scatti, fruscio sopra i toni) e lo vedi **nei numeri**: la tabella mostra le due fasi affiancate e, per ogni tono, di quanti dB cambia il livello della pausa (microfono in silenzio) quando la radio trasmette. **Serve l'antenna collegata e un nominativo vero** (con N0CALL la fase 2 è saltata, come ogni trasmissione). Non parlare e non toccare il microfono finché la prova non è finita (circa 10 secondi).
 
-La pagina confronta i due livelli (prima e dopo il filtro passa-alto) e l'offset: **sale di 10 dB o più** = la RF rientra nei fili del microfono (accorcia i fili, allontanali dall'antenna, intrecciali o schermali; prova una potenza più bassa); **da 5 a 10 dB** = dubbio, ripeti; **sotto 5 dB** = nessun rientro. Le soglie sono provvisorie: annota i valori in [prove.md](prove.md).
+Esito: se il livello del microfono (prima e dopo il filtro passa-alto, in massimo) o dell'offset **sale di 10 dB o più** con la radio accesa, la RF rientra nei fili del microfono (accorcia i fili, allontanali dall'antenna, intrecciali o schermali; prova una potenza più bassa); da 5 a 10 dB, o toni che si sentono peggio di 6 dB, è dubbio e va ripetuto; sotto 5 dB nessun rientro. Le soglie sono provvisorie: annota i valori in [prove.md](prove.md).
+Nel registro seriale le righe sono `CFG AUDIO f=…` (fase 1), `CFG AUDIO rf f=…` (fase 2), `CFG AUDIO m1/m2 rms=… agc=… dc=…` (massimi del microfono nelle due fasi) e `CFG AUDIO rf pkts=…`.
 
 ## Falsi positivi e falsi negativi
 

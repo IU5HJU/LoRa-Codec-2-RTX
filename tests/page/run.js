@@ -240,7 +240,7 @@ async function scenario(name, fn) {
   await scenario('verifica audio: toni sentiti', async (p) => {
     await connect(p);
     await p.click('#hwTones');
-    await until(p, () => document.querySelectorAll('#hwTonesOut tr').length === 4, null, 12000);
+    await until(p, () => document.querySelectorAll('#hwTonesOut tr').length === 5, null, 12000);
     const t = await p.textContent('#hwTonesOut');
     check('tre toni sentiti', (t.match(/sentito/g) || []).length >= 3, t);
     check('giudizio positivo', t.includes('sembrano vivi'));
@@ -261,19 +261,30 @@ async function scenario(name, fn) {
     await until(p, () => document.getElementById('hwTonesOut').textContent.includes('dubbio'), null, 12000);
   });
 
+  const base = [{ f: 500, base: -63.3, tone: -44.3 }, { f: 1000, base: -68.8, tone: -25.1 }, { f: 2000, base: -76.4, tone: -38.2 }];
+  const rfObj = (dBase, dTone, rms, agc, dc) => ({ audio: base.map((a) => ({ f: a.f, base: a.base + dBase, tone: a.tone + dTone })), rms, agc, dc });
   const rfScenario = async (name, rf, expect, notExpect) => scenario(name, async (p) => {
     await connect(p);
-    await p.evaluate((l) => { window.__st.rf = l; }, rf);
+    await p.evaluate((r) => { window.__st.rf = r; }, rf);
     await p.click('#hwTones');
-    await until(p, () => document.getElementById('hwTonesOut').textContent.includes('Prova radio non eseguita') || document.getElementById('hwTonesOut').textContent.includes('rientr') || document.getElementById('hwTonesOut').textContent.includes('Rientr'), null, 12000);
+    await until(p, () => !!document.querySelector('#hwTonesOut table'), null, 15000);
     const t = await p.textContent('#hwTonesOut');
     check(name + ': esito', t.includes(expect), t);
     if (notExpect) check(name + ': non confonde', !t.includes(notExpect), t);
   });
-  await rfScenario('prova radio: nessun rientro', 'CFG AUDIO rf base=-60.0 tx=-59.0 agcbase=-72.0 agctx=-71.0 dcbase=0.5 dctx=0.8 pkts=4', 'Nessun rientro di RF', 'rientra nel microfono');
-  await rfScenario('prova radio: rientro forte', 'CFG AUDIO rf base=-60.0 tx=-10.0 agcbase=-72.0 agctx=-12.0 dcbase=0.5 dctx=40.0 pkts=4', 'La radiofrequenza rientra nel microfono', 'Nessun rientro');
-  await rfScenario('prova radio: rientro dubbio', 'CFG AUDIO rf base=-60.0 tx=-53.0 agcbase=-72.0 agctx=-66.0 dcbase=0.5 dctx=1.0 pkts=4', 'dubbio');
-  await rfScenario('prova radio: senza nominativo', 'CFG AUDIO rf skip=nominativo', 'non eseguita');
+  await rfScenario('fase 2: nessun rientro', rfObj(0.5, -0.5, -25.0, -37.0, 1.2), 'nessun rientro di RF', 'rientra nel microfono');
+  await rfScenario('fase 2: rientro forte', rfObj(30, 0, -5.0, -10.0, 40.0), 'la radiofrequenza rientra nel microfono', 'nessun rientro');
+  await rfScenario('fase 2: rientro dubbio', rfObj(7, 0, -22.0, -30.0, 2.0), 'dubbio');
+  await rfScenario('fase 2: toni coperti dalla radio', rfObj(0, -20, -25.0, -37.0, 1.0), 'si sentono peggio');
+  await rfScenario('fase 2: senza nominativo', 'CFG AUDIO rf skip=nominativo', 'non eseguita');
+  await scenario('fase 2: tabella con le due fasi', async (p) => {
+    await connect(p);
+    await p.evaluate((r) => { window.__st.rf = r; }, rfObj(0.5, -0.5, -25.0, -37.0, 1.2));
+    await p.click('#hwTones');
+    await until(p, () => document.querySelectorAll('#hwTonesOut tr').length === 5, null, 15000);
+    const t = await p.textContent('#hwTonesOut');
+    check('tabella con la fase radio', t.includes('Fase 2: con la radio in trasmissione') && t.includes('Pacchetti trasmessi: 14'), t);
+  });
 
   await scenario('registro: salvataggio su file', async (p) => {
     await connect(p);

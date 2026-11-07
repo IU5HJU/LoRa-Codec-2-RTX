@@ -61,7 +61,7 @@ Dettagli in [prova-collegamento.md](prova-collegamento.md).
 
 ## Controllo hardware (modo 15)
 
-Il modo 15 è usato solo da "Suona i toni" della pagina (`CFG TEST AUDIO`): la scheda trasmette 4 pacchetti dati con payload fisso e il nominativo, per vedere se la radiofrequenza rientra nel microfono. Non è audio e nessun ricevitore lo elabora: i modi sconosciuti vengono scartati.
+Il modo 15 è usato solo da "Suona i toni" della pagina (`CFG TEST AUDIO`): la scheda trasmette pacchetti dati in continuo, con payload fisso e il nominativo, mentre suona i toni, per vedere se la radiofrequenza rientra nel microfono o nell'amplificatore. Non è audio e nessun ricevitore lo elabora: i modi sconosciuti vengono scartati.
 
 ## Parità XOR
 

@@ -62,10 +62,19 @@
     } else if (cmd === 'TEST' && (t[2] === 'ON' || t[2] === 'OFF')) {
       st.test = t[2] === 'ON'; out('CFG OK test=' + (st.test ? 'on' : 'off'));
     } else if (cmd === 'TEST' && t[2] === 'AUDIO') {
-      out('CFG OK audio prova in corso: ascolta i toni (circa 4 secondi)');
-      st.audio.forEach((a, i) => setTimeout(() => out(`CFG AUDIO f=${a.f} base=${a.base.toFixed(1)} tone=${a.tone.toFixed(1)}`), st.delay * (i + 1)));
-      if (st.rf) setTimeout(() => out(st.rf), st.delay * (st.audio.length + 1));
-      setTimeout(() => out('CFG AUDIO fine'), st.delay * (st.audio.length + 2));
+      out('CFG OK audio prova in corso: ascolta i toni due volte, senza e con la radio (circa 10 secondi)');
+      // Fase 1: toni senza radio; fase 2 (se st.rf e' un oggetto): stessi toni con la radio; st.rf stringa = salto.
+      const lines = st.audio.map((a) => `CFG AUDIO f=${a.f} base=${a.base.toFixed(1)} tone=${a.tone.toFixed(1)}`);
+      const lvl = (a, k) => Math.max(...st.audio.map((x) => x.tone)).toFixed(1);
+      lines.push(`CFG AUDIO m1 rms=${lvl()} agc=${(Math.max(...st.audio.map((x) => x.tone)) - 12).toFixed(1)} dc=1.0`);
+      if (typeof st.rf === 'string') lines.push(st.rf);
+      else if (st.rf) {
+        st.rf.audio.forEach((a) => lines.push(`CFG AUDIO rf f=${a.f} base=${a.base.toFixed(1)} tone=${a.tone.toFixed(1)}`));
+        lines.push(`CFG AUDIO m2 rms=${st.rf.rms.toFixed(1)} agc=${st.rf.agc.toFixed(1)} dc=${st.rf.dc.toFixed(1)}`);
+        lines.push('CFG AUDIO rf pkts=14');
+      }
+      lines.push('CFG AUDIO fine');
+      lines.forEach((l, i) => setTimeout(() => out(l), st.delay * (i + 1)));
     } else if (cmd === 'MIC' && t[2] === 'MEASURE') {
       out('CFG OK mic misura in corso: stare in silenzio per 3 s');
       const m = st.measureSeq && st.measureSeq.length ? st.measureSeq.shift() : st.measure;

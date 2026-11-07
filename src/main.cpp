@@ -148,64 +148,81 @@ void setup() {
   Serial.println(reply);  // la pagina di configurazione legge questa riga
 }
 
-// Rientro di radiofrequenza nel microfono: si misura il microfono a riposo e poi mentre la scheda trasmette qualche
-// pacchetto di controllo (ignorato dai ricevitori). Una differenza forte vuol dire che l'RF entra nei fili del microfono.
-// Come ogni trasmissione, richiede un nominativo vero e l'antenna collegata.
-static void runRfCheck() {
-  if (lcr::isPlaceholderCallsign(settings.callsign)) {
-    Serial.println("CFG AUDIO rf skip=nominativo");
-    return;
-  }
-  if (node->state() != lcr::VoiceNode::State::Idle) {
-    Serial.println("CFG AUDIO rf skip=occupata");
-    return;
-  }
-  ui.showMessage("PROVA RF", "scheda in TX");
-  audio.rfWatchBegin();
-  delay(500);
-  const AudioIo::RfWatch base = audio.rfWatchEnd();
+// Trasmissione radio continua durante la seconda fase della prova audio: un task invia pacchetti di controllo
+// (modo 15, ignorati dai ricevitori) uno dopo l'altro mentre il loop principale suona i toni.
+static volatile bool rfBurstRun = false;
+static volatile bool rfBurstDone = true;
+static volatile uint32_t rfBurstPackets = 0;
 
-  constexpr int kPackets = 4;
-  const uint16_t session = static_cast<uint16_t>(esp_random());
-  audio.rfWatchBegin();
-  for (int i = 0; i < kPackets; i++) {
-    lcr::Packet p;
-    p.mode = lcr::kModeRfCheck;
-    p.session = session;
-    p.seq = static_cast<uint8_t>(i);
-    strncpy(p.callsign, settings.callsign, lcr::kMaxCallsign);
-    p.payloadLen = lcr::kMaxDataPayload;
-    for (size_t k = 0; k < lcr::kMaxDataPayload; k++) p.payload[k] = static_cast<uint8_t>(0x55 ^ (k * 37));
+static void rfBurstTask(void*) {
+  lcr::Packet p;
+  p.mode = lcr::kModeRfCheck;
+  p.session = static_cast<uint16_t>(esp_random());
+  strncpy(p.callsign, settings.callsign, lcr::kMaxCallsign);
+  p.payloadLen = lcr::kMaxDataPayload;
+  for (size_t k = 0; k < lcr::kMaxDataPayload; k++) p.payload[k] = static_cast<uint8_t>(0x55 ^ (k * 37));
+  uint8_t seq = 0;
+  while (rfBurstRun) {
+    p.seq = seq++;
     uint8_t buf[lcr::kMaxWireBytes];
     const size_t n = lcr::encodePacket(p, buf, sizeof(buf));
-    if (n) radio.send(buf, n);
-    delay(lcr::kInterPacketGapMs);
+    if (n) radio.send(buf, n);  // bloccante: la radio resta in trasmissione quasi di continuo
+    rfBurstPackets = rfBurstPackets + 1;
+    vTaskDelay(pdMS_TO_TICKS(20));
   }
-  delay(100);
-  const AudioIo::RfWatch tx = audio.rfWatchEnd();
-  radio.startReceive();
-  Serial.printf("CFG AUDIO rf base=%.1f tx=%.1f agcbase=%.1f agctx=%.1f dcbase=%.1f dctx=%.1f pkts=%d\n",
-                static_cast<double>(base.rmsDb), static_cast<double>(tx.rmsDb), static_cast<double>(base.agcInDb),
-                static_cast<double>(tx.agcInDb), static_cast<double>(base.dcPct), static_cast<double>(tx.dcPct), kPackets);
+  rfBurstDone = true;
+  vTaskDelete(nullptr);
 }
 
-// Prova dell'hardware audio (CFG TEST AUDIO): tre toni a volume fisso e basso, con il livello del microfono a ogni
-// frequenza. Bloccante per circa 3,5 s. I risultati tornano alla pagina di configurazione; il giudizio e' dell'operatore.
-static void runAudioTest() {
-  constexpr int kTestVolumeStep = 5;  // -15 dB: udibile ma non forte
-  ui.showMessage("PROVA TONI", "ascolta i toni");
-  const int savedVolume = audio.volumeStep();
-  audio.setVolumeStep(kTestVolumeStep);
+// Una fase della prova: tre toni a volume basso e fisso, con il livello del microfono a ogni frequenza e i massimi di
+// livello e offset visti dal microfono nell'intera fase. Con rf=true le righe hanno il prefisso "rf".
+static void runTonePhase(bool rf) {
   static const float kFreqs[] = {500.0f, 1000.0f, 2000.0f};
+  audio.rfWatchBegin();
   for (float f : kFreqs) {
     float pauseDb = 0, toneDb = 0;
     audio.toneTest(f, pauseDb, toneDb);
-    Serial.printf("CFG AUDIO f=%d base=%.1f tone=%.1f\n", static_cast<int>(f), static_cast<double>(pauseDb),
-                  static_cast<double>(toneDb));
+    Serial.printf("CFG AUDIO %sf=%d base=%.1f tone=%.1f\n", rf ? "rf " : "", static_cast<int>(f),
+                  static_cast<double>(pauseDb), static_cast<double>(toneDb));
     delay(150);
   }
+  const AudioIo::RfWatch w = audio.rfWatchEnd();
+  Serial.printf("CFG AUDIO m%d rms=%.1f agc=%.1f dc=%.1f\n", rf ? 2 : 1, static_cast<double>(w.rmsDb),
+                static_cast<double>(w.agcInDb), static_cast<double>(w.dcPct));
+}
+
+// Prova dell'hardware audio (CFG TEST AUDIO), in due fasi: 1) tre toni senza radio; 2) gli stessi tre toni mentre la
+// scheda trasmette in continuo. Il confronto dei livelli (e l'ascolto) dice se la radiofrequenza rientra nel microfono
+// o nell'amplificatore. La fase 2 richiede un nominativo vero e l'antenna collegata, come ogni trasmissione.
+// I risultati tornano alla pagina di configurazione; il giudizio e' dell'operatore.
+static void runAudioTest() {
+  constexpr int kTestVolumeStep = 5;  // -15 dB: udibile ma non forte
+  const int savedVolume = audio.volumeStep();
+  audio.setVolumeStep(kTestVolumeStep);
+
+  ui.showMessage("PROVA TONI", "fase 1: senza radio");
+  runTonePhase(false);
+
+  if (lcr::isPlaceholderCallsign(settings.callsign)) {
+    Serial.println("CFG AUDIO rf skip=nominativo");
+  } else if (node->state() != lcr::VoiceNode::State::Idle) {
+    Serial.println("CFG AUDIO rf skip=occupata");
+  } else {
+    ui.showMessage("PROVA TONI", "fase 2: con radio TX");
+    delay(500);
+    rfBurstPackets = 0;
+    rfBurstRun = true;
+    rfBurstDone = false;
+    xTaskCreatePinnedToCore(rfBurstTask, "rfburst", 4096, nullptr, 2, nullptr, 1);
+    delay(400);  // la trasmissione e' gia' in corso quando partono i toni
+    runTonePhase(true);
+    rfBurstRun = false;
+    for (int i = 0; i < 100 && !rfBurstDone; i++) delay(20);
+    radio.startReceive();
+    Serial.printf("CFG AUDIO rf pkts=%u\n", static_cast<unsigned>(rfBurstPackets));
+  }
+
   audio.setVolumeStep(savedVolume);
-  runRfCheck();
   Serial.println("CFG AUDIO fine");
   ui.refresh();
 }
