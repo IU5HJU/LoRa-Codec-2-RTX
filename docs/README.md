@@ -6,6 +6,7 @@
 | [firmware.md](firmware.md) | Installazione (Linux, Windows, pagina web), comandi `CFG` sulla seriale, licenze, primo avvio |
 | [protocollo.md](protocollo.md) | Pacchetti, parità XOR, pausa tra i pacchetti, modi 2 e 3 (prova di collegamento) |
 | [prova-collegamento.md](prova-collegamento.md) | Prova radio con frame noti, tre clic sul PTT, risposta automatica |
+| [formato-pacchetto.pdf](formato-pacchetto.pdf) | Formato del pacchetto radio in 2 pagine, da girare a chi lo chiede (sintesi di [protocollo.md](protocollo.md)) |
 | [note-rilascio/](note-rilascio/v0.1.0-beta.1.md) | Note di rilascio di ogni versione (da incollare nella release su GitHub) |
 | [ISTRUZIONI-SESSIONE-SDR.md](ISTRUZIONI-SESSIONE-SDR.md) | Testo da incollare in una nuova sessione per continuare la configurazione del ricevitore SDR |
 | [registra-e-trasmetti.md](registra-e-trasmetti.md) | Il PTT registra, un secondo dopo il rilascio la scheda trasmette: separa elaborazione e radio nelle prove |
