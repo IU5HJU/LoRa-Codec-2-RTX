@@ -203,13 +203,6 @@ async function scenario(name, fn) {
     });
   }
 
-  await scenario('installazione: scheda senza display', async (p) => {
-    const opts = await p.$$eval('#board option', (o) => o.map((x) => x.value));
-    check('tre schede nell\'elenco', opts.join() === 't3,tbeam,tbeam-nodisplay', opts.join());
-    await p.selectOption('#board', 'tbeam-nodisplay');
-    check('il manifest segue la scelta', (await p.getAttribute('#installer', 'manifest')) === 'firmware/tbeam-nodisplay/manifest.json');
-  });
-
   await scenario('registra e trasmetti: attiva e disattiva', async (p) => {
     await connect(p);
     check('pulsanti attivi dopo la connessione', !(await p.isDisabled('#recOn')) && !(await p.isDisabled('#recOff')));

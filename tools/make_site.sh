@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Assembla il sito statico (pagina di installazione e configurazione) in una cartella.
 #   tools/make_site.sh <cartella-artefatti> <cartella-uscita> <versione> <commit>
-# <cartella-artefatti> contiene firmware-t3-v161/, firmware-tbeam-v12/ e firmware-tbeam-v12-senza-display/ (come li scarica
+# <cartella-artefatti> contiene firmware-t3-v161/ e firmware-tbeam-v12/ (come li scarica
 # actions/download-artifact), ognuna con web_factory.bin e ota_update.bin.
 set -euo pipefail
 in=${1:?cartella degli artefatti}
@@ -15,7 +15,7 @@ mkdir -p "$out/firmware"
 cp "$here"/site/index.html "$out/"
 touch "$out/.nojekyll"
 
-for pair in "t3:firmware-t3-v161" "tbeam:firmware-tbeam-v12" "tbeam-nodisplay:firmware-tbeam-v12-senza-display"; do
+for pair in "t3:firmware-t3-v161" "tbeam:firmware-tbeam-v12"; do
   board=${pair%%:*}
   art=${pair#*:}
   test -f "$in/$art/web_factory.bin" || { echo "manca $in/$art/web_factory.bin" >&2; exit 1; }

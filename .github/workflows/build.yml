@@ -3,7 +3,6 @@ name: Build
 # Test sul PC e compilazione del firmware per le schede supportate:
 #   lora32  LILYGO LoRa32 T3 V1.6.1   artefatto firmware-t3-v161
 #   tbeam   LILYGO T-Beam V1.2        artefatto firmware-tbeam-v12
-#   tbeam_nodisplay  T-Beam V1.2 senza display  artefatto firmware-tbeam-v12-senza-display
 # Ogni artefatto contiene due binari, pronti per un flasher web (esp-web-tools):
 #   web_factory.bin  immagine completa da scrivere all'indirizzo 0 (prima installazione)
 #   ota_update.bin   solo l'applicazione, da scrivere a 0x10000 (aggiornamento)
@@ -65,9 +64,6 @@ jobs:
           - env: tbeam
             board: T-Beam V1.2
             artifact: firmware-tbeam-v12
-          - env: tbeam_nodisplay
-            board: T-Beam V1.2 senza display
-            artifact: firmware-tbeam-v12-senza-display
     steps:
       - uses: actions/checkout@v4
 
