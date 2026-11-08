@@ -7,7 +7,7 @@ Si fa dalla [pagina di configurazione](https://iu5hju.github.io/LoRa-Codec-2-RTX
 
 ## 1. Microfono
 
-Pulsante **"Prova il microfono"**: 3 secondi di silenzio, poi 3 secondi in cui parli vicino al microfono (per esempio "prova, uno, due, tre"). La pagina confronta i due livelli (quello visto dall'AGC, dopo il filtro passa-alto).
+Pulsante **"Prova il microfono"**: un conto alla rovescia di 3 secondi (per lasciare il mouse e la tastiera), poi 3 secondi di silenzio, poi 3 secondi in cui parli vicino al microfono (per esempio "prova, uno, due, tre"). La pagina confronta i due livelli (quello visto dall'AGC, dopo il filtro passa-alto).
 
 | Esito | Significato |
 |---|---|

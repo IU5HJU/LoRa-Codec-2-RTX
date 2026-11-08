@@ -431,6 +431,16 @@
 
   // ---- Verifica dell'hardware audio ----
   function showHw(id, html, cls) { const el = $(id); el.innerHTML = html; el.className = 'hwout ' + (cls || ''); }
+  // Conto alla rovescia prima di una misura del silenzio: il clic del mouse (o il tasto premuto) che avvia la misura
+  // finirebbe altrimenti dentro la misura, perche' il microfono e' gia' in ascolto. render(n) mostra i secondi che mancano.
+  const COUNTDOWN_STEPS = 3;
+  async function countdown(render) {
+    const step = Number.isFinite(window.LCR_COUNTDOWN_STEP_MS) ? window.LCR_COUNTDOWN_STEP_MS : 1000;
+    for (let n = COUNTDOWN_STEPS; n >= 1; n--) {
+      render(n);
+      await new Promise(r => setTimeout(r, step));
+    }
+  }
   async function micLevels() {   // misura 3 s (come "Misura il fondo", ma senza salvare nulla)
     const ack = await send('CFG MIC MEASURE', /^CFG (OK|ERR) mic/);
     if (ack.startsWith('CFG ERR')) throw new Error(ack);
@@ -450,6 +460,7 @@
   }
   $('hwMic').addEventListener('click', () => hwRun(async () => {
     try {
+      await countdown(n => showHw('hwMicOut', 'Lascia il mouse e la tastiera e resta in silenzio: la prova parte tra ' + n + '…'));
       showHw('hwMicOut', 'Resta in silenzio e non toccare il microfono… (3 s)');
       const silence = await micLevels();
       showHw('hwMicOut', 'Ora parla vicino al microfono, per esempio: <em>prova, uno, due, tre</em> (3 s)');
@@ -561,11 +572,12 @@
     const ids = ['measure', 'floorDown', 'floorUp', 'micfloor', 'save'];
     ids.forEach(id => { $(id).disabled = true; });
     try {
+      await countdown(n => setStatus('Lascia il mouse e la tastiera e resta in silenzio: la misura parte tra ' + n + '…', ''));
       const ack = await send('CFG MIC MEASURE', /^CFG (OK|ERR) mic/);
       if (ack.startsWith('CFG ERR')) throw new Error(ack);
       let left = 3;
-      setStatus('Resta in silenzio e non toccare il microfono… ' + left, '');
-      const tick = setInterval(() => { left = Math.max(0, left - 1); if (left) setStatus('Resta in silenzio e non toccare il microfono… ' + left, ''); }, 1000);
+      setStatus('Misura in corso, resta in silenzio e non toccare il microfono… ' + left, '');
+      const tick = setInterval(() => { left = Math.max(0, left - 1); if (left) setStatus('Misura in corso, resta in silenzio e non toccare il microfono… ' + left, ''); }, 1000);
       let line;
       try { line = await waitFor(/^CFG MIC /, 8000); } finally { clearInterval(tick); }
       const m = {};

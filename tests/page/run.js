@@ -40,6 +40,8 @@ async function openPage(opts = {}) {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.route(/esp-web-tools/, (r) => r.abort());     // niente rete: l'installer non si prova qui
   await page.addInitScript({ path: FAKE });
+  // Passo del conto alla rovescia prima delle misure del silenzio: breve nei test, 1 s nella pagina vera.
+  await page.addInitScript((ms) => { window.LCR_COUNTDOWN_STEP_MS = ms; }, opts.countdownStep ?? 30);
   await page.goto(baseUrl + '/');
   page.errors = errors;
   page.st = (fn, arg) => page.evaluate(fn, arg);
@@ -51,9 +53,9 @@ async function connect(page) {
   await page.click('#connect');
   await until(page, () => document.getElementById('callsign').value !== '');
 }
-async function scenario(name, fn) {
+async function scenario(name, fn, opts = {}) {
   const before = failures;
-  const page = await openPage();
+  const page = await openPage(opts);
   try {
     await fn(page);
     check('nessun errore JavaScript nella pagina', page.errors.length === 0, page.errors.join(' | '));
@@ -292,6 +294,26 @@ async function scenario(name, fn) {
     const t = await p.textContent('#hwTonesOut');
     check('tabella con la fase radio', t.includes('Fase 2: con la radio in trasmissione') && t.includes('Pacchetti trasmessi: 14'), t);
   });
+
+  // Il clic sul pulsante non deve finire dentro la misura: tra il clic e CFG MIC MEASURE passano 3 passi del conto alla rovescia.
+  await scenario('misura del fondo: conto alla rovescia prima della misura', async (p) => {
+    await connect(p);
+    const t0 = Date.now();
+    await p.click('#measure');
+    await new Promise((r) => setTimeout(r, 400));  // dopo 400 ms il conto (3 x 300 ms) non e' finito
+    check('il comando non e\' ancora partito', !(await cmds(p)).includes('CFG MIC MEASURE'), (await cmds(p)).join(' | '));
+    check('la pagina mostra il conto alla rovescia', /parte tra \d/.test(await status(p)), await status(p));
+    await until(p, () => window.__st.cmds.includes('CFG MIC MEASURE'), null, 4000);
+    check('il comando parte dopo almeno 3 passi', Date.now() - t0 >= 850, String(Date.now() - t0));
+    await until(p, () => document.getElementById('status').textContent.includes('salvato'), null, 6000);
+  }, { countdownStep: 300 });
+  await scenario('prova del microfono: conto alla rovescia prima del silenzio', async (p) => {
+    await connect(p);
+    await p.click('#hwMic');
+    await new Promise((r) => setTimeout(r, 400));
+    check('il comando non e\' ancora partito', !(await cmds(p)).includes('CFG MIC MEASURE'), (await cmds(p)).join(' | '));
+    check('mostra il conto alla rovescia', /parte tra \d/.test(await p.textContent('#hwMicOut')), await p.textContent('#hwMicOut'));
+  }, { countdownStep: 300 });
 
   await scenario('registro: salvataggio su file', async (p) => {
     await connect(p);
