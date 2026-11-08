@@ -61,6 +61,9 @@ constexpr uint32_t kPttClickGapMs = 500;
 // Attesa prima che il ricevitore risponda alla prova: chi ha trasmesso deve tornare in ascolto.
 constexpr uint32_t kTestReplyDelayMs = 700;
 
+// Modo "registra e poi trasmetti" (prova): dopo il rilascio del PTT la trasmissione parte con questo ritardo.
+constexpr uint32_t kRecSendDelayMs = 1000;
+
 // Durata massima di un turno di trasmissione.
 constexpr uint32_t kMaxTurnMs = 30000;
 constexpr uint32_t kMaxTurnFrames = kMaxTurnMs / kFrameMs;

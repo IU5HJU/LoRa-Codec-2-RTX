@@ -35,6 +35,7 @@ class UiNotifier : public lcr::INotifier {
   void rxCallsign(const char* callsign) override;
   void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) override;
   void testModeChanged(bool on) override;
+  void recPhaseChanged(int phase) override { recPhase_ = phase; dirty_ = true; }
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
 
   // Forza il ridisegno dello schermo (dopo una schermata temporanea).
@@ -57,6 +58,7 @@ class UiNotifier : public lcr::INotifier {
   bool dirty_ = true;
   uint32_t lastDrawMs_ = 0;
 
+  int recPhase_ = 0;  // registra e poi trasmetti: 0 nessuna, 1 registra, 2 attesa, 3 trasmette
   lcr::VoiceNode::State state_ = lcr::VoiceNode::State::Idle;
   int volume_ = 0;
   int rssi_ = 0;

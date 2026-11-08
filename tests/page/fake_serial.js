@@ -54,6 +54,8 @@
         if (!inRange(+v, -80, -36)) return out('CFG ERR micfloor da -80 a -36');
         st.cfg.micfloor = +v; out('CFG OK micfloor=' + v);
       } else out('CFG ERR ' + key + ' parametro sconosciuto');
+    } else if (cmd === 'REC' && (t[2] === 'ON' || t[2] === 'OFF')) {
+      st.rec = t[2] === 'ON'; out('CFG OK rec=' + (st.rec ? 'on' : 'off'));
     } else if (cmd === 'RESET') {
       st.cfg = { callsign: 'N0CALL', freq: '433.900', power: 10, volume: 7, micfloor: -60 }; out('CFG OK reset');
     } else if (cmd === 'REBOOT') {

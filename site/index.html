@@ -128,6 +128,11 @@
     <button id="testOn" type="button" class="secondary" disabled>Attiva la prova</button>
     <button id="testOff" type="button" class="secondary" disabled>Disattiva la prova</button>
     <span id="testState" class="muted"></span>
+    <h3>Registra e poi trasmetti</h3>
+    <p class="muted">Per le prove di diagnosi. Con questo modo il PTT <strong>registra</strong> il messaggio (fino a 30 secondi) senza trasmettere; quando lo rilasci, <strong>dopo 1 secondo</strong> la scheda lo trasmette. Così la registrazione e la radio non lavorano mai insieme: se la voce arriva bene all'altra scheda, il problema era la trasmissione in tempo reale. Sul display: "REGISTRA", "ATTESA", "INVIO". Serve il tuo nominativo e l'antenna. Non è salvato: allo spegnimento torna spento.</p>
+    <button id="recOn" type="button" class="secondary" disabled>Attiva registra e trasmetti</button>
+    <button id="recOff" type="button" class="secondary" disabled>Disattiva</button>
+    <span id="recState" class="muted"></span>
     <div id="logtools">
       <button id="logCopy" type="button" class="secondary">Copia il registro</button>
       <button id="logSave" type="button" class="secondary">Salva su file</button>
@@ -230,7 +235,7 @@
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
-    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
+    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'recOn', 'recOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
   }
 
   const sinks = [];   // ascoltatori di righe (prove che raccolgono piu' risposte)
@@ -581,6 +586,16 @@
       setStatus(on ? 'Prova attiva: premi il PTT per inviarla.' : 'Prova disattivata.', 'ok');
     } catch (e) { setStatus('Errore: ' + e.message, 'err'); }
   }
+  async function setRec(on) {
+    try {
+      const r = await send('CFG REC ' + (on ? 'ON' : 'OFF'), /^CFG (OK|ERR)/);
+      if (r.startsWith('CFG ERR')) throw new Error('questo firmware non ha il modo registra e trasmetti: aggiornalo');
+      $('recState').textContent = on ? 'Registra e trasmetti ATTIVO' : 'spento';
+      setStatus(on ? 'Registra e trasmetti attivo: tieni premuto il PTT e parla, rilascia e dopo 1 secondo la scheda trasmette.' : 'Registra e trasmetti disattivato: il PTT trasmette in tempo reale.', 'ok');
+    } catch (e) { setStatus('Errore: ' + e.message, 'err'); }
+  }
+  $('recOn').addEventListener('click', () => setRec(true));
+  $('recOff').addEventListener('click', () => setRec(false));
   $('testOn').addEventListener('click', () => setTest(true));
   $('testOff').addEventListener('click', () => setTest(false));
   if (!supported) $('connect').disabled = true;

@@ -100,6 +100,8 @@ class SettingsConsole {
 
   // Prova di collegamento: NON viene salvata, all'accensione e' sempre spenta.
   bool testMode() const { return testMode_; }
+  // Modo "registra e poi trasmetti" (CFG REC ON/OFF): anche questo non viene salvato.
+  bool recordMode() const { return recMode_; }
   // Allinea lo stato quando la prova viene attivata o disattivata da tre clic sul PTT.
   void setTestMode(bool on) { testMode_ = on; }
 
@@ -111,8 +113,10 @@ class SettingsConsole {
   ConsoleResult mic(const char* value, char* reply, size_t cap);
 
   ConsoleResult test(const char* value, char* reply, size_t cap);
+  ConsoleResult rec(const char* value, char* reply, size_t cap);
 
   bool testMode_ = false;
+  bool recMode_ = false;
   Settings active_;
   Settings defaults_;
   Settings stored_;

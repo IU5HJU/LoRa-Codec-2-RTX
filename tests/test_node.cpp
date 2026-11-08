@@ -298,7 +298,61 @@ static void testLossOnAir() {
   CHECK(s.b.note.recovered == 3 && s.b.note.lostFrames == 0);
 }
 
+static void testRecordThenSend() {
+  // Registra e poi trasmetti: niente radio finche' si registra, trasmissione 1 s dopo il rilascio, stesso audio.
+  Sim s;
+  s.air.clock = &s.clock;
+  s.a.node.setRecordMode(true);
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50);
+  CHECK(s.a.node.state() == VoiceNode::State::Transmitting && s.a.node.recPhase() == VoiceNode::RecPhase::Recording);
+  s.run(3000);
+  CHECK(s.air.sent[0] == 0);  // si registra soltanto
+  s.a.node.pttReleased(s.clock);
+  const uint32_t releaseAt = s.clock;
+  CHECK(s.a.node.recPhase() == VoiceNode::RecPhase::Waiting);
+  s.run(kRecSendDelayMs - 100);
+  CHECK(s.air.sent[0] == 0);  // ancora in attesa
+  s.run(8000);
+  CHECK(!s.air.sentAt[0].empty() && s.air.sentAt[0][0] >= releaseAt + kRecSendDelayMs);
+  const int n = static_cast<int>(s.a.mic.produced());
+  CHECK(n >= 78 && n <= 90);
+  CHECK(s.b.spk.played == seq(n));  // la voce arriva intera e in ordine
+  CHECK(s.b.note.callsign == "IU5HJU");
+  CHECK(s.a.note.txStarts == 1 && s.a.note.txEnds == 1 && !s.a.note.limitHit);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle && s.a.node.recPhase() == VoiceNode::RecPhase::None);
+  CHECK((s.a.note.recPhases == std::vector<int>{1, 2, 3, 0}));
+  for (size_t i = 1; i < s.air.sentAt[0].size(); i++) CHECK(s.air.sentAt[0][i] - s.air.sentAt[0][i - 1] >= kInterPacketGapMs);
+}
+
+static void testRecordTurnLimit() {
+  // PTT tenuto oltre i 30 s: la registrazione si ferma da sola e il messaggio parte comunque.
+  Sim s;
+  s.a.node.setRecordMode(true);
+  s.a.node.pttPressed(s.clock);
+  s.run(40000);
+  CHECK(s.a.note.limitHit);
+  s.a.node.pttReleased(s.clock);  // rilascio tardivo: non cambia niente
+  s.run(40000);
+  CHECK(static_cast<int>(s.a.mic.produced()) == static_cast<int>(kMaxTurnFrames));
+  CHECK(s.b.spk.played == seq(static_cast<int>(kMaxTurnFrames)));
+  CHECK(s.a.node.state() == VoiceNode::State::Idle);
+}
+
+static void testRecordModeOffByDefault() {
+  Sim s;
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 400);
+  CHECK(s.a.node.recPhase() == VoiceNode::RecPhase::None && s.air.sent[0] > 0);  // trasmette subito, come prima
+  s.a.node.pttReleased(s.clock);
+  s.run(3000);
+}
+
 int main() {
+  testRecordThenSend();
+  testRecordTurnLimit();
+  testRecordModeOffByDefault();
   testPacketSpacing();
   testTripleClickTogglesTestMode();
   testSlowClicksDoNothing();

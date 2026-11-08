@@ -128,6 +128,7 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
   if (equalsIgnoreCase(tok[1], "SET") && n == 4) return set(tok[2], tok[3], reply, cap);
   if (equalsIgnoreCase(tok[1], "RESET") && n == 2) return reset(reply, cap);
   if (equalsIgnoreCase(tok[1], "TEST") && n == 3) return test(tok[2], reply, cap);
+  if (equalsIgnoreCase(tok[1], "REC") && n == 3) return rec(tok[2], reply, cap);
   if (equalsIgnoreCase(tok[1], "MIC") && n == 3) return mic(tok[2], reply, cap);
   if (equalsIgnoreCase(tok[1], "REBOOT") && n == 2) {
     say(reply, cap, "CFG OK reboot");
@@ -227,6 +228,19 @@ ConsoleResult SettingsConsole::test(const char* value, char* reply, size_t cap) 
     return ConsoleResult::Error;
   }
   say(reply, cap, testMode_ ? "CFG OK test=on" : "CFG OK test=off");
+  return ConsoleResult::Ok;
+}
+
+ConsoleResult SettingsConsole::rec(const char* value, char* reply, size_t cap) {
+  if (equalsIgnoreCase(value, "ON")) {
+    recMode_ = true;
+  } else if (equalsIgnoreCase(value, "OFF")) {
+    recMode_ = false;
+  } else {
+    say(reply, cap, "CFG ERR rec usa ON oppure OFF");
+    return ConsoleResult::Error;
+  }
+  say(reply, cap, recMode_ ? "CFG OK rec=on" : "CFG OK rec=off");
   return ConsoleResult::Ok;
 }
 

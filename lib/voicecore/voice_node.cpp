@@ -71,6 +71,8 @@ void VoiceNode::stopMic() {
 void VoiceNode::startTx(uint32_t nowMs) {
   const uint16_t sid = makeSessionId();
   txTest_ = testMode_;
+  const bool rec = recMode_ && !testMode_;
+  recCount_ = recSent_ = 0;
   testFramesSent_ = 0;
   nextTestFrameMs_ = nowMs;
   if (txTest_) {
@@ -91,8 +93,66 @@ void VoiceNode::startTx(uint32_t nowMs) {
     in_.start();
     micStarted_ = true;
   }
-  tx_.begin();
+  if (rec) {
+    setRecPhase(RecPhase::Recording);  // nessun pacchetto finche' il PTT non e' rilasciato
+  } else {
+    tx_.begin();
+  }
   notify_.txStarted();
+}
+
+void VoiceNode::setRecPhase(RecPhase p) {
+  recPhase_ = p;
+  notify_.recPhaseChanged(static_cast<int>(p));
+}
+
+// Fine della registrazione (PTT rilasciato o limite di 30 s): il microfono si ferma, la trasmissione parte tra 1 s.
+void VoiceNode::finishRecording(uint32_t nowMs, bool limit) {
+  stopMic();
+  limitHit_ = limit;
+  recReleaseMs_ = nowMs;
+  setRecPhase(RecPhase::Waiting);
+}
+
+void VoiceNode::recTick(uint32_t nowMs) {
+  switch (recPhase_) {
+    case RecPhase::Recording: {
+      int16_t pcm[kFrameSamples];
+      for (int guard = 0; guard < 8 && recPhase_ == RecPhase::Recording && in_.readFrame(pcm); guard++) {
+        if (recCount_ >= kMaxTurnFrames) {
+          finishRecording(nowMs, true);
+          break;
+        }
+        codec_.encode(pcm, recBuf_ + recCount_ * kFrameBytes);
+        recCount_++;
+      }
+      if (recPhase_ == RecPhase::Recording && recCount_ >= kMaxTurnFrames) finishRecording(nowMs, true);
+      break;
+    }
+    case RecPhase::Waiting:
+      if (static_cast<int32_t>(nowMs - recReleaseMs_) >= static_cast<int32_t>(kRecSendDelayMs)) {
+        tx_.begin();
+        nextSendMs_ = nowMs;
+        setRecPhase(RecPhase::Sending);
+      }
+      break;
+    case RecPhase::Sending:
+      // Frame verso la coda dei pacchetti, senza riempirla: ogni frame puo' produrre dati e parita'.
+      for (int guard = 0; guard < 24 && !releasing_ && recSent_ < recCount_ && tx_.queued() <= 4; guard++) {
+        if (!tx_.pushFrame(recBuf_ + recSent_ * kFrameBytes)) {
+          limitHit_ = true;
+          recSent_ = recCount_;
+          break;
+        }
+        recSent_++;
+      }
+      if (!releasing_ && recSent_ >= recCount_) {
+        tx_.finish();
+        releasing_ = true;
+      }
+      break;
+    case RecPhase::None: break;
+  }
 }
 
 void VoiceNode::pttReleased(uint32_t nowMs) {
@@ -104,6 +164,11 @@ void VoiceNode::pttReleased(uint32_t nowMs) {
     lastClickMs_ = nowMs;
     return;
   }
+  if (recPhase_ == RecPhase::Recording) {
+    finishRecording(nowMs, false);
+    return;
+  }
+  if (recPhase_ != RecPhase::None) return;  // registrazione gia' conclusa: il rilascio non cambia nulla
   if (state_ == State::Transmitting && !releasing_) finishCapture(false);
 }
 
@@ -135,7 +200,13 @@ void VoiceNode::txTick(uint32_t nowMs) {
     justSent_ = false;
     nextSendMs_ = nowMs + kInterPacketGapMs;
   }
-  if (!releasing_ && txTest_) {
+  if (recPhase_ == RecPhase::Recording || recPhase_ == RecPhase::Waiting) {
+    recTick(nowMs);
+    return;  // finche' si registra o si attende non si trasmette niente
+  }
+  if (recPhase_ == RecPhase::Sending) {
+    recTick(nowMs);
+  } else if (!releasing_ && txTest_) {
     // Prova: un frame noto ogni 40 ms, come se arrivasse dal codec, fino a kTestFrames.
     for (int guard = 0; guard < 8 && !releasing_ && testFramesSent_ < kTestFrames &&
                         static_cast<int32_t>(nowMs - nextTestFrameMs_) >= 0;
@@ -180,6 +251,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
   } else if (releasing_ && !tx_.hasPacket()) {
     radio_.startReceive();
     state_ = State::Idle;
+    if (recPhase_ != RecPhase::None) setRecPhase(RecPhase::None);
     notify_.txEnded(limitHit_);
   }
 }

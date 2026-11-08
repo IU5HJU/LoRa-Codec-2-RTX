@@ -44,6 +44,15 @@ class VoiceNode {
   void setTestMode(bool on) { testMode_ = on; }
   bool testMode() const { return testMode_; }
 
+  // Modo "registra e poi trasmetti" (prova, non persistente): il PTT registra il messaggio senza trasmettere; dopo il
+  // rilascio e un secondo di attesa la scheda lo trasmette. Serve a separare, nelle prove, la registrazione dalla
+  // radio (nessuna elaborazione audio mentre la radio trasmette). Ignorato con la prova di collegamento attiva.
+  enum class RecPhase { None, Recording, Waiting, Sending };
+  void setRecordMode(bool on) { recMode_ = on; }
+  bool recordMode() const { return recMode_; }
+  RecPhase recPhase() const { return recPhase_; }
+  uint32_t recFrames() const { return recCount_; }
+
   State state() const { return state_; }
   const RxStream& rx() const { return rx_; }
 
@@ -53,6 +62,9 @@ class VoiceNode {
   void stopMic();
   void finishCapture(bool limit);
   void txTick(uint32_t nowMs);
+  void recTick(uint32_t nowMs);
+  void finishRecording(uint32_t nowMs, bool limit);
+  void setRecPhase(RecPhase p);
   void rxTick(uint32_t nowMs);
   void finishTestRx(uint32_t nowMs);
   void sendTestReply(uint32_t nowMs);
@@ -85,6 +97,14 @@ class VoiceNode {
   uint8_t clickCount_ = 0;
   uint32_t lastClickMs_ = 0;
   bool micStarted_ = false;
+
+  // Registra e poi trasmetti
+  bool recMode_ = false;
+  RecPhase recPhase_ = RecPhase::None;
+  uint8_t recBuf_[kMaxTurnFrames * kFrameBytes];
+  uint32_t recCount_ = 0;
+  uint32_t recSent_ = 0;
+  uint32_t recReleaseMs_ = 0;
 
   // Prova di collegamento
   bool testMode_ = false;

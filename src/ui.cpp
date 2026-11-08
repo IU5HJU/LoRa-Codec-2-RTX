@@ -213,7 +213,12 @@ void UiNotifier::draw(uint32_t nowMs) {
   switch (state_) {
     case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", testMode_ ? "PROVA ON" : "ASCOLTO"); break;
     case lcr::VoiceNode::State::Receiving: snprintf(big, sizeof(big), "RX %s", rxCall_); break;
-    default: snprintf(big, sizeof(big), "TX %s", settings_.callsign); break;
+    default:
+      if (recPhase_ == 1) snprintf(big, sizeof(big), "REGISTRA");
+      else if (recPhase_ == 2) snprintf(big, sizeof(big), "ATTESA");
+      else if (recPhase_ == 3) snprintf(big, sizeof(big), "INVIO");
+      else snprintf(big, sizeof(big), "TX %s", settings_.callsign);
+      break;
   }
   bigText(display_, 16, big);
 
@@ -221,6 +226,12 @@ void UiNotifier::draw(uint32_t nowMs) {
   display_.setCursor(0, 38);
   if (notice_) {
     display_.print(notice_);
+  } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 1) {
+    display_.printf("Registro %lu/30 s", static_cast<unsigned long>((nowMs - txStartMs_) / 1000));
+  } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 2) {
+    display_.print("Parte tra 1 secondo");
+  } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 3) {
+    display_.print("Trasmetto messaggio");
   } else if (state_ == lcr::VoiceNode::State::Transmitting) {
     display_.printf(testMode_ ? "Prova %lu/12 s" : "Trasmissione %lu/30 s",
                     static_cast<unsigned long>((nowMs - txStartMs_) / 1000));

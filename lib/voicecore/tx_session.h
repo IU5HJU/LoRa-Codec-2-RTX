@@ -30,6 +30,7 @@ class TxSession {
   void finish();
 
   bool hasPacket() const { return qCount_ > 0; }
+  size_t queued() const { return qCount_; }
   bool popPacket(Packet& out);
   bool finished() const { return finished_; }
   bool overflowed() const { return overflow_; }

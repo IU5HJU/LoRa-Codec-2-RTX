@@ -213,7 +213,9 @@ static void runAudioTest() {
     rfBurstPackets = 0;
     rfBurstRun = true;
     rfBurstDone = false;
-    xTaskCreatePinnedToCore(rfBurstTask, "rfburst", 4096, nullptr, 2, nullptr, 1);
+    // Sul core 0 (il loop e la riproduzione dei toni girano sul core 1) e con priorita' inferiore al microfono: la
+    // trasmissione non puo' togliere tempo ai toni.
+    xTaskCreatePinnedToCore(rfBurstTask, "rfburst", 4096, nullptr, 2, nullptr, 0);
     delay(400);  // la trasmissione e' gia' in corso quando partono i toni
     runTonePhase(true);
     rfBurstRun = false;
@@ -247,6 +249,7 @@ static void serviceConsole() {
       if (r == lcr::ConsoleResult::AudioTest) runAudioTest();
       audio.setMicFloor(console->stored().micFloorDb);  // il fondo si applica subito (CFG SET MICFLOOR)
       node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio
+      node->setRecordMode(console->recordMode());  // registra e poi trasmetti: non salvato, spento all'avvio
       if (r == lcr::ConsoleResult::Reboot) {
         Serial.flush();
         delay(100);
@@ -316,6 +319,22 @@ void loop() {
     } else {
       Serial.printf("CFG MIC fondo=%d min=%d max=%d frames=%u\n", levels.percentile(90), levels.minDb(), levels.maxDb(),
                     static_cast<unsigned>(levels.count()));
+    }
+  }
+
+  // Registra e poi trasmetti: fasi in seriale, con i frame registrati e le perdite del microfono.
+  static lcr::VoiceNode::RecPhase lastRec = lcr::VoiceNode::RecPhase::None;
+  if (node->recPhase() != lastRec) {
+    lastRec = node->recPhase();
+    switch (lastRec) {
+      case lcr::VoiceNode::RecPhase::Recording: Serial.println("[rec] registrazione..."); break;
+      case lcr::VoiceNode::RecPhase::Waiting:
+        Serial.printf("[rec] registrati %u frame (%.1f s), frame persi dal microfono %u; si trasmette tra 1 s\n",
+                      static_cast<unsigned>(node->recFrames()), static_cast<double>(node->recFrames()) * 0.04,
+                      static_cast<unsigned>(audio.micOverruns()));
+        break;
+      case lcr::VoiceNode::RecPhase::Sending: Serial.println("[rec] trasmissione del messaggio"); break;
+      case lcr::VoiceNode::RecPhase::None: Serial.println("[rec] trasmissione finita"); break;
     }
   }
 

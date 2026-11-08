@@ -173,6 +173,9 @@ void testSetVolume() {
 void testTestMode() {
   Fixture f;
   CHECK(!f.con.testMode());
+  CHECK(f.run("CFG REC ON") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK rec=on") == 0 && f.con.recordMode());
+  CHECK(f.run("CFG REC OFF") == ConsoleResult::Ok && !f.con.recordMode());
+  CHECK(f.run("CFG REC MAYBE") == ConsoleResult::Error);
   CHECK(f.run("CFG TEST ON") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK test=on") == 0 && f.con.testMode());
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "test=1"));
   CHECK(f.st.saves == 0 && !f.st.has);  // non si salva: all'accensione e' sempre spenta

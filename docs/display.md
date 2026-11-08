@@ -43,6 +43,9 @@ Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 | 22 | Altri tre clic: prova spenta | avviso "PROVA SPENTA", un bip grave |
 | 23 | Nominativo di 8 caratteri (per esempio `IU5HJU/P`) | "TX IU5HJU/P" o "RX IU5HJU/P": la riga grande passa al testo piccolo, perché a testo grande entrano solo 10 caratteri |
 | 24 | "Suona i toni" della pagina | "PROVA TONI" e "fase 1: senza radio" per circa 4 secondi |
+| 26 | "Registra e poi trasmetti" (registrazione) | "REGISTRA" e "Registro 3/30 s" |
+| 27 | Dopo il rilascio del PTT | "ATTESA" e "Parte tra 1 secondo" |
+| 28 | La scheda trasmette il messaggio | "INVIO" e "Trasmetto messaggio" |
 | 25 | Fase 2 della prova audio (toni con la radio in trasmissione) | "PROVA TONI" e "fase 2: con radio TX" |
 | 20 | Prova interrotta o incompleta | come la 17, ma la riga sotto la percentuale dice "Parz.7/300" e il nominativo: la percentuale è sui frame arrivati, non su 300 |
 

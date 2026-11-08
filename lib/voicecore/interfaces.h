@@ -65,6 +65,8 @@ class INotifier {
     (void)lostFrames;
     (void)recoveredPackets;
   }
+  // Modo "registra e poi trasmetti": fase in corso (0 = nessuna, 1 = registra, 2 = attesa, 3 = trasmette).
+  virtual void recPhaseChanged(int phase) { (void)phase; }
   // La prova di collegamento e' stata attivata o disattivata da tre clic sul PTT.
   virtual void testModeChanged(bool on) { (void)on; }
   // Esito di una prova di collegamento. fromRemote = false: misurato qui sul pacchetti ricevuti;

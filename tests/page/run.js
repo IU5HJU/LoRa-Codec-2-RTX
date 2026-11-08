@@ -203,6 +203,18 @@ async function scenario(name, fn) {
     });
   }
 
+  await scenario('registra e trasmetti: attiva e disattiva', async (p) => {
+    await connect(p);
+    check('pulsanti attivi dopo la connessione', !(await p.isDisabled('#recOn')) && !(await p.isDisabled('#recOff')));
+    await p.click('#recOn');
+    await until(p, () => document.getElementById('recState').textContent.includes('ATTIVO'));
+    check('CFG REC ON inviato', (await cmds(p)).includes('CFG REC ON'));
+    check('spiega che parte dopo 1 secondo', (await status(p)).includes('dopo 1 secondo'));
+    await p.click('#recOff');
+    await until(p, () => document.getElementById('recState').textContent.includes('spento'));
+    check('CFG REC OFF inviato', (await cmds(p)).includes('CFG REC OFF'));
+  });
+
   await scenario('prova di collegamento: attiva e disattiva', async (p) => {
     await connect(p);
     await p.click('#testOn');
