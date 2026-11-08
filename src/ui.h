@@ -38,6 +38,12 @@ class UiNotifier : public lcr::INotifier {
   void recPhaseChanged(int phase) override { recPhase_ = phase; dirty_ = true; }
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
 
+#if defined(LCR_NO_DISPLAY)
+  // Variante senza display: stato sul LED di bordo (vedi docs/tbeam-senza-display.md).
+  void ledInit();
+  void ledFlashes(int n);  // n lampi veloci (bloccante, ~0,3 s l'uno)
+#endif
+
   // Forza il ridisegno dello schermo (dopo una schermata temporanea).
   void refresh() { dirty_ = true; }
 
@@ -49,6 +55,9 @@ class UiNotifier : public lcr::INotifier {
 
  private:
   void draw(uint32_t nowMs);
+#if defined(LCR_NO_DISPLAY)
+  void ledUpdate(uint32_t nowMs, lcr::VoiceNode::State state);
+#endif
   void drawTestReport();
 
   AudioIo& audio_;

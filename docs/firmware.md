@@ -5,6 +5,7 @@ Schede supportate (un ambiente PlatformIO e un artefatto di Actions ciascuna):
 | Scheda | Ambiente | Artefatto di GitHub Actions | Stato |
 |---|---|---|---|
 | LILYGO LoRa32 T3 V1.6.1 | `lora32` | `firmware-t3-v161` | provata: avvio, OLED, PTT, trasmissione |
+| LILYGO T-Beam V1.2 (AXP2101) senza display | `tbeam_nodisplay` | `firmware-tbeam-v12-senza-display` | stato sul LED, vedi [tbeam-senza-display.md](tbeam-senza-display.md); **non ancora provato** |
 | LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **fase 1: provata** (avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, trasmissione e ricezione, batteria sull'OLED); audio da provare |
 
 I pin e le differenze tra le due sono in [pinout.md](pinout.md).

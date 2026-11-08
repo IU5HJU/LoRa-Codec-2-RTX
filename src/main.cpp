@@ -55,7 +55,12 @@ static uint16_t newSessionId() { return static_cast<uint16_t>(esp_random()); }
 static void fatal(const char* what, int code = 0) {
   Serial.printf("ERRORE: %s (%d)\n", what, code);
   ui.showMessage("ERRORE", what);
+#if defined(LCR_NO_DISPLAY)
+  ui.ledInit();
+  for (;;) ui.ledFlashes(1);  // errore: lampeggio continuo
+#else
   for (;;) delay(1000);
+#endif
 }
 
 // Pin PTT: se la scheda non ha un pull-up interno sul pin (GPIO34-39, come il tasto IO38 della
@@ -97,7 +102,13 @@ void setup() {
   pinMode(pins::kVolume, INPUT_PULLUP);
   pttUsable = !pttPinUnstable();
 
+#if defined(LCR_NO_DISPLAY)
+  ui.begin();
+  ui.ledInit();
+  Serial.println("[avvio] variante senza display: lo stato e' sul LED di bordo (GPIO4) e sulla seriale");
+#else
   if (!ui.begin()) Serial.println("OLED non trovato: si continua senza display");
+#endif
   ui.showMessage("AVVIO");
   if (!pmuOk) fatal("alimentazione PMU");
   if (!pttUsable) {
@@ -146,6 +157,9 @@ void setup() {
   char reply[128];
   console->handleLine("CFG GET", reply, sizeof(reply));
   Serial.println(reply);  // la pagina di configurazione legge questa riga
+#if defined(LCR_NO_DISPLAY)
+  ui.ledFlashes(3);  // pronto
+#endif
 }
 
 // Trasmissione radio continua durante la seconda fase della prova audio: un task invia pacchetti di controllo

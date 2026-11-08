@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "battery_info.h"
+#include "packet.h"
 
 #include "board_pins.h"
 #include "user_config.h"
@@ -20,6 +21,46 @@ void bigText(Adafruit_SSD1306& d, int y, const char* text) {
 }
 }  // namespace
 
+#if defined(LCR_NO_DISPLAY)
+// Variante senza display: il display non si tocca mai (ok_ resta falso, quindi nessuna funzione di disegno agisce).
+// Lo stato si legge dal LED di bordo, attivo basso:
+//   ascolto: un lampo ogni 2 s (due lampi con N0CALL: solo ricezione; tre con la prova attiva)
+//   ricezione: acceso fisso; trasmissione: lampeggio veloce (5 Hz)
+//   registrazione (registra e trasmetti): lampeggio lento (1 Hz); attesa: spento
+bool UiNotifier::begin() { return false; }
+
+void UiNotifier::ledInit() {
+  pinMode(pins::kLed, OUTPUT);
+  digitalWrite(pins::kLed, HIGH);
+}
+
+void UiNotifier::ledFlashes(int n) {
+  for (int i = 0; i < n; i++) {
+    digitalWrite(pins::kLed, LOW);
+    delay(120);
+    digitalWrite(pins::kLed, HIGH);
+    delay(180);
+  }
+}
+
+void UiNotifier::ledUpdate(uint32_t nowMs, lcr::VoiceNode::State state) {
+  bool on = false;
+  if (state == lcr::VoiceNode::State::Receiving) {
+    on = true;
+  } else if (state == lcr::VoiceNode::State::Transmitting) {
+    if (recPhase_ == 1) on = (nowMs % 1000) < 500;
+    else if (recPhase_ == 2) on = false;
+    else on = (nowMs % 200) < 100;
+  } else {
+    const int flashes = lcr::isPlaceholderCallsign(settings_.callsign) ? 2 : (testMode_ ? 3 : 1);
+    const uint32_t ph = nowMs % 2000;
+    for (int i = 0; i < flashes; i++) {
+      if (ph >= static_cast<uint32_t>(i) * 250 && ph < static_cast<uint32_t>(i) * 250 + 80) on = true;
+    }
+  }
+  digitalWrite(pins::kLed, on ? LOW : HIGH);
+}
+#else
 bool UiNotifier::begin() {
   Wire.begin(pins::kOledSda, pins::kOledScl);
   ok_ = display_.begin(SSD1306_SWITCHCAPVCC, LCR_OLED_ADDRESS);
@@ -30,6 +71,7 @@ bool UiNotifier::begin() {
   }
   return ok_;
 }
+#endif
 
 void UiNotifier::showMessage(const char* line1, const char* line2) {
   if (!ok_) return;
@@ -163,6 +205,9 @@ void UiNotifier::drawTestReport() {
 
 void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb,
                       float batteryVolts) {
+#if defined(LCR_NO_DISPLAY)
+  ledUpdate(nowMs, state);
+#endif
   if (state != state_ || volumeStep != volume_) dirty_ = true;
   state_ = state;
   volume_ = volumeStep;
