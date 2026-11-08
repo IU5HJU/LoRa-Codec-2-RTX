@@ -6,6 +6,7 @@
 | [firmware.md](firmware.md) | Installazione (Linux, Windows, pagina web), comandi `CFG` sulla seriale, licenze, primo avvio |
 | [protocollo.md](protocollo.md) | Pacchetti, parità XOR, pausa tra i pacchetti, modi 2 e 3 (prova di collegamento) |
 | [prova-collegamento.md](prova-collegamento.md) | Prova radio con frame noti, tre clic sul PTT, risposta automatica |
+| [ISTRUZIONI-SESSIONE-SDR.md](ISTRUZIONI-SESSIONE-SDR.md) | Testo da incollare in una nuova sessione per continuare la configurazione del ricevitore SDR |
 | [registra-e-trasmetti.md](registra-e-trasmetti.md) | Il PTT registra, un secondo dopo il rilascio la scheda trasmette: separa elaborazione e radio nelle prove |
 | [verifica-hardware-audio.md](verifica-hardware-audio.md) | Controllo del montaggio audio con una sola scheda, falsi positivi e negativi |
 | [taratura-microfono.md](taratura-microfono.md) | Misure sul microfono, AGC, fondo e come adattarlo a un altro microfono |
