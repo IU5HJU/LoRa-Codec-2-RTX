@@ -91,6 +91,23 @@ Ordine di lavoro concordato:
 3. **Messaggio vocale**: ricezione che memorizza e riproduce, interleaving, limite in tempo in aria.
 4. **Misure sul campo** (RSSI, SNR, errore di frequenza e perdite per pacchetto, anche in movimento) per decidere quanta protezione serve davvero.
 
+#### Chi ripete cosa (deciso l'8 novembre, sera)
+
+| Profilo | Ripetizione | Come |
+|---|---|---|
+| **Messaggio** | **sì, l'unico dove il messaggio si ripete** | store-and-forward: il nodo memorizza il messaggio completo e lo ritrasmette (stessi bit del Codec2, nessun degrado) |
+| **Standard** | da un **futuro ripetitore standard** | **due frequenze**: una in ricezione (ingresso) e una in trasmissione (uscita) |
+| **Qualità** | **no: solo collegamento diretto (simplex)** | nessun ripetitore |
+
+Conseguenze da tenere presenti (ragionamento, non ancora progettato):
+
+- **Un ripetitore Standard con due frequenze ascolta e trasmette nello stesso momento**: servono **due radio** (una in RX, una in TX) e un buon isolamento tra le antenne (distanza, filtri). Una sola SX127x non basta in tempo reale. Con una sola radio si potrebbe solo memorizzare il turno e ritrasmetterlo dopo, cioè fare un store-and-forward, che non è un ripetitore.
+- **Il ripetitore può rigenerare la protezione:** recupera i pacchetti persi con la parità e trasmette con una parità nuova, quindi ogni tratta ha la sua correzione degli errori.
+- **Le schede Standard hanno bisogno di frequenza di ricezione e di trasmissione separate** (scostamento, "shift") come in un ripetitore analogico, oltre al collegamento diretto sulla frequenza simplex: da prevedere nelle impostazioni e nella pagina.
+- **Un ripetitore (e un nodo che ripete messaggi) è una stazione ad azionamento automatico**: da verificare con la normativa italiana e con l'ARI prima di qualsiasi prova con ripetizione automatica; il ripetitore deve anche identificarsi.
+- **Frequenze da concordare, almeno cinque:** Messaggio, Standard diretto, ingresso e uscita del ripetitore Standard, Qualità (voce "Frequenza di lavoro" in "Aperto").
+- **Messaggio ripetuto:** serve un identificatore univoco del messaggio (nominativo di origine e sessione) per non ripeterlo due volte, un contatore di salti con limite basso, il nominativo di chi ripete e un flag "ripetibile"; ritardi casuali con soppressione se un altro lo ha già ripetuto. Prima un solo salto; la mesh con più salti si valuta dopo le misure sul campo.
+
 ## 3. Pagina web di configurazione (dopo il TOT)
 
 **Decisione del 4 novembre:** la prima versione passa dal cavo USB (Web Serial, Chrome/Edge) ed è
