@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+#include "amp_hold.h"
 #include "board_pins.h"
 #include "settings.h"
 #include "user_config.h"
@@ -228,7 +229,8 @@ void AudioIo::ampOn() {
 }
 
 void AudioIo::loop(uint32_t nowMs) {
-  if (ampOn_ && nowMs - lastPlayMs_ > kAmpOffAfterMs) {
+  // nowMs e' l'ora presa all'inizio del giro del loop: lastPlayMs_ puo' essere piu' recente (vedi amp_hold.h).
+  if (ampOn_ && lcr::ampIdleLongerThan(nowMs, lastPlayMs_, kAmpOffAfterMs)) {
     digitalWrite(pins::kAmpShutdown, LOW);
     ampOn_ = false;
   }
