@@ -107,6 +107,7 @@ class AudioIo {
   void playLost();
   void writeMono(const int16_t* samples, size_t n);
   void ampOn();
+  void primePlayback();
 
   SafeMic mic_;
   Speaker speaker_;
@@ -116,6 +117,7 @@ class AudioIo {
   int volStep_ = 7;
   bool ampOn_ = false;
   uint32_t lastPlayMs_ = 0;
+  uint32_t lastWriteMs_ = 0;  // ultima scrittura sull'I2S (per riconoscere l'inizio di un nuovo ascolto)
   volatile uint32_t micErrors_ = 0;
   // statistiche di riproduzione (loop principale)
   uint32_t playFrames_ = 0, playLimited_ = 0;
