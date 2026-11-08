@@ -40,7 +40,7 @@ Comando `CFG TEST CODEC` dalla seriale (il pulsante nella pagina web è stato to
 3. **ascolto 3:** gli stessi frame decodificati, ma scritti **al ritmo della ricezione** (un frame ogni 40 ms, come fa il loop) **con il display** che si ridisegna come in ricezione;
 4. **ascolto 4:** come il 3 ma **senza display**.
 
-Non c'è radio, quindi servono una scheda sola e nessuna antenna. La pagina mostra i livelli e i picchi prima e dopo il Codec2, e i tempi di codifica e decodifica. I frame codificati vengono stampati nel registro come righe `CFG CODEC hex ...`: copiandole si possono decodificare sul PC con il Codec2 di riferimento.
+Non c'è radio, quindi servono una scheda sola e nessuna antenna. Il registro seriale mostra i livelli e i picchi prima e dopo il Codec2 (riga `CFG CODEC raw=... dec=...`) e i tempi di codifica e decodifica. I frame codificati vengono stampati nel registro come righe `CFG CODEC hex ...`: copiandole si possono decodificare sul PC con il Codec2 di riferimento.
 
 Gli ascolti 3 e 4 servono a capire se il guasto è nelle **condizioni della ricezione** (ritmo di scrittura, display) invece che nel Codec2 o nell'altoparlante: se il 2 è chiaro e il 3 o il 4 no, è lì.
 
