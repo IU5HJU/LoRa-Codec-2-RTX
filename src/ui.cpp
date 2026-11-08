@@ -63,7 +63,15 @@ void UiNotifier::ledUpdate(uint32_t nowMs, lcr::VoiceNode::State state) {
 #else
 bool UiNotifier::begin() {
   Wire.begin(pins::kOledSda, pins::kOledScl);
-  ok_ = display_.begin(SSD1306_SWITCHCAPVCC, LCR_OLED_ADDRESS);
+  // Un display montato a mano puo' stare a 0x3C o a 0x3D: si prova prima quello di user_config.h, poi l'altro.
+  const uint8_t addrs[2] = {static_cast<uint8_t>(LCR_OLED_ADDRESS), static_cast<uint8_t>(LCR_OLED_ADDRESS == 0x3C ? 0x3D : 0x3C)};
+  for (uint8_t a : addrs) {
+    ok_ = display_.begin(SSD1306_SWITCHCAPVCC, a);
+    if (ok_) {
+      Serial.printf("[avvio] display OLED trovato all'indirizzo 0x%02X\n", a);
+      break;
+    }
+  }
   if (ok_) {
     display_.setTextColor(SSD1306_WHITE);
     display_.clearDisplay();

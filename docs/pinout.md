@@ -91,6 +91,8 @@ Collegare sempre l'antenna a 433 MHz **prima** di alimentare o trasmettere: senz
 
 ## LILYGO T-Beam V1.2 (AXP2101)
 
+**Display OLED esterno (per esempio una T-Beam senza OLED di bordo):** si collega ai pin **IO21 (SDA)** e **IO22 (SCL)**, più `3V3` e `GND`: sono gli stessi dell'OLED di bordo e dell'AXP2101, quindi il firmware `tbeam` va bene così. Il firmware cerca il display a **0x3C** e poi a **0x3D** e, all'avvio, scrive sulla seriale i dispositivi I2C trovati (`[avvio] dispositivi I2C trovati: 0x34 0x3C`: 0x34 è l'AXP2101). Il driver è per controller **SSD1306 128x64**; un display da 1,3" con controller SH1106 funziona ma può apparire spostato di 2 pixel o con la prima colonna sporca.
+
 **Fase 1: supporto scritto, compilato e provato sulla scheda (4-5 novembre 2026):** avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, trasmissione e ricezione con la T3 (SNR circa 11-12 dB a 1-2 m). Ancora da provare: audio (microfono, amplificatore, altoparlante) sulla T-Beam.
 Scheda riconosciuta dalla serigrafia **T-BEAM-AXP2101-V1.2** (8 maggio 2023): ESP32 con 4 MB di flash (e 8 MB di PSRAM, non usata),
 modulo LoRa "LORA32 433/470MHz" (famiglia SX127x come la T3; il primo avvio lo conferma, RadioLib controlla il chip),

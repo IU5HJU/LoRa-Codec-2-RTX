@@ -4,6 +4,7 @@
 //
 // ATTENZIONE: collegare l'antenna a 433 MHz prima di alimentare la scheda.
 #include <Arduino.h>
+#include <Wire.h>
 #include <esp_system.h>
 #include <freertos/task.h>
 
@@ -108,6 +109,18 @@ void setup() {
   Serial.println("[avvio] variante senza display: lo stato e' sul LED di bordo (GPIO4) e sulla seriale");
 #else
   if (!ui.begin()) Serial.println("OLED non trovato: si continua senza display");
+  {  // dispositivi sul bus I2C (IO21 SDA, IO22 SCL): sulla T-Beam 0x34 e' l'AXP2101, il display sta a 0x3C o 0x3D
+    Serial.print("[avvio] dispositivi I2C trovati:");
+    int found = 0;
+    for (uint8_t a = 1; a < 127; a++) {
+      Wire.beginTransmission(a);
+      if (Wire.endTransmission() == 0) {
+        Serial.printf(" 0x%02X", a);
+        found++;
+      }
+    }
+    Serial.println(found ? "" : " nessuno");
+  }
 #endif
   ui.showMessage("AVVIO");
   if (!pmuOk) fatal("alimentazione PMU");
