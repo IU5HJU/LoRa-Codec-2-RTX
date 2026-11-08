@@ -203,6 +203,13 @@ async function scenario(name, fn) {
     });
   }
 
+  await scenario('installazione: spiegazione delle versioni', async (p) => {
+    const t = await p.textContent('#verhelp');
+    check('spiega versione rilasciata e di sviluppo', t.includes('Quale versione sto installando?') && t.includes('versione rilasciata') && t.includes('versione di sviluppo') && t.includes('main-GG/MM/AAAA'), t);
+    check('dice come avere esattamente la beta', t.includes('web_factory.bin') && t.includes('write_flash 0x0'), t);
+    check('rimanda alla pagina delle versioni', (await p.getAttribute('#verhelp a', 'href')) === 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases');
+  });
+
   await scenario('prova di collegamento: attiva e disattiva', async (p) => {
     await connect(p);
     await p.click('#testOn');

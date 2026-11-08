@@ -24,6 +24,9 @@
   button { font:inherit; padding:9px 16px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; margin:.5em .5em 0 0; }
   button.secondary { background:transparent; color:var(--accent); }
   button:disabled { opacity:.45; cursor:not-allowed; }
+  .verhelp { margin: 8px 0 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: .92rem; }
+  .verhelp p { margin: 4px 0; }
+  .verhelp ul { margin: 6px 0; padding-left: 22px; }
   .hint { font-size:.85rem; color:var(--muted); margin:.2em 0 0; }
   #status { margin:.8em 0 0; font-weight:600; }
   #status:not(:empty) { padding:.7em .9em; border-left:5px solid var(--muted); border-radius:6px; background:rgba(128,128,128,.14); }
@@ -74,6 +77,14 @@
       <option value="tbeam">LILYGO T-Beam V1.2 (AXP2101)</option>
     </select>
     <p class="muted" id="ver">Versione: …</p>
+    <div class="verhelp" id="verhelp">
+      <p><strong>Quale versione sto installando?</strong> Quella scritta qui sopra, che è sempre l'ultima pubblicata su questa pagina:</p>
+      <ul>
+        <li><strong>v0.1.0-beta.1</strong> (o con <em>rc</em>, o senza etichetta): una <strong>versione rilasciata</strong>, ferma e provata sul campo.</li>
+        <li><strong>main-GG/MM/AAAA</strong>: la <strong>versione di sviluppo</strong>, cioè l'ultima modifica del progetto pubblicata in quel giorno. È più recente, ma meno provata, e cambia a ogni modifica.</li>
+      </ul>
+      <p>La pagina passa da una all'altra da sola. Per avere <strong>esattamente una versione rilasciata</strong> (per esempio la beta) vai alla <a href="https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases">pagina delle versioni su GitHub</a>, scarica il file <code>firmware-…-web_factory.bin</code> della tua scheda (T3 o T-Beam) e scrivilo con <code>esptool.py --chip esp32 write_flash 0x0 file.bin</code>. Le impostazioni salvate nella scheda restano.</p>
+    </div>
     <esp-web-install-button id="installer" manifest="firmware/t3/manifest.json">
       <button slot="activate" type="button">Installa il firmware</button>
       <span slot="unsupported">Browser non supportato.</span>
