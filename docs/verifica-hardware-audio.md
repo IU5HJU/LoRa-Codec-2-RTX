@@ -31,6 +31,21 @@ La prova ha **due fasi**. La fase 1 è quella appena descritta: tre toni, senza 
 Esito: se il livello del microfono (prima e dopo il filtro passa-alto, in massimo) o dell'offset **sale di 10 dB o più** con la radio accesa, la RF rientra nei fili del microfono (accorcia i fili, allontanali dall'antenna, intrecciali o schermali; prova una potenza più bassa); da 5 a 10 dB, o toni che si sentono peggio di 6 dB, è dubbio e va ripetuto; sotto 5 dB nessun rientro. Le soglie sono provvisorie: annota i valori in [prove.md](prove.md).
 Nel registro seriale le righe sono `CFG AUDIO f=…` (fase 1), `CFG AUDIO rf f=…` (fase 2), `CFG AUDIO m1/m2 rms=… agc=… dc=…` (massimi del microfono nelle due fasi) e `CFG AUDIO rf pkts=…`.
 
+## 3. Codec2 sulla scheda, senza radio
+
+Pulsante **"Prova il Codec2"** (o `CFG TEST CODEC`): dopo un bip **parli per 3 secondi** vicino al microfono; la scheda registra, poi riproduce **due volte** la stessa registrazione dal proprio altoparlante, entrambe volte **dallo stesso percorso della ricezione** (AGC, volume, limitatore, raddoppio a 16 kHz):
+
+1. **ascolto 1:** l'audio del microfono così com'è, senza Codec2;
+2. **ascolto 2:** lo stesso audio dopo codifica e decodifica Codec2 (display: "ASCOLTO 1" e "ASCOLTO 2").
+
+Non c'è radio, quindi servono una scheda sola e nessuna antenna. La pagina mostra i livelli e i picchi prima e dopo il Codec2, e i tempi di codifica e decodifica. I frame codificati vengono stampati nel registro come righe `CFG CODEC hex ...`: copiandole si possono decodificare sul PC con il Codec2 di riferimento.
+
+Come leggere l'ascolto:
+
+- **1 chiaro, 2 chiaro ma "robotico":** tutto normale (il Codec2 a 1200 bps suona così). Il guasto è altrove: trasmissione, ricezione o radio.
+- **1 chiaro, 2 solo crepitii (che magari seguono l'andamento della voce):** il difetto è nel Codec2 sulla scheda (codifica o decodifica).
+- **Anche 1 con crepitii:** il difetto è nel percorso di riproduzione che il parlato attraversa e i toni no (AGC, limitatore o raddoppio della frequenza), oppure nell'altoparlante con segnali più complessi dei toni.
+
 ## Falsi positivi e falsi negativi
 
 - **Falso positivo:** il microfono "sente" i toni anche senza che l'altoparlante li emetta, perché il rumore dell'amplificatore (classe D) entra nel microfono dai fili o dall'alimentazione (condividono 5 V, massa e i clock BCLK/WS). **Controllo:** ripeti la prova **con l'altoparlante scollegato**: se il microfono sente lo stesso, il collegamento è elettrico, non acustico, e il risultato non vale.

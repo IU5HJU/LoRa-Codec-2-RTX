@@ -298,6 +298,30 @@ async function scenario(name, fn) {
     check('tabella con la fase radio', t.includes('Fase 2: con la radio in trasmissione') && t.includes('Pacchetti trasmessi: 14'), t);
   });
 
+  await scenario('Codec2: livelli coerenti', async (p) => {
+    await connect(p);
+    await p.click('#hwCodec');
+    await until(p, () => document.querySelectorAll('#hwCodecOut tr').length === 3 || document.getElementById('hwCodecOut').textContent.startsWith('Errore'), null, 12000);
+    const t = await p.textContent('#hwCodecOut');
+    check('mostra i due livelli', t.includes('-28.0 dBFS') && t.includes('-29.5 dBFS'), t);
+    check('livelli coerenti', t.includes('coerenti'), t);
+    check('mostra i picchi', t.includes('9000') && t.includes('8000') && !t.includes('undefined'), t);
+  });
+  await scenario('Codec2: livello molto diverso', async (p) => {
+    await connect(p);
+    await p.evaluate(() => { window.__st.codec = { raw: -28.0, rawPeak: 9000, dec: -60.0, decPeak: 100 }; });
+    await p.click('#hwCodec');
+    await until(p, () => document.querySelectorAll('#hwCodecOut tr').length === 3, null, 12000);
+    check('sospetto sul Codec2', (await p.textContent('#hwCodecOut')).includes('sospetto sul Codec2'));
+  });
+  await scenario('Codec2: registrazione debole', async (p) => {
+    await connect(p);
+    await p.evaluate(() => { window.__st.codec = { raw: -70.0, rawPeak: 50, dec: -71.0, decPeak: 40 }; });
+    await p.click('#hwCodec');
+    await until(p, () => document.querySelectorAll('#hwCodecOut tr').length === 3, null, 12000);
+    check('chiede di parlare piu\' vicino', (await p.textContent('#hwCodecOut')).includes('troppo debole'));
+  });
+
   await scenario('registro: salvataggio su file', async (p) => {
     await connect(p);
     const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#logSave')]);

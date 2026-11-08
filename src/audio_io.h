@@ -63,6 +63,8 @@ class AudioIo {
   // Scrive una riga di riepilogo in buf (vuota se non c'e' stato audio).
   void playStatsLine(char* buf, size_t cap) const;
 
+  void resetBackEnd() { back_.reset(); }  // azzera AGC e filtro dell'uscita (prima di un ascolto di prova)
+
   // Sorveglianza del microfono durante la trasmissione radio (CFG TEST AUDIO): massimi di livello (dBFS, prima e dopo il
   // passa-alto) e di offset (%) visti tra rfWatchBegin() e rfWatchEnd().
   struct RfWatch { float rmsDb, agcInDb, dcPct; };

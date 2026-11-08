@@ -155,6 +155,11 @@
     <button id="hwTones" type="button" disabled>Suona i toni</button>
     <div id="hwTonesOut" class="hwout" role="status"></div>
 
+    <h3>Codec2 sulla scheda (senza radio)</h3>
+    <p class="muted">Per capire se il guasto è nel Codec2. Dopo il bip <strong>parla per 3 secondi</strong> vicino al microfono. Poi la scheda riproduce <strong>due volte</strong> la tua voce: la <strong>1ª così com'è</strong>, la <strong>2ª dopo essere passata dal Codec2</strong> (codifica e decodifica). Confronta a orecchio: la 2ª deve somigliare alla 1ª, un po' più "robotica". Se la 1ª è chiara e la 2ª è solo crepitii, il difetto è nel Codec2 sulla scheda. Una scheda sola, nessuna trasmissione.</p>
+    <button id="hwCodec" type="button" disabled>Prova il Codec2</button>
+    <div id="hwCodecOut" class="hwout" role="status"></div>
+
     <details class="falsi">
       <summary>Come leggere il risultato: falsi positivi e falsi negativi</summary>
       <p><strong>Falso positivo:</strong> il microfono "sente" i toni anche senza che l'altoparlante li emetta, perché il rumore dell'amplificatore entra nel microfono dai fili o dall'alimentazione. <em>Controllo:</em> ripeti la prova <strong>con l'altoparlante scollegato</strong>: se il microfono sente lo stesso, il collegamento è elettrico, non acustico, e il risultato non vale.</p>
@@ -235,7 +240,7 @@
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
-    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'recOn', 'recOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
+    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'recOn', 'recOff', 'hwMic', 'hwTones', 'hwCodec']) $(id).disabled = !on;
   }
 
   const sinks = [];   // ascoltatori di righe (prove che raccolgono piu' risposte)
@@ -522,6 +527,35 @@
       }
       showHw('hwTonesOut', table + txt + rfHtml, cls);
     } catch (e) { showHw('hwTonesOut', 'Errore: ' + e.message, 'err'); }
+    finally { const i = sinks.indexOf(sink); if (i >= 0) sinks.splice(i, 1); }
+  }));
+
+  $('hwCodec').addEventListener('click', () => hwRun(async () => {
+    let res = null, hex = '', err = null;
+    const kv = (txt) => { const m = {}; for (const x of txt.split(' ')) { const i = x.indexOf('='); if (i > 0) m[x.slice(0, i)] = x.slice(i + 1); } return m; };
+    const sink = l => {
+      if (l.startsWith('CFG CODEC raw=')) res = kv(l.slice(10));
+      else if (l.startsWith('CFG CODEC hex ')) hex += l.slice(14).trim();
+      else if (l.startsWith('CFG CODEC ERR')) err = l.slice(14);
+    };
+    sinks.push(sink);
+    try {
+      showHw('hwCodecOut', 'Dopo il bip parla per 3 secondi… poi ascolta i due riascolti (1: senza Codec2, 2: con Codec2). Circa 12 secondi in tutto.');
+      const ack = await send('CFG TEST CODEC', /^CFG (OK|ERR) /);
+      if (ack.startsWith('CFG ERR')) throw new Error(ack.includes('comando') ? 'questo firmware non ha la prova del Codec2: aggiornalo' : ack);
+      await waitFor(/^CFG CODEC (fine|ERR)/, 30000);
+      if (err) throw new Error(err);
+      if (!res) throw new Error('risposta incompleta dalla scheda');
+      const raw = Number(res.raw), dec = Number(res.dec);
+      const d = dec - raw;
+      let txt, cls;
+      if (raw < -50) { txt = 'La registrazione era troppo debole (' + raw.toFixed(1) + ' dBFS): parla più vicino al microfono e ripeti.'; cls = 'err'; }
+      else if (Math.abs(d) > 12) { txt = 'Il livello dopo il Codec2 è molto diverso da quello del microfono (' + (d >= 0 ? '+' : '') + d.toFixed(1) + ' dB): sospetto sul Codec2 sulla scheda.'; cls = 'err'; }
+      else { txt = 'I livelli sono coerenti. Il giudizio è del tuo orecchio: la 2ª riproduzione deve essere comprensibile come la 1ª.'; cls = 'ok'; }
+      showHw('hwCodecOut', '<table><tr><th></th><th>Livello</th><th>Picco</th></tr><tr><td>Microfono (1ª)</td><td>' + raw.toFixed(1) + ' dBFS</td><td>' + res.rawpeak + '</td></tr><tr><td>Dopo il Codec2 (2ª)</td><td>' + dec.toFixed(1) + ' dBFS</td><td>' + res.decpeak + '</td></tr></table>' +
+        '<p>' + txt + ' Tempo di codifica ' + res.encms + ' ms e di decodifica ' + res.decms + ' ms per ' + res.frames + ' frame (limite 3000 ms).</p>' +
+        '<p>Dimmi cosa hai sentito: 1ª chiara? 2ª comprensibile, robotica, crepitii? I frame codificati sono nel registro (righe <code>CFG CODEC hex</code>): copiali per il confronto sul PC.</p>', cls);
+    } catch (e) { showHw('hwCodecOut', 'Errore: ' + e.message, 'err'); }
     finally { const i = sinks.indexOf(sink); if (i >= 0) sinks.splice(i, 1); }
   }));
 

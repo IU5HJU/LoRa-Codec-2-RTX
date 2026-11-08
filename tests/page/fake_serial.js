@@ -63,6 +63,12 @@
       later(() => out(get()));
     } else if (cmd === 'TEST' && (t[2] === 'ON' || t[2] === 'OFF')) {
       st.test = t[2] === 'ON'; out('CFG OK test=' + (st.test ? 'on' : 'off'));
+    } else if (cmd === 'TEST' && t[2] === 'CODEC') {
+      out('CFG OK codec: parla per 3 secondi dopo il bip, poi ascolta due volte (senza e con Codec2)');
+      const c = st.codec || { raw: -28.0, rawPeak: 9000, dec: -29.5, decPeak: 8000 };
+      setTimeout(() => out(`CFG CODEC raw=${c.raw.toFixed(1)} rawpeak=${c.rawPeak} dec=${c.dec.toFixed(1)} decpeak=${c.decPeak} encms=1200 decms=900 frames=75`), st.delay);
+      setTimeout(() => out('CFG CODEC hex 0123456789ab'), st.delay * 2);
+      setTimeout(() => out('CFG CODEC fine'), st.delay * 3);
     } else if (cmd === 'TEST' && t[2] === 'AUDIO') {
       out('CFG OK audio prova in corso: ascolta i toni due volte, senza e con la radio (circa 10 secondi)');
       // Fase 1: toni senza radio; fase 2 (se st.rf e' un oggetto): stessi toni con la radio; st.rf stringa = salto.

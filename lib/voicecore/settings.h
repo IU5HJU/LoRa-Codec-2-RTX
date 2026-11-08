@@ -82,6 +82,7 @@ enum class ConsoleResult {
   Error,
   Reboot,  // risposta pronta; il chiamante deve riavviare la scheda
   MicMeasure,  // risposta pronta; il chiamante deve misurare il fondo per 3 s e stampare il risultato
+  CodecTest,   // risposta pronta; il chiamante deve registrare 3 s e riprodurli senza e con Codec2
   AudioTest,   // risposta pronta; il chiamante deve suonare i toni di prova e stampare i livelli del microfono
 };
 

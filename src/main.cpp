@@ -242,6 +242,96 @@ static void runAudioTest() {
   ui.refresh();
 }
 
+// Prova del Codec2 sulla scheda, con una scheda sola e senza radio (CFG TEST CODEC): 3 secondi dal microfono, poi due
+// ascolti dalla stessa registrazione: 1) l'audio del microfono cosi' com'e', 2) lo stesso audio dopo codifica e
+// decodifica Codec2. Entrambi passano dallo stesso percorso di riproduzione della ricezione. Confronto a orecchio e nei
+// livelli: se il 1 e' buono e il 2 no, il guasto e' nel Codec2 sulla scheda. I frame codificati vengono stampati in
+// esadecimale, per decodificarli sul PC con il Codec2 di riferimento.
+static void runCodecTest() {
+  constexpr size_t kFrames = 75;  // 3 secondi
+  if (node->state() != lcr::VoiceNode::State::Idle) {
+    Serial.println("CFG CODEC ERR occupata");
+    return;
+  }
+  int16_t* raw = static_cast<int16_t*>(malloc(kFrames * lcr::kFrameSamples * sizeof(int16_t)));
+  int16_t* dec = static_cast<int16_t*>(malloc(kFrames * lcr::kFrameSamples * sizeof(int16_t)));
+  if (!raw || !dec) {
+    free(raw);
+    free(dec);
+    Serial.println("CFG CODEC ERR memoria");
+    return;
+  }
+  static uint8_t frames[kFrames * lcr::kFrameBytes];
+
+  ui.showMessage("PARLA", "dopo il bip: 3 s");
+  audio.beep(1000, 120);
+  delay(350);  // il microfono tiene gli ultimi 200 ms prima dello start: cosi' non registra il bip
+  audio.mic().start();
+  size_t got = 0;
+  const uint32_t t0 = millis();
+  while (got < kFrames && millis() - t0 < 6000) {
+    if (!audio.mic().readFrame(raw + got * lcr::kFrameSamples)) {
+      delay(3);
+      continue;
+    }
+    got++;
+  }
+  audio.mic().stop();
+  if (got < kFrames) {
+    free(raw);
+    free(dec);
+    Serial.printf("CFG CODEC ERR microfono: registrati solo %u frame\n", static_cast<unsigned>(got));
+    return;
+  }
+
+  const uint32_t e0 = millis();
+  for (size_t i = 0; i < kFrames; i++) codec.encode(raw + i * lcr::kFrameSamples, frames + i * lcr::kFrameBytes);
+  const uint32_t encMs = millis() - e0;
+  const uint32_t d0 = millis();
+  for (size_t i = 0; i < kFrames; i++) codec.decode(frames + i * lcr::kFrameBytes, dec + i * lcr::kFrameSamples);
+  const uint32_t decMs = millis() - d0;
+
+  auto rmsDb = [](const int16_t* p, size_t n, int& peakOut) {
+    double sq = 0;
+    int pk = 0;
+    for (size_t i = 0; i < n; i++) {
+      sq += static_cast<double>(p[i]) * p[i];
+      const int a = p[i] < 0 ? -p[i] : p[i];
+      if (a > pk) pk = a;
+    }
+    peakOut = pk;
+    return 10.0 * log10(sq / static_cast<double>(n) / (32768.0 * 32768.0) + 1e-12);
+  };
+  int pkRaw = 0, pkDec = 0;
+  const double rRaw = rmsDb(raw, kFrames * lcr::kFrameSamples, pkRaw);
+  const double rDec = rmsDb(dec, kFrames * lcr::kFrameSamples, pkDec);
+  Serial.printf("CFG CODEC raw=%.1f rawpeak=%d dec=%.1f decpeak=%d encms=%u decms=%u frames=%u\n", rRaw, pkRaw, rDec,
+                pkDec, static_cast<unsigned>(encMs), static_cast<unsigned>(decMs), static_cast<unsigned>(kFrames));
+  for (size_t i = 0; i < kFrames * lcr::kFrameBytes; i += 60) {
+    Serial.print("CFG CODEC hex ");
+    for (size_t k = i; k < i + 60 && k < kFrames * lcr::kFrameBytes; k++) Serial.printf("%02x", frames[k]);
+    Serial.println();
+  }
+
+  const int savedVolume = audio.volumeStep();
+  audio.setVolumeStep(10);
+  ui.showMessage("ASCOLTO 1", "senza codec");
+  delay(500);
+  audio.resetBackEnd();
+  for (size_t i = 0; i < kFrames; i++) audio.speaker().playFrame(raw + i * lcr::kFrameSamples);
+  delay(900);
+  ui.showMessage("ASCOLTO 2", "con Codec2");
+  delay(500);
+  audio.resetBackEnd();
+  for (size_t i = 0; i < kFrames; i++) audio.speaker().playFrame(dec + i * lcr::kFrameSamples);
+  delay(900);
+  audio.setVolumeStep(savedVolume);
+  free(raw);
+  free(dec);
+  Serial.println("CFG CODEC fine");
+  ui.refresh();
+}
+
 // Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
 static void serviceConsole() {
   static char line[96];
@@ -260,6 +350,7 @@ static void serviceConsole() {
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);
       if (r == lcr::ConsoleResult::AudioTest) runAudioTest();
+      if (r == lcr::ConsoleResult::CodecTest) runCodecTest();
       audio.setMicFloor(console->stored().micFloorDb);  // il fondo si applica subito (CFG SET MICFLOOR)
       node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio
       node->setRecordMode(console->recordMode());  // registra e poi trasmetti: non salvato, spento all'avvio
