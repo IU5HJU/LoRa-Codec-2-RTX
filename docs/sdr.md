@@ -46,6 +46,8 @@ conda activate lora
 python3 tools/sdr/lora_rx.py --freq 433.9e6 --out cattura.txt
 ```
 
+**Se la chiavetta non viene vista** solo dentro conda (`No supported devices found`, mentre `/usr/bin/rtl_test -t` la trova): su Ubuntu 20.04 la `libudev` di conda non elenca i dispositivi USB. Avvia `lora_rx.py` con `LD_PRELOAD="/lib/x86_64-linux-gnu/libudev.so.1 /usr/lib/x86_64-linux-gnu/libusb-1.0.so.0 /usr/lib/x86_64-linux-gnu/librtlsdr.so.0"` davanti al comando.
+
 I parametri predefiniti sono quelli del firmware: **SF8, BW 250 kHz, CR 4/5, sync word 0x4C, preambolo 12, intestazione esplicita, CRC attivo**. Se hai cambiato la frequenza con `CFG SET FREQ`, passa la stessa a `--freq`.
 Per ogni pacchetto stampa una riga come `[3] CRC ok  voce Codec2 1200, sessione 1234, seq 1, flag -, payload 72 byte` e accoda a `cattura.txt` una riga
 `t=<secondi> crc=<0|1> len=<n> hex=<byte>`. `--help` elenca tutte le opzioni (`--gain`, `--ppm`, `--duration`, `--device`).
@@ -60,7 +62,8 @@ Riassembla i pacchetti come farebbe la scheda ricevente (stessa logica del firmw
 
 - **voce:** nominativo, pacchetti, frame, secondi, frame persi e pacchetti recuperati; scrive `sessione_<id>.c2`. Poi:
   ```bash
-  c2dec 1200 sessioni/sessione_1234.c2 sessioni/sessione_1234.raw
+  cp sessioni/sessione_1234.c2 sessioni/sessione_1234.bin   # c2dec 0.9.2 non decodifica tutto un .c2 senza intestazione
+  c2dec 1200 sessioni/sessione_1234.bin sessioni/sessione_1234.raw
   ffmpeg -f s16le -ar 8000 -ac 1 -i sessioni/sessione_1234.raw sessioni/sessione_1234.wav
   ```
 - **prova di collegamento:** l'esito bit per bit (frame ok, persi, danneggiati), come lo mostra la scheda ricevente, e le eventuali risposte;
@@ -81,6 +84,8 @@ Il decodificatore accetta anche le righe che stampa `gr-lora_sdr` con `print_rx_
 | nessun pacchetto | frequenza identica a quella della scheda; antenna collegata; sync word 0x4C; avvicina la scheda (1-2 m) e prova `--gain 20`/`40`; `--ppm` con il valore misurato da `rtl_test -p` |
 | solo CRC errati | segnale troppo forte (abbassa `--gain` o allontana la scheda) o troppo debole; deriva di frequenza (`--ppm`) |
 | `ModuleNotFoundError` / `ImportError` | non e' attivo l'ambiente: `conda activate lora` |
+| `No supported devices found` o `Wrong rtlsdr device index` solo dentro conda | usa il `LD_PRELOAD` indicato nella sezione 2 |
+| audio troppo corto o tagliato | `c2dec` su un file `.c2`: copialo con estensione `.bin` (sezione 3) |
 | `usb_claim_interface error` | il modulo del kernel della TV digitale occupa la chiavetta: controlla la blacklist e scollega/ricollega |
 | messaggi `O` (overflow) | porta `--samp-rate` a 500000 (multiplo di 250000) o chiudi altri programmi pesanti |
 | nessun audio riconoscibile | controlla `frame persi` in `lcr_decode`: sotto il 5% la voce e' comprensibile; il Codec2 a 1200 bps ha comunque un suono "robotico" |
