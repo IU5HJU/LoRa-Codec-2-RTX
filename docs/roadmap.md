@@ -108,6 +108,20 @@ Conseguenze da tenere presenti (ragionamento, non ancora progettato):
 - **Frequenze da concordare, almeno cinque:** Messaggio, Standard diretto, ingresso e uscita del ripetitore Standard, Qualità (voce "Frequenza di lavoro" in "Aperto").
 - **Messaggio ripetuto:** serve un identificatore univoco del messaggio (nominativo di origine e sessione) per non ripeterlo due volte, un contatore di salti con limite basso, il nominativo di chi ripete e un flag "ripetibile"; ritardi casuali con soppressione se un altro lo ha già ripetuto. Prima un solo salto; la mesh con più salti si valuta dopo le misure sul campo.
 
+#### Ripetitore Standard: due schede collegate (deciso l'8 novembre, sera)
+
+Il ripetitore Standard è fatto da **due schede collegate tra loro**: una **solo in ricezione** sulla frequenza di ingresso e una **solo in trasmissione** sulla frequenza di uscita. Nessun microfono, altoparlante né Codec2: le schede ritrasmettono i pacchetti così come arrivano. Ragionamento, da progettare:
+
+- **Collegamento:** una seriale a 3 fili (TX, RX, massa) tra le due schede basta: i pacchetti sono di circa 90 byte, uno ogni 130-200 ms. La scheda in ricezione passa alla scheda in trasmissione solo i pacchetti con CRC valido, con RSSI e SNR.
+- **Ritardo:** ritrasmettendo pacchetto per pacchetto il ritardo è circa un pacchetto (circa 130 ms in aria più pause). Rigenerare la parità e recuperare un pacchetto perso richiede di attendere la parità del gruppo (circa 2 s): la prima versione ritrasmette quello che arriva, la rigenerazione viene dopo.
+- **Antiripetizione:** un flag "ripetuto" evita che un pacchetto già ripetuto venga ripetuto ancora; ricezione e trasmissione su frequenze diverse evitano gli anelli.
+- **Identificazione:** il ripetitore deve aggiungere il proprio nominativo ai suoi pacchetti e ogni tanto trasmettere un'identificazione (regole da verificare, vedi sopra).
+- **TOT e coda:** il ripetitore applica il TOT del profilo (180 s per lo Standard) e interrompe i turni più lunghi.
+- **Isolamento:** le due antenne vanno separate (distanza, polarizzazione verticale una sopra l'altra) e va misurato quanto la trasmissione disturba la ricezione (RSSI sulla scheda in ricezione mentre l'altra trasmette) prima di montarlo.
+- **Alimentazione:** trasmette di continuo durante un turno (circa metà del tempo): alimentazione fissa e stabile, con la T-Beam e la batteria come riserva.
+- **Schede utente:** frequenza di ricezione e di trasmissione separate (scostamento) e controllo "canale occupato" sulla frequenza di uscita: la scheda ascolta sull'uscita, e se sta ricevendo il PTT è rifiutato come oggi.
+- **Software:** un ruolo "ripetitore RX" e un ruolo "ripetitore TX" nello stesso firmware, scelti nelle impostazioni, senza audio.
+
 ## 3. Pagina web di configurazione (dopo il TOT)
 
 **Decisione del 4 novembre:** la prima versione passa dal cavo USB (Web Serial, Chrome/Edge) ed è
