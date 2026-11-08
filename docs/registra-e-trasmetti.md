@@ -12,7 +12,7 @@ Il protocollo è identico: l'altra scheda riceve come sempre, con gli stessi pac
 
 ## Come si attiva
 
-Nella pagina di configurazione, sezione "Registra e poi trasmetti": **Attiva registra e trasmetti** e **Disattiva**. Oppure dalla seriale: `CFG REC ON` e `CFG REC OFF`. Non è salvato: dopo ogni riavvio il modo è spento. Con la prova di collegamento attiva ha la precedenza la prova.
+Solo dalla **seriale** (115200, per esempio dal registro della pagina di configurazione o da un terminale): `CFG REC ON` e `CFG REC OFF`. I pulsanti nella pagina web sono stati tolti per semplificarla (restano nella cronologia di git). Non è salvato: dopo ogni riavvio il modo è spento. Con la prova di collegamento attiva ha la precedenza la prova.
 
 Serve il tuo nominativo (non N0CALL) e l'antenna collegata, come ogni trasmissione.
 

@@ -33,7 +33,7 @@ Nel registro seriale le righe sono `CFG AUDIO f=…` (fase 1), `CFG AUDIO rf f=�
 
 ## 3. Codec2 sulla scheda, senza radio
 
-Pulsante **"Prova il Codec2"** (o `CFG TEST CODEC`): dopo un bip **parli per 3 secondi** vicino al microfono; la scheda registra, poi riproduce **due volte** la stessa registrazione dal proprio altoparlante, entrambe volte **dallo stesso percorso della ricezione** (AGC, volume, limitatore, raddoppio a 16 kHz):
+Comando `CFG TEST CODEC` dalla seriale (il pulsante nella pagina web è stato tolto per semplificarla; si recupera dalla cronologia di git): dopo un bip **parli per 3 secondi** vicino al microfono; la scheda registra, poi riproduce **due volte** la stessa registrazione dal proprio altoparlante, entrambe volte **dallo stesso percorso della ricezione** (AGC, volume, limitatore, raddoppio a 16 kHz):
 
 1. **ascolto 1:** l'audio del microfono così com'è, senza Codec2;
 2. **ascolto 2:** lo stesso audio dopo codifica e decodifica Codec2 (display: "ASCOLTO 1" e "ASCOLTO 2");
