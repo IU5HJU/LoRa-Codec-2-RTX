@@ -13,12 +13,6 @@ namespace {
 constexpr i2s_port_t kPort = I2S_NUM_0;
 constexpr int kSampleRate = 16000;
 constexpr uint32_t kAmpOffAfterMs = 400;
-// Riserva di riproduzione: all'inizio di un ascolto si scrivono kPlayPrefillMs di silenzio prima dell'audio, cosi' il
-// buffer I2S resta sempre davanti alla voce di altrettanto. Senza, ogni frame (40 ms) si scrive appena prima che
-// il precedente finisca: un qualsiasi ritardo del loop (decodifica, display, radio) lascia il buffer vuoto e l'uscita
-// va a zero a meta' parola, con uno scatto proporzionale alla voce. Vedi docs/prove.md.
-constexpr uint32_t kPlayPrefillMs = 120;
-constexpr uint32_t kPlayNewSessionGapMs = 250;  // pausa dopo la quale un ascolto e' considerato nuovo
 
 lcr::BackEndConfig backConfig() {
   lcr::BackEndConfig c;
@@ -92,8 +86,8 @@ bool AudioIo::begin() {
   cfg.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
   cfg.communication_format = static_cast<i2s_comm_format_t>(I2S_COMM_FORMAT_STAND_I2S);
   cfg.intr_alloc_flags = ESP_INTR_FLAG_LEVEL1;
-  cfg.dma_buf_count = 20;  // 200 ms di coda: riserva di 120 ms piu' i frame in scrittura
-  cfg.dma_buf_len = 160;   // frame stereo per buffer DMA (10 ms)
+  cfg.dma_buf_count = 8;
+  cfg.dma_buf_len = 160;  // frame stereo per buffer DMA (10 ms)
   cfg.use_apll = false;
   cfg.tx_desc_auto_clear = true;  // in assenza di dati l'uscita e' silenzio
   cfg.fixed_mclk = 0;
@@ -246,20 +240,10 @@ void AudioIo::writeMono(const int16_t* samples, size_t n) {
   }
   size_t written = 0;
   i2s_write(kPort, txStereo_, n * 2 * sizeof(int32_t), &written, pdMS_TO_TICKS(200));
-  lastWriteMs_ = millis();
-}
-
-// Inizio di un nuovo ascolto: scrive la riserva di silenzio (vedi kPlayPrefillMs). L'amplificatore ha cosi' anche il
-// tempo di svegliarsi prima della prima sillaba.
-void AudioIo::primePlayback() {
-  if (millis() - lastWriteMs_ <= kPlayNewSessionGapMs) return;
-  memset(spkPcm_, 0, sizeof(spkPcm_));
-  for (uint32_t ms = 0; ms < kPlayPrefillMs; ms += lcr::kFrameMs) writeMono(spkPcm_, back_.outputSamplesPerFrame());
 }
 
 void AudioIo::playFrame(const int16_t* pcm) {
   ampOn();
-  primePlayback();
   const uint32_t t0 = micros();
   if (playFrames_ > 0) {  // intervallo tra due frame consecutivi: sopra 40 ms (senza riserva) il buffer I2S si svuota
     const uint32_t gap = t0 - lastPlayUs_;
@@ -318,7 +302,6 @@ void AudioIo::playTimingLine(char* buf, size_t cap) const {
 
 void AudioIo::playLost() {
   ampOn();
-  primePlayback();
   back_.processLost(spkPcm_);  // silenzio, ma si scrive comunque per mantenere il ritmo
   writeMono(spkPcm_, back_.outputSamplesPerFrame());
 }
