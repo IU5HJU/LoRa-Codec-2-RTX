@@ -314,6 +314,14 @@ async function scenario(name, fn) {
     await until(p, () => document.querySelectorAll('#hwCodecOut tr').length === 3, null, 12000);
     check('sospetto sul Codec2', (await p.textContent('#hwCodecOut')).includes('sospetto sul Codec2'));
   });
+  await scenario('Codec2: errore immediato della scheda', async (p) => {
+    await connect(p);
+    await p.evaluate(() => { window.__st.codecErr = 'memoria: 10 frame su 75, blocco libero piu\' grande 4096 byte'; });
+    await p.click('#hwCodec');
+    await until(p, () => document.getElementById('hwCodecOut').textContent.startsWith('Errore'), null, 5000);
+    const t = await p.textContent('#hwCodecOut');
+    check('mostra l\'errore vero, non "nessuna risposta"', t.includes('memoria') && !t.includes('nessuna risposta'), t);
+  });
   await scenario('Codec2: registrazione debole', async (p) => {
     await connect(p);
     await p.evaluate(() => { window.__st.codec = { raw: -70.0, rawPeak: 50, dec: -71.0, decPeak: 40 }; });

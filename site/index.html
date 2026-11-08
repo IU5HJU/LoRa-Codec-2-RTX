@@ -482,9 +482,11 @@
     sinks.push(sink);
     try {
       showHw('hwTonesOut', 'Ascolta i toni… Fase 1: senza radio. Fase 2: gli stessi toni mentre la scheda trasmette (antenna collegata). Circa 10 secondi.');
+      const fin = waitFor(/^CFG AUDIO fine/, 25000);
+      fin.catch(() => {});
       const ack = await send('CFG TEST AUDIO', /^CFG (OK|ERR) audio/);
       if (ack.startsWith('CFG ERR')) throw new Error(ack);
-      await waitFor(/^CFG AUDIO fine/, 25000);
+      await fin;
       const toRow = (m) => { const base = Number(m.base), tone = Number(m.tone), d = tone - base; return { f: Number(m.f), base, tone, d, verdict: d >= 10 ? 'sentito' : d >= 3 ? 'dubbio' : 'non sentito' }; };
       const rows = got.map(toRow);
       const rows2 = gotRf.map(toRow);
@@ -541,9 +543,13 @@
     sinks.push(sink);
     try {
       showHw('hwCodecOut', 'Dopo il bip parla per 3 secondi… poi ascolta i due riascolti (1: senza Codec2, 2: con Codec2). Circa 12 secondi in tutto.');
+      // La riga finale si attende PRIMA di mandare il comando: un errore immediato (per esempio di memoria) arriva
+      // quasi insieme alla conferma e, attesa dopo, andrebbe persa ("nessuna risposta").
+      const fin = waitFor(/^CFG CODEC (fine|ERR)/, 30000);
+      fin.catch(() => {});
       const ack = await send('CFG TEST CODEC', /^CFG (OK|ERR) /);
       if (ack.startsWith('CFG ERR')) throw new Error(ack.includes('comando') ? 'questo firmware non ha la prova del Codec2: aggiornalo' : ack);
-      await waitFor(/^CFG CODEC (fine|ERR)/, 30000);
+      await fin;
       if (err) throw new Error(err);
       if (!res) throw new Error('risposta incompleta dalla scheda');
       const raw = Number(res.raw), dec = Number(res.dec);

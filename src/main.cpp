@@ -253,15 +253,25 @@ static void runCodecTest() {
     Serial.println("CFG CODEC ERR occupata");
     return;
   }
-  int16_t* raw = static_cast<int16_t*>(malloc(kFrames * lcr::kFrameSamples * sizeof(int16_t)));
-  int16_t* dec = static_cast<int16_t*>(malloc(kFrames * lcr::kFrameSamples * sizeof(int16_t)));
-  if (!raw || !dec) {
-    free(raw);
-    free(dec);
-    Serial.println("CFG CODEC ERR memoria");
+  // Un blocco da 640 byte per frame: la memoria libera e' frammentata e un unico buffer da 48 KB non si trova.
+  static int16_t* raw[kFrames];
+  static uint8_t frames[kFrames * lcr::kFrameBytes];
+  size_t allocated = 0;
+  for (; allocated < kFrames; allocated++) {
+    raw[allocated] = static_cast<int16_t*>(malloc(lcr::kFrameSamples * sizeof(int16_t)));
+    if (!raw[allocated]) break;
+  }
+  auto freeAll = [&]() {
+    for (size_t i = 0; i < allocated; i++) free(raw[i]);
+    allocated = 0;
+  };
+  if (allocated < kFrames) {
+    Serial.printf("CFG CODEC ERR memoria: %u frame su %u, blocco libero piu' grande %u byte\n",
+                  static_cast<unsigned>(allocated), static_cast<unsigned>(kFrames),
+                  static_cast<unsigned>(ESP.getMaxAllocHeap()));
+    freeAll();
     return;
   }
-  static uint8_t frames[kFrames * lcr::kFrameBytes];
 
   ui.showMessage("PARLA", "dopo il bip: 3 s");
   audio.beep(1000, 120);
@@ -270,7 +280,7 @@ static void runCodecTest() {
   size_t got = 0;
   const uint32_t t0 = millis();
   while (got < kFrames && millis() - t0 < 6000) {
-    if (!audio.mic().readFrame(raw + got * lcr::kFrameSamples)) {
+    if (!audio.mic().readFrame(raw[got])) {
       delay(3);
       continue;
     }
@@ -278,56 +288,61 @@ static void runCodecTest() {
   }
   audio.mic().stop();
   if (got < kFrames) {
-    free(raw);
-    free(dec);
+    freeAll();
     Serial.printf("CFG CODEC ERR microfono: registrati solo %u frame\n", static_cast<unsigned>(got));
     return;
   }
 
   const uint32_t e0 = millis();
-  for (size_t i = 0; i < kFrames; i++) codec.encode(raw + i * lcr::kFrameSamples, frames + i * lcr::kFrameBytes);
+  for (size_t i = 0; i < kFrames; i++) codec.encode(raw[i], frames + i * lcr::kFrameBytes);
   const uint32_t encMs = millis() - e0;
-  const uint32_t d0 = millis();
-  for (size_t i = 0; i < kFrames; i++) codec.decode(frames + i * lcr::kFrameBytes, dec + i * lcr::kFrameSamples);
-  const uint32_t decMs = millis() - d0;
-
-  auto rmsDb = [](const int16_t* p, size_t n, int& peakOut) {
-    double sq = 0;
-    int pk = 0;
-    for (size_t i = 0; i < n; i++) {
-      sq += static_cast<double>(p[i]) * p[i];
-      const int a = p[i] < 0 ? -p[i] : p[i];
-      if (a > pk) pk = a;
-    }
-    peakOut = pk;
-    return 10.0 * log10(sq / static_cast<double>(n) / (32768.0 * 32768.0) + 1e-12);
-  };
-  int pkRaw = 0, pkDec = 0;
-  const double rRaw = rmsDb(raw, kFrames * lcr::kFrameSamples, pkRaw);
-  const double rDec = rmsDb(dec, kFrames * lcr::kFrameSamples, pkDec);
-  Serial.printf("CFG CODEC raw=%.1f rawpeak=%d dec=%.1f decpeak=%d encms=%u decms=%u frames=%u\n", rRaw, pkRaw, rDec,
-                pkDec, static_cast<unsigned>(encMs), static_cast<unsigned>(decMs), static_cast<unsigned>(kFrames));
   for (size_t i = 0; i < kFrames * lcr::kFrameBytes; i += 60) {
     Serial.print("CFG CODEC hex ");
     for (size_t k = i; k < i + 60 && k < kFrames * lcr::kFrameBytes; k++) Serial.printf("%02x", frames[k]);
     Serial.println();
   }
 
+  double sqRaw = 0, sqDec = 0;
+  int pkRaw = 0, pkDec = 0;
+  auto accumulate = [](const int16_t* p, double& sq, int& pk) {
+    for (size_t i = 0; i < lcr::kFrameSamples; i++) {
+      sq += static_cast<double>(p[i]) * p[i];
+      const int a = p[i] < 0 ? -p[i] : p[i];
+      if (a > pk) pk = a;
+    }
+  };
+
   const int savedVolume = audio.volumeStep();
   audio.setVolumeStep(10);
   ui.showMessage("ASCOLTO 1", "senza codec");
   delay(500);
   audio.resetBackEnd();
-  for (size_t i = 0; i < kFrames; i++) audio.speaker().playFrame(raw + i * lcr::kFrameSamples);
+  for (size_t i = 0; i < kFrames; i++) {
+    accumulate(raw[i], sqRaw, pkRaw);
+    audio.speaker().playFrame(raw[i]);
+  }
   delay(900);
+
   ui.showMessage("ASCOLTO 2", "con Codec2");
   delay(500);
   audio.resetBackEnd();
-  for (size_t i = 0; i < kFrames; i++) audio.speaker().playFrame(dec + i * lcr::kFrameSamples);
+  int16_t dec[lcr::kFrameSamples];  // un frame alla volta: la decodifica avviene durante l'ascolto
+  uint32_t decUs = 0;
+  for (size_t i = 0; i < kFrames; i++) {
+    const uint32_t d0 = micros();
+    codec.decode(frames + i * lcr::kFrameBytes, dec);
+    decUs += micros() - d0;
+    accumulate(dec, sqDec, pkDec);
+    audio.speaker().playFrame(dec);
+  }
   delay(900);
   audio.setVolumeStep(savedVolume);
-  free(raw);
-  free(dec);
+
+  const double n = static_cast<double>(kFrames * lcr::kFrameSamples) * 32768.0 * 32768.0;
+  Serial.printf("CFG CODEC raw=%.1f rawpeak=%d dec=%.1f decpeak=%d encms=%u decms=%u frames=%u\n",
+                10.0 * log10(sqRaw / n + 1e-12), pkRaw, 10.0 * log10(sqDec / n + 1e-12), pkDec,
+                static_cast<unsigned>(encMs), static_cast<unsigned>(decUs / 1000), static_cast<unsigned>(kFrames));
+  freeAll();
   Serial.println("CFG CODEC fine");
   ui.refresh();
 }
