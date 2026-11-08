@@ -1,6 +1,6 @@
 # Roadmap e decisioni
 
-Aggiornato il 5 novembre 2026. Ordine di lavoro concordato: prima la voce a turni (manca l'hardware audio), poi TOT e profili.
+Aggiornato l'8 novembre 2026 (sezione "Decisioni dell'8 novembre" sotto). Ordine di lavoro concordato: prima la voce a turni (manca l'hardware audio), poi TOT e profili.
 Già fatti, in anticipo: pagina web di installazione e configurazione, impostazioni nella scheda, prova di collegamento.
 
 ## 1. Prima trasmissione (fatta; resta la voce)
@@ -38,6 +38,44 @@ Modifiche al codice previste:
 - tabella dei profili nel core, guidata da dati, con test sul PC che verifica il limite del 70 % per ogni profilo;
 - facoltativo: bip a 10 s dalla fine del TOT;
 - il formato dei pacchetti cambia: le due schede devono avere la stessa versione.
+
+### Decisioni dell'8 novembre 2026: profili e modi (ragionamento, non ancora implementato)
+
+Definizioni (decise con IU5HJU):
+
+- **Più efficiente** = più portata e più correzione degli errori, **a scapito della qualità audio**.
+- **Alta qualità** = brevi distanze e la **massima fedeltà audio possibile**.
+
+Principi, che completano la tabella del 5 novembre:
+
+1. **Due assi indipendenti.** Il **modo del codec** (Codec2 450, 700C, 1200, 2400, 3200...) sta nel pacchetto e il ricevitore lo segue. Il **profilo radio** (SF, banda, coding rate, preambolo) no: il ricevitore LoRa ascolta **un solo** SF e una sola banda e non li riconosce da solo, quindi ogni profilo ha un **canale o una frequenza concordata**. Una scansione automatica dei profili richiede preamboli più lunghi (più tempo in aria): per ora no.
+2. **Fino a SF10/BW250 la voce regge in tempo reale; oltre no.** Con SF10/BW125 o SF11-SF12 trasmettere dura più del parlato (tabella sotto). **Il lungo raggio estremo è quindi un messaggio vocale e non una conversazione** (deciso l'8 novembre): si registra il messaggio (la parte di trasmissione c'è già: `CFG REC ON`, vedi [registra-e-trasmetti.md](registra-e-trasmetti.md)), la scheda lo trasmette più lentamente del parlato, e chi riceve lo **memorizza e lo riproduce a ricezione conclusa**. Con il tempo a disposizione si può fare **interleaving** profondo o ripetere i frame in momenti diversi, senza costo di tempo in aria (utile contro ombre da ostacoli e fading).
+3. **TOT in tempo in aria**, come già deciso (budget di 60 s in aria per turno). Per il messaggio il limite è sul tempo in aria: a SF12/BW125 sono circa 12 s di voce per ogni minuto in aria.
+4. **Qualità massima con il Codec2 = 3200 bps** su **SF7/BW500**. Oltre il Codec2 (banda stretta, circa 4 kHz) servirebbe **Opus a banda larga** (16-24 kbit/s) su SF6/BW500: da valutare dopo le misure (CPU dell'ESP32). La fedeltà dipende anche dall'hardware: l'altoparlante da 3 W senza contenitore ha una risposta molto irregolare ([prove.md](prove.md)).
+
+Numeri calcolati con la formula di Semtech (stime, rumore di 6 dB, 12 frame per pacchetto, parità 1 su 4, pause da 80 ms). "In aria" e "ciclo" sono percentuali del tempo reale della voce; la sensibilità è rispetto al profilo di oggi (1200, SF8/BW250):
+
+| Profilo | Codec2 | LoRa | Sensibilità | In aria | Ciclo | Uso |
+|---|---|---|---|---|---|---|
+| Lungo raggio | 450 | SF9/BW250 | +2,5 dB | 34 % | 55 % | tempo reale |
+| Lungo raggio | 450 | SF10/BW250 | +5 dB | 64 % | 85 % | tempo reale, al limite |
+| Messaggio | 450 | SF10/BW125 | +8 dB | 129 % | 149 % | messaggio |
+| Messaggio | 450 | SF11/BW125 | +10,5 dB | 274 % | 295 % | messaggio |
+| Messaggio | 450 | SF12/BW125 | +13 dB | 506 % | 526 % | messaggio |
+| **Standard (oggi)** | 1200 | SF8/BW250 | 0 dB | 33 % | 54 % | tempo reale |
+| Qualità | 3200 | SF8/BW500 | -3 dB | 37 % | 58 % | breve distanza |
+| Qualità | 3200 | SF7/BW500 | -5,5 dB | 21 % | 42 % | breve distanza |
+
+Le **pause da 80 ms** tra i pacchetti valgono circa il 21 % del tempo di voce (5 pause ogni 1,92 s): ridurle vale quanto cambiare codec. Più protezione costa tempo: con CR 4/8 e 2 pacchetti di parità su 4, SF9/BW250 sale all'81 % e SF10/BW250 al 131 % (non regge). Quanta protezione serve dipende da come sono fatte le perdite sul campo.
+
+Differenze rispetto alla tabella del 5 novembre: il livello Qualità diventa 3200 su BW500 (non 2400 su BW250), e il livello 1 (450 su SF9/BW125) resta una proposta da confrontare ad orecchio. **La banda a 500 kHz va verificata con il piano di banda** e le bande strette (62,5 kHz e meno) richiedono un quarzo preciso (TCXO) da verificare sulle schede.
+
+Ordine di lavoro concordato:
+
+1. **Ascolto comparativo** dei modi Codec2 sulla stessa registrazione (estensione di `CFG TEST CODEC`) e misura di CPU e RAM per modo sulla T3; verificare che la libreria `esp32_codec2` li supporti tutti.
+2. **Profili in tempo reale** (Qualità e Lungo raggio): nuovi modi con dimensioni di frame diverse, impostazioni radio per profilo, sequenza a 16 bit.
+3. **Messaggio vocale a lunga portata**: ricezione che memorizza e riproduce, interleaving, limite in tempo in aria.
+4. **Misure sul campo** (RSSI, SNR, errore di frequenza e perdite per pacchetto, anche in movimento) per decidere quanta protezione serve davvero.
 
 ## 3. Pagina web di configurazione (dopo il TOT)
 
