@@ -7,7 +7,7 @@ CORE := $(wildcard lib/voicecore/*.cpp)
 HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
 TESTS := packet stream node button audio output pins battery settings link level tone decode amp
 
-.PHONY: test test-page test-py lcr_decode clean
+.PHONY: test test-page test-py lcr_decode pdf clean
 test: $(addprefix build/test_,$(TESTS))
 	@for t in $^; do ./$$t || exit 1; done
 
@@ -17,6 +17,10 @@ build/test_%: tests/test_%.cpp $(CORE) $(HDRS)
 
 clean:
 	rm -rf build
+
+# Rigenera docs/formato-pacchetto.pdf dal codice (serve reportlab: pip install reportlab).
+pdf:
+	python3 tools/make_formato_pacchetto_pdf.py
 
 # Prova della pagina web con un dispositivo seriale finto (serve Node e il modulo playwright con Chromium).
 test-page:
