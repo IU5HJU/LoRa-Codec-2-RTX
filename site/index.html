@@ -156,7 +156,7 @@
     <div id="hwTonesOut" class="hwout" role="status"></div>
 
     <h3>Codec2 sulla scheda (senza radio)</h3>
-    <p class="muted">Per capire se il guasto è nel Codec2. Dopo il bip <strong>parla per 3 secondi</strong> vicino al microfono. Poi la scheda riproduce <strong>due volte</strong> la tua voce: la <strong>1ª così com'è</strong>, la <strong>2ª dopo essere passata dal Codec2</strong> (codifica e decodifica). Confronta a orecchio: la 2ª deve somigliare alla 1ª, un po' più "robotica". Se la 1ª è chiara e la 2ª è solo crepitii, il difetto è nel Codec2 sulla scheda. Una scheda sola, nessuna trasmissione.</p>
+    <p class="muted">Per capire se il guasto è nel Codec2. Dopo il bip <strong>parla per 3 secondi</strong> vicino al microfono. Poi la scheda riproduce <strong>quattro volte</strong> la tua voce: la <strong>1ª così com'è</strong>; la <strong>2ª dopo il Codec2</strong> (codifica e decodifica); la <strong>3ª</strong> e la <strong>4ª</strong> sono la stessa del Codec2 ma scritte <strong>al ritmo della ricezione</strong> (un frame ogni 40 ms), la 3ª con il display che si ridisegna come in ricezione, la 4ª senza display. Confronta a orecchio e dimmi quali sono chiare e quali con crepitii: 1ª e 2ª chiare ma 3ª o 4ª no = il guasto è nelle condizioni della ricezione (ritmo di scrittura o display); 3ª no e 4ª sì = il display; 2ª no = il Codec2. Una scheda sola, nessuna trasmissione.</p>
     <button id="hwCodec" type="button" disabled>Prova il Codec2</button>
     <div id="hwCodecOut" class="hwout" role="status"></div>
 
@@ -542,10 +542,10 @@
     };
     sinks.push(sink);
     try {
-      showHw('hwCodecOut', 'Dopo il bip parla per 3 secondi… poi ascolta i due riascolti (1: senza Codec2, 2: con Codec2). Circa 12 secondi in tutto.');
+      showHw('hwCodecOut', 'Dopo il bip parla per 3 secondi… poi ascolta i quattro riascolti (1: senza Codec2, 2: con Codec2, 3: a ritmo di ricezione con display, 4: senza display). Circa 20 secondi in tutto.');
       // La riga finale si attende PRIMA di mandare il comando: un errore immediato (per esempio di memoria) arriva
       // quasi insieme alla conferma e, attesa dopo, andrebbe persa ("nessuna risposta").
-      const fin = waitFor(/^CFG CODEC (fine|ERR)/, 30000);
+      const fin = waitFor(/^CFG CODEC (fine|ERR)/, 60000);
       fin.catch(() => {});
       const ack = await send('CFG TEST CODEC', /^CFG (OK|ERR) /);
       if (ack.startsWith('CFG ERR')) throw new Error(ack.includes('comando') ? 'questo firmware non ha la prova del Codec2: aggiornalo' : ack);
@@ -560,7 +560,7 @@
       else { txt = 'I livelli sono coerenti. Il giudizio è del tuo orecchio: la 2ª riproduzione deve essere comprensibile come la 1ª.'; cls = 'ok'; }
       showHw('hwCodecOut', '<table><tr><th></th><th>Livello</th><th>Picco</th></tr><tr><td>Microfono (1ª)</td><td>' + raw.toFixed(1) + ' dBFS</td><td>' + res.rawpeak + '</td></tr><tr><td>Dopo il Codec2 (2ª)</td><td>' + dec.toFixed(1) + ' dBFS</td><td>' + res.decpeak + '</td></tr></table>' +
         '<p>' + txt + ' Tempo di codifica ' + res.encms + ' ms e di decodifica ' + res.decms + ' ms per ' + res.frames + ' frame (limite 3000 ms).</p>' +
-        '<p>Dimmi cosa hai sentito: 1ª chiara? 2ª comprensibile, robotica, crepitii? I frame codificati sono nel registro (righe <code>CFG CODEC hex</code>): copiali per il confronto sul PC.</p>', cls);
+        '<p>Dimmi cosa hai sentito in ciascuno dei quattro ascolti: chiaro, robotico o con crepitii? I frame codificati sono nel registro (righe <code>CFG CODEC hex</code>): copiali per il confronto sul PC.</p>', cls);
     } catch (e) { showHw('hwCodecOut', 'Errore: ' + e.message, 'err'); }
     finally { const i = sinks.indexOf(sink); if (i >= 0) sinks.splice(i, 1); }
   }));

@@ -221,7 +221,7 @@ ConsoleResult SettingsConsole::test(const char* value, char* reply, size_t cap) 
   } else if (equalsIgnoreCase(value, "OFF")) {
     testMode_ = false;
   } else if (equalsIgnoreCase(value, "CODEC")) {
-    say(reply, cap, "CFG OK codec: parla per 3 secondi dopo il bip, poi ascolta due volte (senza e con Codec2)");
+    say(reply, cap, "CFG OK codec: parla per 3 secondi dopo il bip, poi ascolta quattro volte (senza e con Codec2, poi a ritmo di ricezione)");
     return ConsoleResult::CodecTest;
   } else if (equalsIgnoreCase(value, "AUDIO")) {
     say(reply, cap, "CFG OK audio prova in corso: ascolta i toni due volte, senza e con la radio (circa 10 secondi)");

@@ -64,7 +64,7 @@
     } else if (cmd === 'TEST' && (t[2] === 'ON' || t[2] === 'OFF')) {
       st.test = t[2] === 'ON'; out('CFG OK test=' + (st.test ? 'on' : 'off'));
     } else if (cmd === 'TEST' && t[2] === 'CODEC') {
-      const ackLine = 'CFG OK codec: parla per 3 secondi dopo il bip, poi ascolta due volte (senza e con Codec2)';
+      const ackLine = 'CFG OK codec: parla per 3 secondi dopo il bip, poi ascolta quattro volte (senza e con Codec2, poi a ritmo di ricezione)';
       // Errore immediato: arriva nello stesso blocco di byte della conferma, come sulla scheda vera.
       if (st.codecErr) return out(ackLine + '\r\nCFG CODEC ERR ' + st.codecErr);
       out(ackLine);

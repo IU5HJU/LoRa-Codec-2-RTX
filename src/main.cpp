@@ -242,8 +242,8 @@ static void runAudioTest() {
   ui.refresh();
 }
 
-// Prova del Codec2 sulla scheda, con una scheda sola e senza radio (CFG TEST CODEC): 3 secondi dal microfono, poi due
-// ascolti dalla stessa registrazione: 1) l'audio del microfono cosi' com'e', 2) lo stesso audio dopo codifica e
+// Prova del Codec2 sulla scheda, con una scheda sola e senza radio (CFG TEST CODEC): 3 secondi dal microfono, poi
+// quattro ascolti dalla stessa registrazione (i primi due sotto; il 3 e il 4 a ritmo di ricezione, con e senza display): 1) l'audio del microfono cosi' com'e', 2) lo stesso audio dopo codifica e
 // decodifica Codec2. Entrambi passano dallo stesso percorso di riproduzione della ricezione. Confronto a orecchio e nei
 // livelli: se il 1 e' buono e il 2 no, il guasto e' nel Codec2 sulla scheda. I frame codificati vengono stampati in
 // esadecimale, per decodificarli sul PC con il Codec2 di riferimento.
@@ -336,6 +336,30 @@ static void runCodecTest() {
     audio.speaker().playFrame(dec);
   }
   delay(900);
+
+  // Ascolti 3 e 4: gli stessi frame decodificati, ma a ritmo di ricezione (un frame ogni 40 ms, come fa il loop), il
+  // 3 con il display che si ridisegna come in ricezione, il 4 senza. Se il 2 e' buono e uno di questi no, il guasto
+  // e' nelle condizioni della ricezione (ritmo di scrittura, display) e non nel codec o nell'altoparlante.
+  for (int run = 3; run <= 4; run++) {
+    const bool withUi = run == 3;
+    ui.showMessage(withUi ? "ASCOLTO 3" : "ASCOLTO 4", withUi ? "ritmo RX + display" : "ritmo RX, no display");
+    delay(500);
+    audio.resetBackEnd();
+    uint32_t next = millis();
+    for (size_t i = 0; i < kFrames; i++) {
+      while (static_cast<int32_t>(millis() - next) < 0) {
+        if (withUi) {
+          ui.loop(millis(), lcr::VoiceNode::State::Receiving, audio.volumeStep(), static_cast<int>(radio.lastRssi()),
+                  radio.lastSnr(), battery.volts());
+        }
+        delay(1);
+      }
+      codec.decode(frames + i * lcr::kFrameBytes, dec);
+      audio.speaker().playFrame(dec);
+      next += lcr::kFrameMs;
+    }
+    delay(900);
+  }
   audio.setVolumeStep(savedVolume);
 
   const double n = static_cast<double>(kFrames * lcr::kFrameSamples) * 32768.0 * 32768.0;
