@@ -247,6 +247,19 @@ static void runAudioTest() {
 // decodifica Codec2. Entrambi passano dallo stesso percorso di riproduzione della ricezione. Confronto a orecchio e nei
 // livelli: se il 1 e' buono e il 2 no, il guasto e' nel Codec2 sulla scheda. I frame codificati vengono stampati in
 // esadecimale, per decodificarli sul PC con il Codec2 di riferimento.
+// Frame in esadecimale, righe da 60 byte, con un prefisso: serve a confrontare cio' che si trasmette con cio' che si
+// riceve (stesso numero di frame e stessi byte se la radio e il protocollo non alterano nulla).
+static void printFrameHex(const char* tag, const uint8_t* data, size_t frames) {
+  Serial.printf("%s %u frame\n", tag, static_cast<unsigned>(frames));
+  const size_t total = frames * lcr::kFrameBytes;
+  for (size_t i = 0; i < total; i += 60) {
+    Serial.print(tag);
+    Serial.print(' ');
+    for (size_t k = i; k < i + 60 && k < total; k++) Serial.printf("%02x", data[k]);
+    Serial.println();
+  }
+}
+
 static void runCodecTest() {
   constexpr size_t kFrames = 75;  // 3 secondi
   if (node->state() != lcr::VoiceNode::State::Idle) {
@@ -367,6 +380,7 @@ static void runCodecTest() {
                 10.0 * log10(sqRaw / n + 1e-12), pkRaw, 10.0 * log10(sqDec / n + 1e-12), pkDec,
                 static_cast<unsigned>(encMs), static_cast<unsigned>(decUs / 1000), static_cast<unsigned>(kFrames));
   freeAll();
+  codec.logReset();  // i frame della prova non devono finire nel confronto [tx-hex] / [rx-hex]
   Serial.println("CFG CODEC fine");
   ui.refresh();
 }
@@ -506,10 +520,16 @@ void loop() {
     if (line[0]) Serial.println(line);
     audio.playTimingLine(line, sizeof(line));
     if (line[0]) Serial.println(line);
+    printFrameHex("[rx-hex]", codec.decLog(), codec.decLogCount());
+    codec.logReset();
     if (codec.decodeAvgUs() > 0)
       Serial.printf("[rx-codec] decodifica Codec2: media %u ms, massimo %u ms per frame (limite 40 ms)\n",
                     static_cast<unsigned>(codec.decodeAvgUs() / 1000), static_cast<unsigned>(codec.decodeMaxUs() / 1000));
     codec.resetTiming();
+  }
+  if (prevState == lcr::VoiceNode::State::Transmitting && st != lcr::VoiceNode::State::Transmitting) {
+    printFrameHex("[tx-hex]", codec.encLog(), codec.encLogCount());
+    codec.logReset();
   }
   prevState = st;
 

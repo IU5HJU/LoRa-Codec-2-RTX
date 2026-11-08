@@ -5,6 +5,7 @@
 #include <codec2.h>
 
 #include "interfaces.h"
+#include "protocol.h"
 
 class Codec2Adapter : public lcr::ICodec {
  public:
@@ -23,7 +24,19 @@ class Codec2Adapter : public lcr::ICodec {
   uint32_t decodeAvgUs() const { return decN_ ? static_cast<uint32_t>(decSumUs_ / decN_) : 0; }
   uint32_t decodeMaxUs() const { return decMaxUs_; }
 
+  // Registro dei frame codificati e di quelli decodificati (i primi kLogFrames dopo logReset()), per confrontare in
+  // seriale i frame trasmessi con quelli ricevuti ([tx-hex] e [rx-hex]).
+  static constexpr size_t kLogFrames = 300;  // 12 s
+  void logReset() { encLogN_ = decLogN_ = 0; }
+  size_t encLogCount() const { return encLogN_; }
+  size_t decLogCount() const { return decLogN_; }
+  const uint8_t* encLog() const { return encLog_; }
+  const uint8_t* decLog() const { return decLog_; }
+
  private:
+  uint8_t encLog_[kLogFrames * lcr::kFrameBytes];
+  uint8_t decLog_[kLogFrames * lcr::kFrameBytes];
+  size_t encLogN_ = 0, decLogN_ = 0;
   uint32_t encMaxUs_ = 0, decMaxUs_ = 0, encN_ = 0, decN_ = 0;
   uint64_t encSumUs_ = 0, decSumUs_ = 0;
   struct CODEC2* c2_ = nullptr;
