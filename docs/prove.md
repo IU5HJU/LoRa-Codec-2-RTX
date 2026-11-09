@@ -225,7 +225,8 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Posizione nel pacchetto START** (protocollo 2):
   - A: `CFG SET QTH 43.7696,11.2558`, `CFG SET POS ON`, riavvio. B: `CFG SET QTH 43.8000,11.2000`, profilo Standard, riavvio (coordinate di fantasia, non il QTH vero). Le risposte `CFG OK qth=…` e `CFG OK profile=std` sono arrivate.
   - Con il PTT premuto sulla A, sul display della B è comparso **"Distanza 5.6km"**, uguale al valore calcolato tra i due punti (5,61 km). Il blocco da 7 byte, la sua decodifica e il calcolo della distanza funzionano su due schede vere.
-  - **Non ancora provato:** il test "posizione spenta" (A con `CFG SET POS OFF`: la distanza non deve comparire sulla B), la riga "Ultimo NOMINATIVO 5.6km" a fine ricezione, la distanza in modo Messaggio e il GPS della T-Beam.
+  - **Provato dopo, sempre il 09/11/2026:** con `CFG SET POS OFF` sulla A la distanza **non compare** sulla B (la posizione spenta di default funziona), e a fine ricezione la riga **"Ultimo NOMINATIVO 5.6km"** compare con la posizione accesa. Entrambi **funzionano**.
+  - **Non ancora provato:** la distanza in modo Messaggio e il GPS della T-Beam.
 - Problemi incontrati:
   - PuTTY dava "impossibile aprire la porta": la pagina web del progetto era aperta in **due schede di Chrome** e teneva occupata la porta seriale. Chiuse le schede, la porta si è aperta. **La seriale si apre da un solo programma alla volta.**
   - In PuTTY il controllo di flusso era su XON/XOFF: per la scheda va messo su **None**.
