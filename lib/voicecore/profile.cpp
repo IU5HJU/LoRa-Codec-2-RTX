@@ -15,8 +15,9 @@ const Profile kProfiles[kProfileCount] = {
     {kProfileStandard, "std", "Standard", 8, 250.0f, 5, 12, kMaxTurnMs, false, kPrebufferFrames, kPrebufferTimeoutMs,
      kSessionTimeoutMs},
     // Messaggio: SF12/BW125 (+13 dB). Un pacchetto da 77 byte dura circa 3,4 s in aria: la ricezione aspetta la fine del
-    // messaggio (o 12 s di silenzio) prima di riprodurlo. 10 s di voce a 1200 bps sono circa 91 s in aria.
-    {kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, 10000, true, kNever, 0x7FFFFFFFu, 12000},
+    // messaggio (o 12 s di silenzio) prima di riprodurlo. Limite di durata: 30 s di voce, come lo Standard (deciso il
+    // 9 novembre, "al momento"); a 1200 bps sono circa 271 s (4,5 minuti) in aria, con il Codec2 450 circa 160 s.
+    {kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, kMaxTurnMs, true, kNever, 0x7FFFFFFFu, 12000},
 };
 
 }  // namespace

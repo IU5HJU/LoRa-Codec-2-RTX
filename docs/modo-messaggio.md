@@ -8,13 +8,16 @@ Il profilo **Messaggio** serve per il **lungo raggio estremo**. Non è una conve
 
 - Radio: **SF12, banda 125 kHz**, coding rate 4/5 (circa **+13 dB** di sensibilità rispetto allo Standard SF8/BW250).
 - Codec2 **1200** (per ora: il 450 o il 700C, più compatti, arriveranno nel passo successivo).
-- Durata massima di un messaggio: **10 secondi di voce**.
+- Durata massima di un messaggio: **30 secondi di voce** (deciso il 09/11/2026, "al momento": come lo Standard).
 
 | Voce | Tempo in aria (stima, Codec2 1200) |
 |---|---|
 | 3 s | circa 30 s |
 | 5 s | circa 48 s |
 | 10 s | circa 94 s |
+| **30 s (il massimo)** | **circa 271 s (4,5 minuti)** |
+
+Il tetto di 30 secondi occupa il canale per quasi cinque minuti con il Codec2 1200 (circa 160 s con il 450, quando ci sarà): è un limite, non un obiettivo. Per le prove usa messaggi brevi. Il limite in tempo in aria, come il budget di 60 s della roadmap, resta da decidere.
 
 Un pacchetto da 77 byte dura circa 3,4 secondi in aria: per questo il ricevitore aspetta la fine del messaggio (o 12 secondi di silenzio) prima di riprodurlo.
 
@@ -22,7 +25,7 @@ Un pacchetto da 77 byte dura circa 3,4 secondi in aria: per questo il ricevitore
 
 1. Su **tutte e due** le schede, dalla pagina di configurazione: **Profilo di trasmissione = Messaggio**, nominativo vero, stessa frequenza, poi "Salva e riavvia". (Oppure da seriale: `CFG SET PROFILE MSG`, `CFG REBOOT`.) Controlla con `CFG GET`: deve contenere `profile=msg`.
 2. All'accensione la seriale scrive `... pronto, profilo Messaggio, ... SF12 BW125` e il display mostra **MESSAGGIO**.
-3. Sulla scheda che trasmette: **tieni premuto il PTT e parla** (fino a 10 secondi), poi **rilascia**. Display: `REGISTRA`, poi `ATTESA` (1 secondo), poi `INVIO`.
+3. Sulla scheda che trasmette: **tieni premuto il PTT e parla** (fino a 30 secondi), poi **rilascia**. Display: `REGISTRA`, poi `ATTESA` (1 secondo), poi `INVIO`.
 4. Sulla scheda che riceve: `Ricevo il messaggio` con RSSI e SNR. **Non si sente niente finché il messaggio non è arrivato tutto**; poi `Riproduco messaggio`.
 5. Riporta: la durata del messaggio, quanto ha impiegato ad arrivare, le righe `[rx]`, `RX fine:` e `[rx-audio]` del ricevitore e come suona.
 
@@ -34,7 +37,7 @@ Per le prime prove usa messaggi **brevi** (3-5 secondi): bastano 30-50 secondi i
 
 - Il modo "registra e trasmetti" è **sempre acceso** (`CFG REC OFF` non lo spegne).
 - La **prova di collegamento** (tre clic sul PTT) non c'è: 12 secondi di frame a SF12 sarebbero circa 17 minuti in aria.
-- Il limite di durata è quello del profilo (10 secondi), non i 30 secondi dello Standard.
+- Il limite di durata è quello del profilo (30 secondi di voce, come lo Standard), ma il tempo in aria è molto maggiore (vedi sopra).
 
 ## Cosa manca (prossimi passi, in ordine)
 

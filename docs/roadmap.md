@@ -76,7 +76,7 @@ Differenze rispetto alla tabella del 5 novembre: il livello Qualità diventa 320
 
 | Profilo | Codec2 | Radio | Uso | TOT |
 |---|---|---|---|---|
-| **Messaggio** (lungo raggio estremo) | 450 o 700C, da scegliere ad orecchio | **SF12/BW125** (+13 dB) | registra e invia, ricezione che memorizza e riproduce | limite in tempo in aria (parametro, per esempio 90 s) |
+| **Messaggio** (lungo raggio estremo) | 450 o 700C, da scegliere ad orecchio | **SF12/BW125** (+13 dB) | registra e invia, ricezione che memorizza e riproduce | **30 s di voce, al momento** (deciso il 9 novembre; a 1200 bps sono circa 271 s in aria): il limite in tempo in aria resta da decidere |
 | **Standard** (oggi) | 1200 | SF8/BW250 | tempo reale | 180 s (regola del 5 novembre) |
 | **Qualità** | **3200**, ripiego **2400** se la CPU non regge | **SF7/BW250** (-2,5 dB) | tempo reale, breve distanza | 120 s (41 % in aria: 60 s / 0,41 = 146 s, gradino 120) |
 
