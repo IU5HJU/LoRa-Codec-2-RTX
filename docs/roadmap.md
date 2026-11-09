@@ -218,3 +218,4 @@ Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etich
 - Frequenza di lavoro: ancora il segnaposto 433,900 MHz in `src/user_config.h`, da scegliere col band plan IARU R1 / ARI.
 - Licenza: scelta la **GPL-3.0** (file `LICENSE`), coerente con la libreria `esp32_codec2` (vedi [firmware.md](firmware.md)).
 - Prove su scheda: collegamento nei due versi tra T-Beam e T3, microfono, prova di collegamento (5 novembre); altoparlante e voce a turni ancora da provare (vedi [prove.md](prove.md)).
+- **Percentuale di avanzamento nel modo Messaggio (richiesta del 09/11/2026, da fare dopo le prove):** il display deve mostrare da 1% a 100%, in trasmissione e in ricezione, perché un messaggio lungo dura minuti e sembra bloccato. TX: la lunghezza è nota dopo la registrazione. RX: il pacchetto START deve dichiarare quanti pacchetti seguono (campo nell'intestazione del modo Messaggio, protocollo v2).
