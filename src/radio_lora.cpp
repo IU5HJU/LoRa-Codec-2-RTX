@@ -23,8 +23,10 @@ bool RadioLora::begin(const lcr::Settings& settings) {
   SPI.begin(pins::kRadioSclk, pins::kRadioMiso, pins::kRadioMosi, pins::kRadioCs);
   radio_ = new SX1278(new Module(pins::kRadioCs, pins::kRadioDio0, pins::kRadioRst, pins::kRadioDio1, SPI));
 
-  int state = radio_->begin(settings.freqMhz(), LCR_BANDWIDTH_KHZ, LCR_SPREADING_FACTOR, LCR_CODING_RATE,
-                            LCR_SYNC_WORD, static_cast<int8_t>(settings.powerDbm), LCR_PREAMBLE_SYMBOLS);
+  // I parametri LoRa vengono dal profilo scelto (profile.h): Standard SF8/BW250, Messaggio SF12/BW125.
+  const lcr::Profile& prof = lcr::profileFor(settings.profile);
+  int state = radio_->begin(settings.freqMhz(), prof.bwKhz, prof.sf, prof.cr, LCR_SYNC_WORD,
+                            static_cast<int8_t>(settings.powerDbm), prof.preambleSymbols);
   if (state != RADIOLIB_ERR_NONE) {
     lastError_ = state;
     return false;

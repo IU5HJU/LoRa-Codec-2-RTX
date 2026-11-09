@@ -60,6 +60,8 @@ class INotifier {
   virtual void pttDenied(DenyReason r) { (void)r; }
   virtual void rxStarted() {}
   virtual void rxCallsign(const char* callsign) { (void)callsign; }
+  // Inizia la riproduzione di una ricezione (nel profilo Messaggio avviene a ricezione conclusa).
+  virtual void rxPlaybackStarted() {}
   virtual void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) {
     (void)callsign;
     (void)lostFrames;

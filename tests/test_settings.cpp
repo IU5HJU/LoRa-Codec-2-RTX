@@ -94,7 +94,7 @@ void testNotCommand() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 micfloor=-60 board=T3 reboot=0 test=0") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -192,6 +192,24 @@ void testTestMode() {
   CHECK(!g.con.testMode());
 }
 
+void testProfile() {
+  Fixture f;
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "profile=std"));  // predefinito: Standard
+  CHECK(f.run("CFG SET PROFILE MSG") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK profile=msg") == 0);
+  CHECK(f.st.data.profile == kProfileMessage);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "profile=msg") && strstr(f.reply, "reboot=1"));  // vale dal riavvio
+  CHECK(f.run("cfg set profile std") == ConsoleResult::Ok && f.st.data.profile == kProfileStandard);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=0"));
+  const char* bad[] = {"CFG SET PROFILE", "CFG SET PROFILE XYZ", "CFG SET PROFILE MESSAGGIO", "CFG SET PROFILE 1"};
+  for (const char* b : bad) CHECK(f.run(b) == ConsoleResult::Error);
+  CHECK(strncmp((f.run("CFG SET PROFILE XYZ"), f.reply), "CFG ERR profile", 15) == 0);
+  CHECK(f.st.data.profile == kProfileStandard);
+  // Un valore salvato fuori dalla tabella non e' valido: si torna ai predefiniti
+  Settings s = f.st.data;
+  s.profile = 7;
+  CHECK(!isValidSettings(s));
+}
+
 void testMicFloor() {
   Fixture f;
   CHECK(f.run("CFG SET MICFLOOR -58") == ConsoleResult::Ok && f.st.data.micFloorDb == -58);
@@ -280,6 +298,7 @@ int main() {
   testSetVolume();
   testTestMode();
   testVersion();
+  testProfile();
   testMicFloor();
   testOther();
   testSmallBuffer();

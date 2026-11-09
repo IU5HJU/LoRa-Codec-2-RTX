@@ -153,11 +153,36 @@ async function scenario(name, fn, opts = {}) {
     const c = await cmds(p);
     const idx = (s) => c.indexOf(s);
     check('callsign maiuscolo', idx('CFG SET CALLSIGN IU5HJU') >= 0, c.join(' | '));
-    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG REBOOT'].map(idx);
+    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
     check('ordine dei comandi', order.every((v, i) => v >= 0 && (i === 0 || v > order[i - 1])), c.join(' | '));
     check('messaggio di salvataggio', (await status(p)).includes('Salvato'));
     const st = await p.evaluate(() => window.__st.cfg);
     check('valori nella scheda', st.callsign === 'IU5HJU' && st.freq === '434.125' && st.power === 12 && st.volume === 4);
+  });
+
+  await scenario('profilo di trasmissione: si legge, si cambia e si salva', async (p) => {
+    check('il menu del profilo e\' spento prima di collegare', await p.isDisabled('#profile'));
+    await connect(p);
+    check('menu attivo con un firmware che ha i profili', !(await p.isDisabled('#profile')));
+    check('profilo letto: Standard', (await p.inputValue('#profile')) === 'std');
+    const hint = await p.textContent('#profilehint');
+    check('spiega che profili diversi non si sentono', hint.includes('profili diversi non si sentono') && hint.includes('a ricezione conclusa'), hint);
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#profile', 'msg');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('CFG SET PROFILE msg inviato', (await cmds(p)).includes('CFG SET PROFILE msg'), (await cmds(p)).join(' | '));
+    check('profilo salvato nella scheda', (await p.evaluate(() => window.__st.cfg.profile)) === 'msg');
+  });
+
+  await scenario('profilo di trasmissione: firmware senza profili', async (p) => {
+    await p.evaluate(() => { window.__st.noProfile = true; });
+    await connect(p);
+    check('menu del profilo spento e nessun comando PROFILE', await p.isDisabled('#profile'));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('nessun CFG SET PROFILE con il firmware vecchio', !(await cmds(p)).some((c) => c.includes('PROFILE')), (await cmds(p)).join(' | '));
   });
 
   await scenario('errore del firmware su un valore: la pagina lo mostra e non riavvia', async (p) => {

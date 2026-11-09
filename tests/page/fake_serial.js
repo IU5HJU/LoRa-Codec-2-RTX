@@ -4,8 +4,9 @@
 // il test lo legge (cmds = comandi ricevuti) e lo modifica per simulare situazioni diverse.
 (() => {
   const st = window.__st = {
-    cfg: { callsign: 'N0CALL', freq: '433.900', power: 10, volume: 7, micfloor: -60 },
-    active: { callsign: 'N0CALL', freq: '433.900', power: 10, volume: 7 },
+    cfg: { callsign: 'N0CALL', freq: '433.900', power: 10, volume: 7, micfloor: -60, profile: 'std' },
+    active: { callsign: 'N0CALL', freq: '433.900', power: 10, volume: 7, profile: 'std' },
+    noProfile: false,     // firmware senza profili (piu' vecchio): CFG GET senza profile= e CFG SET PROFILE sconosciuto
     test: false,
     fw: 'abc1234',
     board: 't3',
@@ -21,8 +22,8 @@
   const later = (f) => setTimeout(f, st.delay);
   const get = () => {
     const c = st.cfg, a = st.active;
-    const reboot = (c.callsign !== a.callsign || c.freq !== a.freq || c.power !== a.power || c.volume !== a.volume) ? 1 : 0;
-    return `CFG callsign=${c.callsign} freq=${c.freq} power=${c.power} volume=${c.volume} micfloor=${c.micfloor} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}`;
+    const reboot = (c.callsign !== a.callsign || c.freq !== a.freq || c.power !== a.power || c.volume !== a.volume || c.profile !== a.profile) ? 1 : 0;
+    return `CFG callsign=${c.callsign} freq=${c.freq} power=${c.power} volume=${c.volume} micfloor=${c.micfloor}${st.noProfile ? '' : ' profile=' + c.profile} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}`;
   };
   const inRange = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
   const handle = (line) => {
@@ -50,6 +51,10 @@
       } else if (key === 'VOLUME') {
         if (!inRange(+v, 0, 10)) return out('CFG ERR volume da 0 a 10');
         st.cfg.volume = +v; out('CFG OK volume=' + v);
+      } else if (key === 'PROFILE' && !st.noProfile) {
+        const pv = v.toLowerCase();
+        if (pv !== 'std' && pv !== 'msg') return out('CFG ERR profile usa STD (Standard) oppure MSG (Messaggio)');
+        st.cfg.profile = pv; out('CFG OK profile=' + pv);
       } else if (key === 'MICFLOOR') {
         if (!inRange(+v, -80, -36)) return out('CFG ERR micfloor da -80 a -36');
         st.cfg.micfloor = +v; out('CFG OK micfloor=' + v);
@@ -57,7 +62,7 @@
     } else if (cmd === 'RESET') {
       st.cfg = { callsign: 'N0CALL', freq: '433.900', power: 10, volume: 7, micfloor: -60 }; out('CFG OK reset');
     } else if (cmd === 'REBOOT') {
-      out('CFG OK reboot'); st.active = { callsign: st.cfg.callsign, freq: st.cfg.freq, power: st.cfg.power, volume: st.cfg.volume };
+      out('CFG OK reboot'); st.active = { callsign: st.cfg.callsign, freq: st.cfg.freq, power: st.cfg.power, volume: st.cfg.volume, profile: st.cfg.profile };
       later(() => out(get()));
     } else if (cmd === 'TEST' && (t[2] === 'ON' || t[2] === 'OFF')) {
       st.test = t[2] === 'ON'; out('CFG OK test=' + (st.test ? 'on' : 'off'));

@@ -6,7 +6,21 @@ namespace lcr {
 
 VoiceNode::VoiceNode(const NodeConfig& cfg, IRadio& radio, ICodec& codec, IAudioIn& in, IAudioOut& out,
                      INotifier& notify)
-    : cfg_(cfg), radio_(radio), codec_(codec), in_(in), out_(out), notify_(notify) {}
+    : cfg_(cfg),
+      prof_(profileFor(cfg.profile)),
+      maxTurnFrames_(prof_.maxTurnMs / kFrameMs),
+      radio_(radio),
+      codec_(codec),
+      in_(in),
+      out_(out),
+      notify_(notify) {
+  RxStream::Config rc;
+  rc.prebufferFrames = prof_.rxPrebufferFrames;
+  rc.prebufferTimeoutMs = prof_.rxPrebufferTimeoutMs;
+  rc.sessionTimeoutMs = prof_.rxSessionTimeoutMs;
+  rx_.configure(rc);
+  recMode_ = prof_.message;  // registra e poi invia: il messaggio si trasmette solo a registrazione conclusa
+}
 
 uint16_t VoiceNode::makeSessionId() {
   if (cfg_.newSessionId) return cfg_.newSessionId();
@@ -25,7 +39,7 @@ void VoiceNode::pttPressed(uint32_t nowMs) {
   }
   // A riposo la pressione e' un clic oppure l'inizio di una trasmissione: lo si capisce da quanto dura.
   if (clickCount_ > 0 && nowMs - lastClickMs_ > kPttClickGapMs) clickCount_ = 0;
-  if (clickCount_ >= 2) {
+  if (clickCount_ >= 2 && !prof_.message) {
     // Terzo clic veloce: attiva o disattiva la prova di collegamento, senza trasmettere.
     clickCount_ = 0;
     testMode_ = !testMode_;
@@ -119,14 +133,14 @@ void VoiceNode::recTick(uint32_t nowMs) {
     case RecPhase::Recording: {
       int16_t pcm[kFrameSamples];
       for (int guard = 0; guard < 8 && recPhase_ == RecPhase::Recording && in_.readFrame(pcm); guard++) {
-        if (recCount_ >= kMaxTurnFrames) {
+        if (recCount_ >= maxTurnFrames_) {
           finishRecording(nowMs, true);
           break;
         }
         codec_.encode(pcm, recBuf_ + recCount_ * kFrameBytes);
         recCount_++;
       }
-      if (recPhase_ == RecPhase::Recording && recCount_ >= kMaxTurnFrames) finishRecording(nowMs, true);
+      if (recPhase_ == RecPhase::Recording && recCount_ >= maxTurnFrames_) finishRecording(nowMs, true);
       break;
     }
     case RecPhase::Waiting:
@@ -198,7 +212,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
   // radio_.send() e' bloccante: al tick successivo la trasmissione e' finita, da qui conta la pausa.
   if (justSent_) {
     justSent_ = false;
-    nextSendMs_ = nowMs + kInterPacketGapMs;
+    nextSendMs_ = nowMs + kInterPacketGapMs + cfg_.extraGapMs;
   }
   if (recPhase_ == RecPhase::Recording || recPhase_ == RecPhase::Waiting) {
     recTick(nowMs);
@@ -225,7 +239,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
     int16_t pcm[kFrameSamples];
     uint8_t frame[kFrameBytes];
     for (int guard = 0; guard < 8 && !releasing_ && in_.readFrame(pcm); guard++) {
-      if (framesCaptured_ >= kMaxTurnFrames) {
+      if (framesCaptured_ >= maxTurnFrames_) {
         finishCapture(true);
         break;
       }
@@ -236,7 +250,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
       }
       framesCaptured_++;
     }
-    if (!releasing_ && framesCaptured_ >= kMaxTurnFrames) finishCapture(true);
+    if (!releasing_ && framesCaptured_ >= maxTurnFrames_) finishCapture(true);
   }
 
   Packet p;
@@ -290,6 +304,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       }
       state_ = State::Receiving;
       nextPlayMs_ = nowMs;
+      playbackNotified_ = false;
       notify_.rxStarted();
     }
   }
@@ -312,6 +327,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
         linkRx_.onFrame(o.frame);  // prova: confronto con la sequenza attesa, nessun audio
         break;
       }
+      if (!playbackNotified_) {
+        playbackNotified_ = true;
+        notify_.rxPlaybackStarted();
+      }
       int16_t pcm[kFrameSamples];
       codec_.decode(o.frame, pcm);
       out_.playFrame(pcm);
@@ -321,6 +340,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       if (rxIsTest_) {
         linkRx_.onLost();
       } else {
+        if (!playbackNotified_) {
+          playbackNotified_ = true;
+          notify_.rxPlaybackStarted();
+        }
         out_.playLost();
       }
       break;

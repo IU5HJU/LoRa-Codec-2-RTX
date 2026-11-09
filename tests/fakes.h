@@ -111,6 +111,8 @@ class Notifier : public lcr::INotifier {
     lastDeny = r;
   }
   void rxStarted() override { rxStarts++; }
+  void rxPlaybackStarted() override { playbackStarts++; }
+  int playbackStarts = 0;
   void rxCallsign(const char* cs) override { callsign = cs; }
   void rxEnded(const char*, uint32_t lost, uint32_t rec) override {
     rxEnds++;

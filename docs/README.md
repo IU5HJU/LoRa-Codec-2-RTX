@@ -9,6 +9,7 @@
 | [formato-pacchetto.pdf](formato-pacchetto.pdf) | Formato del pacchetto radio in 2 pagine, da girare a chi lo chiede (sintesi di [protocollo.md](protocollo.md)) |
 | [note-rilascio/](note-rilascio/v0.1.0-beta.1.md) | Note di rilascio di ogni versione (da incollare nella release su GitHub) |
 | [ISTRUZIONI-SESSIONE-SDR.md](ISTRUZIONI-SESSIONE-SDR.md) | Testo da incollare in una nuova sessione per continuare la configurazione del ricevitore SDR |
+| [modo-messaggio.md](modo-messaggio.md) | Profilo Messaggio (lungo raggio estremo, SF12/BW125): come si prova e cosa manca |
 | [registra-e-trasmetti.md](registra-e-trasmetti.md) | Il PTT registra, un secondo dopo il rilascio la scheda trasmette: separa elaborazione e radio nelle prove |
 | [verifica-hardware-audio.md](verifica-hardware-audio.md) | Controllo del montaggio audio con una sola scheda, falsi positivi e negativi |
 | [taratura-microfono.md](taratura-microfono.md) | Misure sul microfono, AGC, fondo e come adattarlo a un altro microfono |

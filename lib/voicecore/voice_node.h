@@ -13,6 +13,7 @@
 
 #include "interfaces.h"
 #include "link_test.h"
+#include "profile.h"
 #include "protocol.h"
 #include "rx_stream.h"
 #include "tx_session.h"
@@ -24,6 +25,10 @@ struct NodeConfig {
   bool fec = true;  // parita' XOR 1 su 4
   // Generatore di ID di sessione (uno per PTT). Se nullptr usa un contatore.
   uint16_t (*newSessionId)() = nullptr;
+  // Profilo di trasmissione (profile.h): Standard o Messaggio.
+  uint8_t profile = kProfileStandard;
+  // Solo per i test: tempo aggiunto alla pausa tra i pacchetti per simulare il tempo in aria (la radio finta e' istantanea).
+  uint32_t extraGapMs = 0;
 };
 
 class VoiceNode {
@@ -41,14 +46,16 @@ class VoiceNode {
 
   // Prova di collegamento (non persistente): con la prova attiva il PTT trasmette frame di prova
   // invece della voce, e dopo aver ricevuto una prova la scheda risponde con il risultato.
-  void setTestMode(bool on) { testMode_ = on; }
+  // Nel profilo Messaggio la prova di collegamento non c'e' (12 s di frame a SF12 sarebbero circa 17 minuti in aria).
+  void setTestMode(bool on) { testMode_ = on && !prof_.message; }
   bool testMode() const { return testMode_; }
 
   // Modo "registra e poi trasmetti" (prova, non persistente): il PTT registra il messaggio senza trasmettere; dopo il
   // rilascio e un secondo di attesa la scheda lo trasmette. Serve a separare, nelle prove, la registrazione dalla
   // radio (nessuna elaborazione audio mentre la radio trasmette). Ignorato con la prova di collegamento attiva.
   enum class RecPhase { None, Recording, Waiting, Sending };
-  void setRecordMode(bool on) { recMode_ = on; }
+  // Nel profilo Messaggio il modo e' sempre acceso (non si puo' spegnere).
+  void setRecordMode(bool on) { recMode_ = on || prof_.message; }
   bool recordMode() const { return recMode_; }
   RecPhase recPhase() const { return recPhase_; }
   uint32_t recFrames() const { return recCount_; }
@@ -71,6 +78,8 @@ class VoiceNode {
   uint16_t makeSessionId();
 
   NodeConfig cfg_;
+  const Profile& prof_;
+  uint32_t maxTurnFrames_;
   IRadio& radio_;
   ICodec& codec_;
   IAudioIn& in_;
@@ -121,6 +130,7 @@ class VoiceNode {
   uint16_t replySession_ = 0;
   TestReport replyReport_;
   uint16_t notifiedSession_ = 0;
+  bool playbackNotified_ = false;  // rxPlaybackStarted() gia' segnalato in questa ricezione
 };
 
 }  // namespace lcr

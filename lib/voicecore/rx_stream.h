@@ -23,7 +23,15 @@ class RxStream {
     const uint8_t* frame;  // valido solo per Kind::Frame, fino alla chiamata successiva
   };
 
+  // Tempi di attesa della ricezione: di solito quelli di protocol.h; il profilo Messaggio aspetta la fine del messaggio.
+  struct Config {
+    size_t prebufferFrames = kPrebufferFrames;           // frame da accumulare prima di riprodurre
+    uint32_t prebufferTimeoutMs = kPrebufferTimeoutMs;   // attesa massima per il pre-buffer
+    uint32_t sessionTimeoutMs = kSessionTimeoutMs;       // silenzio dopo cui la trasmissione e' chiusa
+  };
+
   RxStream() { reset(); }
+  void configure(const Config& c) { cfg_ = c; }
   void reset();
 
   // Ritorna true se il pacchetto appartiene alla trasmissione in corso (o ne
@@ -56,6 +64,7 @@ class RxStream {
   void tryRecoverAll();
   void finish();
 
+  Config cfg_;
   Phase phase_;
   uint16_t session_;
   bool fec_;

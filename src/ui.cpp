@@ -64,7 +64,8 @@ void UiNotifier::txStarted() {
 void UiNotifier::txEnded(bool turnLimitReached) {
   limitHit_ = turnLimitReached;
   if (turnLimitReached) {
-    notice_ = "LIMITE 30 s";
+    snprintf(noticeBuf_, sizeof(noticeBuf_), "LIMITE %lu s", static_cast<unsigned long>(maxTurnSec_));
+    notice_ = noticeBuf_;
     noticeUntilMs_ = millis() + 2000;
   }
   dirty_ = true;
@@ -85,6 +86,7 @@ void UiNotifier::pttDenied(lcr::DenyReason r) {
 
 void UiNotifier::rxStarted() {
   rxCall_[0] = 0;
+  playing_ = false;
   haveLast_ = false;
   dirty_ = true;
 }
@@ -219,7 +221,7 @@ void UiNotifier::draw(uint32_t nowMs) {
 
   char big[24];
   switch (state_) {
-    case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", testMode_ ? "PROVA ON" : "ASCOLTO"); break;
+    case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", message_ ? "MESSAGGIO" : (testMode_ ? "PROVA ON" : "ASCOLTO")); break;
     case lcr::VoiceNode::State::Receiving: snprintf(big, sizeof(big), "RX %s", rxCall_); break;
     default:
       if (recPhase_ == 1) snprintf(big, sizeof(big), "REGISTRA");
@@ -235,14 +237,19 @@ void UiNotifier::draw(uint32_t nowMs) {
   if (notice_) {
     display_.print(notice_);
   } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 1) {
-    display_.printf("Registro %lu/30 s", static_cast<unsigned long>((nowMs - txStartMs_) / 1000));
+    display_.printf("Registro %lu/%lu s", static_cast<unsigned long>((nowMs - txStartMs_) / 1000),
+                    static_cast<unsigned long>(maxTurnSec_));
   } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 2) {
     display_.print("Parte tra 1 secondo");
   } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 3) {
     display_.print("Trasmetto messaggio");
   } else if (state_ == lcr::VoiceNode::State::Transmitting) {
-    display_.printf(testMode_ ? "Prova %lu/12 s" : "Trasmissione %lu/30 s",
-                    static_cast<unsigned long>((nowMs - txStartMs_) / 1000));
+    display_.printf(testMode_ ? "Prova %lu/12 s" : "Trasmissione %lu/%lu s",
+                    static_cast<unsigned long>((nowMs - txStartMs_) / 1000), static_cast<unsigned long>(maxTurnSec_));
+  } else if (state_ == lcr::VoiceNode::State::Receiving && message_) {
+    display_.print(playing_ ? "Riproduco messaggio" : "Ricevo il messaggio");
+    display_.setCursor(0, 47);
+    display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
   } else if (state_ == lcr::VoiceNode::State::Receiving) {
     display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
   } else if (haveLast_) {
@@ -251,7 +258,7 @@ void UiNotifier::draw(uint32_t nowMs) {
     display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
                     static_cast<unsigned long>(lastRecovered_));
   } else {
-    display_.print(testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare");
+    display_.print(message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare"));
   }
 
   display_.setCursor(0, 56);

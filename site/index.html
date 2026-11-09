@@ -105,6 +105,13 @@
       <input id="callsign" maxlength="8" pattern="[A-Za-z0-9/]{1,8}" placeholder="IU5HJU" disabled required>
       <p class="hint">Solo lettere, cifre e “/”, massimo 8 caratteri. Con N0CALL la scheda non trasmette.</p>
 
+      <label for="profile">Profilo di trasmissione</label>
+      <select id="profile" disabled>
+        <option value="std">Standard: voce in tempo reale (SF8, 250 kHz)</option>
+        <option value="msg">Messaggio: lungo raggio, registra e invia (SF12, 125 kHz)</option>
+      </select>
+      <p class="hint" id="profilehint"><strong>Standard</strong>: la voce di sempre, in tempo reale. <strong>Messaggio</strong>: tieni premuto il PTT e registra fino a 10 secondi; un secondo dopo il rilascio la scheda trasmette il messaggio, molto più lentamente del parlato (circa 90 secondi in aria per 10 secondi di voce) e con circa 13 dB di sensibilità in più; chi riceve lo ascolta <strong>a ricezione conclusa</strong>. <strong>Le schede con profili diversi non si sentono</strong>: usa lo stesso profilo (e la stessa frequenza) su tutte. Vale dal riavvio.</p>
+
       <label for="freq">Frequenza (MHz)</label>
       <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
       <p class="hint">Da 430.000 a 440.000. Il valore predefinito è un segnaposto: scegli il canale con il band plan IARU Regione 1 / ARI. Le stazioni che si ascoltano devono usare la stessa frequenza.</p>
@@ -239,10 +246,13 @@
     if (dirty) txt += ' Compilato con modifiche locali.';
     return txt;
   }
+  let profileSeen = false;   // l'ultimo CFG GET conteneva il profilo
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
+    if (!on) profileSeen = false;
+    $('profile').disabled = !on || !profileSeen;   // il firmware piu' vecchio non ha i profili
   }
 
   const sinks = [];   // ascoltatori di righe (prove che raccolgono piu' risposte)
@@ -255,6 +265,7 @@
       if (m.callsign) {
         $('callsign').value = m.callsign; $('freq').value = m.freq; $('power').value = m.power;
         if (m.volume !== undefined) $('volume').value = m.volume;
+        if (m.profile !== undefined) { $('profile').value = m.profile; profileSeen = true; $('profile').disabled = !port; }
         if (m.micfloor !== undefined) { $('micfloor').value = m.micfloor; lastFloor = Number(m.micfloor); }
         $('testState').textContent = m.test === '1' ? 'Prova ATTIVA' : 'Prova spenta';
         lastBoard = m.board || '';
@@ -368,7 +379,9 @@
     if ($('volume').value === '' || !Number.isInteger(vol) || vol < 0 || vol > 10) return { err: 'Il volume deve essere un numero intero da 0 a 10.' };
     const fl = Number($('micfloor').value);
     if ($('micfloor').value === '' || !Number.isInteger(fl) || fl < -80 || fl > -36) return { err: 'Il fondo del microfono deve essere un intero da -80 a -36 dBFS.' };
-    return { cs, freq: fm, pw, vol, fl };
+    const prof = $('profile').value;
+    if (!$('profile').disabled && prof !== 'std' && prof !== 'msg') return { err: 'Profilo non valido.' };
+    return { cs, freq: fm, pw, vol, fl, prof };
   }
 
   async function save(ev) {
@@ -383,11 +396,13 @@
       replies.push(await send('CFG SET POWER ' + v.pw, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET VOLUME ' + v.vol, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET MICFLOOR ' + v.fl, /^CFG (OK|ERR)/));
+      if (!$('profile').disabled) replies.push(await send('CFG SET PROFILE ' + v.prof, /^CFG (OK|ERR)/));
       const bad = replies.find(r => r.startsWith('CFG ERR'));
       if (bad) throw new Error(bad);
       const state = await send('CFG GET', /^CFG callsign=/);
       if (!state.includes('callsign=' + v.cs)) throw new Error('la scheda non ha salvato i valori');
       if (!state.includes('volume=' + v.vol)) throw new Error('la scheda non ha salvato il volume');
+      if (!$('profile').disabled && !state.includes('profile=' + v.prof)) throw new Error('la scheda non ha salvato il profilo');
       setStatus('Salvato. Riavvio della scheda…', 'ok');
       await send('CFG REBOOT', /^CFG OK reboot/);
       setTimeout(async () => {

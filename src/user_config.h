@@ -21,7 +21,8 @@
 // Parita' XOR (1 pacchetto ogni 4): consigliata.
 #define LCR_FEC 1
 
-// Parametri radio (SX1278, 433 MHz).
+// Parametri radio (SX1278, 433 MHz). SF, banda, coding rate e preambolo ora vengono dal PROFILO (lib/voicecore/profile.cpp);
+// qui restano la frequenza, la potenza e la sync word.
 // ATTENZIONE: la frequenza e' un SEGNAPOSTO, da scegliere con il band plan
 // IARU Regione 1 / ARI per la sottobanda digitale dei 70 cm prima di trasmettere.
 #define LCR_FREQUENCY_MHZ 433.900f

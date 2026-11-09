@@ -89,6 +89,7 @@ void setup() {
   settings = lcr::loadSettings(settingsStorage, defaults);
   console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort, LCR_VERSION);
   ui.setSettings(settings);
+  ui.setProfile(lcr::profileFor(settings.profile));
 
   // L'alimentazione va per prima: sulla T-Beam senza il PMU la radio non e' alimentata.
   const bool pmuOk = pmu.begin();
@@ -149,13 +150,14 @@ void setup() {
   strncpy(cfg.callsign, settings.callsign, lcr::kMaxCallsign);
   cfg.fec = LCR_FEC != 0;
   cfg.newSessionId = newSessionId;
+  cfg.profile = settings.profile;
   node = new lcr::VoiceNode(cfg, radio, codec, audio.mic(), audio.speaker(), ui);
 
   Serial.printf("[avvio] stack libero minimo del task principale: %u byte\n",
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
-  Serial.printf("%s pronto, %.3f MHz, %d dBm, SF%d BW%.0f\n", settings.callsign,
-                static_cast<double>(settings.freqMhz()), settings.powerDbm, LCR_SPREADING_FACTOR,
-                static_cast<double>(LCR_BANDWIDTH_KHZ));
+  const lcr::Profile& prof = lcr::profileFor(settings.profile);
+  Serial.printf("%s pronto, profilo %s, %.3f MHz, %d dBm, SF%d BW%.0f\n", settings.callsign, prof.name,
+                static_cast<double>(settings.freqMhz()), settings.powerDbm, prof.sf, static_cast<double>(prof.bwKhz));
   char reply[128];
   console->handleLine("CFG GET", reply, sizeof(reply));
   Serial.println(reply);  // la pagina di configurazione legge questa riga

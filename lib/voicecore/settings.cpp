@@ -10,14 +10,15 @@ namespace lcr {
 
 bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz &&
-         a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb;
+         a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
+         a.profile == b.profile;
 }
 
 bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
-         s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb;
+         s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount;
 }
 
 Settings loadSettings(ISettingsStorage& storage, const Settings& defaults) {
@@ -140,9 +141,9 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
 
 ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
   if (reply && cap > 0) {
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d micfloor=%d board=%s reboot=%d test=%d", stored_.callsign,
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d", stored_.callsign,
              static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
-             stored_.powerDbm, stored_.volume, stored_.micFloorDb, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
+             stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
   }
   return ConsoleResult::Ok;
 }
@@ -200,6 +201,14 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.micFloorDb = fl;
     snprintf(shown, sizeof(shown), "micfloor=%d", fl);
+  } else if (equalsIgnoreCase(key, "PROFILE")) {
+    uint8_t id = 0;
+    if (!profileFromCode(value, id)) {
+      say(reply, cap, "CFG ERR profile %s", "usa STD (Standard) oppure MSG (Messaggio)");
+      return ConsoleResult::Error;
+    }
+    next.profile = id;
+    snprintf(shown, sizeof(shown), "profile=%s", profileFor(id).code);
   } else {
     say(reply, cap, "CFG ERR %s parametro sconosciuto", key);
     return ConsoleResult::Error;

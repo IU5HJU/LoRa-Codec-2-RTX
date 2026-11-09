@@ -13,12 +13,14 @@ static uint16_t nextSession() {
 }
 
 struct Station {
-  Station(fake::Air& air, int id, const char* cs, const uint32_t& clock)
-      : radio(air, id), mic(clock), node(makeCfg(cs), radio, codec, mic, spk, note) {}
-  static NodeConfig makeCfg(const char* cs) {
+  Station(fake::Air& air, int id, const char* cs, const uint32_t& clock, uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0)
+      : radio(air, id), mic(clock), node(makeCfg(cs, profile, extraGapMs), radio, codec, mic, spk, note) {}
+  static NodeConfig makeCfg(const char* cs, uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0) {
     NodeConfig c;
     strcpy(c.callsign, cs);
     c.newSessionId = nextSession;
+    c.profile = profile;
+    c.extraGapMs = extraGapMs;
     return c;
   }
   fake::Radio radio;
@@ -32,8 +34,10 @@ struct Station {
 struct Sim {
   fake::Air air;
   uint32_t clock = 0;
-  Station a{air, 0, "IU5HJU", clock};
-  Station b{air, 1, "IZ5ABC", clock};
+  Station a;
+  Station b;
+  explicit Sim(uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0)
+      : a(air, 0, "IU5HJU", clock, profile, extraGapMs), b(air, 1, "IZ5ABC", clock, profile, extraGapMs) {}
   // Avanza il tempo di ms millisecondi a passi di 10 ms.
   void run(uint32_t ms) {
     const uint32_t end = clock + ms;
@@ -349,7 +353,102 @@ static void testRecordModeOffByDefault() {
   s.run(3000);
 }
 
+// Profilo Messaggio: ogni pacchetto dura circa 3,4 s in aria (extraGapMs lo simula, la radio finta e' istantanea).
+static constexpr uint32_t kMsgAirMs = 3400;
+
+static void testMessageProfile() {
+  Sim s(kProfileMessage, kMsgAirMs);
+  s.air.clock = &s.clock;
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50);
+  CHECK(s.a.node.state() == VoiceNode::State::Transmitting && s.a.node.recPhase() == VoiceNode::RecPhase::Recording);
+  s.run(3000);
+  s.a.node.pttReleased(s.clock);
+  const uint32_t releaseAt = s.clock;
+  s.run(kRecSendDelayMs - 100);
+  CHECK(s.air.sent[0] == 0);  // si registra, poi si aspetta: niente in aria
+  s.run(20000);
+  CHECK(!s.air.sentAt[0].empty() && s.air.sentAt[0][0] >= releaseAt + kRecSendDelayMs);
+  CHECK(s.air.sent[0] >= 3);
+  // A meta' della trasmissione chi riceve ha gia' dei pacchetti ma NON riproduce: aspetta la fine del messaggio.
+  CHECK(s.b.node.state() == VoiceNode::State::Receiving);
+  CHECK(s.b.spk.played.empty() && s.b.note.playbackStarts == 0);
+  // Intervalli tra pacchetti vicini al tempo in aria: il ricevitore non chiude la sessione per silenzio.
+  CHECK(s.b.note.rxEnds == 0);
+  s.run(90000);
+  const int n = static_cast<int>(s.a.mic.produced());
+  CHECK(n >= 70 && n <= 90);
+  CHECK(s.b.spk.played == seq(n));  // tutto il messaggio, in ordine, dopo la fine della ricezione
+  CHECK(s.b.note.playbackStarts == 1 && s.b.note.rxStarts == 1 && s.b.note.rxEnds == 1);
+  CHECK(s.b.note.callsign == "IU5HJU");
+  CHECK(s.a.node.state() == VoiceNode::State::Idle && s.b.node.state() == VoiceNode::State::Idle);
+  CHECK(s.a.note.txEnds == 1 && !s.a.note.limitHit);
+  // Spenta o accesa che sia, la registrazione resta attiva nel profilo Messaggio
+  s.a.node.setRecordMode(false);
+  CHECK(s.a.node.recordMode());
+}
+
+static void testMessageEndLost() {
+  // Pacchetto END e relativa parita' persi: dopo 12 s senza altro il messaggio si riproduce comunque.
+  int total = 0;
+  {
+    Sim ref(kProfileMessage, kMsgAirMs);
+    ref.a.node.pttPressed(ref.clock);
+    ref.run(kPttClickMaxMs + 50 + 3000);
+    ref.a.node.pttReleased(ref.clock);
+    ref.run(110000);
+    total = ref.air.sent[0];
+  }
+  CHECK(total >= 6);
+  Sim s(kProfileMessage, kMsgAirMs);
+  s.air.drop = [total](int from, int idx) { return from == 0 && idx >= total - 2; };
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50 + 3000);
+  s.a.node.pttReleased(s.clock);
+  s.run(110000);
+  CHECK(s.b.node.state() == VoiceNode::State::Idle);
+  CHECK(s.b.note.playbackStarts == 1);
+  CHECK(!s.b.spk.played.empty());
+  // Quello che era arrivato si sente in ordine, senza dover aspettare la parita' o l'END
+  int last = 0;
+  for (int f : s.b.spk.played) {
+    if (f > 0) {
+      CHECK(f == last + 1);
+      last = f;
+    }
+  }
+  CHECK(last >= static_cast<int>(s.a.mic.produced()) - 14);  // l'ultimo pacchetto da 12 frame (e al massimo qualche frame) manca
+}
+
+static void testMessageProfileRules() {
+  Sim s(kProfileMessage, kMsgAirMs);
+  s.a.node.setTestMode(true);
+  CHECK(!s.a.node.testMode());  // niente prova di collegamento nel profilo Messaggio
+  // Tre clic veloci non la attivano
+  s.run(100);
+  for (int i = 0; i < 3; i++) {
+    s.a.node.pttPressed(s.clock);
+    s.run(100);
+    s.a.node.pttReleased(s.clock);
+    s.run(150);
+  }
+  CHECK(!s.a.node.testMode() && s.a.note.testModeChanges.empty());
+  // Un messaggio molto lungo si ferma al limite del profilo (10 s di voce)
+  s.a.node.pttPressed(s.clock);
+  s.run(20000);
+  CHECK(s.a.node.recPhase() != VoiceNode::RecPhase::Recording);  // la registrazione si e' fermata da sola a 10 s
+  s.a.node.pttReleased(s.clock);
+  s.run(150000);
+  CHECK(s.a.note.limitHit);  // e il limite e' stato segnalato
+  CHECK(static_cast<uint32_t>(s.a.mic.produced()) == profileFor(kProfileMessage).maxTurnMs / kFrameMs);
+  CHECK(s.b.spk.played == seq(static_cast<int>(profileFor(kProfileMessage).maxTurnMs / kFrameMs)));
+}
+
 int main() {
+  testMessageProfile();
+  testMessageEndLost();
+  testMessageProfileRules();
   testRecordThenSend();
   testRecordTurnLimit();
   testRecordModeOffByDefault();

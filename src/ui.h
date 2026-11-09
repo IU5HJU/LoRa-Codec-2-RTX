@@ -17,6 +17,11 @@ class UiNotifier : public lcr::INotifier {
 
   // Nominativo e frequenza mostrati sul display (da chiamare appena lette le impostazioni).
   void setSettings(const lcr::Settings& s) { settings_ = s; }
+  // Profilo in uso: cambia i testi (messaggio) e il limite di durata mostrato.
+  void setProfile(const lcr::Profile& p) {
+    message_ = p.message;
+    maxTurnSec_ = p.maxTurnMs / 1000;
+  }
 
   // false se il display non risponde (il resto del sistema funziona comunque).
   bool begin();
@@ -33,6 +38,10 @@ class UiNotifier : public lcr::INotifier {
   void pttDenied(lcr::DenyReason r) override;
   void rxStarted() override;
   void rxCallsign(const char* callsign) override;
+  void rxPlaybackStarted() override {
+    playing_ = true;
+    dirty_ = true;
+  }
   void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) override;
   void testModeChanged(bool on) override;
   void recPhaseChanged(int phase) override { recPhase_ = phase; dirty_ = true; }
@@ -58,6 +67,10 @@ class UiNotifier : public lcr::INotifier {
   bool dirty_ = true;
   uint32_t lastDrawMs_ = 0;
 
+  bool message_ = false;         // profilo Messaggio
+  uint32_t maxTurnSec_ = 30;     // durata massima di un turno o di un messaggio, secondi
+  bool playing_ = false;         // profilo Messaggio: sta riproducendo (altrimenti sta ancora ricevendo)
+  char noticeBuf_[16] = {0};
   int recPhase_ = 0;  // registra e poi trasmetti: 0 nessuna, 1 registra, 2 attesa, 3 trasmette
   lcr::VoiceNode::State state_ = lcr::VoiceNode::State::Idle;
   int volume_ = 0;

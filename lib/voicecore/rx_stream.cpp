@@ -28,7 +28,7 @@ bool RxStream::onPacket(const Packet& p, uint32_t nowMs) {
   if (p.seq >= kMaxPackets) return false;
 
   if (phase_ != Phase::Idle && p.session != session_) {
-    const bool stale = (phase_ == Phase::Done) || (nowMs - lastRxMs_ > kSessionTimeoutMs);
+    const bool stale = (phase_ == Phase::Done) || (nowMs - lastRxMs_ > cfg_.sessionTimeoutMs);
     if (!stale) return false;
     reset();
   }
@@ -135,7 +135,10 @@ RxStream::Out RxStream::nextFrame(uint32_t nowMs) {
   if (phase_ == Phase::Done) return end;
 
   if (phase_ == Phase::Buffering) {
-    if (bufferedFrames() >= kPrebufferFrames || endSeq_ >= 0 || nowMs - firstRxMs_ >= kPrebufferTimeoutMs) {
+    // Si parte con il pre-buffer pieno, a trasmissione conclusa (END), scaduta l'attesa, oppure se i pacchetti
+    // smettono di arrivare (un messaggio con l'END perso si riproduce comunque quando e' chiaro che non arriva altro).
+    if (bufferedFrames() >= cfg_.prebufferFrames || endSeq_ >= 0 || nowMs - firstRxMs_ >= cfg_.prebufferTimeoutMs ||
+        nowMs - lastRxMs_ > cfg_.sessionTimeoutMs) {
       phase_ = Phase::Playing;
     } else {
       return wait;
@@ -176,7 +179,7 @@ RxStream::Out RxStream::nextFrame(uint32_t nowMs) {
       continue;
     }
     // Pacchetto non ancora arrivato: attesa, con chiusura per inattivita'.
-    if (nowMs - lastRxMs_ > kSessionTimeoutMs) {
+    if (nowMs - lastRxMs_ > cfg_.sessionTimeoutMs) {
       finish();
       return end;
     }
