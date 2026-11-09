@@ -27,6 +27,10 @@ struct NodeConfig {
   uint16_t (*newSessionId)() = nullptr;
   // Profilo di trasmissione (profile.h): Standard o Messaggio.
   uint8_t profile = kProfileStandard;
+  // Posizione di questa stazione e se trasmetterla nel pacchetto START (disattivato di default: la posizione e' un dato
+  // personale, si trasmette solo se l'operatore lo sceglie). Vedi position.h.
+  bool sendPosition = false;
+  Position position;
   // Solo per i test: tempo aggiunto alla pausa tra i pacchetti per simulare il tempo in aria (la radio finta e' istantanea).
   uint32_t extraGapMs = 0;
 };
@@ -43,6 +47,12 @@ class VoiceNode {
   void pttReleased(uint32_t nowMs);
   // Da chiamare spesso (almeno ogni ~10 ms).
   void tick(uint32_t nowMs);
+
+  // Aggiorna la posizione di questa stazione (per esempio dal GPS) e se trasmetterla. Vale dal turno successivo.
+  void setOwnPosition(const Position& p, bool send) {
+    cfg_.position = p;
+    cfg_.sendPosition = send;
+  }
 
   // Prova di collegamento (non persistente): con la prova attiva il PTT trasmette frame di prova
   // invece della voce, e dopo aver ricevuto una prova la scheda risponde con il risultato.
@@ -99,6 +109,7 @@ class VoiceNode {
   uint32_t nextSendMs_ = 0;  // non trasmettere prima di questo istante (pausa tra pacchetti)
   bool justSent_ = false;
   bool callsignNotified_ = false;
+  bool positionNotified_ = false;
 
   // PTT: clic e attesa prima di trasmettere
   bool pendingStart_ = false;  // PTT premuto, in attesa di capire se e' un clic o l'inizio di una trasmissione

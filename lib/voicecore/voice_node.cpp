@@ -95,6 +95,7 @@ void VoiceNode::startTx(uint32_t nowMs) {
   }
   replyPending_ = false;
   tx_ = TxSession(cfg_.callsign, sid, cfg_.fec, txTest_ ? kModeTest : kModeCodec2_1200);
+  if (cfg_.sendPosition && !txTest_) tx_.setPosition(cfg_.position);
   framesCaptured_ = 0;
   releasing_ = false;
   limitHit_ = false;
@@ -295,6 +296,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
     if (rx_.session() != notifiedSession_) {
       notifiedSession_ = rx_.session();
       callsignNotified_ = false;
+      positionNotified_ = false;
     }
     if (state_ == State::Idle) {
       rxIsTest_ = p.mode == kModeTest;
@@ -314,6 +316,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
   if (!callsignNotified_ && rx_.callsign()[0]) {
     callsignNotified_ = true;
     notify_.rxCallsign(rx_.callsign());
+  }
+  if (!positionNotified_ && rx_.position().valid) {
+    positionNotified_ = true;
+    notify_.rxPosition(rx_.position());
   }
 
   if (nowMs < nextPlayMs_) return;

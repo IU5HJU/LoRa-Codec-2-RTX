@@ -40,7 +40,7 @@ CR = costante("src/user_config.h", "LCR_CODING_RATE") - 4          # 4/5 -> 1
 PREAMBLE = costante("src/user_config.h", "LCR_PREAMBLE_SYMBOLS")
 
 # Valori che il testo del PDF da' per scontati: se cambiano, il testo va rivisto.
-ATTESI = dict(PROTO=1, FRAME_BYTES=6, FRAMES_PER_PACKET=12, PARITY_GROUP=4, FRAME_MS=40, GAP_MS=80, SF=8, BW_KHZ=250, CR=1, PREAMBLE=12)
+ATTESI = dict(PROTO=2, FRAME_BYTES=6, FRAMES_PER_PACKET=12, PARITY_GROUP=4, FRAME_MS=40, GAP_MS=80, SF=8, BW_KHZ=250, CR=1, PREAMBLE=12)
 for k, v in ATTESI.items():
     if globals()[k] != v:
         sys.exit("%s e' %s nel codice ma il testo del PDF assume %s: rileggi e aggiorna il testo prima di rigenerare." % (k, globals()[k], v))
@@ -148,17 +148,18 @@ s.append(P("Un simbolo dura 2<super>8</super> / 250 kHz = 1,024 ms.", small))
 s.append(P("2. Formato del pacchetto", h2))
 s.append(P("Quello che il chip trasmette come payload LoRa è composto così:", base))
 s.append(Preformatted(
-"byte 0      versione (4 bit alti, = 1) | modo (4 bit bassi)\n"
+"byte 0      versione (4 bit alti, = 2) | modo (4 bit bassi)\n"
 "byte 1-2    ID di sessione, casuale per ogni PTT (big endian)\n"
 "byte 3      numero di sequenza (0..127)\n"
 "byte 4      flag\n"
 "[byte 5     lunghezza del nominativo N (1..8)]    solo se flag CALLSIGN\n"
 "[N byte     nominativo ASCII: A-Z 0-9 /]          solo se flag CALLSIGN\n"
+"[7 byte     posizione]                            solo se flag POSITION (solo nel pacchetto START)\n"
 "resto       payload", code))
 s.append(table([
     ["Campo", "Significato"],
     ["Modo", "1 = voce Codec2 1200 bit/s; 2 = prova di collegamento (frame noti); 3 = risposta alla prova (12 byte con il risultato)"],
-    ["Flag", "bit 0 START (primo pacchetto) - bit 1 END (ultimo dati, l'OVER) - bit 2 PARITY (pacchetto di parità) - bit 3 CALLSIGN (c'è il nominativo) - bit 4 NOFEC (trasmissione senza parità)"],
+    ["Flag", "bit 0 START (primo pacchetto) - bit 1 END (ultimo dati, l'OVER) - bit 2 PARITY (pacchetto di parità) - bit 3 CALLSIGN (c'è il nominativo) - bit 4 NOFEC (trasmissione senza parità) - bit 5 POSITION (c'è la posizione, 7 byte: stato, latitudine e longitudine a 24 bit; solo in START, spenta di default)"],
     ["Sessione", "numero casuale a 16 bit: identifica la trasmissione e permette di scartare i pacchetti di altre trasmissioni"],
     ["Sequenza", "0..127; i pacchetti di parità occupano le posizioni 4, 9, 14... del flusso"],
     ["Nominativo", "in chiaro; presente in START, in END e ogni 10 pacchetti (circa 5 secondi), così chi si sintonizza a trasmissione iniziata lo ottiene comunque"],
@@ -185,7 +186,7 @@ s.append(table([
     ["Durata massima di un turno", "30 secondi (750 frame, circa 80 pacchetti con la parità)"],
     ["Pausa tra due pacchetti", "80 ms (il ricevitore deve rileggere la radio prima del successivo)"],
     ["Pre-buffer in ricezione", "25 frame (1 secondo) prima di iniziare l'ascolto"],
-    ["Compatibilità", "due schede devono avere la stessa <b>versione del protocollo</b> (oggi 1); i modi sconosciuti vengono scartati"],
+    ["Compatibilità", "due schede devono avere la stessa <b>versione del protocollo</b> (oggi 2); i modi sconosciuti vengono scartati"],
 ], [52*mm, W - 52*mm]))
 
 s.append(P("4. Tempi in aria (stima con la formula di Semtech)", h2))

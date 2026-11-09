@@ -9,6 +9,7 @@ void RxStream::reset() {
   session_ = 0;
   fec_ = true;
   memset(callsign_, 0, sizeof(callsign_));
+  position_ = Position();
   firstRxMs_ = 0;
   lastRxMs_ = 0;
   endSeq_ = -1;
@@ -46,6 +47,7 @@ bool RxStream::onPacket(const Packet& p, uint32_t nowMs) {
   lastRxMs_ = nowMs;
 
   if (p.hasCallsign()) memcpy(callsign_, p.callsign, sizeof(callsign_));
+  if (p.hasPosition()) position_ = p.position;
   if (p.seq > highest_) highest_ = p.seq;
 
   if (!slots_[p.seq].have) {

@@ -18,6 +18,7 @@ struct Air {
   int sent[2] = {0, 0};
   const uint32_t* clock = nullptr;           // se impostato, registra l'istante di ogni invio
   std::vector<uint32_t> sentAt[2];
+  std::vector<std::vector<uint8_t>> log[2];  // pacchetti inviati da ciascuno, nell'ordine
   bool busy = false;
   // Se ritorna true il pacchetto numero idx inviato da 'from' viene perso.
   std::function<bool(int from, int idx)> drop;
@@ -30,6 +31,7 @@ class Radio : public lcr::IRadio {
   bool send(const uint8_t* d, size_t n) override {
     const int idx = air_.sent[id_]++;
     if (air_.clock) air_.sentAt[id_].push_back(*air_.clock);
+    air_.log[id_].push_back(std::vector<uint8_t>(d, d + n));
     if (air_.drop && air_.drop(id_, idx)) return true;
     air_.inbox[1 - id_].push_back(std::vector<uint8_t>(d, d + n));
     return true;
@@ -114,6 +116,12 @@ class Notifier : public lcr::INotifier {
   void rxPlaybackStarted() override { playbackStarts++; }
   int playbackStarts = 0;
   void rxCallsign(const char* cs) override { callsign = cs; }
+  void rxPosition(const lcr::Position& p) override {
+    positions++;
+    position = p;
+  }
+  int positions = 0;
+  lcr::Position position;
   void rxEnded(const char*, uint32_t lost, uint32_t rec) override {
     rxEnds++;
     lostFrames = lost;

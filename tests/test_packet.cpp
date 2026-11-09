@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <cstring>
 
 #include "packet.h"
@@ -39,6 +40,61 @@ static void testRoundTrip() {
   CHECK(!q.hasCallsign() && q.payloadLen == 0);
 }
 
+static void testPosition() {
+  Packet p = makeData(0, 0, 1, kFlagStart);
+  strcpy(p.callsign, "IU5HJU");
+  p.position.valid = true;
+  p.position.fromGps = true;
+  p.position.latE7 = 437696000;
+  p.position.lonE7 = 112558000;
+  uint8_t buf[kMaxWireBytes];
+  const size_t n = encodePacket(p, buf, sizeof(buf));
+  CHECK(n == 5 + 1 + 6 + kPositionBytes);  // START con nominativo e posizione, nessun frame
+  Packet q;
+  CHECK(decodePacket(buf, n, q));
+  CHECK(q.flags == (kFlagStart | kFlagCallsign | kFlagPosition));
+  CHECK(q.hasPosition() && q.position.fromGps);
+  CHECK(std::abs(q.position.latE7 - p.position.latE7) < 120 && std::abs(q.position.lonE7 - p.position.lonE7) < 240);
+  CHECK(strcmp(q.callsign, "IU5HJU") == 0);
+
+  // Con frame audio dopo il blocco posizione.
+  Packet d = makeData(0, 2, 5, kFlagStart);
+  strcpy(d.callsign, "IU5HJU");
+  d.position = p.position;
+  const size_t m = encodePacket(d, buf, sizeof(buf));
+  CHECK(m == 5 + 1 + 6 + kPositionBytes + 12);
+  CHECK(decodePacket(buf, m, q) && q.hasPosition() && samePayload(d, q));
+
+  // Senza posizione il pacchetto e' quello di prima.
+  Packet r = makeData(0, 0, 1, kFlagStart);
+  strcpy(r.callsign, "IU5HJU");
+  CHECK(encodePacket(r, buf, sizeof(buf)) == 5 + 1 + 6);
+  CHECK(decodePacket(buf, 12, q) && !q.hasPosition() && (q.flags & kFlagPosition) == 0);
+
+  // La posizione richiede il nominativo; coordinate fuori limite non si trasmettono.
+  Packet nocall = makeData(0, 0, 1, kFlagStart);
+  nocall.position = p.position;
+  CHECK(encodePacket(nocall, buf, sizeof(buf)) == 0);
+  Packet bad = p;
+  bad.position.latE7 = kMaxLatE7 + 1;
+  CHECK(encodePacket(bad, buf, sizeof(buf)) == 0);
+
+  // In ricezione: flag senza il blocco, senza nominativo, o su un pacchetto di parita' = scartato.
+  const size_t full = encodePacket(p, buf, sizeof(buf));
+  CHECK(!decodePacket(buf, full - 1, q));  // blocco troncato
+  uint8_t cut[kMaxWireBytes];
+  memcpy(cut, buf, full);
+  cut[4] &= static_cast<uint8_t>(~kFlagCallsign);
+  CHECK(!decodePacket(cut, full, q));
+  memcpy(cut, buf, full);
+  cut[4] = kFlagParity | kFlagPosition;
+  CHECK(!decodePacket(cut, full, q));
+  // Un pacchetto della versione 1 non si capisce piu'.
+  memcpy(cut, buf, full);
+  cut[0] = static_cast<uint8_t>((1 << 4) | kModeCodec2_1200);
+  CHECK(!decodePacket(cut, full, q));
+}
+
 static void testRejects() {
   uint8_t buf[kMaxWireBytes];
   Packet p = makeData(1, 2, 9);
@@ -49,7 +105,7 @@ static void testRejects() {
   CHECK(!decodePacket(buf, n - 1, q));     // payload non multiplo di 6
   uint8_t bad[kMaxWireBytes];
   memcpy(bad, buf, n);
-  bad[0] = 0x21;                           // versione 2
+  bad[0] = 0x11;                           // versione 1 (vecchia): scartata
   CHECK(!decodePacket(bad, n, q));
   memcpy(bad, buf, n);
   bad[4] = 0x80;                           // flag riservato
@@ -122,6 +178,7 @@ static void testPartialGroupParity() {
 
 int main() {
   testRoundTrip();
+  testPosition();
   testRejects();
   testParityRecovery();
   testPartialGroupParity();

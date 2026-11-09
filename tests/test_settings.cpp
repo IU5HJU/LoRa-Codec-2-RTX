@@ -92,10 +92,37 @@ void testNotCommand() {
   CHECK(f.st.saves == 0);
 }
 
+void testPositionSettings() {
+  Fixture f;
+  // Di default la posizione non si trasmette e il QTH non c'e'.
+  CHECK(!f.st.data.posTx && !f.st.data.qthSet);
+  CHECK(f.run("CFG SET POS ON") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK pos=on") == 0 && f.st.data.posTx);
+  CHECK(f.run("CFG SET pos off") == ConsoleResult::Ok && !f.st.data.posTx);
+  CHECK(f.run("CFG SET POS MAYBE") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET QTH 43.7696,11.2558") == ConsoleResult::Ok);
+  CHECK(strcmp(f.reply, "CFG OK qth=43.76960,11.25580") == 0);
+  CHECK(f.st.data.qthSet && f.st.data.qthLatE7 == 437696000 && f.st.data.qthLonE7 == 112558000);
+  CHECK(f.st.data.qth().valid && !f.st.data.qth().fromGps);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "pos=off qth=43.76960,11.25580"));
+  CHECK(f.run("CFG SET QTH -33.8688,151.2093") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK qth=-33.86880,151.20930") == 0);
+  CHECK(f.run("CFG SET QTH 0,-0.5") == ConsoleResult::Ok && f.st.data.qthLatE7 == 0 && f.st.data.qthLonE7 == -5000000);
+  // Valori non validi: nessun salvataggio.
+  const int saves = f.st.saves;
+  const char* bad[] = {"CFG SET QTH 91,0", "CFG SET QTH 0,181", "CFG SET QTH 43.7696", "CFG SET QTH 43.7696;11.2558", "CFG SET QTH a,b",
+                       "CFG SET QTH 43.12345678,11", "CFG SET QTH ,", "CFG SET QTH 43.,11", "CFG SET QTH 1e1,2"};
+  for (const char* b : bad) {
+    CHECK(f.run(b) == ConsoleResult::Error);
+    CHECK(strncmp(f.reply, "CFG ERR", 7) == 0);
+  }
+  CHECK(f.st.saves == saves);
+  CHECK(f.run("CFG SET QTH NONE") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK qth=none") == 0 && !f.st.data.qthSet);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "qth=none"));
+}
+
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -267,14 +294,14 @@ void testMicFloor() {
 
 void testVersion() {
   Fixture f;
-  CHECK(f.run("CFG VERSION") == ConsoleResult::Ok && strcmp(f.reply, "CFG VERSION fw=v0.1.0-3-gabc1234 board=T3 proto=1") == 0);
+  CHECK(f.run("CFG VERSION") == ConsoleResult::Ok && strcmp(f.reply, "CFG VERSION fw=v0.1.0-3-gabc1234 board=T3 proto=2") == 0);
   CHECK(f.run("cfg version") == ConsoleResult::Ok);
   CHECK(f.run("CFG VERSION x") == ConsoleResult::Error);
   FakeStorage st2;
   Settings a = kDefaults;
   SettingsConsole d(a, kDefaults, st2, "tbeam");  // senza versione: "dev"
   char r[80];
-  CHECK(d.handleLine("CFG VERSION", r, sizeof(r)) == ConsoleResult::Ok && strcmp(r, "CFG VERSION fw=dev board=tbeam proto=1") == 0);
+  CHECK(d.handleLine("CFG VERSION", r, sizeof(r)) == ConsoleResult::Ok && strcmp(r, "CFG VERSION fw=dev board=tbeam proto=2") == 0);
 }
 
 void testOther() {
@@ -323,6 +350,7 @@ int main() {
   testLoad();
   testNotCommand();
   testGet();
+  testPositionSettings();
   testSetCallsign();
   testSetFreq();
   testSetPower();

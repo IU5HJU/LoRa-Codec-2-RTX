@@ -95,6 +95,7 @@ void setup() {
   console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort, LCR_VERSION);
   ui.setSettings(settings);
   ui.setProfile(lcr::profileFor(settings.profile));
+  ui.setOwnPosition(settings.qth());
   {
     size_t n = 0;
     const lcr::MenuItem* items = lcr::defaultMenuItems(n);
@@ -163,6 +164,8 @@ void setup() {
   cfg.fec = LCR_FEC != 0;
   cfg.newSessionId = newSessionId;
   cfg.profile = settings.profile;
+  cfg.sendPosition = settings.posTx;  // spenta di default; la posizione fissa e' il QTH (CFG SET QTH)
+  cfg.position = settings.qth();
   node = new lcr::VoiceNode(cfg, radio, codec, audio.mic(), audio.speaker(), ui);
 
   Serial.printf("[avvio] stack libero minimo del task principale: %u byte\n",
@@ -412,7 +415,7 @@ static void serviceConsole() {
       len = 0;
       tooLong = false;
       if (skip) continue;  // riga troppo lunga: scartata
-      char reply[128];
+      char reply[200];
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);

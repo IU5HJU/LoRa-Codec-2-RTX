@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "position.h"
 #include "protocol.h"
 
 namespace lcr {
@@ -14,11 +15,13 @@ struct Packet {
   uint8_t seq = 0;
   uint8_t flags = 0;
   char callsign[kMaxCallsign + 1] = {0};  // vuoto se assente
+  Position position;  // posizione di chi trasmette (solo nel pacchetto START); position.valid = false se assente
   uint8_t payloadLen = 0;
   uint8_t payload[kMaxPayload] = {0};
 
   bool isParity() const { return (flags & kFlagParity) != 0; }
   bool hasCallsign() const { return callsign[0] != 0; }
+  bool hasPosition() const { return position.valid; }
 };
 
 // Nominativo: 1-8 caratteri tra A-Z, 0-9 e '/'.
@@ -28,7 +31,7 @@ bool isValidCallsign(const char* cs);
 bool isPlaceholderCallsign(const char* cs);
 
 // Serializza. Ritorna i byte scritti, 0 se non entra o il nominativo non e' valido.
-// Il flag kFlagCallsign e' impostato automaticamente.
+// I flag kFlagCallsign e kFlagPosition sono impostati automaticamente (la posizione richiede il nominativo).
 size_t encodePacket(const Packet& p, uint8_t* out, size_t cap);
 
 // Deserializza e valida. Ritorna false per pacchetti non conformi.

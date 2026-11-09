@@ -1,7 +1,7 @@
 // Lato trasmissione: trasforma i frame Codec2 in pacchetti.
 //
 // Sequenza prodotta (con parita' attiva):
-//   seq 0       START + nominativo, nessun frame
+//   seq 0       START + nominativo (+ posizione, se impostata), nessun frame
 //   seq 1..3    dati (12 frame ciascuno)
 //   seq 4       parita' dei seq 0..3
 //   seq 5..8    dati, 9 parita' ...
@@ -20,6 +20,9 @@ class TxSession {
  public:
   TxSession() = default;
   TxSession(const char* callsign, uint16_t session, bool fec, uint8_t mode = kModeCodec2_1200);
+
+  // Posizione da trasmettere nel pacchetto START (da chiamare prima di begin/pushFrame). Una posizione non valida = nessuna.
+  void setPosition(const Position& p) { position_ = p; }
 
   // Accoda il pacchetto iniziale col nominativo. Chiamato in automatico da pushFrame.
   void begin();
@@ -51,6 +54,8 @@ class TxSession {
   bool begun_ = false;
   bool finished_ = false;
   bool overflow_ = false;
+
+  Position position_;
 
   uint8_t seq_ = 0;
   uint8_t lastCallsignSeq_ = 0;

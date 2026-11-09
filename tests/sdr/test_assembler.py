@@ -57,12 +57,17 @@ check("dopo il buco esce il pacchetto nuovo", len(got) == 1 and got[0][1] == pk[
 check("buco contato", asm.lost_bytes > 0)
 
 # descrizione di un pacchetto: START con nominativo, sessione 1234 = 0x04d2
-pkt = bytes([0x11, 0x04, 0xD2, 0x00, 0x01 | 0x08, 6]) + b"IU5HJU"
+pkt = bytes([0x21, 0x04, 0xD2, 0x00, 0x01 | 0x08, 6]) + b"IU5HJU"
 d = describe_packet(pkt)
 check("descrizione", "sessione 1234" in d and "START" in d and "IU5HJU" in d and "voce" in d)
-check("pacchetto corto", "corto" in describe_packet(b"\x11\x00"))
-check("versione sconosciuta", "non e'" in describe_packet(bytes([0x21, 0, 0, 0, 0])))
-check("prova di collegamento", "prova" in describe_packet(bytes([0x12, 0, 1, 0, 0])))
+check("pacchetto corto", "corto" in describe_packet(b"\x21\x00"))
+check("versione sconosciuta", "non e'" in describe_packet(bytes([0x11, 0, 0, 0, 0])))
+# START con posizione: 43.7696, 11.2558 (24 bit: lat (43.7696+90)/180*2^24, lon (11.2558+180)/360*2^24)
+la, lo = round((43.7696 + 90) / 180 * 2**24), round((11.2558 + 180) / 360 * 2**24)
+pos = bytes([1, la >> 16, (la >> 8) & 255, la & 255, lo >> 16, (lo >> 8) & 255, lo & 255])
+d = describe_packet(bytes([0x21, 0x04, 0xD2, 0x00, 1 | 8 | 32, 6]) + b"IU5HJU" + pos)
+check("posizione descritta", "POSIZIONE" in d and "43.7696" in d and "11.2558" in d and "GPS" in d and "payload 0" in d)
+check("prova di collegamento", "prova" in describe_packet(bytes([0x22, 0, 1, 0, 0])))
 
 print("%d falliti" % failures if failures else "tests/sdr/test_assembler.py: tutto ok")
 sys.exit(1 if failures else 0)

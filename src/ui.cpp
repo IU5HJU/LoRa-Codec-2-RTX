@@ -86,6 +86,7 @@ void UiNotifier::pttDenied(lcr::DenyReason r) {
 
 void UiNotifier::rxStarted() {
   rxCall_[0] = 0;
+  distText_[0] = 0;
   playing_ = false;
   haveLast_ = false;
   dirty_ = true;
@@ -94,6 +95,12 @@ void UiNotifier::rxStarted() {
 void UiNotifier::rxCallsign(const char* callsign) {
   strncpy(rxCall_, callsign, lcr::kMaxCallsign);
   rxCall_[lcr::kMaxCallsign] = 0;
+  dirty_ = true;
+}
+
+void UiNotifier::rxPosition(const lcr::Position& p) {
+  if (!ownPos_.valid) return;  // senza la propria posizione non si calcola nessuna distanza
+  lcr::formatDistance(distText_, sizeof(distText_), lcr::distanceKm(ownPos_, p));
   dirty_ = true;
 }
 
@@ -277,11 +284,24 @@ void UiNotifier::draw(uint32_t nowMs) {
   } else if (state_ == lcr::VoiceNode::State::Receiving && message_) {
     display_.print(playing_ ? "Riproduco messaggio" : "Ricevo il messaggio");
     display_.setCursor(0, 47);
-    display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
+    if (distText_[0]) {
+      display_.printf("%s  RSSI %d", distText_, rssi_);
+    } else {
+      display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
+    }
   } else if (state_ == lcr::VoiceNode::State::Receiving) {
     display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
+    if (distText_[0]) {
+      display_.setCursor(0, 47);
+      display_.printf("Distanza %s", distText_);
+    }
   } else if (haveLast_) {
-    display_.printf("Ultimo %s", rxCall_[0] ? rxCall_ : "-");
+    {  // "Ultimo IU5HJU 12.3km": la distanza si aggiunge solo se la riga resta entro i 21 caratteri
+      char line[32];
+      int n = snprintf(line, sizeof(line), "Ultimo %s", rxCall_[0] ? rxCall_ : "-");
+      if (distText_[0] && n > 0 && n + 1 + static_cast<int>(strlen(distText_)) <= 21) snprintf(line + n, sizeof(line) - n, " %s", distText_);
+      display_.print(line);
+    }
     display_.setCursor(0, 47);  // 1 pixel di stacco dalla riga sopra e da "Vol"
     display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
                     static_cast<unsigned long>(lastRecovered_));

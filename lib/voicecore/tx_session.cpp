@@ -43,6 +43,8 @@ bool TxSession::emitData(uint8_t extraFlags) {
   if (withCallsign) {
     memcpy(p.callsign, callsign_, sizeof(p.callsign));
     lastCallsignSeq_ = seq_;
+    // La posizione viaggia solo nel pacchetto START (decisione del 09/11/2026: i turni sono brevi).
+    if (seq_ == 0 && position_.valid) p.position = position_;
   }
 
   p.payloadLen = static_cast<uint8_t>(frameCount_ * kFrameBytes);

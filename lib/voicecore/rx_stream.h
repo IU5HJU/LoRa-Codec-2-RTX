@@ -45,6 +45,8 @@ class RxStream {
   bool active() const { return phase_ != Phase::Idle && phase_ != Phase::Done; }
   bool finished() const { return phase_ == Phase::Done; }
   const char* callsign() const { return callsign_; }
+  // Posizione ricevuta nel pacchetto START (valid = false se non e' arrivata).
+  const Position& position() const { return position_; }
   uint16_t session() const { return session_; }
   uint32_t recoveredPackets() const { return recovered_; }
   uint32_t lostFrames() const { return lostFrames_; }
@@ -69,6 +71,7 @@ class RxStream {
   uint16_t session_;
   bool fec_;
   char callsign_[kMaxCallsign + 1];
+  Position position_;
   uint32_t firstRxMs_;
   uint32_t lastRxMs_;
   int endSeq_;

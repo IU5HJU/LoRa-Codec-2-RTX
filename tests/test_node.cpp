@@ -1,6 +1,8 @@
 // Test end-to-end della macchina a stati con due nodi su un canale simulato.
 #include <memory>
 
+#include <cstdlib>
+
 #include "fakes.h"
 #include "testing.h"
 #include "voice_node.h"
@@ -446,7 +448,66 @@ static void testMessageProfileRules() {
   CHECK(s.b.spk.played == seq(static_cast<int>(profileFor(kProfileMessage).maxTurnMs / kFrameMs)));
 }
 
+static Position qth(double lat, double lon) {
+  Position p;
+  p.valid = true;
+  p.latE7 = static_cast<int32_t>(lat * 1e7);
+  p.lonE7 = static_cast<int32_t>(lon * 1e7);
+  return p;
+}
+
+static void turn(Sim& s) {
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50 + 2000);
+  s.a.node.pttReleased(s.clock);
+  s.run(5000);
+}
+
+static void testPositionOffByDefault() {
+  // Anche con una posizione disponibile, se la trasmissione non e' attivata non parte nulla.
+  Sim s;
+  s.a.node.setOwnPosition(qth(43.7696, 11.2558), false);
+  turn(s);
+  CHECK(s.b.note.rxStarts == 1 && s.b.note.callsign == "IU5HJU");
+  CHECK(s.b.note.positions == 0);
+}
+
+static void testPositionInStartOnly() {
+  Sim s;
+  s.a.node.setOwnPosition(qth(43.7696, 11.2558), true);
+  turn(s);
+  CHECK(s.b.note.rxStarts == 1 && s.b.note.rxEnds == 1);
+  CHECK(s.b.note.positions == 1);  // una sola volta per ricezione, anche se il nominativo si ripete
+  CHECK(s.b.note.position.valid && !s.b.note.position.fromGps);
+  CHECK(std::abs(s.b.note.position.latE7 - 437696000) < 120 && std::abs(s.b.note.position.lonE7 - 112558000) < 240);
+  // Nei pacchetti trasmessi la posizione c'e' solo in quello con START.
+  int withPos = 0, withStart = 0, withCall = 0;
+  for (const auto& raw : s.air.log[0]) {
+    Packet p;
+    if (!decodePacket(raw.data(), raw.size(), p)) continue;
+    if (p.hasPosition()) withPos++;
+    if (p.flags & kFlagStart) withStart++;
+    if (p.hasCallsign()) withCall++;
+    if (p.hasPosition()) CHECK(p.flags & kFlagStart);
+  }
+  CHECK(withPos == 1 && withStart == 1 && withCall >= 2);
+  // La voce passa uguale.
+  const int n = static_cast<int>(s.a.mic.produced());
+  CHECK(s.b.spk.played == seq(n));
+}
+
+static void testPositionNotSentWithoutFix() {
+  Sim s;
+  s.a.node.setOwnPosition(Position(), true);  // abilitata ma nessuna posizione (GPS senza fix, QTH non impostato)
+  turn(s);
+  CHECK(s.b.note.rxStarts == 1 && s.b.note.positions == 0);
+}
+
 int main() {
+  testPositionOffByDefault();
+  testPositionInStartOnly();
+  testPositionNotSentWithoutFix();
   testMessageProfile();
   testMessageEndLost();
   testMessageProfileRules();

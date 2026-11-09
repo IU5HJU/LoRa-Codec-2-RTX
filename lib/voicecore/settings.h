@@ -7,8 +7,8 @@
 // La console e' un protocollo a righe sulla seriale, pensato per la pagina web di
 // configurazione (Web Serial) ma usabile anche a mano:
 //
-//   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=1   (versione del firmware e del protocollo)
-//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0
+//   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=2   (versione del firmware e del protocollo)
+//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0 pos=off qth=none
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
 //   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000; frequenza del profilo Standard)
 //   CFG SET FREQMSG 433.900      -> CFG OK freqmsg=433.900     (come FREQ, per il profilo Messaggio; puo' essere uguale a FREQ)
@@ -17,6 +17,8 @@
 //   CFG MIC MEASURE              -> misura il fondo per 3 s (stare in silenzio), poi: CFG MIC fondo=-61 min=-63 max=-58 frames=75
 //   CFG SET VOLUME 7             -> CFG OK volume=7            (0 = muto, 1-10 in passi da 3 dB)
 //   CFG SET PROFILE MSG          -> CFG OK profile=msg         (STD = Standard, MSG = Messaggio SF12/BW125; vale dal riavvio)
+//   CFG SET POS ON               -> CFG OK pos=on             (trasmette la posizione nel pacchetto START; di default OFF; serve il QTH o un GPS)
+//   CFG SET QTH 43.7696,11.2558  -> CFG OK qth=43.76960,11.25580   (posizione fissa in gradi decimali, lat,lon; NONE la cancella)
 //   CFG TEST ON                  -> CFG OK test=on             (prova di collegamento, solo fino al riavvio; OFF la spegne)
 //   CFG TEST AUDIO               -> suona 500, 1000 e 2000 Hz e misura il microfono: CFG AUDIO f=500 base=-90.1 tone=-52.3 ... CFG AUDIO fine
 //   CFG RESET                    -> CFG OK reset               (torna ai valori compilati)
@@ -28,6 +30,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "position.h"
 #include "profile.h"
 #include "protocol.h"
 
@@ -58,6 +61,21 @@ struct Settings {
   int volume = kDefaultVolume;  // volume iniziale dell'altoparlante
   int micFloorDb = kDefaultMicFloorDb;  // fondo del microfono, dBFS
   uint8_t profile = kProfileStandard;   // profilo di trasmissione (profile.h); vale dal riavvio
+  bool posTx = false;       // trasmette la posizione nel pacchetto START (spento di default: dato personale)
+  bool qthSet = false;      // posizione fissa (QTH) impostata
+  int32_t qthLatE7 = 0;     // posizione fissa, decimilionesimi di grado
+  int32_t qthLonE7 = 0;
+
+  // Posizione fissa dell'operatore (non valida se non impostata). Serve anche per calcolare la distanza dalle stazioni
+  // ricevute, indipendentemente da posTx.
+  Position qth() const {
+    Position p;
+    p.valid = qthSet;
+    p.fromGps = false;
+    p.latE7 = qthLatE7;
+    p.lonE7 = qthLonE7;
+    return p;
+  }
 
   // Frequenza del profilo in uso (quella con cui lavora la radio).
   uint32_t profileFreqKhz() const { return profile == kProfileMessage ? freqMsgKhz : freqKhz; }

@@ -11,7 +11,8 @@ namespace lcr {
 bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         a.profile == b.profile;
+         a.profile == b.profile && a.posTx == b.posTx && a.qthSet == b.qthSet &&
+         (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
 }
 
 bool isValidSettings(const Settings& s) {
@@ -19,7 +20,8 @@ bool isValidSettings(const Settings& s) {
          s.freqMsgKhz <= kMaxFreqKhz &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
-         s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount;
+         s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount &&
+         (!s.qthSet || isValidCoordinate(s.qthLatE7, s.qthLonE7));
 }
 
 Settings loadSettings(ISettingsStorage& storage, const Settings& defaults) {
@@ -73,6 +75,42 @@ bool parseFreqKhz(const char* t, uint32_t& khz) {
   return true;
 }
 
+// "43.7696" / "-11.25" -> decimilionesimi di grado. Al massimo 7 decimali, nessun esponente.
+bool parseDegreesE7(const char* t, int32_t& e7) {
+  bool neg = false;
+  if (*t == '-') {
+    neg = true;
+    t++;
+  }
+  int64_t whole = 0;
+  size_t digits = 0;
+  while (isdigit(static_cast<unsigned char>(*t))) {
+    if (++digits > 3) return false;
+    whole = whole * 10 + (*t - '0');
+    t++;
+  }
+  if (digits == 0) return false;
+  int64_t frac = 0;
+  size_t fd = 0;
+  if (*t == '.') {
+    t++;
+    while (isdigit(static_cast<unsigned char>(*t))) {
+      if (++fd > 7) return false;
+      frac = frac * 10 + (*t - '0');
+      t++;
+    }
+    if (fd == 0) return false;
+  }
+  if (*t != 0) return false;
+  while (fd < 7) {
+    frac *= 10;
+    fd++;
+  }
+  const int64_t v = whole * 10000000 + frac;
+  e7 = static_cast<int32_t>(neg ? -v : v);
+  return true;
+}
+
 bool parseInt(const char* t, int& v) {
   size_t n = 0;
   int sign = 1;
@@ -89,6 +127,19 @@ bool parseInt(const char* t, int& v) {
   if (n == 0 || *t != 0) return false;
   v = sign * acc;
   return true;
+}
+
+// "43.76960,11.25580" (5 decimali, circa 1 m).
+void formatQth(char* out, size_t cap, int32_t latE7, int32_t lonE7) {
+  auto part = [](char* o, size_t c, int32_t e7) {
+    const int64_t a = e7 < 0 ? -static_cast<int64_t>(e7) : e7;
+    const int64_t r = (a + 50) / 100;  // 5 decimali, arrotondato
+    snprintf(o, c, "%s%lld.%05lld", (e7 < 0 && r != 0) ? "-" : "", static_cast<long long>(r / 100000), static_cast<long long>(r % 100000));
+  };
+  char la[16], lo[16];
+  part(la, sizeof(la), latE7);
+  part(lo, sizeof(lo), lonE7);
+  snprintf(out, cap, "%s,%s", la, lo);
 }
 
 }  // namespace
@@ -142,10 +193,16 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
 
 ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
   if (reply && cap > 0) {
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d",
+    char qthText[32];
+    if (stored_.qthSet) {
+      formatQth(qthText, sizeof(qthText), stored_.qthLatE7, stored_.qthLonE7);
+    } else {
+      snprintf(qthText, sizeof(qthText), "none");
+    }
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d pos=%s qth=%s",
              stored_.callsign, static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
              static_cast<unsigned>(stored_.freqMsgKhz / 1000), static_cast<unsigned>(stored_.freqMsgKhz % 1000),
-             stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
+             stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0, stored_.posTx ? "on" : "off", qthText);
   }
   return ConsoleResult::Ok;
 }
@@ -220,6 +277,43 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.profile = id;
     snprintf(shown, sizeof(shown), "profile=%s", profileFor(id).code);
+  } else if (equalsIgnoreCase(key, "POS")) {
+    if (equalsIgnoreCase(value, "ON")) {
+      next.posTx = true;
+    } else if (equalsIgnoreCase(value, "OFF")) {
+      next.posTx = false;
+    } else {
+      say(reply, cap, "CFG ERR pos %s", "usa ON oppure OFF");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "pos=%s", next.posTx ? "on" : "off");
+  } else if (equalsIgnoreCase(key, "QTH")) {
+    if (equalsIgnoreCase(value, "NONE")) {
+      next.qthSet = false;
+      next.qthLatE7 = next.qthLonE7 = 0;
+      snprintf(shown, sizeof(shown), "qth=none");
+    } else {
+      char tmp[40];
+      strncpy(tmp, value, sizeof(tmp) - 1);
+      tmp[sizeof(tmp) - 1] = 0;
+      char* comma = strchr(tmp, ',');
+      int32_t la = 0, lo = 0;
+      if (!comma) {
+        say(reply, cap, "CFG ERR qth %s", "usa latitudine,longitudine in gradi, per esempio 43.7696,11.2558");
+        return ConsoleResult::Error;
+      }
+      *comma = 0;
+      if (!parseDegreesE7(tmp, la) || !parseDegreesE7(comma + 1, lo) || !isValidCoordinate(la, lo)) {
+        say(reply, cap, "CFG ERR qth %s", "latitudine da -90 a 90, longitudine da -180 a 180, senza spazi");
+        return ConsoleResult::Error;
+      }
+      next.qthSet = true;
+      next.qthLatE7 = la;
+      next.qthLonE7 = lo;
+      char q[32];
+      formatQth(q, sizeof(q), la, lo);
+      snprintf(shown, sizeof(shown), "qth=%s", q);
+    }
   } else {
     say(reply, cap, "CFG ERR %s parametro sconosciuto", key);
     return ConsoleResult::Error;

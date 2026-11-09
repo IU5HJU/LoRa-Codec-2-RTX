@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "link_test.h"
+#include "position.h"
 
 namespace lcr {
 
@@ -60,6 +61,8 @@ class INotifier {
   virtual void pttDenied(DenyReason r) { (void)r; }
   virtual void rxStarted() {}
   virtual void rxCallsign(const char* callsign) { (void)callsign; }
+  // Chi trasmette ha mandato la sua posizione (nel pacchetto START). Una volta per ricezione.
+  virtual void rxPosition(const Position& p) { (void)p; }
   // Inizia la riproduzione di una ricezione (nel profilo Messaggio avviene a ricezione conclusa).
   virtual void rxPlaybackStarted() {}
   virtual void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) {

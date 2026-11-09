@@ -25,10 +25,13 @@ size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
   if (cs && !isValidCallsign(p.callsign)) return 0;
   if (p.payloadLen > kMaxPayload) return 0;
   const size_t csLen = cs ? strlen(p.callsign) : 0;
-  const size_t need = 5 + (cs ? 1 + csLen : 0) + p.payloadLen;
+  const bool hasPos = p.position.valid;
+  if (hasPos && (!cs || !isValidCoordinate(p.position.latE7, p.position.lonE7))) return 0;
+  const size_t need = 5 + (cs ? 1 + csLen : 0) + (hasPos ? kPositionBytes : 0) + p.payloadLen;
   if (need > cap) return 0;
 
-  const uint8_t flags = static_cast<uint8_t>((p.flags & ~kFlagCallsign) | (cs ? kFlagCallsign : 0));
+  const uint8_t flags = static_cast<uint8_t>((p.flags & ~(kFlagCallsign | kFlagPosition)) | (cs ? kFlagCallsign : 0) |
+                                             (hasPos ? kFlagPosition : 0));
   size_t pos = 0;
   out[pos++] = static_cast<uint8_t>((kProtocolVersion << 4) | (p.mode & 0x0F));
   out[pos++] = static_cast<uint8_t>(p.session >> 8);
@@ -39,6 +42,10 @@ size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
     out[pos++] = static_cast<uint8_t>(csLen);
     memcpy(out + pos, p.callsign, csLen);
     pos += csLen;
+  }
+  if (hasPos) {
+    encodePosition(p.position, out + pos);
+    pos += kPositionBytes;
   }
   if (p.payloadLen) memcpy(out + pos, p.payload, p.payloadLen);
   pos += p.payloadLen;
@@ -67,12 +74,18 @@ bool decodePacket(const uint8_t* in, size_t len, Packet& out) {
     if (!isValidCallsign(q.callsign)) return false;
     pos += n;
   }
+  if (q.flags & kFlagPosition) {
+    if (!(q.flags & kFlagCallsign) || pos + kPositionBytes > len) return false;
+    decodePosition(in + pos, q.position);
+    if (!isValidCoordinate(q.position.latE7, q.position.lonE7)) return false;
+    pos += kPositionBytes;
+  }
 
   const size_t pl = len - pos;
   if (pl > kMaxPayload) return false;
 
   if (q.flags & kFlagParity) {
-    if (q.flags & (kFlagStart | kFlagEnd | kFlagCallsign)) return false;
+    if (q.flags & (kFlagStart | kFlagEnd | kFlagCallsign | kFlagPosition)) return false;
     if (pl < kParityHeader) return false;
     const uint8_t count = in[pos];
     const uint8_t xorLen = in[pos + 1];

@@ -24,6 +24,9 @@ class UiNotifier : public lcr::INotifier {
     maxTurnSec_ = p.maxTurnMs / 1000;
   }
 
+  // Posizione di questa stazione (QTH fisso o GPS): serve a mostrare la distanza dalla stazione ricevuta.
+  void setOwnPosition(const lcr::Position& p) { ownPos_ = p; }
+
   // Menu delle modalita': mentre e' aperto lo schermo mostra le voci. currentId e' il profilo in uso (segnato con *).
   void setMenu(const lcr::Menu* menu, uint8_t currentId) {
     menu_ = menu;
@@ -45,6 +48,7 @@ class UiNotifier : public lcr::INotifier {
   void pttDenied(lcr::DenyReason r) override;
   void rxStarted() override;
   void rxCallsign(const char* callsign) override;
+  void rxPosition(const lcr::Position& p) override;
   void rxPlaybackStarted() override {
     playing_ = true;
     dirty_ = true;
@@ -75,6 +79,8 @@ class UiNotifier : public lcr::INotifier {
   bool dirty_ = true;
   uint32_t lastDrawMs_ = 0;
 
+  lcr::Position ownPos_;
+  char distText_[12] = {0};  // distanza dall'ultima stazione ricevuta ("12.3km"), vuota se non nota
   const lcr::Menu* menu_ = nullptr;
   uint8_t menuCurrentId_ = 0;
   bool message_ = false;         // profilo Messaggio

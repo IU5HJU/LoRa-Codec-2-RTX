@@ -102,7 +102,7 @@ async function scenario(name, fn, opts = {}) {
     await connect(p);
     await until(p, () => document.getElementById('fwinfo').textContent.includes('beta'));
     const t = await p.textContent('#fwinfo');
-    check('firmware beta riconosciuto, con il protocollo', t.includes('BETA') && t.includes('protocollo 1') && t.includes('pubblicata su questo sito'), t);
+    check('firmware beta riconosciuto, con il protocollo', t.includes('BETA') && t.includes('protocollo 2') && t.includes('pubblicata su questo sito'), t);
     publishedVersion = 'v0.1.0-rc.1';
     await p.reload();
     await until(p, () => document.getElementById('ver').textContent.includes('v0.1.0-rc.1'));

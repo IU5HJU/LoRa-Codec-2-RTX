@@ -129,13 +129,15 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | Comando | Risposta | Note |
 |---|---|---|
 | `CFG GET` | `CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0` | `reboot=1` se i valori salvati differiscono da quelli in uso |
-| `CFG VERSION` | `CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=1` | versione del firmware (da `git describe`, "dev" se compilato senza git), scheda e **versione del protocollo** ([versioni.md](versioni.md)); la pagina web la confronta con quella pubblicata |
+| `CFG VERSION` | `CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=2` | versione del firmware (da `git describe`, "dev" se compilato senza git), scheda e **versione del protocollo** ([versioni.md](versioni.md)); la pagina web la confronta con quella pubblicata |
 | `CFG SET CALLSIGN iu5hju` | `CFG OK callsign=IU5HJU` | solo A-Z, 0-9 e `/`, massimo 8 caratteri |
 | `CFG SET FREQ 433.900` | `CFG OK freq=433.900` | MHz, da 430.000 a 440.000 (70 cm); **segnaposto**: scegli il canale col band plan IARU R1 / ARI |
 | `CFG SET POWER 10` | `CFG OK power=10` | dBm, da 2 a 17 |
 | `CFG SET VOLUME 7` | `CFG OK volume=7` | volume iniziale dell'altoparlante: 0 muto, 1-10 in passi da 3 dB (10 = massimo); il pulsante su GPIO15 lo cambia poi a scheda accesa, ma allo spegnimento torna a questo valore |
 | `CFG SET FREQMSG 433.900` | `CFG OK freqmsg=433.900` | **frequenza del profilo Messaggio** (MHz, 430.000-440.000), come `FREQ`. **Può essere uguale** a `FREQ`: nessun controllo (nelle prove si usa spesso una frequenza nota). La scheda usa la frequenza del profilo scelto |
 | `CFG SET PROFILE MSG` | `CFG OK profile=msg` | **profilo di trasmissione**: `STD` (Standard, voce in tempo reale, SF8/BW250) oppure `MSG` (Messaggio, lungo raggio, SF12/BW125, registra e invia: [modo-messaggio.md](modo-messaggio.md)). Vale dal riavvio; le schede con profili diversi non si sentono |
+| `CFG SET POS ON` | `CFG OK pos=on` | **trasmette la posizione** nel pacchetto `START` (protocollo 2, [protocollo.md](protocollo.md)). **Spenta di default**: la posizione è un dato personale e viaggia in chiaro. Se non c'è una posizione (QTH non impostato) non parte nulla. `OFF` la spegne |
+| `CFG SET QTH 43.7696,11.2558` | `CFG OK qth=43.76960,11.25580` | **posizione fissa** (latitudine,longitudine in gradi decimali, senza spazi). Serve anche a mostrare la **distanza in km** dalle stazioni che trasmettono la loro posizione, anche con `POS OFF`. `NONE` la cancella |
 | `CFG SET MICFLOOR -60` | `CFG OK micfloor=-60` | **fondo del microfono** in dBFS (da -80 a -36): livello in silenzio visto dall'AGC; l'AGC lavora sopra fondo + 6 dB. Vale subito e resta salvato; standard -60 |
 | `CFG MIC MEASURE` | `CFG OK mic misura in corso...`, dopo 3 s `CFG MIC fondo=-61 min=-63 max=-58 frames=75` | misura il fondo (stare in silenzio): `fondo` è il livello sotto cui sta il 90% dei campioni. Non salva da solo: lo fa la pagina con `CFG SET MICFLOOR` |
 | `CFG TEST AUDIO` | `CFG OK audio prova in corso...`, poi `CFG AUDIO f=500 base=-90.1 tone=-52.3` (e 1000, 2000 Hz) e `CFG AUDIO fine` | suona tre toni a volume basso e fisso e misura il microfono alla frequenza del tono ([verifica-hardware-audio.md](verifica-hardware-audio.md)); blocca la scheda per circa 3,5 s |

@@ -205,6 +205,7 @@ Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etich
 - **Fase 1** (fatta e provata il 4 novembre: avvio, AXP2101, radio, tasto IO38, trasmissione): alimentazione AXP2101 (radio accesa, GPS spento), tasto di bordo IO38 come PTT, pin audio propri (microfono su GPIO36, altoparlante su GPIO2), due ambienti `lora32` e `tbeam`, compilazione di entrambi su Actions.
 - **Fase 2**: batteria e carica sull'OLED e in seriale, avviso di batteria scarica con un bip.
 - **Fase 3**: GPS: locatore Maidenhead e ora precisa, per esempio nell'intestazione di inizio e fine turno.
+- **Posizione nei pacchetti (09/11/2026), decisioni:** protocollo **v2** (flag `POSITION`, blocco da 7 byte: stato, latitudine e longitudine a 24 bit); trasmissione **spenta di default**; **solo nel pacchetto `START`** (i passaggi sono brevi: anche un mezzo in movimento aggiorna la posizione a ogni turno). Fatto il 09/11/2026 sul PC e nel firmware: blocco, `CFG SET POS`, `CFG SET QTH` (posizione fissa), distanza in km sul display (se si conosce la propria posizione). **Manca la lettura del GPS della T-Beam** (NMEA su seriale, buffer di circa 1 s, alimentazione, "nessun fix" = niente blocco) e il suo uso per `setOwnPosition`.
 - Se la scheda risultasse con radio SX1262 serve una variante di `RadioLora`.
 
 ## Aperto
