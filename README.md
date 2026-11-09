@@ -96,4 +96,4 @@ La pagina web di installazione e configurazione ha una prova a parte (`make test
 
 ## Sostieni il progetto
 
-LoRa-Codec-2-RTX è software libero (GPL-3.0) e lo resterà: il sostegno è del tutto volontario e non dà diritto a nulla in cambio, né funzioni né assistenza. Se il progetto ti è utile e vuoi aiutarlo a crescere (schede e componenti per le prove, tempo per lo sviluppo), puoi offrire un caffè con [PayPal.Me](https://www.paypal.me/maccalampo). Grazie, e buoni collegamenti. 73 de IU5HJU
+LoRa-Codec-2-RTX è software libero (GPL-3.0) e lo resterà: il sostegno è del tutto volontario e non dà diritto a nulla in cambio, né funzioni né assistenza. Se ti fa piacere aiutarlo a crescere (schede e componenti per le prove, tempo per lo sviluppo), puoi offrire un caffè con [PayPal.Me](https://www.paypal.me/maccalampo). Grazie, e buoni collegamenti. 73 de IU5HJU
