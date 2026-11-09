@@ -8,6 +8,8 @@
 // avanzamento, fine) vanno sullo standard error, cosi' non si mescolano con l'audio.
 //   --messaggio        ascolta il profilo Messaggio (SF12): la riproduzione parte a messaggio completo
 //   --accept-bad-crc   non scarta i pacchetti con CRC errato
+//   --anticipo MS      cuscinetto per chi riproduce: i primi frame escono MS millisecondi in anticipo (predefinito 240, 0 = ritmo
+//                      reale esatto); evita i vuoti ("underrun") di aplay
 // Alla fine dell'ingresso aspetta che la trasmissione in corso finisca (al massimo 90 s) e termina.
 #include <poll.h>
 #include <unistd.h>
@@ -48,19 +50,23 @@ class StdSink : public LiveRx::Sink {
 
 int main(int argc, char** argv) {
   bool message = false, acceptBad = false;
+  uint32_t lead = 240;
   for (int i = 1; i < argc; i++) {
     const std::string a = argv[i];
     if (a == "--messaggio") {
       message = true;
     } else if (a == "--accept-bad-crc") {
       acceptBad = true;
+    } else if (a == "--anticipo" && i + 1 < argc) {
+      lead = static_cast<uint32_t>(std::atoi(argv[++i]));
+      if (lead > 1000) lead = 1000;
     } else {
-      std::fprintf(stderr, "uso: lcr_live [--messaggio] [--accept-bad-crc]   (legge le righe di lora_rx.py dallo standard input)\n");
+      std::fprintf(stderr, "uso: lcr_live [--messaggio] [--accept-bad-crc] [--anticipo MS]   (legge le righe di lora_rx.py dallo standard input)\n");
       return a == "-h" || a == "--help" ? 0 : 2;
     }
   }
   StdSink sink;
-  LiveRx live(sink, message, acceptBad);
+  LiveRx live(sink, message, acceptBad, lead);
   const auto t0 = std::chrono::steady_clock::now();
   auto nowMs = [&]() {
     return static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count());

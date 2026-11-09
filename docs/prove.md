@@ -254,3 +254,5 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
   - **`ffplay` non va bene in tempo reale**: con i frame a ritmo reale (uno ogni 40 ms) non riproduce, mentre `aplay -q -t raw -f S16_LE -r 8000 -c 1` suona regolare.
   - La riproduzione automatica dopo `Ctrl+C` (lotti) funzionava già: l'audio si sentiva anche se la prima volta non si vedeva nel testo incollato.
 - Non ancora provato: il modo Messaggio (SF12) con l'SDR in tempo reale e l'avanzamento in percentuale sul terminale.
+- **Posizione dal GPS del T-Beam:** con `CFG SET GPS ON` e `POS ON` il T-Beam (fix con 4 satelliti) ha trasmesso la posizione nel pacchetto START; l'SDR in tempo reale l'ha mostrata come `posizione … (GPS)`, cioè con lo stato "da GPS" e non "fissa". Trasmissione da 8,6 s, 0 frame persi. Le coordinate non sono riportate qui.
+- **Difetto trovato:** `aplay` ha stampato `underrun!!!` (vuoto di almeno 107 ms), perché i frame arrivavano esattamente a ritmo reale e il suo buffer restava quasi vuoto. Corretto con un cuscinetto di 240 ms (`lcr_live --anticipo`); da riprovare con la chiavetta.

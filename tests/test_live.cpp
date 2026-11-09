@@ -109,7 +109,8 @@ void testStandard() {
   CHECK(same);
   // A ritmo reale: un frame ogni 40 ms (stessa cadenza della scheda), e il primo non prima del pre-buffer di 1 s
   // (25 frame) dall'arrivo del primo pacchetto con audio.
-  for (size_t i = 1; i < out.at.size(); i++) CHECK(out.at[i] - out.at[i - 1] >= 30 && out.at[i] - out.at[i - 1] <= 50);
+  // I primi frame escono in blocco (cuscinetto di 240 ms = 6 frame), poi uno ogni 40 ms.
+  for (size_t i = 8; i < out.at.size(); i++) CHECK(out.at[i] - out.at[i - 1] >= 30 && out.at[i] - out.at[i - 1] <= 50);
   CHECK(!out.at.empty() && out.at.front() >= 350);
   // Informazioni per l'operatore.
   CHECK(out.has("inizio trasmissione"));
@@ -119,6 +120,28 @@ void testStandard() {
   CHECK(!live.receiving());
   // La voce senza lunghezza dichiarata non ha l'avanzamento.
   CHECK(!out.has("avanzamento"));
+}
+
+void testLead() {
+  const Stream s = makeStream(100, false, false);
+  // Con il cuscinetto (240 ms) i primi 7 frame escono insieme; senza (0) uno ogni 40 ms sin dal primo.
+  Out a, b;
+  uint32_t ca = 0, cb = 0;
+  a.clock = &ca;
+  b.clock = &cb;
+  LiveRx withLead(a, false, false, 240), noLead(b, false, false, 0);
+  run(withLead, s, 350, {}, ca, 8000);
+  run(noLead, s, 350, {}, cb, 8000);
+  CHECK(a.frames.size() == 100 && b.frames.size() == 100);
+  CHECK(a.at.size() == 100 && b.at.size() == 100);
+  CHECK(a.at[6] - a.at[0] <= 20);                       // blocco iniziale: il primo frame e 6 di cuscinetto
+  CHECK(a.at[7] - a.at[6] >= 30 && a.at[7] - a.at[6] <= 50);  // poi il ritmo reale
+  CHECK(b.at[5] - b.at[0] >= 180);                      // senza cuscinetto: 5 intervalli da 40 ms
+  // Il cuscinetto anticipa l'audio, non lo ritarda; la durata totale resta quella del messaggio (meno l'anticipo).
+  CHECK(a.at.front() == b.at.front());
+  CHECK(a.at.back() + 200 <= b.at.back() + 40 && a.at.back() + 280 >= b.at.back());
+  // Stesso contenuto, nello stesso ordine.
+  CHECK(a.frames == b.frames);
 }
 
 void testRecovery() {
@@ -228,6 +251,7 @@ void testTestSession() {
 
 int main() {
   testStandard();
+  testLead();
   testRecovery();
   testMessage();
   testTestSession();

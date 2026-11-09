@@ -28,7 +28,11 @@ class LiveRx {
   };
 
   // message: profilo Messaggio (la riproduzione parte a messaggio completo, come sulle schede); altrimenti Standard.
-  LiveRx(Sink& sink, bool message = false, bool acceptBadCrc = false) : sink_(sink), acceptBad_(acceptBadCrc) {
+  // leadMs: anticipo con cui si consegnano i frame rispetto al ritmo reale. I primi frame escono in blocco e poi uno ogni
+  // 40 ms: chi riproduce (aplay) ha un cuscinetto di leadMs contro i piccoli ritardi e non va in "underrun" (vuoti nell'audio).
+  // Costa leadMs di ritardo in meno, non in piu': l'audio parte prima, non dopo. 0 = ritmo reale esatto.
+  LiveRx(Sink& sink, bool message = false, bool acceptBadCrc = false, uint32_t leadMs = 240)
+      : sink_(sink), acceptBad_(acceptBadCrc), lead_(leadMs) {
     const Profile& p = profileFor(message ? kProfileMessage : kProfileStandard);
     RxStream::Config rc;
     rc.prebufferFrames = p.rxPrebufferFrames;
@@ -76,7 +80,10 @@ class LiveRx {
   }
 
   void tick(uint32_t now) {
-    if (receiving_ && now >= nextPlay_) step(now);
+    // Piu' frame nello stesso giro solo se si e' in anticipo (i primi, per il cuscinetto); mai un ciclo senza fine.
+    for (int guard = 0; guard < 16 && receiving_ && now >= nextPlay_; guard++) {
+      if (!step(now)) break;
+    }
   }
 
  private:
@@ -109,12 +116,13 @@ class LiveRx {
     }
   }
 
-  void step(uint32_t now) {
+  // true se ha consegnato un frame (o chiuso la trasmissione): si puo' provare subito con il successivo.
+  bool step(uint32_t now) {
     const RxStream::Out o = rx_.nextFrame(now);
     switch (o.kind) {
       case RxStream::Kind::Wait:
         nextPlay_ = now;
-        return;
+        return false;
       case RxStream::Kind::Frame:
         frames_++;
         if (isTest_) lt_.onFrame(o.frame);
@@ -131,10 +139,15 @@ class LiveRx {
         break;
       case RxStream::Kind::End:
         finish();
-        return;
+        return false;
     }
-    nextPlay_ += kFrameMs;
-    if (now > nextPlay_ + 5 * kFrameMs) nextPlay_ = now + kFrameMs;
+    if (!isTest_ && frames_ + lostFrames_ == 1) {
+      nextPlay_ = now + kFrameMs - lead_;  // primo frame: il cuscinetto parte da qui
+    } else {
+      nextPlay_ += kFrameMs;
+    }
+    if (now > nextPlay_ + 5 * kFrameMs + lead_) nextPlay_ = now + kFrameMs;  // troppo indietro: si riparte dal ritmo reale
+    return true;
   }
 
   void finish() {
@@ -155,6 +168,7 @@ class LiveRx {
 
   Sink& sink_;
   bool acceptBad_;
+  uint32_t lead_;
   RxStream rx_;
   LinkTestRx lt_;
   bool receiving_ = false;

@@ -81,6 +81,7 @@ tail -n0 -F cattura.txt | build/lcr_live | c2dec 1200 - - | aplay -q -t raw -f S
 
 - **Standard:** la voce si sente mentre la scheda trasmette, con un ritardo di circa **1-2 secondi** (il pre-buffer di 1 s più il tempo di demodulazione).
 - **Messaggio (`--messaggio`, SF12):** come sulle schede, la riproduzione parte a messaggio completo; durante la ricezione si legge l'avanzamento.
+- **Cuscinetto contro gli "underrun" (10/11/2026):** `aplay` può stampare `underrun!!!` (un vuoto nell'audio) se per un attimo non riceve dati: con i frame consegnati esattamente a ritmo reale il suo buffer resta sempre quasi vuoto. `lcr_live` fa quindi uscire i primi 7 frame in blocco e poi uno ogni 40 ms, così l'audio ha **240 ms di margine** (`--anticipo MS`, 0 = ritmo reale esatto). L'audio parte prima, non dopo.
 - Si usa `aplay` e non `ffplay`: `ffplay` con dati che arrivano a rilento si blocca nel suo "probe" iniziale.
 - Lo script **`tools/sdr/ricevitore-live.sh`** fa tutto (ambiente conda, scelta del modo, frequenza e guadagno, ascolto, riepilogo finale) e si può collegare a un'icona su Ubuntu MATE.
 - Provato sul PC con orologio finto (`tests/test_live.cpp`) e con una trasmissione sintetica (600 byte in 4,9 s). **Da provare con la chiavetta e una scheda vera.**
