@@ -234,3 +234,13 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
   - Due `CFG ERR comando sconosciuto` per un comando digitato male (`CFG REBOOT` con caratteri sbagliati): nessun effetto sulle impostazioni.
   - Il terminale non copia sempre la riga intera: la riga di `CFG GET` è stata troncata a `pos=on qth`.
 - **Richiesta dell'operatore (da fare dopo le prove):** nel modo Messaggio il display deve mostrare una **percentuale stimata di avanzamento da 1% a 100%** sia in trasmissione sia in ricezione, perché un messaggio lungo dura minuti e l'utente medio penserebbe che la scheda sia bloccata. Lato TX la lunghezza è nota dopo la registrazione; lato RX serve che il pacchetto START dichiari quanti pacchetti seguono (modifica del protocollo v2).
+
+### 10/11/2026, casa, IU5HJU (percentuale di avanzamento e segnale "MSG" in Morse nel modo Messaggio)
+
+- Schede: LoRa32 T3 V1.6.1 e T-Beam V1.2, entrambe aggiornate al firmware di sviluppo con il segnale Morse all'inizio della ricezione (`e347988`), profilo Messaggio.
+- **Esito: funziona tutto.** Percentuale di avanzamento (1-100%) in invio e in ricezione, nominativo di chi trasmette durante la ricezione e segnale "MSG" in Morse all'inizio della ricezione, come da progetto. I valori e i tempi non sono stati annotati.
+- Problemi incontrati:
+  - **Versioni diverse sulle due schede:** il T-Beam aveva ancora `6412e02`, di prima del campo `TOTAL` nel pacchetto START. Quel firmware scartava lo START del messaggio (il flag 64 gli era sconosciuto), e la ricezione partiva lo stesso dai pacchetti successivi, **senza nominativo e senza percentuale** (il nominativo arrivava solo con l'END). Dopo l'aggiornamento il difetto è sparito. Le due schede devono avere lo stesso firmware: il numero di protocollo è lo stesso (2), ma il formato dello START è cambiato, quindi la riga di avvio `firmware XXXXXXX` va controllata su entrambe.
+  - Il segnale Morse in versione `cf17027` suonava a fine ricezione, subito prima della voce, e non serviva: spostato all'inizio.
+  - La compilazione del firmware era fallita nella run 151 per l'inizializzazione con le graffe di una struttura (C++11 della scheda); corretta nella run 152.
+- Decisioni: l'ACK sui messaggi è stato valutato e **abbandonato** (broadcast con risposte che si scontrano, finestra di attesa, trasmissione automatica, nessuna autenticazione).
