@@ -122,6 +122,24 @@ Il ripetitore Standard è fatto da **due schede collegate tra loro**: una **solo
 - **Schede utente:** frequenza di ricezione e di trasmissione separate (scostamento) e controllo "canale occupato" sulla frequenza di uscita: la scheda ascolta sull'uscita, e se sta ricevendo il PTT è rifiutato come oggi.
 - **Software:** un ruolo "ripetitore RX" e un ruolo "ripetitore TX" nello stesso firmware, scelti nelle impostazioni, senza audio.
 
+#### Cambio di modalità a bordo e pagina interna (bozza del 9 novembre, da implementare)
+
+Si usano i due tasti che ci sono già. **Deciso:** pressione lunga sul volume apre il menu, PTT sceglie, volume conferma, uscita automatica dopo 10 s senza cambiare.
+
+| Tasto | Fuori dal menu | Dentro il menu |
+|---|---|---|
+| **Volume**, breve | alza il volume (come oggi) | **conferma** la voce scelta |
+| **Volume**, lungo (circa 2 s) | **apre il menu** (bip) | **esce senza cambiare** |
+| **PTT**, breve | trasmette (come oggi) | **voce successiva** |
+
+- Il menu si apre **solo a scheda ferma** (né in ricezione né in trasmissione). **Nel menu il PTT non trasmette mai.** Dopo 10 s senza tasti il menu si chiude **senza cambiare**.
+- **Canali memorizzati:** non solo "tre modi", ma memorie, ognuna con **profilo e frequenze proprie** (per esempio: Standard diretto, Standard via ripetitore con ingresso e uscita separati, Messaggio, Qualità). Si configurano dalla pagina; il menu a bordo sceglie la memoria e il display ne mostra il nome. Servono quindi **frequenze per profilo** nelle impostazioni (oggi ce n'è una sola).
+- **Cambio di memoria:** nel primo passo si **salva la scelta e si riavvia** la scheda (due secondi, semplice e sicuro). Il cambio a caldo della radio viene dopo. La voce "Qualità" resta grigia finché il modo 3 non esiste.
+- **Pagina di configurazione interna** (stile LoRa APRS di Guzman, CA2RXU: all'avvio la scheda crea un proprio Wi-Fi e serve una pagina su `192.168.4.1`): una **voce "Configurazione Wi-Fi" nello stesso menu**, quindi un solo gesto. Con la pagina attiva **la trasmissione è disattivata**.
+  - La rete (`LoRaCodec2-XXXX`) ha una **password casuale mostrata sul display**: le password predefinite uguali per tutti (come in alcuni progetti analoghi) sono note a chiunque.
+  - **Stessa pagina di oggi**, che passa i comandi `CFG` alla scheda al posto della porta seriale: l'interprete dei comandi esiste già e ha i test, quindi non c'è un secondo programma da mantenere.
+  - Dopo il salvataggio la pagina **rilegge i valori dalla scheda** e li confronta (lo fa già oggi): in alcuni progetti analoghi capitavano impostazioni che non si salvavano senza che nessuno se ne accorgesse.
+
 ## 3. Pagina web di configurazione (dopo il TOT)
 
 **Decisione del 4 novembre:** la prima versione passa dal cavo USB (Web Serial, Chrome/Edge) ed è
