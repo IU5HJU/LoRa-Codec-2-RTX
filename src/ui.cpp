@@ -331,6 +331,14 @@ void UiNotifier::draw(uint32_t nowMs) {
                     static_cast<unsigned long>(lastRecovered_));
   } else {
     display_.print(message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare"));
+    if (gpsEnabled_) {  // riga libera a riposo: stato del GPS
+      display_.setCursor(0, 47);
+      if (gpsFix_) {
+        display_.printf("GPS fix, %d satelliti", gpsSats_);
+      } else {
+        display_.print("GPS cerco satelliti");
+      }
+    }
   }
 
   display_.setCursor(0, 56);

@@ -17,6 +17,7 @@ lcr::Settings compileTimeSettings() {
   s.volume = LCR_VOLUME_STEP;
   s.micFloorDb = LCR_MIC_FLOOR_DBFS;
   s.profile = lcr::kProfileStandard;
+  s.gpsOn = false;  // il GPS consuma batteria: acceso solo se l'operatore lo sceglie
   s.posTx = false;  // la posizione e' un dato personale: non si trasmette finche' l'operatore non lo sceglie
   s.qthSet = false;
   return s;
@@ -35,7 +36,8 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.volume = p.getInt("vol", lcr::kDefaultVolume);  // assente nelle versioni precedenti
     out.micFloorDb = p.getInt("floor", lcr::kDefaultMicFloorDb);
     out.profile = static_cast<uint8_t>(p.getUChar("prof", lcr::kProfileStandard));  // assente nelle versioni precedenti
-    out.posTx = p.getBool("ptx", false);  // assenti nelle versioni precedenti
+    out.gpsOn = p.getBool("gps", false);  // assenti nelle versioni precedenti
+    out.posTx = p.getBool("ptx", false);
     out.qthSet = p.getBool("qset", false);
     out.qthLatE7 = p.getInt("qlat", 0);
     out.qthLonE7 = p.getInt("qlon", 0);
@@ -50,7 +52,7 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
   const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
                     p.putInt("vol", s.volume) > 0 &&
                     p.putInt("floor", s.micFloorDb) > 0 && p.putUChar("prof", s.profile) > 0 &&
-                    p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
+                    p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;
   p.end();
   return ok;

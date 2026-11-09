@@ -70,6 +70,17 @@ bool Pmu::begin() {
   return true;
 }
 
+void Pmu::setGpsPower(bool on) {
+  if (!g_pmu) return;
+  if (on) {
+    g_pmu->setPowerChannelVoltage(XPOWERS_ALDO3, 3300);
+    g_pmu->enablePowerOutput(XPOWERS_ALDO3);
+  } else {
+    g_pmu->disablePowerOutput(XPOWERS_ALDO3);
+  }
+  Serial.printf("[pmu] GPS ALDO3 %s\n", g_pmu->isPowerChannelEnable(XPOWERS_ALDO3) ? "acceso" : "spento");
+}
+
 void Pmu::logStatus() {
   if (!g_pmu) return;
   Serial.printf("[pmu] batteria %s, %d mV, %d %%, USB %s, carica %s\n",
@@ -98,6 +109,7 @@ int Pmu::batteryMillivolt() { return -1; }
 int Pmu::batteryPercent() { return -1; }
 bool Pmu::charging() { return false; }
 bool Pmu::usbPresent() { return false; }
+void Pmu::setGpsPower(bool) {}
 void Pmu::logStatus() {}
 
 #endif

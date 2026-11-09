@@ -28,6 +28,14 @@ class UiNotifier : public lcr::INotifier {
   // Posizione di questa stazione (QTH fisso o GPS): serve a mostrare la distanza dalla stazione ricevuta.
   void setOwnPosition(const lcr::Position& p) { ownPos_ = p; }
 
+  // Stato del GPS (T-Beam): spento/acceso, fix si/no e satelliti; compare nella schermata a riposo.
+  void setGpsStatus(bool enabled, bool fix, int sats) {
+    if (enabled != gpsEnabled_ || fix != gpsFix_ || sats != gpsSats_) dirty_ = true;
+    gpsEnabled_ = enabled;
+    gpsFix_ = fix;
+    gpsSats_ = sats;
+  }
+
   // Menu delle modalita': mentre e' aperto lo schermo mostra le voci. currentId e' il profilo in uso (segnato con *).
   void setMenu(const lcr::Menu* menu, uint8_t currentId) {
     menu_ = menu;
@@ -88,6 +96,9 @@ class UiNotifier : public lcr::INotifier {
   bool dirty_ = true;
   uint32_t lastDrawMs_ = 0;
 
+  bool gpsEnabled_ = false;
+  bool gpsFix_ = false;
+  int gpsSats_ = 0;
   lcr::Position ownPos_;
   char distText_[12] = {0};  // distanza dall'ultima stazione ricevuta ("12.3km"), vuota se non nota
   const lcr::Menu* menu_ = nullptr;

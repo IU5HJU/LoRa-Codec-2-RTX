@@ -20,6 +20,9 @@ class Pmu {
   bool charging();
   bool usbPresent();
 
+  // Accende o spegne l'alimentazione del GPS (solo T-Beam, uscita ALDO3 a 3,3 V). Senza PMU non fa nulla.
+  void setGpsPower(bool on);
+
   // Stampa in seriale lo stato dell'alimentazione (batteria, USB, carica). Nessun effetto senza PMU.
   void logStatus();
 

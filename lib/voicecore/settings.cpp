@@ -11,7 +11,7 @@ namespace lcr {
 bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         a.profile == b.profile && a.posTx == b.posTx && a.qthSet == b.qthSet &&
+         a.profile == b.profile && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
 }
 
@@ -199,10 +199,10 @@ ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
     } else {
       snprintf(qthText, sizeof(qthText), "none");
     }
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d pos=%s qth=%s",
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d pos=%s qth=%s gps=%s",
              stored_.callsign, static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
              static_cast<unsigned>(stored_.freqMsgKhz / 1000), static_cast<unsigned>(stored_.freqMsgKhz % 1000),
-             stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0, stored_.posTx ? "on" : "off", qthText);
+             stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0, stored_.posTx ? "on" : "off", qthText, stored_.gpsOn ? "on" : "off");
   }
   return ConsoleResult::Ok;
 }
@@ -287,6 +287,21 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "pos=%s", next.posTx ? "on" : "off");
+  } else if (equalsIgnoreCase(key, "GPS")) {
+    // Il GPS c'e' solo sulla T-Beam: sulle altre schede un'impostazione che non fa niente confonderebbe.
+    if (!equalsIgnoreCase(board_, "tbeam")) {
+      say(reply, cap, "CFG ERR gps %s", "questa scheda non ha il GPS");
+      return ConsoleResult::Error;
+    }
+    if (equalsIgnoreCase(value, "ON")) {
+      next.gpsOn = true;
+    } else if (equalsIgnoreCase(value, "OFF")) {
+      next.gpsOn = false;
+    } else {
+      say(reply, cap, "CFG ERR gps %s", "usa ON oppure OFF");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "gps=%s", next.gpsOn ? "on" : "off");
   } else if (equalsIgnoreCase(key, "QTH")) {
     if (equalsIgnoreCase(value, "NONE")) {
       next.qthSet = false;

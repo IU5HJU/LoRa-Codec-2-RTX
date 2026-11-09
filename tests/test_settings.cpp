@@ -47,7 +47,7 @@ struct Fixture {
   FakeStorage st;
   Settings active = kDefaults;
   SettingsConsole con{active, kDefaults, st, "T3", "v0.1.0-3-gabc1234"};
-  char reply[160];
+  char reply[200];
   ConsoleResult run(const char* line) { return con.handleLine(line, reply, sizeof(reply)); }
 };
 
@@ -119,10 +119,36 @@ void testPositionSettings() {
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "qth=none"));
 }
 
+void testGpsSetting() {
+  // Sulla T3 il GPS non c'e': errore, niente salvato.
+  Fixture f;
+  CHECK(!f.st.data.gpsOn);
+  const int saves = f.st.saves;
+  CHECK(f.run("CFG SET GPS ON") == ConsoleResult::Error);
+  CHECK(strncmp(f.reply, "CFG ERR gps", 11) == 0 && f.st.saves == saves);
+  // Sulla T-Beam: ON e OFF, salvato, vale dal riavvio.
+  FakeStorage st;
+  Settings active = kDefaults;
+  SettingsConsole con(active, kDefaults, st, "tbeam", "dev");
+  char reply[200];
+  CHECK(con.handleLine("CFG GET", reply, sizeof(reply)) == ConsoleResult::Ok && strstr(reply, "gps=off"));
+  CHECK(con.handleLine("CFG SET GPS ON", reply, sizeof(reply)) == ConsoleResult::Ok);
+  CHECK(strcmp(reply, "CFG OK gps=on") == 0 && st.data.gpsOn);
+  CHECK(con.handleLine("CFG GET", reply, sizeof(reply)) == ConsoleResult::Ok && strstr(reply, "gps=on") && strstr(reply, "reboot=1"));
+  CHECK(active.gpsOn == false);  // quello in uso non cambia
+  CHECK(con.handleLine("CFG SET gps maybe", reply, sizeof(reply)) == ConsoleResult::Error);
+  CHECK(con.handleLine("CFG SET GPS OFF", reply, sizeof(reply)) == ConsoleResult::Ok && !st.data.gpsOn);
+  // La riga di CFG GET con QTH lungo e GPS acceso sta nel buffer da 200.
+  CHECK(con.handleLine("CFG SET QTH -33.8688,-151.2093", reply, sizeof(reply)) == ConsoleResult::Ok);
+  CHECK(con.handleLine("CFG SET POS ON", reply, sizeof(reply)) == ConsoleResult::Ok);
+  CHECK(con.handleLine("CFG SET GPS ON", reply, sizeof(reply)) == ConsoleResult::Ok);
+  CHECK(con.handleLine("CFG GET", reply, sizeof(reply)) == ConsoleResult::Ok && strlen(reply) < 199 && strstr(reply, "gps=on"));
+}
+
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -350,6 +376,7 @@ int main() {
   testLoad();
   testNotCommand();
   testGet();
+  testGpsSetting();
   testPositionSettings();
   testSetCallsign();
   testSetFreq();

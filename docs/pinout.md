@@ -106,7 +106,7 @@ GPS u-blox NEO-6M, **OLED** SSD1306 montato, tasti PWR / IO38 / RST, pila a bott
 | Radio | SX127x, stessi pin | SX127x, **stessi pin** (SCK 5, MISO 19, MOSI 27, CS 18, DIO0 26, RST 23, DIO1 33) |
 | OLED | integrato | montato sul connettore, stesso bus I2C 21/22 |
 | PTT | pulsante esterno IO0-GND | **tasto di bordo IO38** (solo ingresso, senza pull-up interno) |
-| GPS | assente | RX = GPIO34, TX = GPIO12 (non usato in fase 1, alimentazione GPS spenta) |
+| GPS | assente | RX = GPIO34 (dal GPS), TX = GPIO12 (verso il GPS, non usato: al GPS non si scrive); alimentazione ALDO3 a 3,3 V, spenta di default, accesa con `CFG SET GPS ON` ([firmware.md](firmware.md)) |
 | LED di bordo | GPIO25 | GPIO4 (attivo basso) |
 
 ### Assegnazione per il progetto

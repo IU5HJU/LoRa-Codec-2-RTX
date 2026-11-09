@@ -13,6 +13,7 @@
 #include "board_pins.h"
 #include "button_gesture.h"
 #include "codec2_adapter.h"
+#include "gps.h"
 #include "menu.h"
 #include "packet.h"
 #include "pmu.h"
@@ -38,6 +39,7 @@ static const char* const kBoardShort = "t3";
 #endif
 
 static Pmu pmu;
+static Gps gps;
 static Battery battery;
 static RadioLora radio;
 static Codec2Adapter codec;
@@ -107,6 +109,7 @@ void setup() {
   // L'alimentazione va per prima: sulla T-Beam senza il PMU la radio non e' alimentata.
   const bool pmuOk = pmu.begin();
   battery.begin(pmu);
+  gps.begin(settings.gpsOn, pmu);  // solo T-Beam e solo se acceso con CFG SET GPS ON
 
   pinMode(pins::kPtt, pttPinMode());
   pinMode(pins::kVolume, INPUT_PULLUP);
@@ -490,6 +493,18 @@ void loop() {
     case lcr::MenuBeep::None: break;
   }
   if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) applyProfileChoice(act.outcome.id);
+
+  // GPS: lettura della seriale e posizione da usare (il GPS se ha un fix recente, altrimenti il QTH fisso). Si aggiorna
+  // una volta al secondo: serve al pacchetto START (se la trasmissione della posizione e' accesa) e alla distanza sul display.
+  gps.loop(now);
+  static uint32_t lastPosMs = 0;
+  if (now - lastPosMs >= 1000) {
+    lastPosMs = now;
+    const lcr::Position pos = gps.position(now, settings.qth());
+    node->setOwnPosition(pos, settings.posTx);
+    ui.setOwnPosition(pos);
+    ui.setGpsStatus(gps.active(), gps.hasFix(now), gps.satellites());
+  }
 
   battery.update(now);
 
