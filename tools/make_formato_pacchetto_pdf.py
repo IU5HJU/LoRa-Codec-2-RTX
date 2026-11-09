@@ -155,11 +155,12 @@ s.append(Preformatted(
 "[byte 5     lunghezza del nominativo N (1..8)]    solo se flag CALLSIGN\n"
 "[N byte     nominativo ASCII: A-Z 0-9 /]          solo se flag CALLSIGN\n"
 "[7 byte     posizione]                            solo se flag POSITION (solo nel pacchetto START)\n"
+"[1 byte     pacchetti totali]                     solo se flag TOTAL (solo START dei messaggi)\n"
 "resto       payload", code))
 s.append(table([
     ["Campo", "Significato"],
     ["Modo", "1 = voce Codec2 1200 bit/s; 2 = prova di collegamento (frame noti); 3 = risposta alla prova (12 byte con il risultato)"],
-    ["Flag", "bit 0 START (primo pacchetto) - bit 1 END (ultimo dati, l'OVER) - bit 2 PARITY (pacchetto di parità) - bit 3 CALLSIGN (c'è il nominativo) - bit 4 NOFEC (trasmissione senza parità) - bit 5 POSITION (c'è la posizione, 7 byte: stato, latitudine e longitudine a 24 bit; solo in START, spenta di default)"],
+    ["Flag", "bit 0 START (primo pacchetto) - bit 1 END (ultimo dati, l'OVER) - bit 2 PARITY (pacchetto di parità) - bit 3 CALLSIGN (c'è il nominativo) - bit 4 NOFEC (trasmissione senza parità) - bit 5 POSITION (c'è la posizione, 7 byte: stato, latitudine e longitudine a 24 bit; solo in START, spenta di default) - bit 6 TOTAL (1 byte con i pacchetti totali del messaggio, solo in START)"],
     ["Sessione", "numero casuale a 16 bit: identifica la trasmissione e permette di scartare i pacchetti di altre trasmissioni"],
     ["Sequenza", "0..127; i pacchetti di parità occupano le posizioni 4, 9, 14... del flusso"],
     ["Nominativo", "in chiaro; presente in START, in END e ogni 10 pacchetti (circa 5 secondi), così chi si sintonizza a trasmissione iniziata lo ottiene comunque"],

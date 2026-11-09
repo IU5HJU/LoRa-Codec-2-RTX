@@ -95,6 +95,51 @@ static void testPosition() {
   CHECK(!decodePacket(cut, full, q));
 }
 
+static void testTotal() {
+  Packet p = makeData(0, 0, 1, kFlagStart);
+  strcpy(p.callsign, "IU5HJU");
+  p.totalPackets = 80;
+  uint8_t buf[kMaxWireBytes];
+  const size_t n = encodePacket(p, buf, sizeof(buf));
+  CHECK(n == 5 + 1 + 6 + 1);  // START con nominativo e totale
+  Packet q;
+  CHECK(decodePacket(buf, n, q));
+  CHECK(q.hasTotal() && q.totalPackets == 80 && (q.flags & kFlagTotal) && !q.hasPosition());
+  // Insieme alla posizione: prima la posizione, poi il totale.
+  p.position.valid = true;
+  p.position.latE7 = 437696000;
+  p.position.lonE7 = 112558000;
+  const size_t m = encodePacket(p, buf, sizeof(buf));
+  CHECK(m == 5 + 1 + 6 + kPositionBytes + 1);
+  CHECK(buf[m - 1] == 80);
+  CHECK(decodePacket(buf, m, q) && q.hasPosition() && q.totalPackets == 80);
+  // Senza il totale il pacchetto e' quello di prima.
+  Packet r = makeData(0, 0, 1, kFlagStart);
+  strcpy(r.callsign, "IU5HJU");
+  CHECK(encodePacket(r, buf, sizeof(buf)) == 12 && decodePacket(buf, 12, q) && !q.hasTotal());
+  // Il totale si dichiara solo nel pacchetto START.
+  Packet notStart = makeData(3, 12, 1, 0);
+  notStart.totalPackets = 80;
+  CHECK(encodePacket(notStart, buf, sizeof(buf)) == 0);
+  // In ricezione: flag senza il byte, totale zero, o senza START = scartato.
+  const size_t full = encodePacket(p, buf, sizeof(buf));
+  uint8_t cut[kMaxWireBytes];
+  CHECK(!decodePacket(buf, full - 1, q));  // totale mancante
+  memcpy(cut, buf, full);
+  cut[full - 1] = 0;
+  CHECK(!decodePacket(cut, full, q));
+  memcpy(cut, buf, full);
+  cut[4] &= static_cast<uint8_t>(~kFlagStart);
+  CHECK(!decodePacket(cut, full, q));
+  memcpy(cut, buf, full);
+  cut[4] = kFlagParity | kFlagTotal;
+  CHECK(!decodePacket(cut, full, q));
+  // Il bit 7 resta riservato.
+  memcpy(cut, buf, full);
+  cut[4] |= 0x80;
+  CHECK(!decodePacket(cut, full, q));
+}
+
 static void testRejects() {
   uint8_t buf[kMaxWireBytes];
   Packet p = makeData(1, 2, 9);
@@ -179,6 +224,7 @@ static void testPartialGroupParity() {
 int main() {
   testRoundTrip();
   testPosition();
+  testTotal();
   testRejects();
   testParityRecovery();
   testPartialGroupParity();

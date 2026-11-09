@@ -47,6 +47,9 @@ class RxStream {
   const char* callsign() const { return callsign_; }
   // Posizione ricevuta nel pacchetto START (valid = false se non e' arrivata).
   const Position& position() const { return position_; }
+  // Pacchetti totali dichiarati nel pacchetto START (0 = non dichiarati) e il piu' alto numero di sequenza visto finora.
+  size_t totalPackets() const { return total_; }
+  size_t highestSeq() const { return highest_; }
   uint16_t session() const { return session_; }
   uint32_t recoveredPackets() const { return recovered_; }
   uint32_t lostFrames() const { return lostFrames_; }
@@ -72,6 +75,7 @@ class RxStream {
   bool fec_;
   char callsign_[kMaxCallsign + 1];
   Position position_;
+  size_t total_;
   uint32_t firstRxMs_;
   uint32_t lastRxMs_;
   int endSeq_;

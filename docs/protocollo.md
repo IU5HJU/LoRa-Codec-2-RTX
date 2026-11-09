@@ -38,11 +38,12 @@ byte 4     flag
 [byte 5    lunghezza nominativo N (1..8)]      solo se flag CALLSIGN
 [N byte    nominativo ASCII, A-Z 0-9 /]        solo se flag CALLSIGN
 [7 byte    posizione]                          solo se flag POSITION (solo nel pacchetto START, con il nominativo)
+[1 byte    pacchetti totali]                   solo se flag TOTAL (solo nel pacchetto START dei messaggi)
 resto      payload
 ```
 
-Flag: `1 START`, `2 END`, `4 PARITY`, `8 CALLSIGN`, `16 NOFEC` (trasmissione senza parità), `32 POSITION`.
-Bit 6-7 riservati: i pacchetti che li usano vengono scartati.
+Flag: `1 START`, `2 END`, `4 PARITY`, `8 CALLSIGN`, `16 NOFEC` (trasmissione senza parità), `32 POSITION`, `64 TOTAL`.
+Il bit 7 è riservato: i pacchetti che li usano vengono scartati.
 
 **Blocco posizione** (protocollo 2, `lib/voicecore/position.h`): 7 byte dopo il nominativo, solo nel pacchetto `START` (le trasmissioni sono brevi: una posizione ogni turno basta, anche per un mezzo in movimento).
 
@@ -55,9 +56,13 @@ byte 4-6   longitudine, 24 bit big endian: (lon + 180) / 360 * 2^24    (passo ci
 Costo in aria (stima): circa 9 ms a SF8/BW250, circa 0,23 s a SF12/BW125, una volta per turno. **La posizione è disattivata di default** (`CFG SET POS ON` per trasmetterla, `CFG SET QTH lat,lon` per la posizione fissa): è un dato personale e viaggia in chiaro. Chi riceve la usa per mostrare la distanza in km se ha a sua volta una posizione.
 
 Il payload dei pacchetti dati è una sequenza di frame Codec2 da 6 byte (0-12 frame).
-Dimensione massima sul canale: 5 + 9 + 7 + 75 = 96 byte (il pacchetto `START` con la posizione ha solo header, nominativo e posizione: 5 + 9 + 7 = 21 byte).
+Dimensione massima sul canale: 5 + 9 + 7 + 1 + 75 = 97 byte (il pacchetto `START` con la posizione ha solo header, nominativo e posizione: 5 + 9 + 7 = 21 byte).
 
 Il nominativo viaggia in chiaro e il contenuto non è cifrato, come richiesto dalla normativa radioamatoriale.
+
+**Pacchetti totali** (protocollo 2, flag `TOTAL`): 1 byte, solo nel pacchetto `START`, dopo la posizione. Dichiara quanti pacchetti (dati e parità, numeri di sequenza da 0 a totale - 1) trasmetterà il messaggio: chi riceve calcola la percentuale di avanzamento. Lo dichiara solo il modo Messaggio, dove il messaggio è già registrato quando parte l'invio; la voce in tempo reale (Standard) non conosce la lunghezza in anticipo e non lo manda. Valori da 1 a 255; il byte `0` non è valido. Costo: 1 byte.
+
+Il totale è `START + pacchetti pieni (1 ogni 12 frame) + END` più un pacchetto di parità ogni 4 pacchetti dati (l'ultimo gruppo, anche parziale, ne ha uno).
 
 ## Pausa tra i pacchetti
 

@@ -13,6 +13,11 @@ TxSession::TxSession(const char* callsign, uint16_t session, bool fec, uint8_t m
   parity_.reset();
 }
 
+size_t TxSession::expectedPackets(size_t frames, bool fec) {
+  const size_t data = 1 + frames / kFramesPerPacket + 1;  // START, pacchetti pieni, END con i frame restanti (anche 0)
+  return fec ? data + (data + kParityGroup - 1) / kParityGroup : data;
+}
+
 bool TxSession::enqueue(const Packet& p) {
   if (qCount_ >= kQueue) {
     overflow_ = true;
@@ -46,6 +51,7 @@ bool TxSession::emitData(uint8_t extraFlags) {
     // La posizione viaggia solo nel pacchetto START (decisione del 09/11/2026: i turni sono brevi).
     if (seq_ == 0 && position_.valid) p.position = position_;
   }
+  if (seq_ == 0 && expectedTotal_) p.totalPackets = expectedTotal_;
 
   p.payloadLen = static_cast<uint8_t>(frameCount_ * kFrameBytes);
   if (p.payloadLen) memcpy(p.payload, frames_, p.payloadLen);

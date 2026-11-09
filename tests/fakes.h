@@ -120,6 +120,9 @@ class Notifier : public lcr::INotifier {
     positions++;
     position = p;
   }
+  void txProgress(int p) override { txPercents.push_back(p); }
+  void rxProgress(int p) override { rxPercents.push_back(p); }
+  std::vector<int> txPercents, rxPercents;
   int positions = 0;
   lcr::Position position;
   void rxEnded(const char*, uint32_t lost, uint32_t rec) override {

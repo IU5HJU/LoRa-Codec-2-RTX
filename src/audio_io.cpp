@@ -6,6 +6,7 @@
 
 #include "amp_hold.h"
 #include "board_pins.h"
+#include "morse.h"
 #include "settings.h"
 #include "user_config.h"
 
@@ -304,6 +305,31 @@ void AudioIo::playLost() {
   ampOn();
   back_.processLost(spkPcm_);  // silenzio, ma si scrive comunque per mantenere il ritmo
   writeMono(spkPcm_, back_.outputSamplesPerFrame());
+}
+
+void AudioIo::pause(uint32_t durationMs) {
+  if (back_.muted()) return;
+  memset(spkPcm_, 0, sizeof(spkPcm_));
+  const size_t total = static_cast<size_t>(kSampleRate / 1000) * durationMs;
+  size_t done = 0;
+  while (done < total) {
+    const size_t n = min(total - done, static_cast<size_t>(2 * lcr::kFrameSamples));
+    writeMono(spkPcm_, n);
+    done += n;
+  }
+  lastPlayMs_ = millis();  // l'amplificatore resta acceso tra un elemento e l'altro
+}
+
+void AudioIo::playMorse(const char* text, float freqHz, uint16_t unitMs) {
+  lcr::MorseElement el[48];
+  const size_t n = lcr::morseElements(text, unitMs, el, sizeof(el) / sizeof(el[0]));
+  for (size_t i = 0; i < n; i++) {
+    if (el[i].tone) {
+      beep(freqHz, el[i].ms);
+    } else {
+      pause(el[i].ms);
+    }
+  }
 }
 
 void AudioIo::beep(float freqHz, uint32_t durationMs) {

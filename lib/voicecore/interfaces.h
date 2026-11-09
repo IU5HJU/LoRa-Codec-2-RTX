@@ -63,6 +63,9 @@ class INotifier {
   virtual void rxCallsign(const char* callsign) { (void)callsign; }
   // Chi trasmette ha mandato la sua posizione (nel pacchetto START). Una volta per ricezione.
   virtual void rxPosition(const Position& p) { (void)p; }
+  // Avanzamento (1-100) dell'invio di un messaggio o della ricezione di un messaggio, quando la lunghezza e' dichiarata.
+  virtual void txProgress(int percent) { (void)percent; }
+  virtual void rxProgress(int percent) { (void)percent; }
   // Inizia la riproduzione di una ricezione (nel profilo Messaggio avviene a ricezione conclusa).
   virtual void rxPlaybackStarted() {}
   virtual void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) {

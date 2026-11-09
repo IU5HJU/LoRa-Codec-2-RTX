@@ -87,6 +87,7 @@ void VoiceNode::startTx(uint32_t nowMs) {
   txTest_ = testMode_;
   const bool rec = recMode_ && !testMode_;
   recCount_ = recSent_ = 0;
+  txTotal_ = txSent_ = 0;
   testFramesSent_ = 0;
   nextTestFrameMs_ = nowMs;
   if (txTest_) {
@@ -146,7 +147,12 @@ void VoiceNode::recTick(uint32_t nowMs) {
     }
     case RecPhase::Waiting:
       if (static_cast<int32_t>(nowMs - recReleaseMs_) >= static_cast<int32_t>(kRecSendDelayMs)) {
+        // Il messaggio e' gia' registrato: se ne conosce la lunghezza e la si dichiara nel pacchetto START.
+        txTotal_ = TxSession::expectedPackets(recCount_, cfg_.fec);
+        if (txTotal_ > 255) txTotal_ = 0;
+        tx_.setExpectedTotal(txTotal_);
         tx_.begin();
+        if (txTotal_) notify_.txProgress(1);  // l'invio parte: 1% subito, cosi' non sembra bloccato
         nextSendMs_ = nowMs;
         setRecPhase(RecPhase::Sending);
       }
@@ -262,6 +268,11 @@ void VoiceNode::txTick(uint32_t nowMs) {
     if (n) {
       radio_.send(buf, n);
       justSent_ = true;
+      if (txTotal_) {
+        txSent_++;
+        int pct = static_cast<int>(txSent_ * 100 / txTotal_);
+        notify_.txProgress(pct < 1 ? 1 : (pct > 100 ? 100 : pct));
+      }
     }
   } else if (releasing_ && !tx_.hasPacket()) {
     radio_.startReceive();
@@ -307,8 +318,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       state_ = State::Receiving;
       nextPlayMs_ = nowMs;
       playbackNotified_ = false;
+      rxPercent_ = 0;
       notify_.rxStarted();
     }
+    reportRxProgress();
   }
 
   if (state_ != State::Receiving) return;
@@ -335,6 +348,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       }
       if (!playbackNotified_) {
         playbackNotified_ = true;
+        if (rx_.totalPackets() && rxPercent_ < 100) {  // messaggio completo (anche se l'ultimo pacchetto si e' perso)
+          rxPercent_ = 100;
+          notify_.rxProgress(100);
+        }
         notify_.rxPlaybackStarted();
       }
       int16_t pcm[kFrameSamples];
@@ -364,6 +381,22 @@ void VoiceNode::rxTick(uint32_t nowMs) {
   }
   nextPlayMs_ += kFrameMs;
   if (nowMs > nextPlayMs_ + 5 * kFrameMs) nextPlayMs_ = nowMs + kFrameMs;
+}
+
+// Avanzamento della ricezione di un messaggio con lunghezza dichiarata: in base al piu' alto numero di sequenza visto,
+// cosi' non torna indietro se un pacchetto si perde.
+void VoiceNode::reportRxProgress() {
+  if (rxIsTest_) return;
+  const size_t total = rx_.totalPackets();
+  if (total == 0) return;
+  // Il primo pacchetto (START) vale 1%; poi in base al piu' alto numero di sequenza visto.
+  size_t pct = rx_.highestSeq() == 0 ? 1 : (rx_.highestSeq() + 1) * 100 / total;
+  if (pct < 1) pct = 1;
+  if (pct > 100) pct = 100;
+  if (static_cast<int>(pct) > rxPercent_) {
+    rxPercent_ = static_cast<int>(pct);
+    notify_.rxProgress(rxPercent_);
+  }
 }
 
 void VoiceNode::finishTestRx(uint32_t nowMs) {

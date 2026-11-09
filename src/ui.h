@@ -9,6 +9,7 @@
 #include "audio_io.h"
 #include "interfaces.h"
 #include "menu.h"
+#include "morse.h"
 #include "settings.h"
 #include "voice_node.h"
 
@@ -49,8 +50,19 @@ class UiNotifier : public lcr::INotifier {
   void rxStarted() override;
   void rxCallsign(const char* callsign) override;
   void rxPosition(const lcr::Position& p) override;
+  // Nel profilo Messaggio il messaggio e' arrivato per intero: prima di riprodurlo suona "MSG" in Morse (come lo squillo
+  // degli SMS dei vecchi telefoni). Bloccante per circa 1,6 s: il messaggio e' gia' tutto in memoria.
   void rxPlaybackStarted() override {
     playing_ = true;
+    dirty_ = true;
+    if (message_) audio_.playMorse(lcr::kMessageTone, lcr::kMessageToneHz, lcr::kMessageToneUnitMs);
+  }
+  void txProgress(int percent) override {
+    txPct_ = percent;
+    dirty_ = true;
+  }
+  void rxProgress(int percent) override {
+    rxPct_ = percent;
     dirty_ = true;
   }
   void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) override;
@@ -85,6 +97,8 @@ class UiNotifier : public lcr::INotifier {
   uint8_t menuCurrentId_ = 0;
   bool message_ = false;         // profilo Messaggio
   uint32_t maxTurnSec_ = 30;     // durata massima di un turno o di un messaggio, secondi
+  int txPct_ = 0;                // avanzamento dell'invio di un messaggio, 1-100 (0 = non noto)
+  int rxPct_ = 0;                // avanzamento della ricezione di un messaggio, 1-100 (0 = non noto)
   bool playing_ = false;         // profilo Messaggio: sta riproducendo (altrimenti sta ancora ricevendo)
   char noticeBuf_[16] = {0};
   int recPhase_ = 0;  // registra e poi trasmetti: 0 nessuna, 1 registra, 2 attesa, 3 trasmette

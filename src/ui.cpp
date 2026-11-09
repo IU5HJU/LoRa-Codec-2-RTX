@@ -55,6 +55,7 @@ void UiNotifier::showMessage(const char* line1, const char* line2) {
 }
 
 void UiNotifier::txStarted() {
+  txPct_ = 0;
   txStartMs_ = millis();
   limitHit_ = false;
   haveLast_ = false;
@@ -85,6 +86,7 @@ void UiNotifier::pttDenied(lcr::DenyReason r) {
 }
 
 void UiNotifier::rxStarted() {
+  rxPct_ = 0;
   rxCall_[0] = 0;
   distText_[0] = 0;
   playing_ = false;
@@ -277,12 +279,24 @@ void UiNotifier::draw(uint32_t nowMs) {
   } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 2) {
     display_.print("Parte tra 1 secondo");
   } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 3) {
-    display_.print("Trasmetto messaggio");
+    if (txPct_ > 0) {
+      display_.printf("Invio messaggio %d%%", txPct_);
+      display_.drawRect(0, 47, 128, 7, SSD1306_WHITE);  // barra di avanzamento sulla riga libera
+      display_.fillRect(2, 49, (124 * txPct_) / 100, 3, SSD1306_WHITE);
+    } else {
+      display_.print("Trasmetto messaggio");
+    }
   } else if (state_ == lcr::VoiceNode::State::Transmitting) {
     display_.printf(testMode_ ? "Prova %lu/12 s" : "Trasmissione %lu/%lu s",
                     static_cast<unsigned long>((nowMs - txStartMs_) / 1000), static_cast<unsigned long>(maxTurnSec_));
   } else if (state_ == lcr::VoiceNode::State::Receiving && message_) {
-    display_.print(playing_ ? "Riproduco messaggio" : "Ricevo il messaggio");
+    if (playing_) {
+      display_.print("Riproduco messaggio");
+    } else if (rxPct_ > 0) {
+      display_.printf("Ricevo messaggio %d%%", rxPct_);  // al massimo 21 caratteri
+    } else {
+      display_.print("Ricevo il messaggio");
+    }
     display_.setCursor(0, 47);
     if (distText_[0]) {
       display_.printf("%s  RSSI %d", distText_, rssi_);

@@ -35,6 +35,10 @@ class AudioIo {
   int volumeStep() const { return volStep_; }
   // Tono breve per i segnali acustici (fino a ~300 ms). Rispetta volume e muto.
   void beep(float freqHz, uint32_t durationMs);
+  // Silenzio di durata ms (tra i toni di una segnalazione).
+  void pause(uint32_t durationMs);
+  // Suona un testo in Morse (morse.h), bloccante: la durata totale e' la somma degli elementi.
+  void playMorse(const char* text, float freqHz, uint16_t unitMs);
 
   uint32_t micErrors() const { return micErrors_; }
   uint32_t micOverruns() { return mic_.overruns(); }

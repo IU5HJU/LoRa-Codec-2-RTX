@@ -24,6 +24,13 @@ class TxSession {
   // Posizione da trasmettere nel pacchetto START (da chiamare prima di begin/pushFrame). Una posizione non valida = nessuna.
   void setPosition(const Position& p) { position_ = p; }
 
+  // Pacchetti totali che la trasmissione conterra' (dati + parita'), dichiarati nel pacchetto START: chi riceve ne ricava
+  // la percentuale di avanzamento. Si usa solo quando la lunghezza e' nota in anticipo (messaggio registrato).
+  // 0 o piu' di 255 = non dichiarato. Da chiamare prima di begin().
+  void setExpectedTotal(size_t n) { expectedTotal_ = (n >= 1 && n <= 255) ? static_cast<uint8_t>(n) : 0; }
+  // Quanti pacchetti produce una trasmissione di 'frames' frame: START, un pacchetto ogni 12 frame, END e la parita'.
+  static size_t expectedPackets(size_t frames, bool fec);
+
   // Accoda il pacchetto iniziale col nominativo. Chiamato in automatico da pushFrame.
   void begin();
   // Aggiunge un frame Codec2 (kFrameBytes). Ritorna false se il limite di
@@ -56,6 +63,7 @@ class TxSession {
   bool overflow_ = false;
 
   Position position_;
+  uint8_t expectedTotal_ = 0;
 
   uint8_t seq_ = 0;
   uint8_t lastCallsignSeq_ = 0;

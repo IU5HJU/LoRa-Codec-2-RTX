@@ -27,11 +27,14 @@ size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
   const size_t csLen = cs ? strlen(p.callsign) : 0;
   const bool hasPos = p.position.valid;
   if (hasPos && (!cs || !isValidCoordinate(p.position.latE7, p.position.lonE7))) return 0;
-  const size_t need = 5 + (cs ? 1 + csLen : 0) + (hasPos ? kPositionBytes : 0) + p.payloadLen;
+  const bool hasTotal = p.totalPackets != 0;
+  if (hasTotal && !(p.flags & kFlagStart)) return 0;  // il totale si dichiara solo nel pacchetto START
+  const size_t need = 5 + (cs ? 1 + csLen : 0) + (hasPos ? kPositionBytes : 0) + (hasTotal ? 1 : 0) + p.payloadLen;
   if (need > cap) return 0;
 
-  const uint8_t flags = static_cast<uint8_t>((p.flags & ~(kFlagCallsign | kFlagPosition)) | (cs ? kFlagCallsign : 0) |
-                                             (hasPos ? kFlagPosition : 0));
+  const uint8_t flags = static_cast<uint8_t>((p.flags & ~(kFlagCallsign | kFlagPosition | kFlagTotal)) |
+                                             (cs ? kFlagCallsign : 0) | (hasPos ? kFlagPosition : 0) |
+                                             (hasTotal ? kFlagTotal : 0));
   size_t pos = 0;
   out[pos++] = static_cast<uint8_t>((kProtocolVersion << 4) | (p.mode & 0x0F));
   out[pos++] = static_cast<uint8_t>(p.session >> 8);
@@ -47,6 +50,7 @@ size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
     encodePosition(p.position, out + pos);
     pos += kPositionBytes;
   }
+  if (hasTotal) out[pos++] = p.totalPackets;
   if (p.payloadLen) memcpy(out + pos, p.payload, p.payloadLen);
   pos += p.payloadLen;
   return pos;
@@ -80,12 +84,17 @@ bool decodePacket(const uint8_t* in, size_t len, Packet& out) {
     if (!isValidCoordinate(q.position.latE7, q.position.lonE7)) return false;
     pos += kPositionBytes;
   }
+  if (q.flags & kFlagTotal) {
+    if (!(q.flags & kFlagStart) || pos >= len) return false;
+    q.totalPackets = in[pos++];
+    if (q.totalPackets == 0) return false;
+  }
 
   const size_t pl = len - pos;
   if (pl > kMaxPayload) return false;
 
   if (q.flags & kFlagParity) {
-    if (q.flags & (kFlagStart | kFlagEnd | kFlagCallsign | kFlagPosition)) return false;
+    if (q.flags & (kFlagStart | kFlagEnd | kFlagCallsign | kFlagPosition | kFlagTotal)) return false;
     if (pl < kParityHeader) return false;
     const uint8_t count = in[pos];
     const uint8_t xorLen = in[pos + 1];

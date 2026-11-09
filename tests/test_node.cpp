@@ -504,7 +504,104 @@ static void testPositionNotSentWithoutFix() {
   CHECK(s.b.note.rxStarts == 1 && s.b.note.positions == 0);
 }
 
+static void testExpectedPackets() {
+  // Il totale calcolato in anticipo coincide con i pacchetti davvero prodotti, per ogni lunghezza e con/senza parita'.
+  for (int fec = 0; fec < 2; fec++) {
+    for (size_t frames = 0; frames <= 750; frames++) {
+      TxSession tx("IU5HJU", 1, fec != 0);
+      tx.setExpectedTotal(TxSession::expectedPackets(frames, fec != 0));
+      uint8_t f[kFrameBytes] = {1, 2, 3, 4, 5, 6};
+      size_t count = 0;
+      Packet p;
+      uint8_t declared = 0;
+      tx.begin();
+      for (size_t i = 0; i < frames; i++) {
+        tx.pushFrame(f);
+        while (tx.popPacket(p)) {
+          if (count++ == 0) declared = p.totalPackets;
+        }
+      }
+      tx.finish();
+      while (tx.popPacket(p)) {
+        if (count++ == 0) declared = p.totalPackets;
+      }
+      if (count != TxSession::expectedPackets(frames, fec != 0) || declared != count) {
+        CHECK(count == TxSession::expectedPackets(frames, fec != 0));
+        CHECK(declared == count);
+        return;
+      }
+    }
+  }
+  CHECK(TxSession::expectedPackets(0, true) == 3);   // START, END, parita'
+  CHECK(TxSession::expectedPackets(12, false) == 3); // START, un pacchetto pieno, END senza frame
+  // Lunghezze non dichiarabili in un byte: nessun totale.
+  TxSession big("IU5HJU", 1, true);
+  big.setExpectedTotal(300);
+  Packet p;
+  big.begin();
+  CHECK(big.popPacket(p) && p.totalPackets == 0);
+}
+
+static void testMessageProgress() {
+  Sim s(kProfileMessage, kMsgAirMs);
+  s.air.clock = &s.clock;
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50 + 3000);
+  s.a.node.pttReleased(s.clock);
+  s.run(120000);
+  CHECK(s.b.note.playbackStarts == 1 && s.a.note.txEnds == 1);
+  // Il pacchetto START dichiara il totale, uguale ai pacchetti davvero trasmessi.
+  Packet start;
+  CHECK(decodePacket(s.air.log[0][0].data(), s.air.log[0][0].size(), start));
+  CHECK(start.hasTotal() && start.totalPackets == s.air.log[0].size());
+  // Trasmissione: da 1% a 100%, mai indietro, un avviso per pacchetto.
+  const auto& tx = s.a.note.txPercents;
+  CHECK(tx.size() == s.air.log[0].size() + 1);  // 1% all'avvio dell'invio, poi un avviso per pacchetto
+  CHECK(!tx.empty() && tx.front() == 1 && tx.back() == 100);
+  for (size_t i = 1; i < tx.size(); i++) CHECK(tx[i] >= tx[i - 1]);
+  // Ricezione: stessa cosa.
+  const auto& rx = s.b.note.rxPercents;
+  CHECK(!rx.empty() && rx.front() == 1 && rx.back() == 100);
+  for (size_t i = 1; i < rx.size(); i++) CHECK(rx[i] > rx[i - 1]);  // si notifica solo quando sale
+  // Chi trasmette non vede la percentuale di ricezione e viceversa.
+  CHECK(s.a.note.rxPercents.empty() && s.b.note.txPercents.empty());
+}
+
+static void testProgressLostTail() {
+  // Se l'ultimo pacchetto e la sua parita' si perdono la ricezione chiude comunque a 100% all'inizio della riproduzione.
+  Sim s(kProfileMessage, kMsgAirMs);
+  s.air.clock = &s.clock;
+  s.air.drop = [](int from, int idx) { return from == 0 && idx >= 12; };  // si perde tutto dopo il dodicesimo pacchetto
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50 + 8000);
+  s.a.node.pttReleased(s.clock);
+  s.run(200000);
+  const auto& rx = s.b.note.rxPercents;
+  CHECK(!rx.empty() && rx.front() >= 1 && rx.back() == 100);
+  for (size_t i = 1; i < rx.size(); i++) CHECK(rx[i] > rx[i - 1]);
+}
+
+static void testNoProgressInStandard() {
+  // La voce in tempo reale non conosce la lunghezza in anticipo: nessuna percentuale, ne' in trasmissione ne' in ricezione.
+  Sim s;
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50 + 3000);
+  s.a.node.pttReleased(s.clock);
+  s.run(6000);
+  CHECK(s.b.note.rxEnds == 1);
+  CHECK(s.a.note.txPercents.empty() && s.b.note.rxPercents.empty());
+  Packet start;
+  CHECK(decodePacket(s.air.log[0][0].data(), s.air.log[0][0].size(), start) && !start.hasTotal());
+}
+
 int main() {
+  testExpectedPackets();
+  testMessageProgress();
+  testProgressLostTail();
+  testNoProgressInStandard();
   testPositionOffByDefault();
   testPositionInStartOnly();
   testPositionNotSentWithoutFix();

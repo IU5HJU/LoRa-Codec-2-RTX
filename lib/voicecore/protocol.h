@@ -7,7 +7,7 @@
 
 namespace lcr {
 
-constexpr uint8_t kProtocolVersion = 2;  // v2 (09/11/2026): flag kFlagPosition e blocco posizione nel pacchetto START
+constexpr uint8_t kProtocolVersion = 2;  // v2 (09/11/2026): flag kFlagPosition (blocco posizione) e kFlagTotal (totale pacchetti) nel pacchetto START
 
 // Modo Codec2 trasportato (nibble basso del primo byte dell'header).
 constexpr uint8_t kModeCodec2_1200 = 1;
@@ -84,13 +84,14 @@ enum Flags : uint8_t {
   kFlagParity = 4,    // pacchetto di parita' XOR
   kFlagCallsign = 8,  // l'header contiene il nominativo
   kFlagNoFec = 16,    // la trasmissione non usa parita'
+  kFlagTotal = 64,    // dopo il blocco posizione c'e' 1 byte: numero totale di pacchetti della trasmissione (solo START, messaggi)
   kFlagPosition = 32, // dopo il nominativo c'e' il blocco posizione (position.h), solo nel pacchetto START
 };
-constexpr uint8_t kFlagsKnown = 63;
+constexpr uint8_t kFlagsKnown = 127;
 // Flag protetti dalla parita' (gli altri sono derivabili o non utili).
 constexpr uint8_t kFlagsParityMask = kFlagStart | kFlagEnd;
 
 // Dimensione massima di un pacchetto sul canale.
-constexpr size_t kMaxWireBytes = 5 + 1 + kMaxCallsign + 7 /* blocco posizione, position.h */ + kMaxPayload;
+constexpr size_t kMaxWireBytes = 5 + 1 + kMaxCallsign + 7 /* blocco posizione, position.h */ + 1 /* totale pacchetti */ + kMaxPayload;
 
 }  // namespace lcr

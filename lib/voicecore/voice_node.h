@@ -82,6 +82,7 @@ class VoiceNode {
   void recTick(uint32_t nowMs);
   void finishRecording(uint32_t nowMs, bool limit);
   void setRecPhase(RecPhase p);
+  void reportRxProgress();
   void rxTick(uint32_t nowMs);
   void finishTestRx(uint32_t nowMs);
   void sendTestReply(uint32_t nowMs);
@@ -110,6 +111,9 @@ class VoiceNode {
   bool justSent_ = false;
   bool callsignNotified_ = false;
   bool positionNotified_ = false;
+  size_t txTotal_ = 0;   // pacchetti dichiarati nel messaggio in invio (0 = nessuno)
+  size_t txSent_ = 0;    // pacchetti gia' inviati
+  int rxPercent_ = 0;    // ultima percentuale di ricezione notificata
 
   // PTT: clic e attesa prima di trasmettere
   bool pendingStart_ = false;  // PTT premuto, in attesa di capire se e' un clic o l'inizio di una trasmissione

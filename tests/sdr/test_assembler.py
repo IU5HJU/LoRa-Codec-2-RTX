@@ -67,6 +67,9 @@ la, lo = round((43.7696 + 90) / 180 * 2**24), round((11.2558 + 180) / 360 * 2**2
 pos = bytes([1, la >> 16, (la >> 8) & 255, la & 255, lo >> 16, (lo >> 8) & 255, lo & 255])
 d = describe_packet(bytes([0x21, 0x04, 0xD2, 0x00, 1 | 8 | 32, 6]) + b"IU5HJU" + pos)
 check("posizione descritta", "POSIZIONE" in d and "43.7696" in d and "11.2558" in d and "GPS" in d and "payload 0" in d)
+# START di un messaggio con posizione e totale: 80 pacchetti
+d = describe_packet(bytes([0x21, 0x04, 0xD2, 0x00, 1 | 8 | 32 | 64, 6]) + b"IU5HJU" + pos + bytes([80]))
+check("totale descritto", "TOTALE" in d and "80 pacchetti" in d and "payload 0" in d)
 check("prova di collegamento", "prova" in describe_packet(bytes([0x22, 0, 1, 0, 0])))
 
 print("%d falliti" % failures if failures else "tests/sdr/test_assembler.py: tutto ok")
