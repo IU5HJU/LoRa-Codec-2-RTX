@@ -8,9 +8,10 @@
 // configurazione (Web Serial) ma usabile anche a mano:
 //
 //   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=1   (versione del firmware e del protocollo)
-//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0
+//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
-//   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000)
+//   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000; frequenza del profilo Standard)
+//   CFG SET FREQMSG 433.900      -> CFG OK freqmsg=433.900     (come FREQ, per il profilo Messaggio; puo' essere uguale a FREQ)
 //   CFG SET POWER 10             -> CFG OK power=10            (dBm, 2-17)
 //   CFG SET MICFLOOR -60         -> CFG OK micfloor=-60        (fondo del microfono in dBFS, da -80 a -36)
 //   CFG MIC MEASURE              -> misura il fondo per 3 s (stare in silenzio), poi: CFG MIC fondo=-61 min=-63 max=-58 frames=75
@@ -51,13 +52,16 @@ inline float micGateFromFloor(int floorDb) { return static_cast<float>(floorDb +
 
 struct Settings {
   char callsign[kMaxCallsign + 1] = {0};
-  uint32_t freqKhz = 0;
+  uint32_t freqKhz = 0;     // frequenza del profilo Standard
+  uint32_t freqMsgKhz = 0;  // frequenza del profilo Messaggio: puo' essere uguale a quella dello Standard (mai bloccante)
   int powerDbm = 0;
   int volume = kDefaultVolume;  // volume iniziale dell'altoparlante
   int micFloorDb = kDefaultMicFloorDb;  // fondo del microfono, dBFS
   uint8_t profile = kProfileStandard;   // profilo di trasmissione (profile.h); vale dal riavvio
 
-  float freqMhz() const { return static_cast<float>(freqKhz) / 1000.0f; }
+  // Frequenza del profilo in uso (quella con cui lavora la radio).
+  uint32_t profileFreqKhz() const { return profile == kProfileMessage ? freqMsgKhz : freqKhz; }
+  float freqMhz() const { return static_cast<float>(profileFreqKhz()) / 1000.0f; }
 };
 
 bool operator==(const Settings& a, const Settings& b);

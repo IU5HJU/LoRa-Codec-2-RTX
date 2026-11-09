@@ -34,6 +34,7 @@ Settings make(const char* cs, uint32_t khz, int dbm, int vol = kDefaultVolume, i
   Settings s;
   memcpy(s.callsign, cs, strlen(cs) < kMaxCallsign ? strlen(cs) : kMaxCallsign);
   s.freqKhz = khz;
+  s.freqMsgKhz = khz;  // di partenza tutte le frequenze dei profili sono uguali
   s.powerDbm = dbm;
   s.volume = vol;
   s.micFloorDb = floorDb;
@@ -94,7 +95,7 @@ void testNotCommand() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -190,6 +191,36 @@ void testTestMode() {
   CHECK(f.run("CFG RESET") == ConsoleResult::Ok && f.con.testMode());  // il reset non tocca la prova
   Fixture g;  // un nuovo avvio parte spento
   CHECK(!g.con.testMode());
+}
+
+void testFreqMsg() {
+  Fixture f;
+  // Di partenza uguale a quella dello Standard
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "freq=433.900 freqmsg=433.900"));
+  CHECK(f.run("CFG SET FREQMSG 434.125") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK freqmsg=434.125") == 0);
+  CHECK(f.st.data.freqMsgKhz == 434125 && f.st.data.freqKhz == 433900);  // lo Standard non cambia
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "freq=433.900 freqmsg=434.125"));
+  // Mai bloccante: uguale a quella dello Standard, anche dopo averla cambiata
+  CHECK(f.run("CFG SET FREQMSG 433.900") == ConsoleResult::Ok && f.st.data.freqMsgKhz == f.st.data.freqKhz);
+  CHECK(f.run("CFG SET FREQ 434.500") == ConsoleResult::Ok && f.run("CFG SET FREQMSG 434.500") == ConsoleResult::Ok);
+  CHECK(f.st.data.freqKhz == 434500 && f.st.data.freqMsgKhz == 434500);
+  CHECK(f.run("cfg set freqmsg 433.9") == ConsoleResult::Ok && f.st.data.freqMsgKhz == 433900);
+  // Resta solo il limite della banda
+  const char* bad[] = {"CFG SET FREQMSG 429.999", "CFG SET FREQMSG 440.001", "CFG SET FREQMSG x", "CFG SET FREQMSG", "CFG SET FREQMSG 433.9999"};
+  for (const char* b : bad) CHECK(f.run(b) == ConsoleResult::Error);
+  CHECK(strncmp((f.run("CFG SET FREQMSG 500"), f.reply), "CFG ERR freqmsg", 15) == 0);
+  CHECK(f.st.data.freqMsgKhz == 433900);
+  // Un valore salvato fuori banda non e' valido
+  Settings s = f.st.data;
+  s.freqMsgKhz = 441000;
+  CHECK(!isValidSettings(s));
+  // La radio lavora con la frequenza del profilo in uso
+  Settings m = make("IU5HJU", 433900, 10);
+  m.freqMsgKhz = 434200;
+  m.profile = kProfileMessage;
+  CHECK(m.profileFreqKhz() == 434200 && m.freqMhz() > 434.19f && m.freqMhz() < 434.21f);
+  m.profile = kProfileStandard;
+  CHECK(m.profileFreqKhz() == 433900);
 }
 
 void testProfile() {
@@ -298,6 +329,7 @@ int main() {
   testSetVolume();
   testTestMode();
   testVersion();
+  testFreqMsg();
   testProfile();
   testMicFloor();
   testOther();

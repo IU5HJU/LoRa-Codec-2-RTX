@@ -116,6 +116,11 @@
       <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
       <p class="hint">Da 430.000 a 440.000. Il valore predefinito è un segnaposto: scegli il canale con il band plan IARU Regione 1 / ARI. Le stazioni che si ascoltano devono usare la stessa frequenza.</p>
 
+      <label for="freqmsg">Frequenza del profilo Messaggio (MHz)</label>
+      <input id="freqmsg" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
+      <p class="hint" id="freqmsghint">La scheda usa la frequenza del profilo scelto. Le due frequenze <strong>possono essere uguali</strong> (nelle prove si usa spesso una frequenza nota): non c'è nessun obbligo di usarne di diverse. <button id="sameFreq" type="button" class="secondary" disabled>Usa quella dello Standard</button></p>
+      <p class="hint" id="freqnote" hidden>Stessa frequenza per i due profili: va bene per le prove, ma <strong>non è un canale condiviso</strong>. Profili diversi non si decodificano a vicenda e il controllo "canale occupato" non vede un segnale dell'altro profilo.</p>
+
       <label for="power">Potenza (dBm)</label>
       <input id="power" type="number" min="2" max="17" step="1" placeholder="10" disabled required>
       <p class="hint">Da 2 a 17 dBm.</p>
@@ -247,11 +252,18 @@
     return txt;
   }
   let profileSeen = false;   // l'ultimo CFG GET conteneva il profilo
+  let freqMsgSeen = false;   // l'ultimo CFG GET conteneva la frequenza del profilo Messaggio
+  function updateFreqNote() {
+    const same = !$('freqmsg').disabled && $('freq').value.trim() !== '' && $('freq').value.trim() === $('freqmsg').value.trim();
+    $('freqnote').hidden = !same;
+  }
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) profileSeen = false;
+    if (!on) { profileSeen = false; freqMsgSeen = false; }
+    $('freqmsg').disabled = !on || !freqMsgSeen;   // il firmware piu' vecchio ha una sola frequenza
+    $('sameFreq').disabled = !on || !freqMsgSeen;
     $('profile').disabled = !on || !profileSeen;   // il firmware piu' vecchio non ha i profili
   }
 
@@ -265,6 +277,8 @@
       if (m.callsign) {
         $('callsign').value = m.callsign; $('freq').value = m.freq; $('power').value = m.power;
         if (m.volume !== undefined) $('volume').value = m.volume;
+        if (m.freqmsg !== undefined) { $('freqmsg').value = m.freqmsg; freqMsgSeen = true; $('freqmsg').disabled = !port; $('sameFreq').disabled = !port; }
+        updateFreqNote();
         if (m.profile !== undefined) { $('profile').value = m.profile; profileSeen = true; $('profile').disabled = !port; }
         if (m.micfloor !== undefined) { $('micfloor').value = m.micfloor; lastFloor = Number(m.micfloor); }
         $('testState').textContent = m.test === '1' ? 'Prova ATTIVA' : 'Prova spenta';
@@ -373,6 +387,13 @@
     if (!/^\d{3}(\.\d{1,3})?$/.test(fm)) return { err: 'Frequenza non valida: usa il formato 433.900.' };
     const khz = Math.round(parseFloat(fm) * 1000);
     if (khz < LIMITS.freqMin || khz > LIMITS.freqMax) return { err: 'La frequenza deve essere tra 430.000 e 440.000 MHz.' };
+    let fmsg = null;
+    if (!$('freqmsg').disabled) {
+      fmsg = $('freqmsg').value.trim();
+      if (!/^\d{3}(\.\d{1,3})?$/.test(fmsg)) return { err: 'Frequenza del profilo Messaggio non valida: usa il formato 433.900.' };
+      const km = Math.round(parseFloat(fmsg) * 1000);
+      if (km < LIMITS.freqMin || km > LIMITS.freqMax) return { err: 'La frequenza del profilo Messaggio deve essere tra 430.000 e 440.000 MHz.' };
+    }
     const pw = Number($('power').value);
     if (!Number.isInteger(pw) || pw < LIMITS.pwrMin || pw > LIMITS.pwrMax) return { err: 'La potenza deve essere un numero intero da 2 a 17 dBm.' };
     const vol = Number($('volume').value);
@@ -381,7 +402,7 @@
     if ($('micfloor').value === '' || !Number.isInteger(fl) || fl < -80 || fl > -36) return { err: 'Il fondo del microfono deve essere un intero da -80 a -36 dBFS.' };
     const prof = $('profile').value;
     if (!$('profile').disabled && prof !== 'std' && prof !== 'msg') return { err: 'Profilo non valido.' };
-    return { cs, freq: fm, pw, vol, fl, prof };
+    return { cs, freq: fm, fmsg, pw, vol, fl, prof };
   }
 
   async function save(ev) {
@@ -393,6 +414,7 @@
       const replies = [];
       replies.push(await send('CFG SET CALLSIGN ' + v.cs, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET FREQ ' + v.freq, /^CFG (OK|ERR)/));
+      if (v.fmsg !== null) replies.push(await send('CFG SET FREQMSG ' + v.fmsg, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET POWER ' + v.pw, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET VOLUME ' + v.vol, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET MICFLOOR ' + v.fl, /^CFG (OK|ERR)/));
@@ -414,6 +436,10 @@
       setStatus('Errore: ' + e.message, 'err');
     }
   }
+
+  $('freq').addEventListener('input', updateFreqNote);
+  $('freqmsg').addEventListener('input', updateFreqNote);
+  $('sameFreq').addEventListener('click', () => { $('freqmsg').value = $('freq').value.trim(); updateFreqNote(); });
 
   async function reset() {
     if (!confirm('Cancellare le impostazioni salvate e tornare ai valori di fabbrica (N0CALL)?')) return;

@@ -31,6 +31,8 @@ Un pacchetto da 77 byte dura circa 3,4 secondi in aria: per questo il ricevitore
 
 Per le prime prove usa messaggi **brevi** (3-5 secondi): bastano 30-50 secondi in aria.
 
+**Frequenza:** il profilo Messaggio ha la **sua frequenza** (`CFG SET FREQMSG`, o il campo nella pagina), che può essere **uguale** a quella dello Standard: nelle prove si usa spesso una frequenza nota. Con la stessa frequenza i due profili non sono un canale condiviso (vedi sotto).
+
 **Attenzione:** le schede con profili diversi **non si sentono**. Se una scheda Standard e una Messaggio sono accese insieme, non c'è collegamento. Il profilo vale dal riavvio.
 
 ## Cosa cambia per chi usa il profilo Messaggio

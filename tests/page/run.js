@@ -153,7 +153,7 @@ async function scenario(name, fn, opts = {}) {
     const c = await cmds(p);
     const idx = (s) => c.indexOf(s);
     check('callsign maiuscolo', idx('CFG SET CALLSIGN IU5HJU') >= 0, c.join(' | '));
-    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
+    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET FREQMSG 433.900', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
     check('ordine dei comandi', order.every((v, i) => v >= 0 && (i === 0 || v > order[i - 1])), c.join(' | '));
     check('messaggio di salvataggio', (await status(p)).includes('Salvato'));
     const st = await p.evaluate(() => window.__st.cfg);
@@ -173,6 +173,60 @@ async function scenario(name, fn, opts = {}) {
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
     check('CFG SET PROFILE msg inviato', (await cmds(p)).includes('CFG SET PROFILE msg'), (await cmds(p)).join(' | '));
     check('profilo salvato nella scheda', (await p.evaluate(() => window.__st.cfg.profile)) === 'msg');
+  });
+
+  await scenario('frequenze dei profili: possono essere diverse o uguali, mai bloccanti', async (p) => {
+    check('campo spento prima di collegare', await p.isDisabled('#freqmsg'));
+    await connect(p);
+    check('campo attivo e letto', !(await p.isDisabled('#freqmsg')) && (await p.inputValue('#freqmsg')) === '433.900');
+    check('stesse frequenze: la nota (non bloccante) e\' visibile', !(await p.isHidden('#freqnote')));
+    const note = await p.textContent('#freqnote');
+    check('la nota dice che non e\' un canale condiviso', note.includes('non è un canale condiviso') && note.includes('canale occupato'), note);
+    // diverse: la nota sparisce e si salva
+    await p.fill('#callsign', 'IU5HJU'); await p.fill('#freqmsg', '434.200');
+    check('frequenze diverse: nessuna nota', await p.isHidden('#freqnote'));
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('CFG SET FREQMSG inviato', (await cmds(p)).includes('CFG SET FREQMSG 434.200'), (await cmds(p)).join(' | '));
+    check('frequenza del profilo Messaggio salvata, quella dello Standard intatta', (await p.evaluate(() => window.__st.cfg.freqmsg)) === '434.200' && (await p.evaluate(() => window.__st.cfg.freq)) === '433.900');
+  });
+
+  await scenario('frequenze dei profili: tutte uguali si salva senza avvisi di errore', async (p) => {
+    await connect(p);
+    await p.fill('#callsign', 'IU5HJU'); await p.fill('#freq', '434.000'); await p.fill('#freqmsg', '434.000');
+    check('nota visibile ma non e\' un errore', !(await p.isHidden('#freqnote')));
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('salvate uguali', (await p.evaluate(() => window.__st.cfg.freq)) === '434.000' && (await p.evaluate(() => window.__st.cfg.freqmsg)) === '434.000');
+    check('nessun errore', !(await status(p)).includes('Errore') && (await status(p)).includes('Salvato'), await status(p));
+  });
+
+  await scenario('frequenze dei profili: il pulsante copia quella dello Standard', async (p) => {
+    await connect(p);
+    await p.fill('#freq', '435.250');
+    await p.fill('#freqmsg', '433.100');
+    await p.click('#sameFreq');
+    check('copiata', (await p.inputValue('#freqmsg')) === '435.250');
+    check('la nota compare', !(await p.isHidden('#freqnote')));
+  });
+
+  await scenario('frequenze dei profili: fuori banda rifiutata prima di inviare', async (p) => {
+    await connect(p);
+    await p.fill('#callsign', 'IU5HJU'); await p.fill('#freqmsg', '445.000');
+    await p.click('#save');
+    await until(p, () => /Errore|deve essere/.test(document.getElementById('status').textContent));
+    check('messaggio sulla frequenza del Messaggio', (await status(p)).includes('profilo Messaggio'), await status(p));
+    check('nessun SET inviato', !(await cmds(p)).some((c) => c.startsWith('CFG SET')));
+  });
+
+  await scenario('frequenze dei profili: firmware con una sola frequenza', async (p) => {
+    await p.evaluate(() => { window.__st.noFreqMsg = true; });
+    await connect(p);
+    check('campo e pulsante spenti', (await p.isDisabled('#freqmsg')) && (await p.isDisabled('#sameFreq')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('nessun CFG SET FREQMSG con il firmware vecchio', !(await cmds(p)).some((c) => c.includes('FREQMSG')), (await cmds(p)).join(' | '));
   });
 
   await scenario('profilo di trasmissione: firmware senza profili', async (p) => {

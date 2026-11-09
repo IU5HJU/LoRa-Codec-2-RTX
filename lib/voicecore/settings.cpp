@@ -9,13 +9,14 @@
 namespace lcr {
 
 bool operator==(const Settings& a, const Settings& b) {
-  return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz &&
+  return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
          a.profile == b.profile;
 }
 
 bool isValidSettings(const Settings& s) {
-  return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz &&
+  return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
+         s.freqMsgKhz <= kMaxFreqKhz &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
          s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount;
@@ -141,8 +142,9 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
 
 ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
   if (reply && cap > 0) {
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d", stored_.callsign,
-             static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d",
+             stored_.callsign, static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
+             static_cast<unsigned>(stored_.freqMsgKhz / 1000), static_cast<unsigned>(stored_.freqMsgKhz % 1000),
              stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0);
   }
   return ConsoleResult::Ok;
@@ -177,6 +179,15 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.freqKhz = khz;
     snprintf(shown, sizeof(shown), "freq=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
+  } else if (equalsIgnoreCase(key, "FREQMSG")) {
+    // Come FREQ, per il profilo Messaggio. Nessun controllo che sia diversa da FREQ: puo' essere uguale (prove su una frequenza nota).
+    uint32_t khz = 0;
+    if (!parseFreqKhz(value, khz) || khz < kMinFreqKhz || khz > kMaxFreqKhz) {
+      say(reply, cap, "CFG ERR freqmsg %s", "in MHz, da 430.000 a 440.000");
+      return ConsoleResult::Error;
+    }
+    next.freqMsgKhz = khz;
+    snprintf(shown, sizeof(shown), "freqmsg=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "POWER")) {
     int dbm = 0;
     if (!parseInt(value, dbm) || dbm < kMinPowerDbm || dbm > kMaxPowerDbm) {
