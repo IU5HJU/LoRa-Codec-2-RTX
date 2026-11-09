@@ -92,6 +92,16 @@ void UiNotifier::rxStarted() {
   playing_ = false;
   haveLast_ = false;
   dirty_ = true;
+  if (message_) {
+    // Nel profilo Messaggio la ricezione dura minuti: all'inizio suona "MSG" in Morse (come lo squillo degli SMS dei
+    // vecchi telefoni) per attirare l'attenzione. Prima si mostra lo schermo di ricezione, poi si suona (circa 1,6 s,
+    // bloccante: il pacchetto successivo del messaggio arriva dopo almeno 3 s).
+    state_ = lcr::VoiceNode::State::Receiving;
+    draw(millis());
+    lastDrawMs_ = millis();
+    dirty_ = false;
+    audio_.playMorse(lcr::kMessageTone, lcr::kMessageToneHz, lcr::kMessageToneUnitMs);
+  }
 }
 
 void UiNotifier::rxCallsign(const char* callsign) {

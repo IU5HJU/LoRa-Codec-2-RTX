@@ -50,12 +50,9 @@ class UiNotifier : public lcr::INotifier {
   void rxStarted() override;
   void rxCallsign(const char* callsign) override;
   void rxPosition(const lcr::Position& p) override;
-  // Nel profilo Messaggio il messaggio e' arrivato per intero: prima di riprodurlo suona "MSG" in Morse (come lo squillo
-  // degli SMS dei vecchi telefoni). Bloccante per circa 1,6 s: il messaggio e' gia' tutto in memoria.
   void rxPlaybackStarted() override {
     playing_ = true;
     dirty_ = true;
-    if (message_) audio_.playMorse(lcr::kMessageTone, lcr::kMessageToneHz, lcr::kMessageToneUnitMs);
   }
   void txProgress(int percent) override {
     txPct_ = percent;
