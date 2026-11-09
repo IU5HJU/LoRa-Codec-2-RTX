@@ -4,9 +4,11 @@
 // il test lo legge (cmds = comandi ricevuti) e lo modifica per simulare situazioni diverse.
 (() => {
   const st = window.__st = {
-    cfg: { callsign: 'N0CALL', freq: '433.900', freqmsg: '433.900', power: 10, volume: 7, micfloor: -60, profile: 'std' },
+    cfg: { callsign: 'N0CALL', freq: '433.900', freqmsg: '433.900', power: 10, volume: 7, micfloor: -60, profile: 'std', pos: 'off', qth: 'none', gps: 'off' },
     active: { callsign: 'N0CALL', freq: '433.900', freqmsg: '433.900', power: 10, volume: 7, profile: 'std' },
     noFreqMsg: false,     // firmware con una sola frequenza (piu' vecchio)
+    noPos: false,         // firmware senza posizione (piu' vecchio): CFG GET senza pos=/qth= e CFG SET POS/QTH sconosciuti
+    noGps: false,         // firmware senza GPS: CFG GET senza gps=
     noProfile: false,     // firmware senza profili (piu' vecchio): CFG GET senza profile= e CFG SET PROFILE sconosciuto
     test: false,
     fw: 'abc1234',
@@ -24,7 +26,7 @@
   const get = () => {
     const c = st.cfg, a = st.active;
     const reboot = (c.callsign !== a.callsign || c.freq !== a.freq || c.power !== a.power || c.volume !== a.volume || c.profile !== a.profile || c.freqmsg !== a.freqmsg) ? 1 : 0;
-    return `CFG callsign=${c.callsign} freq=${c.freq}${st.noFreqMsg ? '' : ' freqmsg=' + c.freqmsg} power=${c.power} volume=${c.volume} micfloor=${c.micfloor}${st.noProfile ? '' : ' profile=' + c.profile} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}`;
+    return `CFG callsign=${c.callsign} freq=${c.freq}${st.noFreqMsg ? '' : ' freqmsg=' + c.freqmsg} power=${c.power} volume=${c.volume} micfloor=${c.micfloor}${st.noProfile ? '' : ' profile=' + c.profile} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}${st.noPos ? '' : ' pos=' + c.pos + ' qth=' + c.qth}${st.noGps ? '' : ' gps=' + c.gps}`;
   };
   const inRange = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
   const handle = (line) => {
@@ -60,6 +62,21 @@
         const pv = v.toLowerCase();
         if (pv !== 'std' && pv !== 'msg') return out('CFG ERR profile usa STD (Standard) oppure MSG (Messaggio)');
         st.cfg.profile = pv; out('CFG OK profile=' + pv);
+      } else if (key === 'POS' && !st.noPos) {
+        const pv = v.toLowerCase();
+        if (pv !== 'on' && pv !== 'off') return out('CFG ERR pos usa ON oppure OFF');
+        st.cfg.pos = pv; out('CFG OK pos=' + pv);
+      } else if (key === 'QTH' && !st.noPos) {
+        if (v.toUpperCase() === 'NONE') { st.cfg.qth = 'none'; return out('CFG OK qth=none'); }
+        const m = /^(-?\d{1,3}(?:\.\d{1,7})?),(-?\d{1,3}(?:\.\d{1,7})?)$/.exec(v);
+        if (!m || Math.abs(+m[1]) > 90 || Math.abs(+m[2]) > 180) return out('CFG ERR qth latitudine da -90 a 90, longitudine da -180 a 180, senza spazi');
+        st.cfg.qth = (+m[1]).toFixed(5) + ',' + (+m[2]).toFixed(5);   // la scheda stampa 5 decimali
+        out('CFG OK qth=' + st.cfg.qth);
+      } else if (key === 'GPS' && !st.noGps) {
+        if (st.board !== 'tbeam') return out('CFG ERR gps questa scheda non ha il GPS');
+        const pv = v.toLowerCase();
+        if (pv !== 'on' && pv !== 'off') return out('CFG ERR gps usa ON oppure OFF');
+        st.cfg.gps = pv; out('CFG OK gps=' + pv);
       } else if (key === 'MICFLOOR') {
         if (!inRange(+v, -80, -36)) return out('CFG ERR micfloor da -80 a -36');
         st.cfg.micfloor = +v; out('CFG OK micfloor=' + v);

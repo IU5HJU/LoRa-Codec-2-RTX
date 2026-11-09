@@ -244,6 +244,89 @@ async function scenario(name, fn, opts = {}) {
     check('profilo salvato nella scheda', (await p.evaluate(() => window.__st.cfg.profile)) === 'msg');
   });
 
+  await scenario('posizione: si legge, si imposta e si salva (T3, senza GPS)', async (p) => {
+    check('campi spenti prima di collegare', (await p.isDisabled('#pos')) && (await p.isDisabled('#qthlat')) && (await p.isDisabled('#gps')));
+    await connect(p);
+    check('trasmissione della posizione: spenta di default', !(await p.isDisabled('#pos')) && (await p.inputValue('#pos')) === 'off');
+    check('posizione fissa letta: vuota', (await p.inputValue('#qthlat')) === '' && (await p.inputValue('#qthlon')) === '' && !(await p.isDisabled('#qthlat')));
+    check('GPS spento sulla T3 (la scheda non lo ha)', await p.isDisabled('#gps'));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#pos', 'on');
+    await p.fill('#qthlat', '43,7696');        // la virgola vale come punto
+    await p.fill('#qthlon', '11.2558');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    const c = await cmds(p);
+    check('CFG SET POS on inviato', c.includes('CFG SET POS on'), c.join(' | '));
+    check('CFG SET QTH inviato con il punto decimale', c.includes('CFG SET QTH 43.7696,11.2558'), c.join(' | '));
+    check('nessun CFG SET GPS sulla T3', !c.some((x) => x.startsWith('CFG SET GPS')));
+    const st = await p.evaluate(() => window.__st.cfg);
+    check('valori salvati nella scheda', st.pos === 'on' && st.qth === '43.76960,11.25580', JSON.stringify(st));
+    check('dopo il riavvio i campi mostrano i valori riletti', (await p.inputValue('#qthlat')) === '43.76960' && (await p.inputValue('#pos')) === 'on', await p.inputValue('#qthlat'));
+  });
+
+  await scenario('posizione fissa: cancellarla e controlli sui valori', async (p) => {
+    await p.evaluate(() => { window.__st.cfg.qth = '43.76960,11.25580'; window.__st.cfg.pos = 'on'; });
+    await connect(p);
+    check('valori letti', (await p.inputValue('#qthlat')) === '43.76960' && (await p.inputValue('#qthlon')) === '11.25580' && (await p.inputValue('#pos')) === 'on');
+    await p.fill('#callsign', 'IU5HJU');
+    // un solo campo: errore, nessun SET
+    await p.fill('#qthlon', '');
+    await p.click('#save');
+    await until(p, () => document.getElementById('status').className === 'err');
+    check('serve anche la longitudine', (await status(p)).includes('longitudine'), await status(p));
+    for (const [la, lo, word] of [['91', '10', 'latitudine'], ['40', '181', 'longitudine'], ['abc', '10', 'non valida'], ['43.123456789', '10', 'non valida']]) {
+      await p.fill('#qthlat', la); await p.fill('#qthlon', lo);
+      await p.click('#save');
+      await until(p, () => document.getElementById('status').className === 'err');
+      check('errore per ' + la + ',' + lo, (await status(p)).toLowerCase().includes(word), await status(p));
+    }
+    check('nessun SET inviato con valori non validi', !(await cmds(p)).some((x) => x.startsWith('CFG SET')));
+    // Cancella: entrambi vuoti -> QTH NONE
+    await p.click('#qthclear');
+    check('Cancella svuota i campi', (await p.inputValue('#qthlat')) === '' && (await p.inputValue('#qthlon')) === '');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('CFG SET QTH none inviato (il firmware accetta maiuscole e minuscole)', (await cmds(p)).includes('CFG SET QTH none'), (await cmds(p)).join(' | '));
+    check('posizione fissa cancellata nella scheda', (await p.evaluate(() => window.__st.cfg.qth)) === 'none');
+  });
+
+  await scenario('GPS: attivo sulla T-Beam, spento sulle altre schede', async (p) => {
+    await p.evaluate(() => { window.__st.board = 'tbeam'; });
+    await connect(p);
+    check('GPS attivo sulla T-Beam e spento di default', !(await p.isDisabled('#gps')) && (await p.inputValue('#gps')) === 'off');
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#gps', 'on');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('CFG SET GPS on inviato', (await cmds(p)).includes('CFG SET GPS on'), (await cmds(p)).join(' | '));
+    check('GPS acceso nella scheda', (await p.evaluate(() => window.__st.cfg.gps)) === 'on');
+    check('spiegazione del GPS visibile', (await p.textContent('#gpshint')).includes('fix recente'));
+  });
+
+  await scenario('firmware senza posizione ne\' GPS: campi spenti e nessun comando nuovo', async (p) => {
+    await p.evaluate(() => { window.__st.noPos = true; window.__st.noGps = true; });
+    await connect(p);
+    check('campi della posizione spenti', (await p.isDisabled('#pos')) && (await p.isDisabled('#qthlat')) && (await p.isDisabled('#qthclear')) && (await p.isDisabled('#gps')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    const c = await cmds(p);
+    check('nessun comando POS, QTH o GPS', !c.some((x) => /^CFG SET (POS|QTH|GPS)/.test(x)), c.join(' | '));
+    check('il resto si salva normalmente', c.includes('CFG SET CALLSIGN IU5HJU'));
+  });
+
+  await scenario('posizione: la scheda non salva e la pagina lo dice', async (p) => {
+    await connect(p);
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#pos', 'on');
+    await p.evaluate(() => { window.__st.reject = 'POS'; });
+    await p.click('#save');
+    await until(p, () => document.getElementById('status').className === 'err');
+    check('errore del firmware mostrato', (await status(p)).includes('CFG ERR pos'), await status(p));
+    check('nessun riavvio dopo l\'errore', !(await cmds(p)).includes('CFG REBOOT'));
+  });
+
   await scenario('frequenze dei profili: possono essere diverse o uguali, mai bloccanti', async (p) => {
     check('campo spento prima di collegare', await p.isDisabled('#freqmsg'));
     await connect(p);

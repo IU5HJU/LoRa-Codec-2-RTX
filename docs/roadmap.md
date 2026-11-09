@@ -22,7 +22,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 
 | # | Voce | Note |
 |---|---|---|
-| 1 | Pagina web: campi `POS`, `QTH` e `GPS` | oggi si impostano da seriale (PuTTY) |
+| 1 | ~~Pagina web: campi `POS`, `QTH` e `GPS`~~ | **fatto il 10/11/2026** (da provare con una scheda vera) |
 | 2 | Menu, **passo 3**: voce "Configurazione Wi-Fi" e pagina interna alla scheda | vedi "Cambio di modalità a bordo" |
 | 3 | **Verifiche sul Codec2** 3200, 450 e 700C: CPU, RAM, ascolto comparativo | prima del modo Qualità |
 | 4 | **Modo Qualità** (Codec2 3200, SF7/BW250): blocchi da 20 ms, sequenza a 16 bit | la voce nel menu è già grigia |

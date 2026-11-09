@@ -38,6 +38,9 @@
   .floorrow { display:flex; flex-wrap:wrap; gap:.4em; align-items:center; }
   .floorrow button { margin:0; }
   .floorrow input { width:7rem; max-width:7rem; text-align:center; }
+  .qthrow { display:flex; flex-wrap:wrap; gap:.4em; align-items:center; }
+  .qthrow button { margin:0; }
+  .qthrow input { width:9rem; max-width:9rem; text-align:center; }
   .hwout { margin-top:.6em; min-height:1.2em; font-weight:600; }
   .hwout.ok { color:var(--ok); } .hwout.err { color:var(--err); }
   .hwout table { border-collapse:collapse; margin:.4em 0; font-weight:400; font-size:.92rem; }
@@ -149,6 +152,29 @@
         <button id="floorUp" type="button" class="secondary" disabled aria-label="Alza il fondo di 1 dB">+</button>
         <button id="measure" type="button" disabled>Misura il fondo</button>
       </div>
+
+      <h3>Posizione (facoltativa)</h3>
+      <label for="pos">Trasmissione della posizione</label>
+      <select id="pos" disabled>
+        <option value="off">Non trasmettere la posizione (predefinito)</option>
+        <option value="on">Trasmetti la posizione nel pacchetto di inizio di ogni turno</option>
+      </select>
+      <p class="hint" id="poshint">La posizione viaggia <strong>in chiaro</strong>, come il nominativo, solo nel primo pacchetto di ogni turno (7 byte): chi riceve vede la <strong>distanza in km</strong> sul display. Serve una posizione: il GPS (T-Beam) oppure quella fissa qui sotto.</p>
+
+      <label for="qthlat">Posizione fissa (QTH): latitudine e longitudine</label>
+      <div class="qthrow">
+        <input id="qthlat" inputmode="decimal" placeholder="43.7696" aria-label="Latitudine in gradi" disabled>
+        <input id="qthlon" inputmode="decimal" placeholder="11.2558" aria-label="Longitudine in gradi" disabled>
+        <button id="qthclear" type="button" class="secondary" disabled>Cancella</button>
+      </div>
+      <p class="hint" id="qthhint">In gradi decimali: positivi a nord e a est, negativi a sud e a ovest (per esempio 43.7696 e 11.2558). Si può scrivere anche con la virgola. Serve <strong>anche senza trasmetterla</strong>, per vedere la distanza dalle stazioni che trasmettono la loro. Lascia vuoti i due campi per non avere nessuna posizione fissa.</p>
+
+      <label for="gps">GPS (solo T-Beam)</label>
+      <select id="gps" disabled>
+        <option value="off">Spento (predefinito)</option>
+        <option value="on">Acceso</option>
+      </select>
+      <p class="hint" id="gpshint">Il GPS assorbe decine di mA: accendilo solo se serve. Con un <strong>fix recente</strong> (cielo aperto; il primo può richiedere alcuni minuti) la posizione viene dal GPS, altrimenti dalla posizione fissa. Il display a riposo dice "GPS cerco satelliti" o "GPS fix, N satelliti".</p>
 
       <button id="save" type="submit" disabled>Salva e riavvia</button>
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
@@ -317,6 +343,22 @@
   function refreshFwInfo() { if (lastFw !== null) $('fwinfo').textContent = fwDescription(lastFw, lastProto); }
   let profileSeen = false;   // l'ultimo CFG GET conteneva il profilo
   let freqMsgSeen = false;   // l'ultimo CFG GET conteneva la frequenza del profilo Messaggio
+  let posSeen = false, gpsSeen = false;   // l'ultimo CFG GET conteneva pos=/qth= e gps= (firmware piu' vecchi: no)
+  function updatePosControls(on) {
+    $('pos').disabled = !on || !posSeen;
+    $('qthlat').disabled = !on || !posSeen;
+    $('qthlon').disabled = !on || !posSeen;
+    $('qthclear').disabled = !on || !posSeen;
+    const tbeam = lastBoard === 'tbeam';
+    $('gps').disabled = !on || !gpsSeen || !tbeam;
+    $('gpshint').hidden = false;
+    if (on && gpsSeen && !tbeam) $('gps').value = 'off';
+  }
+  function setQth(v) {   // "43.76960,11.25580" oppure "none"
+    const m = /^(-?[\d.]+),(-?[\d.]+)$/.exec(v || '');
+    $('qthlat').value = m ? m[1] : '';
+    $('qthlon').value = m ? m[2] : '';
+  }
   function updateFreqNote() {
     const same = !$('freqmsg').disabled && $('freq').value.trim() !== '' && $('freq').value.trim() === $('freqmsg').value.trim();
     $('freqnote').hidden = !same;
@@ -325,7 +367,8 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { profileSeen = false; freqMsgSeen = false; }
+    if (!on) { profileSeen = false; freqMsgSeen = false; posSeen = false; gpsSeen = false; }
+    updatePosControls(on);
     $('freqmsg').disabled = !on || !freqMsgSeen;   // il firmware piu' vecchio ha una sola frequenza
     $('sameFreq').disabled = !on || !freqMsgSeen;
     $('profile').disabled = !on || !profileSeen;   // il firmware piu' vecchio non ha i profili
@@ -347,6 +390,9 @@
         if (m.micfloor !== undefined) { $('micfloor').value = m.micfloor; lastFloor = Number(m.micfloor); }
         $('testState').textContent = m.test === '1' ? 'Prova ATTIVA' : 'Prova spenta';
         lastBoard = m.board || '';
+        if (m.pos !== undefined) { $('pos').value = m.pos; setQth(m.qth); posSeen = true; }
+        if (m.gps !== undefined) { $('gps').value = m.gps; gpsSeen = true; }
+        updatePosControls(!!port);
       }
     }
     waiters = waiters.filter(w => {
@@ -469,7 +515,32 @@
     if ($('micfloor').value === '' || !Number.isInteger(fl) || fl < -80 || fl > -36) return { err: 'Il fondo del microfono deve essere un intero da -80 a -36 dBFS.' };
     const prof = $('profile').value;
     if (!$('profile').disabled && prof !== 'std' && prof !== 'msg') return { err: 'Profilo non valido.' };
-    return { cs, freq: fm, fmsg, pw, vol, fl, prof };
+    let pos = null, qth = null, gps = null;
+    if (!$('pos').disabled) pos = $('pos').value === 'on' ? 'on' : 'off';
+    if (!$('qthlat').disabled) {
+      const norm = (s) => s.trim().replace(',', '.');
+      const la = norm($('qthlat').value), lo = norm($('qthlon').value);
+      if (la === '' && lo === '') {
+        qth = 'none';
+      } else {
+        if (la === '' || lo === '') return { err: 'Per la posizione fissa servono sia la latitudine sia la longitudine (oppure lascia vuoti tutti e due i campi).' };
+        if (!/^-?\d{1,3}(\.\d{1,7})?$/.test(la) || !/^-?\d{1,3}(\.\d{1,7})?$/.test(lo)) return { err: 'Posizione fissa non valida: usa gradi decimali, per esempio 43.7696 e 11.2558.' };
+        if (Math.abs(parseFloat(la)) > 90) return { err: 'La latitudine deve essere tra -90 e 90 gradi.' };
+        if (Math.abs(parseFloat(lo)) > 180) return { err: 'La longitudine deve essere tra -180 e 180 gradi.' };
+        qth = la + ',' + lo;
+      }
+    }
+    if (!$('gps').disabled) gps = $('gps').value === 'on' ? 'on' : 'off';
+    return { cs, freq: fm, fmsg, pw, vol, fl, prof, pos, qth, gps };
+  }
+
+  // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
+  function qthSaved(state, qth) {
+    if (qth === 'none') return state.includes('qth=none');
+    const m = /qth=(-?[\d.]+),(-?[\d.]+)/.exec(state);
+    if (!m) return false;
+    const [la, lo] = qth.split(',').map(parseFloat);
+    return Math.abs(parseFloat(m[1]) - la) < 0.00002 && Math.abs(parseFloat(m[2]) - lo) < 0.00002;
   }
 
   async function save(ev) {
@@ -486,12 +557,18 @@
       replies.push(await send('CFG SET VOLUME ' + v.vol, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET MICFLOOR ' + v.fl, /^CFG (OK|ERR)/));
       if (!$('profile').disabled) replies.push(await send('CFG SET PROFILE ' + v.prof, /^CFG (OK|ERR)/));
+      if (v.pos !== null) replies.push(await send('CFG SET POS ' + v.pos, /^CFG (OK|ERR)/));
+      if (v.qth !== null) replies.push(await send('CFG SET QTH ' + v.qth, /^CFG (OK|ERR)/));
+      if (v.gps !== null) replies.push(await send('CFG SET GPS ' + v.gps, /^CFG (OK|ERR)/));
       const bad = replies.find(r => r.startsWith('CFG ERR'));
       if (bad) throw new Error(bad);
       const state = await send('CFG GET', /^CFG callsign=/);
       if (!state.includes('callsign=' + v.cs)) throw new Error('la scheda non ha salvato i valori');
       if (!state.includes('volume=' + v.vol)) throw new Error('la scheda non ha salvato il volume');
       if (!$('profile').disabled && !state.includes('profile=' + v.prof)) throw new Error('la scheda non ha salvato il profilo');
+      if (v.pos !== null && !state.includes('pos=' + v.pos)) throw new Error('la scheda non ha salvato la trasmissione della posizione');
+      if (v.qth !== null && !qthSaved(state, v.qth)) throw new Error('la scheda non ha salvato la posizione fissa');
+      if (v.gps !== null && !state.includes('gps=' + v.gps)) throw new Error('la scheda non ha salvato l\'impostazione del GPS');
       setStatus('Salvato. Riavvio della scheda…', 'ok');
       await send('CFG REBOOT', /^CFG OK reboot/);
       setTimeout(async () => {
@@ -504,6 +581,7 @@
     }
   }
 
+  $('qthclear').addEventListener('click', () => { $('qthlat').value = ''; $('qthlon').value = ''; });
   $('freq').addEventListener('input', updateFreqNote);
   $('freqmsg').addEventListener('input', updateFreqNote);
   $('sameFreq').addEventListener('click', () => { $('freqmsg').value = $('freq').value.trim(); updateFreqNote(); });
