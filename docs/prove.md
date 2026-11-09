@@ -244,3 +244,13 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
   - Il segnale Morse in versione `cf17027` suonava a fine ricezione, subito prima della voce, e non serviva: spostato all'inizio.
   - La compilazione del firmware era fallita nella run 151 per l'inizializzazione con le graffe di una struttura (C++11 della scheda); corretta nella run 152.
 - Decisioni: l'ACK sui messaggi è stato valutato e **abbandonato** (broadcast con risposte che si scontrano, finestra di attesa, trasmissione automatica, nessuna autenticazione).
+
+### 10/11/2026, casa, IU5HJU (ricezione SDR in tempo reale con lcr_live)
+
+- Ricevitore: portatile Ubuntu MATE, chiavetta Nooelec NESDR SMArt v5, ambiente conda `lora`; script `tools/sdr/ricevitore-live.sh` (chiavetta, `lora_rx.py`, `tail -F`, `lcr_live`, `c2dec`, `aplay`), modo Standard (SF8, banda 250 kHz).
+- **Esito: funziona a dovere.** La voce della scheda si sente in diretta dall'altoparlante del portatile durante la trasmissione. Ritardo, qualità dell'audio e frame persi non sono stati annotati.
+- Verifiche precedenti che hanno portato alla scelta degli strumenti:
+  - **`c2dec` 0.9.2 legge dall'ingresso standard** (`c2dec 1200 - -`): provato con una cattura vecchia.
+  - **`ffplay` non va bene in tempo reale**: con i frame a ritmo reale (uno ogni 40 ms) non riproduce, mentre `aplay -q -t raw -f S16_LE -r 8000 -c 1` suona regolare.
+  - La riproduzione automatica dopo `Ctrl+C` (lotti) funzionava già: l'audio si sentiva anche se la prima volta non si vedeva nel testo incollato.
+- Non ancora provato: il modo Messaggio (SF12) con l'SDR in tempo reale e l'avanzamento in percentuale sul terminale.
