@@ -5,9 +5,9 @@ CXXFLAGS ?= -std=c++17 -Wall -Wextra -O1 -g -fsanitize=address,undefined -Ilib/v
 
 CORE := $(wildcard lib/voicecore/*.cpp)
 HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
-TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea
+TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live
 
-.PHONY: test test-page test-py lcr_decode pdf clean
+.PHONY: test test-page test-py lcr_decode lcr_live pdf clean
 test: $(addprefix build/test_,$(TESTS))
 	@for t in $^; do ./$$t || exit 1; done
 
@@ -28,6 +28,13 @@ test-page:
 
 # Decodificatore offline dei pacchetti catturati con un SDR (tools/lcr_decode.cpp): build/lcr_decode
 lcr_decode: build/lcr_decode
+
+# Ricezione in tempo reale (tools/lcr_live.cpp): build/lcr_live
+lcr_live: build/lcr_live
+
+build/lcr_live: tools/lcr_live.cpp tools/lcr_live_core.h tools/lcr_decode_core.h $(CORE) $(HDRS)
+	@mkdir -p build
+	$(CXX) -std=c++17 -Wall -Wextra -O2 -Ilib/voicecore -Itools -o $@ $< $(CORE)
 
 build/lcr_decode: tools/lcr_decode.cpp tools/lcr_decode_core.h $(CORE) $(HDRS)
 	@mkdir -p build

@@ -71,6 +71,20 @@ Riassembla i pacchetti come farebbe la scheda ricevente (stessa logica del firmw
 
 Il decodificatore accetta anche le righe che stampa `gr-lora_sdr` con `print_rx_msg` in esadecimale, o un file con un solo pacchetto per riga.
 
+## 3 bis. Ascolto in tempo reale (10/11/2026)
+
+`tools/lcr_live.cpp` (`make lcr_live`) fa la stessa ricostruzione di `lcr_decode`, ma **man mano che i pacchetti arrivano**: legge le righe di `lora_rx.py` dallo standard input e scrive sullo standard output i frame Codec2 1200 a ritmo reale (uno ogni 40 ms), con la stessa logica del ricevitore della scheda: pre-buffer di 1 s, recupero con la parità, frame persi a zero. Le righe di stato (nominativo, posizione, avanzamento del messaggio, fine) vanno sullo standard error.
+
+```bash
+tail -n0 -F cattura.txt | build/lcr_live | c2dec 1200 - - | aplay -q -t raw -f S16_LE -r 8000 -c 1
+```
+
+- **Standard:** la voce si sente mentre la scheda trasmette, con un ritardo di circa **1-2 secondi** (il pre-buffer di 1 s più il tempo di demodulazione).
+- **Messaggio (`--messaggio`, SF12):** come sulle schede, la riproduzione parte a messaggio completo; durante la ricezione si legge l'avanzamento.
+- Si usa `aplay` e non `ffplay`: `ffplay` con dati che arrivano a rilento si blocca nel suo "probe" iniziale.
+- Lo script **`tools/sdr/ricevitore-live.sh`** fa tutto (ambiente conda, scelta del modo, frequenza e guadagno, ascolto, riepilogo finale) e si può collegare a un'icona su Ubuntu MATE.
+- Provato sul PC con orologio finto (`tests/test_live.cpp`) e con una trasmissione sintetica (600 byte in 4,9 s). **Da provare con la chiavetta e una scheda vera.**
+
 ## 4. Controllo di una scheda
 
 1. Sulla scheda attiva la prova di collegamento (tre clic sul PTT) e tieni premuto il PTT per i 12 secondi.
