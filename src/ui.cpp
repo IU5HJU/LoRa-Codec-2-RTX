@@ -171,6 +171,29 @@ void UiNotifier::drawTestReport() {
   display_.display();
 }
 
+// Menu delle modalita': titolo, una voce per riga (la scelta in negativo, la modalita' in uso con *, le voci non
+// disponibili con "presto"), istruzioni in basso. Al massimo 21 caratteri per riga a testo piccolo.
+void UiNotifier::drawMenu() {
+  display_.setTextSize(1);
+  display_.setCursor(0, 13);
+  display_.print("MODALITA'");
+  for (size_t i = 0; i < menu_->count(); i++) {
+    const lcr::MenuItem& it = menu_->item(i);
+    const int y = 24 + static_cast<int>(i) * 10;
+    const bool sel = i == menu_->selectedIndex();
+    if (sel) {
+      display_.fillRect(0, y - 1, 128, 10, SSD1306_WHITE);
+      display_.setTextColor(SSD1306_BLACK);
+    }
+    display_.setCursor(2, y);
+    display_.printf("%c %s%s", it.id == menuCurrentId_ ? '*' : ' ', it.label, it.enabled ? "" : " (presto)");
+    display_.setTextColor(SSD1306_WHITE);
+  }
+  display_.setCursor(0, 56);
+  display_.print("PTT=avanti  VOL=ok");
+  display_.display();
+}
+
 void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeStep, int rssiDbm, float snrDb,
                       float batteryVolts) {
   if (state != state_ || volumeStep != volume_) dirty_ = true;
@@ -213,6 +236,11 @@ void UiNotifier::draw(uint32_t nowMs) {
   display_.setCursor(0, 0);
   display_.printf("%s  %.3f MHz", settings_.callsign, static_cast<double>(settings_.freqMhz()));
   display_.drawFastHLine(0, 10, 128, SSD1306_WHITE);
+
+  if (menu_ && menu_->isOpen()) {
+    drawMenu();
+    return;
+  }
 
   if (testShown_ && state_ == lcr::VoiceNode::State::Idle) {
     drawTestReport();

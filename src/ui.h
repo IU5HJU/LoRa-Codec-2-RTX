@@ -8,6 +8,7 @@
 
 #include "audio_io.h"
 #include "interfaces.h"
+#include "menu.h"
 #include "settings.h"
 #include "voice_node.h"
 
@@ -21,6 +22,12 @@ class UiNotifier : public lcr::INotifier {
   void setProfile(const lcr::Profile& p) {
     message_ = p.message;
     maxTurnSec_ = p.maxTurnMs / 1000;
+  }
+
+  // Menu delle modalita': mentre e' aperto lo schermo mostra le voci. currentId e' il profilo in uso (segnato con *).
+  void setMenu(const lcr::Menu* menu, uint8_t currentId) {
+    menu_ = menu;
+    menuCurrentId_ = currentId;
   }
 
   // false se il display non risponde (il resto del sistema funziona comunque).
@@ -59,6 +66,7 @@ class UiNotifier : public lcr::INotifier {
  private:
   void draw(uint32_t nowMs);
   void drawTestReport();
+  void drawMenu();
 
   AudioIo& audio_;
   lcr::Settings settings_;
@@ -67,6 +75,8 @@ class UiNotifier : public lcr::INotifier {
   bool dirty_ = true;
   uint32_t lastDrawMs_ = 0;
 
+  const lcr::Menu* menu_ = nullptr;
+  uint8_t menuCurrentId_ = 0;
   bool message_ = false;         // profilo Messaggio
   uint32_t maxTurnSec_ = 30;     // durata massima di un turno o di un messaggio, secondi
   bool playing_ = false;         // profilo Messaggio: sta riproducendo (altrimenti sta ancora ricevendo)

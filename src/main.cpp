@@ -11,7 +11,9 @@
 #include "audio_io.h"
 #include "battery.h"
 #include "board_pins.h"
+#include "button_gesture.h"
 #include "codec2_adapter.h"
+#include "menu.h"
 #include "packet.h"
 #include "pmu.h"
 #include "ptt_button.h"
@@ -46,7 +48,10 @@ static NvsSettingsStorage settingsStorage;
 static lcr::Settings settings;                // in uso: NVS se valida, altrimenti user_config.h
 static lcr::SettingsConsole* console = nullptr;  // comandi CFG sulla seriale
 static lcr::PttButton ptt(LCR_PTT_DEBOUNCE_MS);
-static lcr::PttButton volumeButton(30);
+static lcr::ButtonGesture volumeButton(30, 2000);  // volume: breve = alza, lunga = menu delle modalita'
+static lcr::Menu* menu = nullptr;
+static lcr::MenuFlow* menuFlow = nullptr;
+static bool volumeArmed = false;  // come il PTT: un volume gia' premuto all'accensione non apre il menu
 
 static bool pttUsable = true;   // false se il pin PTT risulta instabile all'avvio
 static bool pttArmed = false;   // il PTT vale solo dopo essere stato rilasciato almeno una volta
@@ -90,6 +95,13 @@ void setup() {
   console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort, LCR_VERSION);
   ui.setSettings(settings);
   ui.setProfile(lcr::profileFor(settings.profile));
+  {
+    size_t n = 0;
+    const lcr::MenuItem* items = lcr::defaultMenuItems(n);
+    menu = new lcr::Menu(items, n);
+    menuFlow = new lcr::MenuFlow(*menu);
+    ui.setMenu(menu, settings.profile);
+  }
 
   // L'alimentazione va per prima: sulla T-Beam senza il PMU la radio non e' alimentata.
   const bool pmuOk = pmu.begin();
@@ -422,6 +434,25 @@ static void serviceConsole() {
   }
 }
 
+// Scelta confermata nel menu: si salva il profilo (le altre impostazioni salvate restano com'erano) e si riavvia.
+static void applyProfileChoice(uint8_t id) {
+  lcr::Settings s = console->stored();
+  s.profile = id;
+  const lcr::Profile& p = lcr::profileFor(id);
+  if (!settingsStorage.save(s)) {
+    Serial.println("[menu] ERRORE: salvataggio del profilo non riuscito");
+    ui.showMessage("ERRORE", "Salvataggio fallito");
+    delay(2000);
+    ui.refresh();
+    return;
+  }
+  Serial.printf("[menu] profilo %s scelto e salvato: riavvio\n", p.name);
+  ui.showMessage("RIAVVIO", p.name);
+  Serial.flush();
+  delay(1500);
+  ESP.restart();
+}
+
 void loop() {
   const uint32_t now = millis();
   serviceConsole();
@@ -429,18 +460,33 @@ void loop() {
   const bool raw = pttRawPressed();
   if (!raw) pttArmed = true;  // un PTT gia' premuto all'accensione non fa partire la trasmissione
   const bool pttDown = pttUsable && pttArmed && raw;
-  switch (ptt.update(pttDown, now)) {
-    case lcr::PttButton::Event::Pressed: node->pttPressed(now); break;
-    case lcr::PttButton::Event::Released: node->pttReleased(now); break;
-    case lcr::PttButton::Event::None: break;
-  }
+  const lcr::PttButton::Event pttEvent = ptt.update(pttDown, now);
 
-  // Pulsante volume (opzionale): ogni pressione sale di un passo, da 10 torna a 1.
-  if (volumeButton.update(digitalRead(pins::kVolume) == LOW, now) == lcr::PttButton::Event::Pressed) {
+  // Pulsante volume (opzionale): pressione breve = un passo in su (da 10 torna a 1); pressione lunga (2 s) a scheda
+  // ferma = menu delle modalita'. Nel menu il PTT sceglie la voce e non trasmette mai (vedi lib/voicecore/menu.h).
+  const bool volRaw = digitalRead(pins::kVolume) == LOW;
+  if (!volRaw) volumeArmed = true;
+  const lcr::ButtonGesture::Event volEvent = volumeButton.update(volumeArmed && volRaw, now);
+  const bool nodeIdle = node->state() == lcr::VoiceNode::State::Idle && node->recPhase() == lcr::VoiceNode::RecPhase::None;
+  const lcr::MenuFlow::Actions act = menuFlow->update(pttEvent, volEvent, nodeIdle, settings.profile, now);
+  if (act.pttToNode) {
+    if (pttEvent == lcr::PttButton::Event::Pressed) node->pttPressed(now);
+    if (pttEvent == lcr::PttButton::Event::Released) node->pttReleased(now);
+  }
+  if (act.volumeUp) {
     const int next = audio.volumeStep() >= lcr::AudioBackEnd::kVolumeSteps ? 1 : audio.volumeStep() + 1;
     audio.setVolumeStep(next);
     audio.beep(600, 40);
   }
+  if (act.redraw) ui.refresh();
+  switch (act.beep) {
+    case lcr::MenuBeep::Open: audio.beep(800, 60); break;
+    case lcr::MenuBeep::Next: audio.beep(600, 30); break;
+    case lcr::MenuBeep::Confirm: audio.beep(1000, 60); break;
+    case lcr::MenuBeep::Cancel: audio.beep(400, 100); break;
+    case lcr::MenuBeep::None: break;
+  }
+  if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) applyProfileChoice(act.outcome.id);
 
   battery.update(now);
 
