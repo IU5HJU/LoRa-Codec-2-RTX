@@ -140,6 +140,17 @@ Si usano i due tasti che ci sono già. **Deciso:** pressione lunga sul volume ap
   - **Stessa pagina di oggi**, che passa i comandi `CFG` alla scheda al posto della porta seriale: l'interprete dei comandi esiste già e ha i test, quindi non c'è un secondo programma da mantenere.
   - Dopo il salvataggio la pagina **rilegge i valori dalla scheda** e li confronta (lo fa già oggi): in alcuni progetti analoghi capitavano impostazioni che non si salvavano senza che nessuno se ne accorgesse.
 
+#### Frequenze non bloccanti (requisito del 9 novembre)
+
+Nel mondo radioamatoriale le prove si fanno spesso su **una frequenza nota**: la scelta delle frequenze dei profili **non deve mai essere bloccante**.
+
+- **Qualunque voce può essere uguale a qualunque altra:** Standard, Messaggio e Qualità possono usare la stessa frequenza, e il ripetitore può avere **ingresso e uscita uguali** (utile in fase di prova con una sola frequenza). Il firmware e la pagina **non rifiutano e non avvisano in modo bloccante** frequenze uguali. Resta il solo controllo sulla banda (430-440 MHz).
+- **Predefinito:** tutte le memorie partono con la stessa frequenza (oggi il segnaposto 433,900 MHz); chi aggiorna dalla versione con una sola frequenza la ritrova in tutte le voci.
+- **Stessa frequenza non vuol dire che si sentano:** due profili con la stessa frequenza ma SF e banda diversi **non si decodificano a vicenda**. Il controllo "canale occupato" (CAD) vede solo un segnale con il proprio SF, quindi una scheda Standard non si accorge di un messaggio SF12 in corso sulla stessa frequenza, e viceversa. Va bene per le prove, ma non è un canale condiviso: la pagina lo dice in una nota, senza impedirlo.
+- **Ripetitore su una sola frequenza: l'antiripetizione diventa obbligatoria.** Con due frequenze diverse la scheda in ricezione non sente mai la propria trasmissione. Con la **stessa** frequenza la sente, la ripete di nuovo e così via: un anello infinito. Servono quindi **sempre**: (1) un flag **"ripetuto"** nei pacchetti ritrasmessi, che la scheda in ricezione del ripetitore ignora; (2) una piccola memoria degli ultimi pacchetti (sessione e numero di sequenza) per non ripetere due volte lo stesso. Chi riceve sia l'originale sia la copia ignora il duplicato, perché la sessione e la sequenza sono le stesse.
+- **Schede senza il flag:** il flag è un bit nuovo nelle bandiere; le schede con il firmware precedente scartano i pacchetti con bandiere sconosciute, quindi non sentono le copie ripetute (non c'è rumore, solo silenzio).
+- **Prova a frequenza unica:** mentre la scheda in trasmissione del ripetitore trasmette, quella in ricezione è sorda o sovraccarica e può perdere pacchetti degli utenti. È un limite della prova, non un difetto.
+
 ## 3. Pagina web di configurazione (dopo il TOT)
 
 **Decisione del 4 novembre:** la prima versione passa dal cavo USB (Web Serial, Chrome/Edge) ed è
