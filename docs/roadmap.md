@@ -1,11 +1,44 @@
 # Roadmap e decisioni
 
-Aggiornato l'8 novembre 2026 (sezione "Decisioni dell'8 novembre" sotto). Ordine di lavoro concordato: prima la voce a turni (manca l'hardware audio), poi TOT e profili.
-Già fatti, in anticipo: pagina web di installazione e configurazione, impostazioni nella scheda, prova di collegamento.
+Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le decisioni dell'8 novembre sono più sotto).
+
+## Stato al 10/11/2026
+
+**Fatto e provato su scheda** (esiti in [prove.md](prove.md)):
+
+| Cosa | Dove |
+|---|---|
+| Voce a turni in Standard (SF8/BW250, Codec2 1200); causa dei crepitii trovata e corretta | 8 novembre |
+| Prima beta `v0.1.0-beta.1`, pagina di installazione con menu delle versioni, copia di sicurezza di `esp32_codec2` in `third_party/` | 8-9 novembre |
+| Profilo **Messaggio** (SF12/BW125): registra e invia, riproduce a messaggio completo; provato fino a 30 s, senza riavvii | 9 novembre |
+| Frequenza propria del profilo Messaggio (`FREQMSG`), anche uguale a quella dello Standard | 9 novembre |
+| **Menu a bordo** (volume lungo, PTT, conferma, riavvio sul profilo scelto) | 9 novembre |
+| **Protocollo v2:** posizione nello START (spenta di default), `QTH` fisso, distanza in km sul display in Standard e in Messaggio | 9 novembre |
+| **Percentuale 1-100%** del messaggio (campo `TOTAL` nello START) e segnale **"MSG" in Morse** all'inizio della ricezione | 10 novembre |
+| **GPS del T-Beam** (`CFG SET GPS ON`): fix con 4 satelliti, posizione dal GPS nel pacchetto START, vista dall'SDR come "(GPS)" | 10 novembre |
+| **SDR:** ricezione, decodifica e **ascolto in tempo reale** (`lcr_live`) con icone su Ubuntu MATE | 10 novembre |
+
+**Da fare**, in ordine di priorità proposto:
+
+| # | Voce | Note |
+|---|---|---|
+| 1 | Pagina web: campi `POS`, `QTH` e `GPS` | oggi si impostano da seriale (PuTTY) |
+| 2 | Menu, **passo 3**: voce "Configurazione Wi-Fi" e pagina interna alla scheda | vedi "Cambio di modalità a bordo" |
+| 3 | **Verifiche sul Codec2** 3200, 450 e 700C: CPU, RAM, ascolto comparativo | prima del modo Qualità |
+| 4 | **Modo Qualità** (Codec2 3200, SF7/BW250): blocchi da 20 ms, sequenza a 16 bit | la voce nel menu è già grigia |
+| 5 | **Misure sul campo:** RSSI, SNR, deriva di frequenza, perdite, anche in movimento | decidono quanta protezione serve |
+| 6 | Intestazione del messaggio (identificatore, flag emergenza e ripetibile); Codec2 450/700C nel Messaggio | dopo le verifiche del punto 3 |
+| 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **dopo** la verifica normativa (ARI): sono stazioni automatiche |
+| 8 | **Memorie** (profilo e frequenze per ogni canale) e frequenze di lavoro col band plan IARU/ARI | |
+| 9 | Locatore Maidenhead e ora precisa dal GPS | |
+
+**Piccole cose in sospeso:** note di rilascio della beta da incollare a mano su GitHub; PDF di protocollo con 138 ms invece di 137; verifica file per file della licenza di `third_party/` prima di una versione stabile.
+
+**Decisioni di rinuncia:** nessun ACK sui messaggi (valutato il 10 novembre: broadcast con risposte che si scontrano, finestre di attesa, trasmissione automatica, nessuna autenticazione); Opus escluso per la modalità Qualità (resta il Codec2 3200).
 
 ## 1. Prima trasmissione (fatta; resta la voce)
 
-Procedura in [firmware.md](firmware.md). Stato al 5 novembre: **collegamento radio provato nei due versi** tra T-Beam e T3, microfono provato sulla T3, prova di collegamento funzionante. Manca la voce: servono amplificatore e altoparlante (spedizione parziale in attesa).
+Procedura in [firmware.md](firmware.md). Stato: **collegamento radio provato nei due versi** tra T-Beam e T3 (5 novembre), microfono e altoparlante provati, **la voce passa da una scheda all'altra e si sente bene** (8 novembre, dopo la correzione dell'amplificatore, vedi [prove.md](prove.md)).
 Regola ferma: **mai alimentare una scheda senza antenna**, nemmeno via USB per caricare il firmware.
 
 ## 2. TOT fino a 3 minuti e profili (dopo la prima trasmissione)
@@ -39,7 +72,7 @@ Modifiche al codice previste:
 - facoltativo: bip a 10 s dalla fine del TOT;
 - il formato dei pacchetti cambia: le due schede devono avere la stessa versione.
 
-### Decisioni dell'8 novembre 2026: profili e modi (ragionamento, non ancora implementato)
+### Decisioni dell'8 novembre 2026: profili e modi (ragionamento; Standard, Messaggio e menu a bordo fatti, Qualità e ripetitore ancora da fare)
 
 Definizioni (decise con IU5HJU):
 
@@ -178,7 +211,7 @@ Fatta anche la pagina (`site/index.html`, flasher e configurazione via Web Seria
 
 ## Prova di collegamento (fatta e provata)
 
-Sequenza di frame noti confrontata bit per bit, con risposta automatica; vedi [prova-collegamento.md](prova-collegamento.md). Provata sulle schede il 5 novembre. Livelli 2 e 3 (autotest del codec, prova dell'altoparlante) da fare con l'hardware audio.
+Sequenza di frame noti confrontata bit per bit, con risposta automatica; vedi [prova-collegamento.md](prova-collegamento.md). Provata sulle schede il 5 novembre. Livelli 2 e 3 (autotest del codec e prova dell'altoparlante): `CFG TEST CODEC` e `CFG TEST AUDIO`, provati il 7-8 novembre ([verifica-hardware-audio.md](verifica-hardware-audio.md)).
 
 ## Fondo del microfono: misura a cura dell'operatore (fatto il 5 novembre, da provare)
 
@@ -189,14 +222,14 @@ Il rumore di fondo cambia con l'ambiente (casa, auto, portatile, strada): la sog
 - Firmware: `CFG MIC MEASURE`, `CFG SET MICFLOOR`, impostazione salvata in NVS. Il guadagno massimo (30 dB) resta in `user_config.h`.
 - **Da decidere dopo l'ascolto della voce** (serve l'altoparlante): se serve anche la calibrazione automatica o l'adattamento continuo. Vedi [taratura-microfono.md](taratura-microfono.md).
 
-## Verifica dell'hardware audio (scritta il 5 novembre, da provare)
+## Verifica dell'hardware audio (scritta il 5 novembre, provata il 7-8 novembre)
 
 Per un collega con una sola scheda: prova del microfono (silenzio contro voce) e prova combinata di altoparlante e microfono (tre toni misurati con Goertzel), dalla pagina di configurazione, con la spiegazione di falsi positivi e negativi.
 Vedi [verifica-hardware-audio.md](verifica-hardware-audio.md). Le soglie vanno messe a punto sulle schede vere.
 
 ## Versioni (deciso il 7 novembre)
 
-Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etichetta, `v0.1.0-beta.1`, si mette quando la voce passa da una scheda all'altra ed e' comprensibile all'ascolto.
+Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etichetta, `v0.1.0-beta.1`, è stata pubblicata l'8 novembre, quando la voce è passata da una scheda all'altra ed è risultata comprensibile.
 
 ## 4. Flasher web (dopo la configurazione a runtime)
 
@@ -209,7 +242,7 @@ Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etich
 
 - **Fase 1** (fatta e provata il 4 novembre: avvio, AXP2101, radio, tasto IO38, trasmissione): alimentazione AXP2101 (radio accesa, GPS spento), tasto di bordo IO38 come PTT, pin audio propri (microfono su GPIO36, altoparlante su GPIO2), due ambienti `lora32` e `tbeam`, compilazione di entrambi su Actions.
 - **Fase 2**: batteria e carica sull'OLED e in seriale, avviso di batteria scarica con un bip.
-- **Fase 3**: GPS: locatore Maidenhead e ora precisa, per esempio nell'intestazione di inizio e fine turno.
+- **Fase 3** (GPS): lettura del GPS fatta e provata il 10 novembre (vedi sotto). Ancora da fare: locatore Maidenhead e ora precisa, per esempio nell'intestazione di inizio e fine turno.
 - **Posizione nei pacchetti (09/11/2026), decisioni:** protocollo **v2** (flag `POSITION`, blocco da 7 byte: stato, latitudine e longitudine a 24 bit); trasmissione **spenta di default**; **solo nel pacchetto `START`** (i passaggi sono brevi: anche un mezzo in movimento aggiorna la posizione a ogni turno). Fatto il 09/11/2026 sul PC e nel firmware: blocco, `CFG SET POS`, `CFG SET QTH` (posizione fissa), distanza in km sul display (se si conosce la propria posizione). **Lettura del GPS della T-Beam: scritta il 10/11/2026, da provare su scheda** (`CFG SET GPS ON`, spento di default; NMEA GGA e RMC a 9600 baud, buffer da 2 KB, alimentazione ALDO3; fix recente = posizione dal GPS, altrimenti il QTH fisso, altrimenti nessuna; interprete e scelta della posizione testati sul PC con le frasi di esempio e con rumore, checksum errati e coordinate non valide).
 - Se la scheda risultasse con radio SX1262 serve una variante di `RadioLora`.
 
@@ -217,5 +250,5 @@ Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etich
 
 - Frequenza di lavoro: ancora il segnaposto 433,900 MHz in `src/user_config.h`, da scegliere col band plan IARU R1 / ARI.
 - Licenza: scelta la **GPL-3.0** (file `LICENSE`), coerente con la libreria `esp32_codec2` (vedi [firmware.md](firmware.md)).
-- Prove su scheda: collegamento nei due versi tra T-Beam e T3, microfono, prova di collegamento (5 novembre); altoparlante e voce a turni ancora da provare (vedi [prove.md](prove.md)).
+- Prove su scheda: collegamento nei due versi tra T-Beam e T3, microfono, prova di collegamento (5 novembre); altoparlante e voce a turni provati l'8 novembre, menu, messaggi, posizione, GPS e SDR il 9-10 novembre (vedi [prove.md](prove.md)).
 - **Fatto il 10/11/2026 sul PC e nel firmware, da provare su scheda: percentuale di avanzamento nel modo Messaggio (richiesta del 09/11/2026), con campo `TOTAL` nel pacchetto START, e segnale "MSG" in Morse all'inizio della ricezione del messaggio ([modo-messaggio.md](modo-messaggio.md)).** Richiesta originale: il display deve mostrare da 1% a 100%, in trasmissione e in ricezione, perché un messaggio lungo dura minuti e sembra bloccato. TX: la lunghezza è nota dopo la registrazione. RX: il pacchetto START deve dichiarare quanti pacchetti seguono (campo nell'intestazione del modo Messaggio, protocollo v2).
