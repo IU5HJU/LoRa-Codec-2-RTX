@@ -20,9 +20,10 @@ const char* codeFor(char c) {
 }
 
 struct Writer {
+  Writer(MorseElement* o, size_t c) : out(o), cap(c), n(0) {}
   MorseElement* out;
   size_t cap;
-  size_t n = 0;
+  size_t n;
   bool put(bool tone, uint16_t ms) {
     if (n >= cap) return false;
     out[n++] = {tone, ms};
@@ -33,7 +34,7 @@ struct Writer {
 
 size_t morseElements(const char* text, uint16_t unitMs, MorseElement* out, size_t cap) {
   if (!text || !out) return 0;
-  Writer w{out, cap};
+  Writer w(out, cap);
   uint16_t gapUnits = 0;  // 7 dopo uno spazio tra parole, altrimenti 3 tra le lettere
   bool first = true;
   for (const char* p = text; *p; p++) {
