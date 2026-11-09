@@ -36,4 +36,5 @@ build/lcr_decode: tools/lcr_decode.cpp tools/lcr_decode_core.h $(CORE) $(HDRS)
 # Prova della parte Python del ricevitore SDR (non serve GNU Radio).
 test-py:
 	python3 tests/sdr/test_assembler.py
+	python3 tests/site/test_versions.py
 	python3 -m py_compile tools/sdr/lora_rx.py

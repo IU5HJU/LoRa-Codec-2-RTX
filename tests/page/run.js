@@ -12,11 +12,16 @@ const SITE = path.join(ROOT, 'site');
 const FAKE = path.join(__dirname, 'fake_serial.js');
 
 let publishedVersion = 'test-1';   // modificabile dai test
+let versionsData = null;           // versions.json (menu delle versioni); null = assente, come nelle pagine di prima del menu
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url === '/version.json') {
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify({ version: publishedVersion, commit: 'abc1234def5678900000000000000000000000ff' }));
+  }
+  if (url === '/versions.json' && versionsData) {
+    res.setHeader('Content-Type', 'application/json');
+    return res.end(JSON.stringify(versionsData));
   }
   const file = path.join(SITE, url === '/' ? 'index.html' : url);
   if (!file.startsWith(SITE) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.statusCode = 404; return res.end('no'); }
@@ -160,6 +165,70 @@ async function scenario(name, fn, opts = {}) {
     check('valori nella scheda', st.callsign === 'IU5HJU' && st.freq === '434.125' && st.power === 12 && st.volume === 4);
   });
 
+  // ---- Menu delle versioni ----
+  const DEV = { id: 'dev', version: 'main-09/11/2026', kind: 'dev', commit: 'abc1234def5678900000000000000000000000ff', date: null };
+  const BETA = { id: 'v0.1.0-beta.1', version: 'v0.1.0-beta.1', kind: 'beta', commit: null, date: '2026-11-08' };
+  const STABLE = { id: 'v1.0.0', version: 'v1.0.0', kind: 'stable', commit: null, date: '2027-01-15' };
+
+  versionsData = { default: BETA.id, versions: [BETA, DEV] };
+  await scenario('menu delle versioni: elenco, proposta e spiegazione', async (p) => {
+    await until(p, () => !document.getElementById('fwverbox').hidden);
+    const opts = await p.$$eval('#fwver option', (o) => o.map((x) => ({ v: x.value, t: x.textContent })));
+    check('due voci: beta e sviluppo', opts.map((o) => o.v).join() === 'v0.1.0-beta.1,dev', JSON.stringify(opts));
+    check('la beta e\' descritta come tale', opts[0].t.includes('BETA') && opts[0].t.includes('v0.1.0-beta.1'), opts[0].t);
+    check('lo sviluppo e\' descritto come tale', opts[1].t.includes('Sviluppo') && opts[1].t.includes('main-09/11/2026'), opts[1].t);
+    check('proposta: la versione rilasciata, non lo sviluppo', (await p.inputValue('#fwver')) === 'v0.1.0-beta.1');
+    check('gruppi: rilasciate e sviluppo', (await p.$$eval('#fwver optgroup', (g) => g.map((x) => x.label).join('|'))) === 'Versioni rilasciate|Sviluppo');
+    check('manifest della versione proposta', (await p.getAttribute('#installer', 'manifest')) === 'firmware/v0.1.0-beta.1/t3/manifest.json', await p.getAttribute('#installer', 'manifest'));
+    const ver = await p.textContent('#ver');
+    check('riga della versione con la data in formato europeo', ver.includes('v0.1.0-beta.1') && ver.includes('08/11/2026') && ver.includes('BETA'), ver);
+    check('spiegazione della fase', (await p.textContent('#fwverhint')).includes('Beta'), await p.textContent('#fwverhint'));
+    check('collegamento alle note di rilascio', !(await p.isHidden('#relnotes')) && (await p.getAttribute('#relnoteslink', 'href')) === 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases/tag/v0.1.0-beta.1');
+    check('dice di lasciare quella proposta', (await p.textContent('#verhelp')).includes('lascia quella proposta'));
+  });
+  await scenario('menu delle versioni: cambiare versione o scheda aggiorna il manifest', async (p) => {
+    await until(p, () => !document.getElementById('fwverbox').hidden);
+    await p.selectOption('#fwver', 'dev');
+    check('manifest dello sviluppo', (await p.getAttribute('#installer', 'manifest')) === 'firmware/dev/t3/manifest.json');
+    const ver = await p.textContent('#ver');
+    check('riga dello sviluppo con il commit', ver.includes('main-09/11/2026 (abc1234)') && ver.includes('versione di sviluppo'), ver);
+    check('nessuna nota di rilascio per lo sviluppo', await p.isHidden('#relnotes'));
+    check('collegamento al sorgente del commit', (await p.getAttribute('#src', 'href')).endsWith('/tree/abc1234def5678900000000000000000000000ff'));
+    await p.selectOption('#board', 'tbeam');
+    check('cambiando scheda resta la versione', (await p.getAttribute('#installer', 'manifest')) === 'firmware/dev/tbeam/manifest.json');
+    await p.selectOption('#fwver', 'v0.1.0-beta.1');
+    check('di nuovo la beta con la scheda scelta', (await p.getAttribute('#installer', 'manifest')) === 'firmware/v0.1.0-beta.1/tbeam/manifest.json');
+  });
+  await scenario('menu delle versioni: il confronto con la scheda segue la versione scelta', async (p) => {
+    await until(p, () => !document.getElementById('fwverbox').hidden);
+    await p.evaluate(() => { window.__st.fw = 'v0.1.0-beta.1'; });
+    await connect(p);
+    await until(p, () => document.getElementById('fwinfo').textContent.includes('Firmware installato'));
+    check('uguale alla versione scelta', (await p.textContent('#fwinfo')).includes('È la versione scelta nel passo 1'), await p.textContent('#fwinfo'));
+    await p.selectOption('#fwver', 'dev');
+    check('scelta un\'altra versione: diversa', (await p.textContent('#fwinfo')).includes('È diversa da quella scelta nel passo 1'), await p.textContent('#fwinfo'));
+    await p.selectOption('#fwver', 'v0.1.0-beta.1');
+    check('di nuovo uguale', (await p.textContent('#fwinfo')).includes('È la versione scelta nel passo 1'));
+  });
+  versionsData = { default: STABLE.id, versions: [DEV, BETA, STABLE] };   // ordine sparso: lo decide il programma che compila versions.json
+  await scenario('menu delle versioni: con una stabile si propone quella', async (p) => {
+    await until(p, () => !document.getElementById('fwverbox').hidden);
+    check('proposta: la stabile', (await p.inputValue('#fwver')) === 'v1.0.0');
+    const labels = await p.$$eval('#fwver option', (o) => o.map((x) => x.textContent));
+    check('"(consigliata)" solo sulla stabile', labels.filter((l) => l.includes('(consigliata)')).length === 1 && labels.find((l) => l.includes('v1.0.0')).includes('(consigliata)'), JSON.stringify(labels));
+    check('la stabile e\' descritta come tale', labels.find((l) => l.includes('v1.0.0')).includes('stabile'));
+    check('spiegazione della stabile', (await p.textContent('#fwverhint')).includes('consigliata'));
+  });
+  versionsData = null;
+  await scenario('menu delle versioni: senza versions.json resta il comportamento di prima', async (p) => {
+    await sleep(300);
+    check('menu nascosto', await p.isHidden('#fwverbox'));
+    check('manifest storico', (await p.getAttribute('#installer', 'manifest')) === 'firmware/t3/manifest.json');
+    await p.selectOption('#board', 'tbeam');
+    check('manifest storico con la scheda', (await p.getAttribute('#installer', 'manifest')) === 'firmware/tbeam/manifest.json');
+    check('la versione pubblicata si legge da version.json', (await p.textContent('#ver')).includes('test-1'));
+  });
+
   await scenario('profilo di trasmissione: si legge, si cambia e si salva', async (p) => {
     check('il menu del profilo e\' spento prima di collegare', await p.isDisabled('#profile'));
     await connect(p);
@@ -286,8 +355,9 @@ async function scenario(name, fn, opts = {}) {
 
   await scenario('installazione: spiegazione delle versioni', async (p) => {
     const t = await p.textContent('#verhelp');
-    check('spiega versione rilasciata e di sviluppo', t.includes('Quale versione sto installando?') && t.includes('versione rilasciata') && t.includes('versione di sviluppo') && t.includes('main-GG/MM/AAAA'), t);
-    check('dice come avere esattamente la beta', t.includes('web_factory.bin') && t.includes('write_flash 0x0'), t);
+    check('spiega stabile, beta e sviluppo', t.includes('Quale versione scelgo?') && t.includes('Stabile') && t.includes('Beta') && t.includes('Sviluppo') && t.includes('main-GG/MM/AAAA'), t);
+    check('dice di lasciare quella proposta', t.includes('lascia quella proposta'), t);
+    check('per chi usa la riga di comando: esptool', t.includes('web_factory.bin') && t.includes('write_flash 0x0'), t);
     check('rimanda alla pagina delle versioni', (await p.getAttribute('#verhelp a', 'href')) === 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases');
   });
 

@@ -167,11 +167,25 @@ jobs:
         with:
           pattern: firmware-*
           path: dist
+      - name: Scarica le versioni già rilasciate (per il menu delle versioni della pagina)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          # Le ultime 6 release non in bozza, solo i *-web_factory.bin. Un errore qui non deve impedire la pubblicazione:
+          # il menu mostrera' solo le versioni che si sono potute scaricare.
+          mkdir -p releases
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 6 --exclude-drafts --json tagName,publishedAt > releases/index.json || echo '[]' > releases/index.json
+          for tag in $(jq -r '.[].tagName' releases/index.json); do
+            mkdir -p "releases/$tag"
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*-web_factory.bin' --dir "releases/$tag" || echo "nessun binario per $tag"
+          done
+          find releases -type f | sort
       - name: Assembla il sito
         run: |
           set -euo pipefail
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME}"; else v="main-$(TZ=Europe/Rome date +%d/%m/%Y)"; fi
-          tools/make_site.sh dist _site "$v" "$GITHUB_SHA"
+          tools/make_site.sh dist _site "$v" "$GITHUB_SHA" releases
           find _site -type f | sort
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

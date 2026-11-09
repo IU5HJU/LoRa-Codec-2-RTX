@@ -76,14 +76,24 @@
       <option value="t3">LILYGO LoRa32 T3 V1.6.1</option>
       <option value="tbeam">LILYGO T-Beam V1.2 (AXP2101)</option>
     </select>
+    <div id="fwverbox" hidden>
+      <label for="fwver">Versione del firmware</label>
+      <select id="fwver" disabled></select>
+      <p class="hint" id="fwverhint"></p>
+    </div>
     <p class="muted" id="ver">Versione: …</p>
     <div class="verhelp" id="verhelp">
-      <p><strong>Quale versione sto installando?</strong> Quella scritta qui sopra, che è sempre l'ultima pubblicata su questa pagina:</p>
+      <p><strong>Quale versione scelgo?</strong> Se non sai quale, <strong>lascia quella proposta</strong>. Nel menu trovi:</p>
       <ul>
-        <li><strong>v0.1.0-beta.1</strong> (o con <em>rc</em>, o senza etichetta): una <strong>versione rilasciata</strong>, ferma e provata sul campo.</li>
-        <li><strong>main-GG/MM/AAAA</strong>: la <strong>versione di sviluppo</strong>, cioè l'ultima modifica del progetto pubblicata in quel giorno. È più recente, ma meno provata, e cambia a ogni modifica.</li>
+        <li><strong>Stabile</strong> (per esempio <em>v1.0.0</em>): la versione consigliata, provata sul campo.</li>
+        <li><strong>Beta</strong> (<em>v0.1.0-beta.1</em>) e <strong>candidata al rilascio</strong> (<em>rc</em>): funzionano, ma sono ancora in prova sul campo.</li>
+        <li><strong>Sviluppo</strong> (<em>main-GG/MM/AAAA</em>): l'ultima modifica del progetto, più recente ma meno provata e diversa a ogni pubblicazione. Per chi vuole le novità.</li>
       </ul>
-      <p>La pagina passa da una all'altra da sola. Per avere <strong>esattamente una versione rilasciata</strong> (per esempio la beta) vai alla <a href="https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases">pagina delle versioni su GitHub</a>, scarica il file <code>firmware-…-web_factory.bin</code> della tua scheda (T3 o T-Beam) e scrivilo con <code>esptool.py --chip esp32 write_flash 0x0 file.bin</code>. Le impostazioni salvate nella scheda restano.</p>
+      <p id="relnotes" hidden>Cosa c'è in questa versione: <a id="relnoteslink" href="https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases">note di rilascio</a>.</p>
+      <details class="falsi">
+        <summary>Per chi preferisce la riga di comando (esptool)</summary>
+        <p>Scarica il file <code>firmware-…-web_factory.bin</code> della tua scheda (T3 o T-Beam) dalla <a href="https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases">pagina delle versioni su GitHub</a> e scrivilo con <code>esptool.py --chip esp32 write_flash 0x0 file.bin</code>. Le impostazioni salvate nella scheda restano.</p>
+      </details>
     </div>
     <esp-web-install-button id="installer" manifest="firmware/t3/manifest.json">
       <button slot="activate" type="button">Installa il firmware</button>
@@ -204,17 +214,66 @@
     return '';
   }
 
-  // Versione pubblicata e link al sorgente.
-  let published = null;   // versione pubblicata su questo sito (version.json)
+  // Versione del build corrente (version.json) e link al sorgente. Con il menu delle versioni, `published` e' la versione scelta.
+  let published = null;   // versione scelta nel menu (o, senza menu, quella pubblicata su questo sito)
+  let versions = null;    // versions.json: { default, versions: [ { id, version, kind, commit, date } ] }
+  const KIND_TEXT = {
+    stable: 'Stabile: la versione consigliata.',
+    rc: 'Candidata al rilascio: funziona, ma è ancora in prova sul campo.',
+    beta: 'Beta: funziona, ma è ancora in prova sul campo.',
+    dev: 'Sviluppo: l\'ultima modifica del progetto, più recente ma meno provata.',
+  };
+  function optionLabel(e, recommended) {
+    const k = { stable: 'stabile', rc: 'candidata al rilascio', beta: 'BETA', dev: 'sviluppo, per chi vuole le novità' }[e.kind] || e.kind;
+    return (e.kind === 'dev' ? 'Sviluppo ' : '') + e.version + ' — ' + k + (recommended ? ' (consigliata)' : '');
+  }
+  function manifestPath() {
+    const id = versions && $('fwver').value ? $('fwver').value : null;
+    return id ? 'firmware/' + id + '/' + $('board').value + '/manifest.json' : 'firmware/' + $('board').value + '/manifest.json';
+  }
+  function applyVersion() {
+    $('installer').setAttribute('manifest', manifestPath());
+    if (!versions) return;
+    const e = versions.versions.find(x => x.id === $('fwver').value);
+    if (!e) return;
+    published = { version: e.version, commit: e.commit };
+    $('fwverhint').textContent = KIND_TEXT[e.kind] || '';
+    $('ver').textContent = 'Versione: ' + e.version + (e.commit ? ' (' + String(e.commit).slice(0, 7) + ')' : '') + (e.date ? ', pubblicata il ' + e.date.split('-').reverse().join('/') : '') + versionKind(e.version);
+    const rel = e.kind !== 'dev';
+    $('relnotes').hidden = !rel;
+    if (rel) $('relnoteslink').href = 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases/tag/' + e.version;
+    if (e.commit && /^[0-9a-f]{7,40}$/.test(e.commit)) $('src').href = 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/tree/' + e.commit;
+    if (typeof refreshFwInfo === 'function') refreshFwInfo();   // il confronto con la scheda segue la versione scelta
+  }
   fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(v => {
-    published = v;
-    $('ver').textContent = 'Versione: ' + v.version + ' (' + String(v.commit).slice(0, 7) + ')' + versionKind(v.version);
+    if (!versions) {
+      published = v;
+      $('ver').textContent = 'Versione: ' + v.version + ' (' + String(v.commit).slice(0, 7) + ')' + versionKind(v.version);
+    }
     if (/^[0-9a-f]{7,40}$/.test(v.commit)) $('src').href = 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/tree/' + v.commit;
-  }).catch(() => { $('ver').textContent = 'Versione: non disponibile'; });
+  }).catch(() => { if (!versions) $('ver').textContent = 'Versione: non disponibile'; });
+  // Menu delle versioni: se versions.json manca (pagina pubblicata prima del menu) resta il comportamento di prima.
+  fetch('versions.json', { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('assente'); return r.json(); }).then(v => {
+    if (!v || !Array.isArray(v.versions) || !v.versions.length) throw new Error('vuoto');
+    versions = v;
+    const sel = $('fwver');
+    sel.textContent = '';
+    const released = v.versions.filter(e => e.kind !== 'dev'), dev = v.versions.filter(e => e.kind === 'dev');
+    const mk = (e) => { const o = document.createElement('option'); o.value = e.id; o.textContent = optionLabel(e, e.id === v.default && e.kind !== 'dev'); return o; };
+    for (const [label, list] of [['Versioni rilasciate', released], ['Sviluppo', dev]]) {
+      if (!list.length) continue;
+      const g = document.createElement('optgroup'); g.label = label;
+      list.forEach(e => g.appendChild(mk(e)));
+      sel.appendChild(g);
+    }
+    sel.value = v.default || v.versions[0].id;
+    sel.disabled = false;
+    $('fwverbox').hidden = false;
+    applyVersion();
+  }).catch(() => {});
 
-  $('board').addEventListener('change', () => {
-    $('installer').setAttribute('manifest', 'firmware/' + $('board').value + '/manifest.json');
-  });
+  $('board').addEventListener('change', () => { $('installer').setAttribute('manifest', manifestPath()); });
+  $('fwver').addEventListener('change', applyVersion);
 
   // ---- Configurazione via Web Serial (comandi CFG, vedi docs/firmware.md) ----
   const LIMITS = { freqMin: 430000, freqMax: 440000, pwrMin: 2, pwrMax: 17 };
@@ -244,13 +303,17 @@
     const sha = m ? m[1] : (/^[0-9a-f]{7,}$/.test(base) ? base : null);
     let txt = 'Firmware installato: ' + fw + versionKind(fw.replace(/-\d+-g[0-9a-f]+$/, '')) + (proto ? ' (protocollo ' + proto + ')' : '') + '.';
     if (published) {
-      const same = (sha && String(published.commit).startsWith(sha)) || base === published.version;
-      txt += same ? ' È la versione pubblicata su questo sito.'
-                  : ' È diversa da quella pubblicata (' + published.version + ', ' + String(published.commit).slice(0, 7) + '): può essere più vecchia o più recente. Per aggiornare usa il passo 1.';
+      const pc = published.commit ? String(published.commit) : '';
+      const same = (sha && pc && pc.startsWith(sha)) || base === published.version;
+      const what = versions ? 'quella scelta nel passo 1' : 'quella pubblicata';
+      txt += same ? (versions ? ' È la versione scelta nel passo 1.' : ' È la versione pubblicata su questo sito.')
+                  : ' È diversa da ' + what + ' (' + published.version + (pc ? ', ' + pc.slice(0, 7) : '') + '): può essere più vecchia o più recente. Per cambiare versione usa il passo 1.';
     }
     if (dirty) txt += ' Compilato con modifiche locali.';
     return txt;
   }
+  let lastFw = null, lastProto = '';   // firmware letto dalla scheda collegata (null = nessuna scheda)
+  function refreshFwInfo() { if (lastFw !== null) $('fwinfo').textContent = fwDescription(lastFw, lastProto); }
   let profileSeen = false;   // l'ultimo CFG GET conteneva il profilo
   let freqMsgSeen = false;   // l'ultimo CFG GET conteneva la frequenza del profilo Messaggio
   function updateFreqNote() {
@@ -333,6 +396,7 @@
     try { port && await port.close(); } catch (e) {}
     port = writer = reader = null;
     $('fwinfo').textContent = '';
+    lastFw = null;
     waiters.forEach(w => clearTimeout(w.timer)); waiters = [];
     setConnected(false);
     if (!closing) setStatus('Scheda scollegata.', '');
@@ -371,7 +435,9 @@
           const v = await send('CFG VERSION', /^CFG VERSION /, 2000);
           const m = /fw=(\S+)/.exec(v);
           const pm = /proto=(\d+)/.exec(v);
-          $('fwinfo').textContent = fwDescription(m ? m[1] : '', pm ? pm[1] : '');
+          lastFw = m ? m[1] : '';
+          lastProto = pm ? pm[1] : '';
+          refreshFwInfo();
         } catch (e) { $('fwinfo').textContent = 'Versione del firmware non disponibile (firmware più vecchio).'; }
         return true;
       } catch (e) { if (!writer) return false; }
