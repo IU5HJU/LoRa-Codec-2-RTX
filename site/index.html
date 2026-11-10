@@ -28,10 +28,13 @@
   .verhelp p { margin: 4px 0; }
   .verhelp ul { margin: 6px 0; padding-left: 22px; }
   .hint { font-size:.85rem; color:var(--muted); margin:.2em 0 0; }
-  #status { margin:.8em 0 0; font-weight:600; }
-  #status:not(:empty) { padding:.7em .9em; border-left:5px solid var(--muted); border-radius:6px; background:rgba(128,128,128,.14); }
-  #status.err { color:var(--err); border-left-color:var(--err); background:rgba(179,38,30,.12); }
-  #status.ok { color:var(--ok); border-left-color:var(--ok); background:rgba(26,127,55,.12); }
+  /* Messaggio di stato: fisso in basso nella finestra, cosi' si vede accanto al pulsante premuto, ovunque sia nella pagina. */
+  #status { font-weight:600; }
+  #status:empty { display:none; }
+  #status:not(:empty) { position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:50; width:calc(100% - 24px); max-width:736px; max-height:40vh; overflow:auto; padding:.7em .9em; border-left:5px solid var(--muted); border-radius:8px; background:var(--card); color:var(--fg); box-shadow:0 4px 18px rgba(0,0,0,.35); cursor:pointer; }
+  #status.err { color:var(--err); border-left-color:var(--err); }
+  #status.ok { color:var(--ok); border-left-color:var(--ok); }
+  main { padding-bottom:110px; }
   #log { background:var(--log-bg); color:var(--log-fg); font:12px/1.4 ui-monospace, monospace; padding:10px; border-radius:6px; height:11rem; overflow:auto; white-space:pre-wrap; margin-top:.8em; }
   #nosupport { display:none; }
   .floorhint { margin:.2em 0 .6em; }
@@ -312,9 +315,10 @@
   let waiters = [];   // risposte attese: { re, resolve, timer }
   let lastBoard = '';
 
+  $('status').title = 'Tocca per chiudere';
+  $('status').addEventListener('click', () => { $('status').textContent = ''; $('status').className = ''; });
   function setStatus(msg, cls) {
     const s = $('status'); s.textContent = msg || ''; s.className = cls || '';
-    if (msg && cls) s.scrollIntoView({ block: 'nearest', behavior: 'smooth' });   // errori e conferme non devono restare fuori schermo
   }
   function log(line) {
     const el = $('log');
