@@ -55,7 +55,7 @@ Una SX127x **demodula un solo SF e una sola banda alla volta**. Non ascolta tre 
 - **Stazioni:** **frequenza di ingresso e di uscita separate** (oggi una per profilo, già prevista nella roadmap), controllo "canale occupato" sulla frequenza di uscita, riconoscimento del flag "ripetuto", eventuale profilo "ripetitore" (opzione B).
 - **Protocollo:** flag "ripetuto" (bit 7), eventuale pacchetto di identificazione. Un cambio dei bit noti è compatibile solo con il firmware nuovo.
 
-## Aspetti normativi (da chiarire prima di trasmettere)
+## Aspetti normativi
 
 Il ripetitore è una **stazione automatica**: l'autorizzazione dei ripetitori viene dal **Ministero** (non dall'ARI, che non norma i ripetitori). Questo sarebbe il **primo ripetitore LoRa in Italia**, quindi è un'attività **puramente sperimentale**, svolta da radioamatori nell'ambito della sperimentazione che la licenza consente. L'**operatore gestisce già un ripetitore autorizzato** e ne conosce le regole: lo studio non le ripete e le scelte (frequenze, potenza, identificazione, controllo remoto) restano **sotto la responsabilità dell'operatore**.
 
