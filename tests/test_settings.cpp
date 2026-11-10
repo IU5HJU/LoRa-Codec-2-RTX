@@ -59,6 +59,30 @@ struct Fixture {
   ConsoleResult run(const char* line) { return con.handleLine(line, reply, sizeof(reply)); }
 };
 
+static void testRepeaterRole() {
+  Fixture f;
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "role=off") && strstr(f.reply, "freqout=433.900"));
+  CHECK(f.run("CFG SET ROLE RPTRX") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK role=rptrx") == 0);
+  CHECK(f.st.data.role == kRoleRepeaterRx);
+  CHECK(f.run("cfg set role rpttx") == ConsoleResult::Ok && f.st.data.role == kRoleRepeaterTx);
+  CHECK(f.run("CFG SET FREQOUT 434.400") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK freqout=434.400") == 0);
+  CHECK(f.st.data.outFreqKhz() == 434400 && f.st.data.freqKhz == 433900);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "role=rpttx") && strstr(f.reply, "freqout=434.400") && strstr(f.reply, "reboot=1"));
+  CHECK(f.run("CFG SET ROLE XYZ") == ConsoleResult::Error && f.st.data.role == kRoleRepeaterTx);
+  CHECK(f.run("CFG SET FREQOUT 500.000") == ConsoleResult::Error);
+  // La scheda TX usa la frequenza di uscita al posto di quella del profilo.
+  const Settings out = f.st.data.withProfileFreqKhz(f.st.data.outFreqKhz());
+  CHECK(out.profileFreqKhz() == 434400 && f.st.data.profileFreqKhz() == 433900);
+  Settings m = f.st.data;
+  m.profile = kProfileMessage;
+  m.freqMsgKhz = 433100;
+  CHECK(m.withProfileFreqKhz(434400).freqMsgKhz == 434400 && m.withProfileFreqKhz(434400).freqKhz == 433900);
+  Settings bad = f.st.data;
+  bad.role = 9;
+  CHECK(!isValidSettings(bad));
+}
+
+
 void testValidate() {
   CHECK(isValidSettings(kDefaults));
   CHECK(isValidSettings(make("IU5HJU", 430000, 2)));
@@ -146,17 +170,17 @@ void testGpsSetting() {
   CHECK(active.gpsOn == false);  // quello in uso non cambia
   CHECK(con.handleLine("CFG SET gps maybe", reply, sizeof(reply)) == ConsoleResult::Error);
   CHECK(con.handleLine("CFG SET GPS OFF", reply, sizeof(reply)) == ConsoleResult::Ok && !st.data.gpsOn);
-  // La riga di CFG GET con QTH lungo e GPS acceso sta nel buffer da 200.
+  // La riga di CFG GET con QTH lungo e GPS acceso sta nel buffer da 260 (main.cpp).
   CHECK(con.handleLine("CFG SET QTH -33.8688,-151.2093", reply, sizeof(reply)) == ConsoleResult::Ok);
   CHECK(con.handleLine("CFG SET POS ON", reply, sizeof(reply)) == ConsoleResult::Ok);
   CHECK(con.handleLine("CFG SET GPS ON", reply, sizeof(reply)) == ConsoleResult::Ok);
-  CHECK(con.handleLine("CFG GET", reply, sizeof(reply)) == ConsoleResult::Ok && strlen(reply) < 199 && strstr(reply, "gps=on"));
+  CHECK(con.handleLine("CFG GET", reply, sizeof(reply)) == ConsoleResult::Ok && strlen(reply) < 259 && strstr(reply, "gps=on"));
 }
 
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=5 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=5 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off role=off freqout=433.900") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -389,6 +413,7 @@ void testSmallBuffer() {
 
 int main() {
   testVolumeMigration();
+  testRepeaterRole();
   testValidate();
   testLoad();
   testNotCommand();

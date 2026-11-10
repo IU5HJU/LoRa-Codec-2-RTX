@@ -194,3 +194,32 @@ Senza cavo e senza PC con Chrome: tieni premuto il **volume** (circa 2 s) per ap
 In alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10x9 punti) indica il profilo in uso: **S** Standard, **M** Messaggio, **Q** Qualità. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per fargli posto.
 
 Se il telefono dice "nessun Internet" e la pagina non si apre: scegli di **restare collegato** a quella rete, **spegni i dati mobili** e apri a mano `http://192.168.4.1` (con `http://`, non `https://`). La seriale stampa righe `[wifi]` (client collegato, indirizzo assegnato, richiesta della pagina) per capire a che punto si ferma. La configurazione del Wi-Fi segue quella del Tracker LoRa APRS di Guzman (modo NULL, poi AP, `softAP(nome, password)` predefinito, nessun DNS) e usa lo stesso server asincrono (ESPAsyncWebServer + AsyncTCP, stesse versioni).
+
+## Ripetitore a due schede (ruoli RX e TX, 10/11/2026)
+
+Studio e decisioni: [studio-ripetitore.md](studio-ripetitore.md). **Scritto, non ancora provato sulle schede** (compila solo se Actions è verde; la logica è provata sul PC).
+
+**Il ripetitore** è fatto da **due schede uguali** (T3 o T-Beam, **senza audio**): la scheda **RX** ascolta la frequenza di ingresso e manda i pacchetti da ripetere alla scheda **TX**, che li trasmette sulla frequenza di uscita. Ripete solo il **modo del profilo scelto** (di base lo Standard, Codec2 1200) e aggiunge ai pacchetti il flag `RELAYED`. Ogni scheda ha la **sua antenna**: la separazione fra le due antenne (distanza, filtri, cavità) è a cura dell'operatore.
+
+**Impostazioni** (stesse per le due schede salvo il ruolo, dalla seriale USB; valgono dal riavvio):
+
+```
+CFG SET CALLSIGN IU5HJU       nominativo del ripetitore (con N0CALL la scheda TX non trasmette)
+CFG SET PROFILE STD           profilo ripetuto (STD, e in teoria QUA o MSG: il modo ripetuto e' quello del profilo)
+CFG SET FREQ 433.900          frequenza di INGRESSO (la usa la scheda RX; per MSG e QUA FREQMSG e FREQQUAL)
+CFG SET FREQOUT 434.400       frequenza di USCITA (la usa la scheda TX)
+CFG SET ROLE RPTRX            sulla scheda RX   (oppure RPTTX sulla scheda TX; OFF torna alla scheda normale)
+CFG REBOOT
+```
+
+**Collegamento fra le due schede** (seriale a 115200, 3,3 V, nessun altro filo oltre alla massa): **pin 14 e pin 13** di ciascuna (gli stessi dell'I2S, liberi senza audio):
+
+| Scheda RX | Scheda TX |
+|---|---|
+| pin 14 (TX) | pin 13 (RX) |
+| pin 13 (RX) | pin 14 (TX) |
+| GND | GND |
+
+Sulla T3 i pin 14 e 13 sono sullo slot microSD: **toglierla**. Il display di ciascuna scheda mostra lo stato (pacchetti ricevuti, ripetuti, scartati, coda della TX, collegamento). La scheda TX trasmette ogni pacchetto della coda con la pausa minima di 80 ms. Per uscire dal ruolo: `CFG SET ROLE OFF` e `CFG REBOOT`.
+
+**Cosa non c'è ancora:** comandi del sysop (modo 5), identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).

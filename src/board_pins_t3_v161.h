@@ -36,6 +36,11 @@ constexpr int kMicData = 34;     // INMP441 SD -> ESP32 (GPIO34: solo ingresso, 
 constexpr int kAmpData = 4;      // ESP32 -> MAX98357A DIN
 constexpr int kAmpShutdown = 25; // MAX98357A SD (alto = acceso). Condiviso col LED di bordo.
 
+// --- Ripetitore (due schede, nessun audio): la seriale fra RX e TX usa i pin dell'I2S, liberi in quel ruolo.
+// Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
+constexpr int kLinkTx = kI2sBclk;
+constexpr int kLinkRx = kI2sWs;
+
 // --- PTT: pulsante esterno tra GPIO0 e massa (la scheda ha solo RST) ---
 constexpr int kPtt = 0;
 constexpr bool kPttHasInternalPullup = true;

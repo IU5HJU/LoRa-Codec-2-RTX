@@ -19,6 +19,7 @@
 #include "pmu.h"
 #include "ptt_button.h"
 #include "radio_lora.h"
+#include "repeater_node.h"
 #include "settings.h"
 #include "settings_nvs.h"
 #include "ui.h"
@@ -138,6 +139,11 @@ void setup() {
   if (WifiConfig::bootRequest()) {  // richiesto dal menu: si cancella subito l'indicatore (niente ciclo di riavvii) e si configura
     WifiConfig::setBootRequest(false);
     runWifiConfigMode();
+  }
+  if (settings.role != lcr::kRoleNormal) {  // scheda RX o TX del ripetitore: nessun audio, non ritorna
+    runRepeaterRole(settings, ui, [](const char* line, char* reply, size_t cap) {
+      return console->handleLine(line, reply, cap) == lcr::ConsoleResult::Reboot;
+    });
   }
   if (!pttUsable) {
     Serial.printf("ATTENZIONE: il pin PTT (GPIO%d) e' instabile (manca il pull-up?): PTT disattivato\n", pins::kPtt);
@@ -433,7 +439,7 @@ static void serviceConsole() {
       len = 0;
       tooLong = false;
       if (skip) continue;  // riga troppo lunga: scartata
-      char reply[200];
+      char reply[260];
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);

@@ -38,6 +38,11 @@ constexpr int kMicData = 36;      // INMP441 SD -> ESP32 (pin VP: solo ingresso,
 constexpr int kAmpData = 2;       // ESP32 -> MAX98357A DIN (GPIO2: pin di avvio, ma qui e' un'uscita)
 constexpr int kAmpShutdown = 25;  // MAX98357A SD (alto = acceso)
 
+// --- Ripetitore (due schede, nessun audio): la seriale fra RX e TX usa i pin dell'I2S, liberi in quel ruolo.
+// Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
+constexpr int kLinkTx = kI2sBclk;
+constexpr int kLinkRx = kI2sWs;
+
 // --- PTT: tasto utente di bordo IO38 ---
 // GPIO38 e' solo ingresso e non ha pull-up interno: si conta su quello esterno della
 // scheda (da verificare). Il firmware controlla all'avvio che il pin sia stabile.

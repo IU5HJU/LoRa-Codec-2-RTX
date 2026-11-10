@@ -10,7 +10,7 @@ namespace lcr {
 
 bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
-         a.qualFreqKhz() == b.qualFreqKhz() &&
+         a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
          a.profile == b.profile && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
@@ -19,6 +19,7 @@ bool operator==(const Settings& a, const Settings& b) {
 bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
          s.freqMsgKhz <= kMaxFreqKhz && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
+         (s.freqOutKhz == 0 || (s.freqOutKhz >= kMinFreqKhz && s.freqOutKhz <= kMaxFreqKhz)) && s.role <= kRoleRepeaterTx &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
          s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount &&
@@ -200,11 +201,12 @@ ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
     } else {
       snprintf(qthText, sizeof(qthText), "none");
     }
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u freqqual=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d pos=%s qth=%s gps=%s",
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u freqqual=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d pos=%s qth=%s gps=%s role=%s freqout=%u.%03u",
              stored_.callsign, static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
              static_cast<unsigned>(stored_.freqMsgKhz / 1000), static_cast<unsigned>(stored_.freqMsgKhz % 1000),
              static_cast<unsigned>(stored_.qualFreqKhz() / 1000), static_cast<unsigned>(stored_.qualFreqKhz() % 1000),
-             stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0, stored_.posTx ? "on" : "off", qthText, stored_.gpsOn ? "on" : "off");
+             stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0, stored_.posTx ? "on" : "off", qthText, stored_.gpsOn ? "on" : "off", roleCode(stored_.role),
+             static_cast<unsigned>(stored_.outFreqKhz() / 1000), static_cast<unsigned>(stored_.outFreqKhz() % 1000));
   }
   return ConsoleResult::Ok;
 }
@@ -255,6 +257,26 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.freqQualKhz = khz;
     snprintf(shown, sizeof(shown), "freqqual=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
+  } else if (equalsIgnoreCase(key, "FREQOUT")) {
+    uint32_t khz = 0;
+    if (!parseFreqKhz(value, khz) || khz < kMinFreqKhz || khz > kMaxFreqKhz) {
+      say(reply, cap, "CFG ERR freqout %s", "in MHz, da 430.000 a 440.000");
+      return ConsoleResult::Error;
+    }
+    next.freqOutKhz = khz;
+    snprintf(shown, sizeof(shown), "freqout=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
+  } else if (equalsIgnoreCase(key, "ROLE")) {
+    if (equalsIgnoreCase(value, "OFF")) {
+      next.role = kRoleNormal;
+    } else if (equalsIgnoreCase(value, "RPTRX")) {
+      next.role = kRoleRepeaterRx;
+    } else if (equalsIgnoreCase(value, "RPTTX")) {
+      next.role = kRoleRepeaterTx;
+    } else {
+      say(reply, cap, "CFG ERR role %s", "usa OFF, RPTRX oppure RPTTX");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "role=%s", roleCode(next.role));
   } else if (equalsIgnoreCase(key, "POWER")) {
     int dbm = 0;
     if (!parseInt(value, dbm) || dbm < kMinPowerDbm || dbm > kMaxPowerDbm) {

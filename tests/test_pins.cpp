@@ -57,6 +57,7 @@ int main() {
     CHECK(kI2sBclk == kSdSclk && kI2sWs == kSdCs && kVolume == kSdMosi);
     CHECK(kLed == kAmpShutdown);  // LED condiviso con lo shutdown dell'amplificatore
     CHECK(kPtt == 0 && kPttHasInternalPullup);
+    CHECK(kLinkTx == kI2sBclk && kLinkRx == kI2sWs);  // la seriale del ripetitore riusa i pin dell'I2S
   }
 
   // ---- T-Beam V1.2 ----
@@ -70,6 +71,7 @@ int main() {
     CHECK(kGpsRx == 34 && kGpsTx == 12);
     // Il PTT e' il tasto di bordo IO38, senza pull-up interno.
     CHECK(kPtt == 38 && !kPttHasInternalPullup);
+    CHECK(kLinkTx == kI2sBclk && kLinkRx == kI2sWs && kLinkTx < 34 && kLinkRx < 34);
     // La radio e' sugli stessi pin della T3.
     CHECK(kRadioSclk == pins_t3_v161::kRadioSclk && kRadioMiso == pins_t3_v161::kRadioMiso &&
           kRadioMosi == pins_t3_v161::kRadioMosi && kRadioCs == pins_t3_v161::kRadioCs &&

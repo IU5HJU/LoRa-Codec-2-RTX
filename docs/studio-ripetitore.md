@@ -4,7 +4,7 @@ Data: 10/11/2026. Stato: **studio, nessun codice scritto**. I numeri di tempo in
 
 ## Stato (10/11/2026)
 
-**Scelta l'opzione A** (due schede, un solo profilo: il Codec2 1200 Standard). **Fase 1 scritta e provata sul PC:** flag `RELAYED` (bit 7) nel protocollo e logica di decisione del ripetitore (`lib/voicecore/repeater.*`, test `tests/test_repeater.cpp`: flag, anelli, duplicati, filtro dei modi, durata della sessione e catena completa con un pacchetto perso e ricostruito dalla parità). **Ancora da fare:** firmware delle due schede (ruolo RX e ruolo TX con la seriale), comandi del sysop, identificazione periodica, prove sul banco.
+**Scelta l'opzione A** (due schede, un solo profilo: il Codec2 1200 Standard). **Fase 1 scritta e provata sul PC:** flag `RELAYED` (bit 7) nel protocollo e logica di decisione del ripetitore (`lib/voicecore/repeater.*`, test `tests/test_repeater.cpp`: flag, anelli, duplicati, filtro dei modi, durata della sessione e catena completa con un pacchetto perso e ricostruito dalla parità). **Fase 2, firmware delle due schede, scritta il 10/11/2026** (`src/repeater_node.*`, `lib/voicecore/repeater_link.*`, impostazioni `ROLE` e `FREQOUT`; seriale fra le schede con CRC e coda di trasmissione provate sul PC; il firmware delle schede compila solo su Actions): [firmware.md](firmware.md#ripetitore-a-due-schede-ruoli-rx-e-tx-10112026). **Ancora da fare:** prove sul banco, comandi del sysop (modo 5), identificazione periodica.
 
 ## Obiettivo
 
