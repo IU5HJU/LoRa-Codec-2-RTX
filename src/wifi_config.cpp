@@ -1,6 +1,7 @@
 #include "wifi_config.h"
 
 #include <Arduino.h>
+#include <DNSServer.h>
 #include <WebServer.h>
 #include <WiFi.h>
 #include <esp_random.h>
@@ -9,6 +10,7 @@
 
 namespace {
 WebServer* server = nullptr;
+DNSServer* dns = nullptr;  // portale captive: ogni nome risolve la scheda (192.168.4.1)
 WifiConfig::Handler handler;
 bool rebootRequested = false;
 }  // namespace
@@ -45,7 +47,15 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
     server->send(200, "text/plain; charset=utf-8", reply);
     if (reboot) rebootRequested = true;
   });
-  server->onNotFound([]() { server->send(404, "text/plain; charset=utf-8", "non trovato"); });
+  // Portale captive: il telefono controlla se la rete ha Internet con indirizzi come /generate_204 (Android) o
+  // /hotspot-detect.html (iOS). Rispondendo con un rinvio alla pagina, il telefono apre da solo la configurazione
+  // invece di dichiarare "nessun Internet" e usare i dati mobili (il motivo per cui la pagina non si caricava).
+  server->onNotFound([]() {
+    server->sendHeader("Location", "http://192.168.4.1/", true);
+    server->send(302, "text/plain; charset=utf-8", "");
+  });
+  dns = new DNSServer();
+  dns->start(53, "*", WiFi.softAPIP());
   server->begin();
   active_ = true;
   return true;
@@ -53,6 +63,7 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
 
 bool WifiConfig::loop() {
   if (!active_) return false;
+  dns->processNextRequest();
   server->handleClient();
   if (rebootRequested && !reboot_) {
     reboot_ = true;

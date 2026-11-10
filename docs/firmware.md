@@ -190,3 +190,5 @@ Senza cavo e senza PC con Chrome: tieni premuto il **volume** (circa 2 s) per ap
 ## Riquadro del profilo sul display
 
 In alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10x9 punti) indica il profilo in uso: **S** Standard, **M** Messaggio, **Q** Qualità. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per fargli posto.
+
+Se il telefono dice "nessun Internet" e la pagina non si apre: scegli di **restare collegato** a quella rete, **spegni i dati mobili** e apri a mano `http://192.168.4.1` (con `http://`, non `https://`). Dalla versione del 10/11/2026 la scheda si comporta da portale captive (risolve ogni nome su se stessa e rinvia ogni richiesta alla pagina), quindi il telefono di solito la apre da solo.
