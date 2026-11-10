@@ -26,7 +26,7 @@ Durata massima di un turno: **30 s** (750 frame). Al limite la trasmissione si c
 | Parità | 1 pacchetto XOR ogni 4 pacchetti dati (disattivabile) |
 | Nominativo | in `START`, in `END` e ogni 10 pacchetti (~5 s) |
 
-Sintesi in due pagine, da girare a chi lo chiede: [formato-pacchetto.pdf](formato-pacchetto.pdf), generata da `tools/make_formato_pacchetto_pdf.py` (`make pdf`): i tempi in aria si calcolano dai parametri radio e il programma si ferma se il protocollo o la radio cambiano rispetto al testo, così il PDF non invecchia in silenzio.
+Sintesi in tre pagine, da girare a chi lo chiede: [formato-pacchetto.pdf](formato-pacchetto.pdf), generata da `tools/make_formato_pacchetto_pdf.py` (`make pdf`): i tempi in aria si calcolano dai parametri radio e il programma si ferma se il protocollo o la radio cambiano rispetto al testo, così il PDF non invecchia in silenzio.
 
 ## Formato del pacchetto
 
