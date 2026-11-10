@@ -49,6 +49,7 @@ static UiNotifier ui(audio);
 static lcr::VoiceNode* node = nullptr;
 static NvsSettingsStorage settingsStorage;
 static lcr::Settings settings;                // in uso: NVS se valida, altrimenti user_config.h
+static WifiConfig wifiConfig;  // configurazione dalla pagina interna (voce "Wi-Fi" del menu)
 static lcr::SettingsConsole* console = nullptr;  // comandi CFG sulla seriale
 static lcr::PttButton ptt(LCR_PTT_DEBOUNCE_MS);
 static lcr::ButtonGesture volumeButton(30, 2000);  // volume: breve = alza, lunga = menu delle modalita'
@@ -426,7 +427,9 @@ static void serviceConsole() {
       tooLong = false;
       if (skip) continue;  // riga troppo lunga: scartata
       char reply[200];
+      WifiConfig::lock();  // con il Wi-Fi attivo anche la pagina manda comandi (da un altro task)
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
+      WifiConfig::unlock();
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);
       if (r == lcr::ConsoleResult::AudioTest) runAudioTest();
@@ -449,8 +452,6 @@ static void serviceConsole() {
 
 // Configurazione dalla pagina interna (voce "Wi-Fi" del menu): la scheda smette di trasmettere e ricevere, crea il suo
 // Wi-Fi con una password casuale mostrata sul display e serve la pagina su 192.168.4.1. Si esce riavviando.
-static WifiConfig wifiConfig;
-
 static void startWifiConfig() {
   char ssid[24], pass[16];
   ui.showMessage("WI-FI", "Avvio...");
