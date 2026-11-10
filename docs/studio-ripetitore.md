@@ -57,18 +57,18 @@ Una SX127x **demodula un solo SF e una sola banda alla volta**. Non ascolta tre 
 
 ## Aspetti normativi (da chiarire prima di trasmettere)
 
-Il ripetitore è una **stazione automatica**: serve l'**autorizzazione del Ministero** (non dell'ARI, che non norma i ripetitori): autorizzazione, frequenze di ingresso e di uscita, potenza, identificazione e controllo da remoto sono quelli previsti dalla normativa italiana per i ripetitori automatici. L'**operatore gestisce già un ripetitore autorizzato** e ne conosce le regole: lo studio non le ripete. Nessuna prova su aria libera prima dell'autorizzazione.
+Il ripetitore è una **stazione automatica**: l'autorizzazione dei ripetitori viene dal **Ministero** (non dall'ARI, che non norma i ripetitori). Questo sarebbe il **primo ripetitore LoRa in Italia**, quindi è un'attività **puramente sperimentale**, svolta da radioamatori nell'ambito della sperimentazione che la licenza consente. L'**operatore gestisce già un ripetitore autorizzato** e ne conosce le regole: lo studio non le ripete e le scelte (frequenze, potenza, identificazione, controllo remoto) restano **sotto la responsabilità dell'operatore**.
 
 ## Verdetto
 
 - **Fattibile con due schede**: ripetizione a livello di pacchetto, rigenerata con la parità, un solo profilo o il canale universale a SF7 (opzioni A e B).
 - **Ripetere "qualsiasi modo" con due schede si può solo con il canale universale** (opzione B, SF7): niente cambia per il codec, cambia il profilo radio. Per **ripetere ogni profilo con i suoi parametri** servono più schede (opzione C).
-- **Ordine consigliato:** (1) ripetitore di pacchetti con un profilo (A) in modalità di prova, **senza trasmettere sull'aria libera**; (2) valutare B; (3) C solo se serve; (4) solo dopo l'autorizzazione del Ministero, prove sul campo.
+- **Ordine consigliato:** (1) ripetitore di pacchetti con un profilo (A) in modalità di prova, **senza trasmettere sull'aria libera**; (2) valutare B; (3) C solo se serve; (4) prove sul campo, a cura dell'operatore, nei limiti della sperimentazione.
 
 ## Da decidere
 
 1. Opzione A o B come primo passo (B implica un modo "ripetitore" anche nelle stazioni).
-2. Frequenze di ingresso e di uscita e la procedura di autorizzazione presso il Ministero.
+2. Frequenze di ingresso e di uscita e le condizioni della sperimentazione (frequenze, potenza, identificazione), che decide l'operatore.
 3. Quante schede e che hardware per il ripetitore (alimentazione fissa, antenne, filtri).
 
 ## Variante: ripetitore del solo modo 1200 con i comandi (idea del 10/11/2026)
@@ -84,7 +84,7 @@ La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitor
 
 **Pacchetto di comando (modo 5, bozza):** stessa intestazione dei pacchetti di oggi (sessione, sequenza, bandiere), **nominativo di chi comanda** (già previsto), carico con un **codice di comando e i parametri**. Il ripetitore **non lo ripete**; risponde con un pacchetto di stato dello stesso modo.
 
-**Chi può comandare (precisazione del 10/11/2026):** i comandi di gestione del ripetitore servono alla **gestione e allo spegnimento in caso di disturbo**, quindi li può inviare **solo il sysop**. Il ripetitore **ignora** ogni comando che non sia autenticato come proveniente dal sysop: nessun comando senza firma, nemmeno "stato". Le regole di fondo (comandi ammessi per la gestione) sono quelle indicate dall'operatore; l'autorizzazione e le condizioni del controllo remoto sono quelle del Ministero, già note all'operatore.
+**Chi può comandare (precisazione del 10/11/2026):** i comandi di gestione del ripetitore servono alla **gestione e allo spegnimento in caso di disturbo**, quindi li può inviare **solo il sysop**. Il ripetitore **ignora** ogni comando che non sia autenticato come proveniente dal sysop: nessun comando senza firma, nemmeno "stato". Le regole di fondo (comandi ammessi per la gestione) sono quelle indicate dall'operatore; le condizioni del controllo remoto le conosce e le decide l'operatore (sperimentazione).
 
 **Comandi del sysop (bozza):**
 

@@ -32,7 +32,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 | 4 | **Modo Qualità** (Codec2 3200, SF7/BW250) | **fatto e provato sulle schede il 10/11/2026** (suona meglio del 1200). L'**ascolto in Qualità con l'SDR** (`lcr_live` ricompilato) è **riuscito il 10/11/2026**. La **CPU è misurata** (vedi riga 3). Resta la sequenza a 16 bit per durate oltre i 30 s |
 | 5 | **Misure sul campo:** RSSI, SNR, deriva di frequenza, perdite, anche in movimento | decidono quanta protezione serve |
 | 6 | Intestazione del messaggio (identificatore, flag emergenza e ripetibile) | il Messaggio **resta a 1200** (decisione del 10/11/2026, vedi sotto) |
-| 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **dopo** l'autorizzazione del Ministero (non dell'ARI): sono stazioni automatiche |
+| 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **sperimentale** a cura dell'operatore (primo ripetitore LoRa in Italia, [studio-ripetitore.md](studio-ripetitore.md)): sono stazioni automatiche |
 | 8 | **Memorie** (profilo e frequenze per ogni canale) e frequenze di lavoro col band plan IARU/ARI | |
 | 9 | Locatore Maidenhead e ora precisa dal GPS | |
 | 10 | **Documentazione e testo per un video esplicativo** del progetto | vedi sotto: da preparare **prima** delle riprese, senza scrivere codice |
