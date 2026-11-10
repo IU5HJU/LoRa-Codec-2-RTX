@@ -263,9 +263,17 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - Prove fatte, una alla volta e con l'antenna collegata: stessa versione su entrambe le schede; lettera del profilo (S, M, Q) sul display; voce "Wi-Fi" del menu (rete, password in carattere doppio, pagina interna, salvataggio); trasmissione in Standard, in Qualità (Codec2 3200) e in Messaggio tra le due schede.
 - Esito: **tutte superate**, secondo la segnalazione dell'operatore. Non sono stati annotati valori di RSSI, SNR o distanza.
 - Prima di questo giro, nella stessa giornata: il 3200 suona meglio del 1200 (ascolto dell'operatore); il volume con la nuova scala (passo 5 a 0 dB, fino a +15 dB) è adatto all'uso all'aperto; la pagina interna si apre dal telefono dopo il passaggio al modo di avvio dedicato; sulla T3 la pagina non manda più il comando GPS (la T3 non ha il GPS).
-- Ancora da misurare: tempo di codifica del 3200 sulla scheda, distanze lunghe e mezzi in movimento.
+- Ancora da misurare: tempo di codifica del 3200 sulla scheda (fatto più tardi, vedi la voce "CPU del Codec2 3200" in fondo), distanze lunghe e mezzi in movimento.
 
 ### 10/11/2026, casa, IU5HJU (ascolto SDR del profilo Qualità)
 
 - Ricevitore: chiavetta NESDR con GNU Radio e `tools/sdr/ricevitore-live.sh`, voce 3 (Qualità: SF7, banda 250 kHz, Codec2 3200), dopo `git pull` e ricompilazione di `lcr_live` (il vecchio `lcr_live`, compilato prima del modo Qualità, scartava in silenzio i pacchetti a 3200).
 - Esito: **ascolto del modo Qualità riuscito**, secondo la segnalazione dell'operatore. Non sono stati annotati valori di perdite o di livello.
+
+### 10/11/2026, casa, IU5HJU (CPU del Codec2 3200 sulla T3)
+
+- Scheda: LoRa32 T3 V1.6.1, firmware `8593262`, profilo **Qualità**. Comando `CFG TEST CODEC` (3 secondi di parlato, 75 frame da 40 ms).
+- Risultato: `raw=-26.6 dBFS rawpeak=19123 dec=-25.3 dBFS decpeak=13951 encms=753 decms=1000 frames=75`.
+- Per frame: **codifica 10,0 ms (25% dei 40 ms)**, **decodifica 13,3 ms (33%)**. Per confronto, l'1200 (8/11/2026): 17,4 ms e 13,3 ms.
+- Conclusione: il 3200 regge in tempo reale con ampio margine; la codifica è più veloce di quella dell'1200. Livelli in uscita dal codec coerenti con l'ingresso (-26,6 contro -25,3 dBFS).
+- Nota: un primo tentativo con `CFG TEST CODEC` scritto male è stato rifiutato (`CFG ERR test usa ON, OFF, AUDIO oppure CODEC`) e ha lasciato una trasmissione normale in Qualità nel registro (77 frame da 16 byte): nessun problema.

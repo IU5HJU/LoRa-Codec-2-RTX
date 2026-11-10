@@ -41,7 +41,14 @@ Misura sul PC (x86, `-O2`) con un segnale armonico sintetico, non voce vera: **s
 | 700C | circa 22% | circa 57% |
 | 450 | circa 24% | circa 56% |
 
-Sono stime: il fattore vale per il 1200 e potrebbe cambiare con le altre routine (700C e 450 usano la "newamp"). La codifica del 1200 sulla scheda non è mai stata cronometrata. Il modo Qualità è scritto (10/11/2026): da **misurare sulla scheda** con il registro `[rx-codec]` (decodifica) e `CFG TEST CODEC` (codifica).
+Sono stime: il fattore vale per il 1200 e potrebbe cambiare con le altre routine (700C e 450 usano la "newamp"). **Misurato sulla scheda (T3, 10/11/2026, `CFG TEST CODEC`, 75 frame da 40 ms):**
+
+| Modo | Codifica | Decodifica | Quota dei 40 ms |
+|---|---|---|---|
+| 1200 (misura dell'8/11/2026) | 1308 ms = 17,4 ms/frame | 996 ms = 13,3 ms/frame | codifica 44%, decodifica 33% |
+| **3200** | **753 ms = 10,0 ms/frame** | **1000 ms = 13,3 ms/frame** | **codifica 25%, decodifica 33%** |
+
+Le stime sopra (circa 50% in codifica e 31% in decodifica per il 3200) erano pessimistiche sulla codifica: sulla scheda il 3200 si codifica **più in fretta** del 1200 (due blocchi da 20 ms, calcolo più semplice) e la decodifica costa lo stesso. Il 3200 regge in tempo reale con ampio margine; la memoria in più è circa 2 kB. Il registro `[tx-codec]` (a fine trasmissione) e `[rx-codec]` (a fine ricezione) mostrano gli stessi tempi in uso reale.
 
 **Cadenza a 20 ms:** il 3200 produce un frame ogni 20 ms. La catena audio lavora a blocchi da 40 ms: basta codificare **due blocchi da 160 campioni** per ogni blocco audio, senza cambiare il ritmo del ciclo principale (il ridisegno del display da solo dura circa 25 ms, più di 20).
 
