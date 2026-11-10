@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
-#include <freertos/semphr.h>
 #include <Preferences.h>
 #include <WiFi.h>
 #include <esp_random.h>
@@ -13,14 +12,24 @@ namespace {
 AsyncWebServer* server = nullptr;
 WifiConfig::Handler handler;
 volatile bool rebootRequested = false;
-SemaphoreHandle_t cfgLock = nullptr;  // i comandi arrivano dal task di rete: un comando alla volta, anche rispetto alla seriale
 }  // namespace
 
-void WifiConfig::lock() {
-  if (cfgLock) xSemaphoreTake(cfgLock, portMAX_DELAY);
+bool WifiConfig::bootRequest() {
+  Preferences pref;
+  bool on = false;
+  if (pref.begin("lcr", true)) {
+    on = pref.getBool("wifiboot", false);
+    pref.end();
+  }
+  return on;
 }
-void WifiConfig::unlock() {
-  if (cfgLock) xSemaphoreGive(cfgLock);
+
+void WifiConfig::setBootRequest(bool on) {
+  Preferences pref;
+  if (pref.begin("lcr", false)) {
+    pref.putBool("wifiboot", on);
+    pref.end();
+  }
 }
 
 bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, size_t passCap) {
@@ -63,13 +72,13 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
     WiFi.mode(WIFI_OFF);
     return false;
   }
-  cfgLock = xSemaphoreCreateMutex();
   // Server asincrono come nel Tracker LoRa APRS di Guzman (ESPAsyncWebServer): le richieste si servono nel task di rete e
   // il loop principale non resta bloccato. Il server sincrono (WebServer) dava una pagina bianca e poi non rispondeva piu'.
   server = new AsyncWebServer(80);
   server->on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.println("[wifi] richiesta della pagina");
-    request->send(200, "text/html; charset=utf-8", kWifiPage);
+    // Come nel Tracker di Guzman: risposta dalla flash (senza copiare la pagina nella memoria), con tipo e lunghezza.
+    request->send(request->beginResponse(200, "text/html", reinterpret_cast<const uint8_t*>(kWifiPage), sizeof(kWifiPage) - 1));
   });
   server->on("/cfg", HTTP_GET, [](AsyncWebServerRequest* request) {
     const String line = request->hasParam("c") ? request->getParam("c")->value() : String();
@@ -85,9 +94,7 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
     }
     char reply[260];
     reply[0] = 0;
-    WifiConfig::lock();
     const bool reboot = handler(line.c_str(), reply, sizeof(reply));
-    WifiConfig::unlock();
     request->send(200, "text/plain; charset=utf-8", reply);
     if (reboot) rebootRequested = true;
   });

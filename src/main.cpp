@@ -24,6 +24,8 @@
 #include "ui.h"
 #include "user_config.h"
 #include "voice_node.h"
+#include <WiFi.h>
+
 #include "wifi_config.h"
 
 // Codec2 e il resto dell'applicazione girano nel task principale. Lo stack
@@ -50,6 +52,7 @@ static lcr::VoiceNode* node = nullptr;
 static NvsSettingsStorage settingsStorage;
 static lcr::Settings settings;                // in uso: NVS se valida, altrimenti user_config.h
 static WifiConfig wifiConfig;  // configurazione dalla pagina interna (voce "Wi-Fi" del menu)
+static void runWifiConfigMode();
 static lcr::SettingsConsole* console = nullptr;  // comandi CFG sulla seriale
 static lcr::PttButton ptt(LCR_PTT_DEBOUNCE_MS);
 static lcr::ButtonGesture volumeButton(30, 2000);  // volume: breve = alza, lunga = menu delle modalita'
@@ -132,6 +135,10 @@ void setup() {
   }
   ui.showMessage("AVVIO");
   if (!pmuOk) fatal("alimentazione PMU");
+  if (WifiConfig::bootRequest()) {  // richiesto dal menu: si cancella subito l'indicatore (niente ciclo di riavvii) e si configura
+    WifiConfig::setBootRequest(false);
+    runWifiConfigMode();
+  }
   if (!pttUsable) {
     Serial.printf("ATTENZIONE: il pin PTT (GPIO%d) e' instabile (manca il pull-up?): PTT disattivato\n", pins::kPtt);
     ui.showMessage("PTT?", "pin instabile");
@@ -427,9 +434,7 @@ static void serviceConsole() {
       tooLong = false;
       if (skip) continue;  // riga troppo lunga: scartata
       char reply[200];
-      WifiConfig::lock();  // con il Wi-Fi attivo anche la pagina manda comandi (da un altro task)
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
-      WifiConfig::unlock();
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);
       if (r == lcr::ConsoleResult::AudioTest) runAudioTest();
@@ -450,9 +455,20 @@ static void serviceConsole() {
   }
 }
 
-// Configurazione dalla pagina interna (voce "Wi-Fi" del menu): la scheda smette di trasmettere e ricevere, crea il suo
-// Wi-Fi con una password casuale mostrata sul display e serve la pagina su 192.168.4.1. Si esce riavviando.
-static void startWifiConfig() {
+// Configurazione dalla pagina interna (voce "Wi-Fi" del menu), come nel Tracker LoRa APRS di Guzman: la voce del menu salva
+// un indicatore e riavvia; all'avvio, PRIMA di avviare Codec2, audio e radio, la scheda crea il suo Wi-Fi con una password
+// salvata (casuale la prima volta) e serve la pagina su 192.168.4.1. Non trasmette e non riceve. Si esce riavviando.
+static void rebootIntoWifiConfig() {
+  WifiConfig::setBootRequest(true);
+  Serial.println("[wifi] indicatore salvato: riavvio in modalita' configurazione Wi-Fi");
+  ui.showMessage("RIAVVIO", "Configurazione Wi-Fi");
+  Serial.flush();
+  delay(1500);
+  ESP.restart();
+}
+
+// Modo configurazione Wi-Fi: non ritorna mai (esce con un riavvio).
+static void runWifiConfigMode() {
   char ssid[24], pass[16];
   ui.showMessage("WI-FI", "Avvio...");
   const bool ok = wifiConfig.begin(
@@ -462,17 +478,32 @@ static void startWifiConfig() {
       },
       ssid, sizeof(ssid), pass, sizeof(pass));
   if (!ok) {
-    Serial.println("[wifi] ERRORE: il Wi-Fi non parte");
+    Serial.println("[wifi] ERRORE: il Wi-Fi non parte, riavvio");
     ui.showMessage("ERRORE", "Wi-Fi non parte");
-    delay(2000);
-    ui.refresh();
-    return;
+    delay(2500);
+    ESP.restart();
   }
   Serial.printf("[wifi] rete %s, password %s, pagina http://192.168.4.1 (trasmissione disattivata)\n", ssid, pass);
   char l2[28], l3[28];
   snprintf(l2, sizeof(l2), "Rete: %s", ssid);
   snprintf(l3, sizeof(l3), "Password: %s", pass);
   ui.showLines("CONFIGURAZIONE Wi-Fi", l2, l3, "Pagina: 192.168.4.1", "TX spenta. VOL lungo=esci");
+  uint32_t noClientsSince = millis();
+  for (;;) {
+    const uint32_t now = millis();
+    const bool vr = digitalRead(pins::kVolume) == LOW;
+    if (!vr) volumeArmed = true;
+    const lcr::ButtonGesture::Event ve = volumeButton.update(volumeArmed && vr, now);
+    // Come nel Tracker di Guzman: senza client collegati per un po' la configurazione si chiude (qui dopo 5 minuti).
+    if (WiFi.softAPgetStationNum() > 0) noClientsSince = now;
+    if (wifiConfig.loop() || ve == lcr::ButtonGesture::Event::Long || now - noClientsSince > 5UL * 60UL * 1000UL) {
+      ui.showMessage("RIAVVIO");
+      Serial.flush();
+      delay(500);
+      ESP.restart();
+    }
+    delay(5);
+  }
 }
 
 // Scelta confermata nel menu: si salva il profilo (le altre impostazioni salvate restano com'erano) e si riavvia.
@@ -498,20 +529,6 @@ void loop() {
   const uint32_t now = millis();
   serviceConsole();
 
-  if (wifiConfig.active()) {
-    // Configurazione Wi-Fi: niente radio ne' audio. Pressione lunga del volume (o il pulsante della pagina) = riavvio.
-    const bool vr = digitalRead(pins::kVolume) == LOW;
-    if (!vr) volumeArmed = true;
-    const lcr::ButtonGesture::Event ve = volumeButton.update(volumeArmed && vr, now);
-    if (wifiConfig.loop() || ve == lcr::ButtonGesture::Event::Long) {
-      ui.showMessage("RIAVVIO");
-      Serial.flush();
-      delay(500);
-      ESP.restart();
-    }
-    delay(2);
-    return;
-  }
 
   const bool raw = pttRawPressed();
   if (!raw) pttArmed = true;  // un PTT gia' premuto all'accensione non fa partire la trasmissione
@@ -543,10 +560,8 @@ void loop() {
     case lcr::MenuBeep::None: break;
   }
   if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) {
-    if (act.outcome.id == lcr::kMenuWifiId) startWifiConfig();
+    if (act.outcome.id == lcr::kMenuWifiId) rebootIntoWifiConfig();
     else applyProfileChoice(act.outcome.id);
-    // Wi-Fi attivo: lo schermo con rete e password non deve essere ridisegnato da ui.loop() in fondo a questo giro
-    if (wifiConfig.active()) return;
   }
 
   // GPS: lettura della seriale e posizione da usare (il GPS se ha un fix recente, altrimenti il QTH fisso). Si aggiorna
