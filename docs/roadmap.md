@@ -31,6 +31,13 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 | 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **dopo** la verifica normativa (ARI): sono stazioni automatiche |
 | 8 | **Memorie** (profilo e frequenze per ogni canale) e frequenze di lavoro col band plan IARU/ARI | |
 | 9 | Locatore Maidenhead e ora precisa dal GPS | |
+| 10 | **Documentazione e testo per un video esplicativo** del progetto | vedi sotto: da preparare **prima** delle riprese, senza scrivere codice |
+
+**Video esplicativo (da preparare, 10/11/2026):** è in programma un video che racconta il progetto. Serve una documentazione pronta e un **testo da leggere e spiegare passo passo, in forma ridotta (pochi minuti)**. Da fare, senza scrivere codice:
+- **Scaletta** in pochi blocchi: l'idea (voce su LoRa a 433 MHz tra radioamatori), la scheda e cosa serve (T3 o T-Beam, microfono, amplificatore, altoparlante), l'installazione dalla pagina web, i tre profili (Standard, Messaggio, Qualità) con la differenza di portata e suono, il menu a bordo e la configurazione, una prova dal vivo, i limiti e cosa manca.
+- **Testo parlato** breve, con un linguaggio semplice e le frasi lette ad alta voce senza sigle non spiegate; un paragrafo per blocco, con i tempi indicativi.
+- **Materiale di supporto:** schema dei collegamenti, tabella dei profili (portata, tempo in aria, qualità), schermate del display e della pagina, i messaggi da non dimenticare (nominativo, antenna collegata, frequenze, niente cifratura).
+- **Prima delle riprese:** le prove su scheda ancora aperte (Wi-Fi, profili, Qualità) e la beta pubblicata, così il video mostra una versione che esiste.
 
 **Piccole cose in sospeso:** note di rilascio della beta da incollare a mano su GitHub; PDF di protocollo con 138 ms invece di 137; verifica file per file della licenza di `third_party/` prima di una versione stabile.
 
