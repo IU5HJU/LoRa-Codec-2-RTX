@@ -45,16 +45,18 @@ static void testGesture() {
 static void testMenu() {
   size_t n = 0;
   const MenuItem* items = defaultMenuItems(n);
-  CHECK(n == 3);
+  CHECK(n == 4);
   Menu m(items, n);
   CHECK(!m.isOpen());
 
   // Si apre sulla voce in uso.
   CHECK(m.open(1, 0));
   CHECK(m.isOpen() && m.selectedIndex() == 1);
-  // Messaggio -> Qualita' -> Standard -> Messaggio
+  // Messaggio -> Qualita' -> Wi-Fi -> Standard -> Messaggio
   m.next(100);
   CHECK(m.selectedIndex() == 2);
+  m.next(120);
+  CHECK(m.selectedIndex() == 3 && m.item(3).id == kMenuWifiId);
   m.next(150);
   CHECK(m.selectedIndex() == 0);
   m.next(200);
@@ -68,6 +70,12 @@ static void testMenu() {
   m.next(1100);
   o = m.confirm(1200);
   CHECK(o.kind == K::Selected && o.id == 1);
+
+  // Wi-Fi: la conferma e' una scelta (id 100), da qualunque profilo
+  CHECK(m.open(2, 600));
+  m.next(610);
+  o = m.confirm(620);
+  CHECK(o.kind == K::Selected && o.id == kMenuWifiId);
 
   // Tempo massimo: 10 s dall'ultimo tasto.
   CHECK(m.open(0, 5000));

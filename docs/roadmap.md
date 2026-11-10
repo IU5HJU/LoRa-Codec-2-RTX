@@ -23,7 +23,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 | # | Voce | Note |
 |---|---|---|
 | 1 | ~~Pagina web: campi `POS`, `QTH` e `GPS`~~ | **fatto il 10/11/2026** (da provare con una scheda vera) |
-| 2 | Menu, **passo 3**: voce "Configurazione Wi-Fi" e pagina interna alla scheda | vedi "Cambio di modalità a bordo" |
+| 2 | ~~Menu, **passo 3**: voce "Wi-Fi" e pagina interna alla scheda~~ | **scritta il 10/11/2026** (voce "Wi-Fi" nel menu, rete `LoRaCodec2-XXXX` con password casuale sul display, pagina su 192.168.4.1, TX e RX spente); **da provare su scheda** |
 | 3 | **Verifiche sul Codec2** 3200 (e 450, 700C: scartati per il Messaggio) | **fatta la parte sul PC il 10/11/2026** ([codec2.md](codec2.md): modi disponibili, CPU e RAM stimate, tempo in aria, strumento `codec_compare`); da fare l'**ascolto del 3200 e del 2400** per la Qualità e la misura della CPU sulla scheda quando si scrive il modo Qualità |
 | 4 | **Modo Qualità** (Codec2 3200, SF7/BW250) | **scritto il 10/11/2026** (modo 4 del protocollo, profilo `qua`, `CFG SET PROFILE QUA` e `FREQQUAL`, voce del menu attiva, `lcr_live`/`lcr_decode`/`ricevitore-live.sh`); **da provare su scheda** (ascolto e CPU). Resta la sequenza a 16 bit per durate oltre i 30 s |
 | 5 | **Misure sul campo:** RSSI, SNR, deriva di frequenza, perdite, anche in movimento | decidono quanta protezione serve |

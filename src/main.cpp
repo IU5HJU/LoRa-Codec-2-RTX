@@ -24,6 +24,7 @@
 #include "ui.h"
 #include "user_config.h"
 #include "voice_node.h"
+#include "wifi_config.h"
 
 // Codec2 e il resto dell'applicazione girano nel task principale. Lo stack
 // predefinito (8 kB) non basta: "stack overflow in task loopTask" e riavvio
@@ -446,6 +447,33 @@ static void serviceConsole() {
   }
 }
 
+// Configurazione dalla pagina interna (voce "Wi-Fi" del menu): la scheda smette di trasmettere e ricevere, crea il suo
+// Wi-Fi con una password casuale mostrata sul display e serve la pagina su 192.168.4.1. Si esce riavviando.
+static WifiConfig wifiConfig;
+
+static void startWifiConfig() {
+  char ssid[24], pass[16];
+  ui.showMessage("WI-FI", "Avvio...");
+  const bool ok = wifiConfig.begin(
+      [](const char* line, char* reply, size_t cap) {
+        const lcr::ConsoleResult r = console->handleLine(line, reply, cap);
+        return r == lcr::ConsoleResult::Reboot;
+      },
+      ssid, sizeof(ssid), pass, sizeof(pass));
+  if (!ok) {
+    Serial.println("[wifi] ERRORE: il Wi-Fi non parte");
+    ui.showMessage("ERRORE", "Wi-Fi non parte");
+    delay(2000);
+    ui.refresh();
+    return;
+  }
+  Serial.printf("[wifi] rete %s, password %s, pagina http://192.168.4.1 (trasmissione disattivata)\n", ssid, pass);
+  char l2[28], l3[28];
+  snprintf(l2, sizeof(l2), "Rete: %s", ssid);
+  snprintf(l3, sizeof(l3), "Password: %s", pass);
+  ui.showLines("CONFIGURAZIONE Wi-Fi", l2, l3, "Pagina: 192.168.4.1", "TX spenta. VOL lungo=esci");
+}
+
 // Scelta confermata nel menu: si salva il profilo (le altre impostazioni salvate restano com'erano) e si riavvia.
 static void applyProfileChoice(uint8_t id) {
   lcr::Settings s = console->stored();
@@ -468,6 +496,21 @@ static void applyProfileChoice(uint8_t id) {
 void loop() {
   const uint32_t now = millis();
   serviceConsole();
+
+  if (wifiConfig.active()) {
+    // Configurazione Wi-Fi: niente radio ne' audio. Pressione lunga del volume (o il pulsante della pagina) = riavvio.
+    const bool vr = digitalRead(pins::kVolume) == LOW;
+    if (!vr) volumeArmed = true;
+    const lcr::ButtonGesture::Event ve = volumeButton.update(volumeArmed && vr, now);
+    if (wifiConfig.loop() || ve == lcr::ButtonGesture::Event::Long) {
+      ui.showMessage("RIAVVIO");
+      Serial.flush();
+      delay(500);
+      ESP.restart();
+    }
+    delay(2);
+    return;
+  }
 
   const bool raw = pttRawPressed();
   if (!raw) pttArmed = true;  // un PTT gia' premuto all'accensione non fa partire la trasmissione
@@ -498,7 +541,10 @@ void loop() {
     case lcr::MenuBeep::Cancel: audio.beep(400, 100); break;
     case lcr::MenuBeep::None: break;
   }
-  if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) applyProfileChoice(act.outcome.id);
+  if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) {
+    if (act.outcome.id == lcr::kMenuWifiId) startWifiConfig();
+    else applyProfileChoice(act.outcome.id);
+  }
 
   // GPS: lettura della seriale e posizione da usare (il GPS se ha un fix recente, altrimenti il QTH fisso). Si aggiorna
   // una volta al secondo: serve al pacchetto START (se la trasmissione della posizione e' accesa) e alla distanza sul display.

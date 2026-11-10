@@ -54,6 +54,21 @@ void UiNotifier::showMessage(const char* line1, const char* line2) {
   display_.display();
 }
 
+// Schermata a righe di testo piccolo (fino a 5 righe da 21 caratteri), per la configurazione Wi-Fi.
+void UiNotifier::showLines(const char* l1, const char* l2, const char* l3, const char* l4, const char* l5) {
+  if (!ok_) return;
+  display_.clearDisplay();
+  display_.setTextSize(1);
+  display_.setTextColor(SSD1306_WHITE);
+  const char* lines[5] = {l1, l2, l3, l4, l5};
+  for (int i = 0; i < 5; i++) {
+    if (!lines[i]) continue;
+    display_.setCursor(0, i * 12);
+    display_.println(lines[i]);
+  }
+  display_.display();
+}
+
 void UiNotifier::txStarted() {
   txPct_ = 0;
   txStartMs_ = millis();
@@ -194,21 +209,21 @@ void UiNotifier::drawTestReport() {
 // disponibili con "presto"), istruzioni in basso. Al massimo 21 caratteri per riga a testo piccolo.
 void UiNotifier::drawMenu() {
   display_.setTextSize(1);
-  display_.setCursor(0, 13);
+  display_.setCursor(0, 11);
   display_.print("MODALITA'");
   for (size_t i = 0; i < menu_->count(); i++) {
     const lcr::MenuItem& it = menu_->item(i);
-    const int y = 24 + static_cast<int>(i) * 10;
+    const int y = 21 + static_cast<int>(i) * 9;
     const bool sel = i == menu_->selectedIndex();
     if (sel) {
-      display_.fillRect(0, y - 1, 128, 10, SSD1306_WHITE);
+      display_.fillRect(0, y - 1, 128, 9, SSD1306_WHITE);
       display_.setTextColor(SSD1306_BLACK);
     }
     display_.setCursor(2, y);
     display_.printf("%c %s%s", it.id == menuCurrentId_ ? '*' : ' ', it.label, it.enabled ? "" : " (presto)");
     display_.setTextColor(SSD1306_WHITE);
   }
-  display_.setCursor(0, 56);
+  display_.setCursor(0, 57);
   display_.print("PTT=avanti  VOL=ok");
   display_.display();
 }

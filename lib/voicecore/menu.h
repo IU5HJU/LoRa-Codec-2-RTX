@@ -19,6 +19,8 @@
 namespace lcr {
 
 constexpr uint32_t kMenuTimeoutMs = 10000;
+// Identificatore della voce "Wi-Fi" (configurazione dalla pagina interna): non e' un profilo, i profili vanno da 0.
+constexpr uint8_t kMenuWifiId = 100;
 
 struct MenuItem {
   const char* label;  // testo sul display (al massimo 10 caratteri a testo grande)
@@ -26,7 +28,7 @@ struct MenuItem {
   bool enabled;       // false: si vede ma non si puo' scegliere (per esempio il profilo Qualita' prima che esista)
 };
 
-// Le voci del menu: Standard, Messaggio e Qualita' (non ancora disponibile).
+// Le voci del menu: Standard, Messaggio, Qualita' e Wi-Fi (configurazione).
 const MenuItem* defaultMenuItems(size_t& count);
 
 // Segnali acustici suggeriti per ogni azione (la scheda senza display si guida con quelli).

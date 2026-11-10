@@ -45,6 +45,8 @@ class UiNotifier : public lcr::INotifier {
   // false se il display non risponde (il resto del sistema funziona comunque).
   bool begin();
   void showMessage(const char* line1, const char* line2 = nullptr);  // schermata bloccante (avvio/errori)
+  void showLines(const char* l1, const char* l2 = nullptr, const char* l3 = nullptr, const char* l4 = nullptr,
+                 const char* l5 = nullptr);  // fino a 5 righe di testo piccolo
 
   // Da chiamare nel loop: ridisegna a ~4 Hz e quando cambia qualcosa.
   // batteryVolts: tensione della batteria in volt, negativa se non disponibile.
