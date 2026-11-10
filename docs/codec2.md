@@ -97,6 +97,7 @@ ffplay -nodisp -autoexit confronto/1200.wav
 
 - Ingresso: WAV PCM a 16 bit, mono, 8000 Hz (`--raw` per s16le grezzo). Altri formati: `ffmpeg -i in.wav -ar 8000 -ac 1 -sample_fmt s16 voce.wav`.
 - Opzioni: `--perdita N` butta via il N% dei frame a caso (frame a zero, come la ricezione quando un pacchetto non si recupera); `--grezzo` salta la normalizzazione (per sentire la differenza); `--bersaglio DBFS` cambia il livello (predefinito −24, come la scheda).
+- **Meglio un microfono un po' basso che alto** (provato il 10/11/2026): la normalizzazione recupera bene un livello basso, ma una registrazione che **satura** non si recupera più (il picco al massimo distorce la voce prima ancora del codec), e lo strumento la segnala come `ALTO`. Nel dubbio, abbassa il volume di ingresso.
 - **Cosa ascoltare:** per il **Messaggio** confronta 1200, 700C e 450 (si capiscono le parole? i nominativi? i numeri?); per la **Qualità** 3200, 2400 e 1200. Il microfono di un portatile resta più rumoroso dell'INMP441 della scheda: parla a circa 20 cm.
 - Lo strumento non è nei test di GitHub Actions per l'audio, ma la sua normalizzazione sì (`make test-py`).
 
