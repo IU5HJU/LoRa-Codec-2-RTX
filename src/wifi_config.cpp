@@ -1,7 +1,6 @@
 #include "wifi_config.h"
 
 #include <Arduino.h>
-#include <DNSServer.h>
 #include <WebServer.h>
 #include <WiFi.h>
 #include <esp_random.h>
@@ -10,29 +9,29 @@
 
 namespace {
 WebServer* server = nullptr;
-DNSServer* dns = nullptr;  // portale captive: ogni nome risolve la scheda (192.168.4.1)
 WifiConfig::Handler handler;
 bool rebootRequested = false;
 }  // namespace
 
 bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, size_t passCap) {
   handler = h;
-  uint8_t mac[6] = {0};
-  WiFi.macAddress(mac);
-  snprintf(ssid, ssidCap, "LoRaCodec2-%02X%02X", mac[4], mac[5]);
   // Password casuale di 8 cifre (esp_random usa l'hardware): non esiste una password uguale per tutte le schede.
   snprintf(password, passCap, "%08lu", static_cast<unsigned long>(esp_random() % 100000000UL));
 
+  // Come nel Tracker LoRa APRS di Guzman (wifi_utils.cpp, startAutoAP): modo NULL, poi AP, softAP(nome, password) con i
+  // valori predefiniti, nessun indirizzo configurato a mano e nessun DNS. Le righe [wifi] sulla seriale dicono se il
+  // client si collega, che indirizzo riceve e se la richiesta della pagina arriva.
+  WiFi.mode(WIFI_MODE_NULL);
   WiFi.mode(WIFI_AP);
-  // Indirizzo della scheda e rete esplicitamente (come il valore predefinito): se il telefono non raggiunge la pagina
-  // le righe [wifi] sulla seriale dicono se si e' collegato, che indirizzo ha ricevuto e se le richieste arrivano.
-  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
+  uint8_t mac[6] = {0};
+  WiFi.macAddress(mac);
+  snprintf(ssid, ssidCap, "LoRaCodec2-%02X%02X", mac[4], mac[5]);
   WiFi.onEvent([](WiFiEvent_t ev, WiFiEventInfo_t info) {
     if (ev == ARDUINO_EVENT_WIFI_AP_STACONNECTED) Serial.println("[wifi] un client si e' collegato alla rete");
     if (ev == ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED) Serial.printf("[wifi] indirizzo assegnato al client: %s\n", IPAddress(info.wifi_ap_staipassigned.ip.addr).toString().c_str());
     if (ev == ARDUINO_EVENT_WIFI_AP_STADISCONNECTED) Serial.println("[wifi] il client si e' scollegato");
   });
-  if (!WiFi.softAP(ssid, password, 1, 0, 2)) {  // canale 1, non nascosta, al massimo 2 client
+  if (!WiFi.softAP(ssid, password)) {
     WiFi.mode(WIFI_OFF);
     return false;
   }
@@ -55,24 +54,15 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
     server->send(200, "text/plain; charset=utf-8", reply);
     if (reboot) rebootRequested = true;
   });
-  // Portale captive: il telefono controlla se la rete ha Internet con indirizzi come /generate_204 (Android) o
-  // /hotspot-detect.html (iOS). Rispondendo con un rinvio alla pagina, il telefono apre da solo la configurazione
-  // invece di dichiarare "nessun Internet" e usare i dati mobili (il motivo per cui la pagina non si caricava).
-  server->onNotFound([]() {
-    server->sendHeader("Location", "http://192.168.4.1/", true);
-    server->send(302, "text/plain; charset=utf-8", "");
-  });
-  dns = new DNSServer();
-  dns->start(53, "*", WiFi.softAPIP());
+  server->onNotFound([]() { Serial.println("[wifi] richiesta non trovata"); server->send(404, "text/plain; charset=utf-8", "non trovato"); });
   server->begin();
-  Serial.printf("[wifi] punto di accesso %s, indirizzo %s, canale 1\n", ssid, WiFi.softAPIP().toString().c_str());
+  Serial.printf("[wifi] punto di accesso %s, indirizzo %s\n", ssid, WiFi.softAPIP().toString().c_str());
   active_ = true;
   return true;
 }
 
 bool WifiConfig::loop() {
   if (!active_) return false;
-  dns->processNextRequest();
   server->handleClient();
   if (rebootRequested && !reboot_) {
     reboot_ = true;
