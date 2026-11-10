@@ -13,15 +13,17 @@ const PAGE = m[1];
 const st = {
   cfg: { callsign: 'IU5HJU', profile: 'std', freq: '433.900', freqmsg: '433.900', freqqual: '433.900', power: 10, volume: 7, micfloor: -60, pos: 'off', qth: 'none', gps: 'off' },
   cmds: [],
+  board: 't3',
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
 const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps'];
 function handle(line) {
   st.cmds.push(line);
   const t = line.split(' ');
-  if (t[1] === 'GET') return 'CFG ' + KEYS.map((k) => k + '=' + st.cfg[k]).join(' ') + ' board=t3 reboot=0 test=0';
+  if (t[1] === 'GET') return 'CFG ' + KEYS.map((k) => k + '=' + st.cfg[k]).join(' ') + ' board=' + st.board + ' reboot=0 test=0';
   if (t[1] === 'SET') {
     const k = t[2].toLowerCase();
+    if (k === 'gps' && st.board !== 'tbeam') return 'CFG ERR gps questa scheda non ha il GPS';
     if (k === 'power' && (+t[3] < 2 || +t[3] > 17)) return 'CFG ERR power da 2 a 17';
     if (st.drop !== k) st.cfg[k] = k === 'callsign' ? t[3].toUpperCase() : t[3];
     return 'CFG OK ' + k + '=' + t[3];
@@ -58,6 +60,9 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 1] === 'CFG GET');
   check('nominativo maiuscolo', st.cfg.callsign === 'IU5HJU/P');
 
+  check('GPS nascosto sulla T3', await p.isHidden('#gps'));
+  check('nessun comando GPS sulla T3', !st.cmds.some((c) => c.startsWith('CFG SET GPS')));
+
   st.drop = 'volume';   // la scheda non salva il volume: la pagina deve accorgersene
   await p.fill('#volume', '3'); await p.click('#save');
   await p.waitForFunction(() => /diversi/.test(document.getElementById('st').textContent));
@@ -68,6 +73,15 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.waitForTimeout(400);
   check('valore fuori limite bloccato dal modulo', !st.cmds.includes('CFG SET POWER 99'));
   await p.fill('#power', '10');
+
+  // Sulla T-Beam il campo GPS compare e il comando parte
+  st.board = 'tbeam';
+  await p.reload();
+  await p.waitForFunction(() => !document.getElementById('gpsbox').hidden);
+  await p.selectOption('#gps', 'on');
+  await p.click('#save');
+  await p.waitForFunction(() => /Salvato|diversi|Rifiutato/.test(document.getElementById('st').textContent));
+  check('GPS sulla T-Beam', st.cmds.includes('CFG SET GPS on') && st.cfg.gps === 'on', st.cmds.slice(-3).join('|'));
 
   const n = st.cmds.length;
   await p.click('#reboot');

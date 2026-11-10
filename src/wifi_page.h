@@ -32,7 +32,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <label for="micfloor">Fondo del microfono (dBFS)</label><input id="micfloor" type="number" min="-80" max="-36" required>
 <label for="pos">Trasmetti la posizione</label><select id="pos"><option value="off">No</option><option value="on">Sì</option></select>
 <label for="qth">Posizione fissa (latitudine,longitudine, oppure none)</label><input id="qth" placeholder="43.7696,11.2558">
-<label for="gps">GPS (solo T-Beam)</label><select id="gps"><option value="off">Spento</option><option value="on">Acceso</option></select>
+<div id="gpsbox" hidden><label for="gps">GPS (solo T-Beam)</label><select id="gps"><option value="off">Spento</option><option value="on">Acceso</option></select></div>
 <button type="submit" id="save">Salva</button>
 <button type="button" class="sec" id="reboot">Riavvia la scheda</button>
 </form>
@@ -42,14 +42,16 @@ const $=id=>document.getElementById(id);
 function st(t,c){const e=$('st');e.textContent=t;e.className=c||'';}
 async function cmd(l){const r=await fetch('/cfg?c='+encodeURIComponent(l));return (await r.text()).trim();}
 function parse(t){const m={};for(const kv of t.replace(/^CFG /,'').split(' ')){const i=kv.indexOf('=');if(i>0)m[kv.slice(0,i)]=kv.slice(i+1);}return m;}
-function fill(m){for(const k of ['callsign','profile','freq','freqmsg','freqqual','power','volume','micfloor','pos','qth','gps'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
+let board='';
+function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqqual','power','volume','micfloor','pos','qth','gps'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
 async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))throw new Error(t);fill(parse(t));st('Valori letti dalla scheda.','ok');}catch(e){st('Lettura non riuscita: '+e.message,'err');}}
 $('f').addEventListener('submit',async ev=>{
   ev.preventDefault();st('Salvataggio…','');
-  const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqqual:$('freqqual').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none',gps:$('gps').value};
-  const keys={callsign:'CALLSIGN',freq:'FREQ',freqmsg:'FREQMSG',freqqual:'FREQQUAL',power:'POWER',volume:'VOLUME',micfloor:'MICFLOOR',profile:'PROFILE',pos:'POS',qth:'QTH',gps:'GPS'};
+  const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqqual:$('freqqual').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none'};
+  if(board==='tbeam')want.gps=$('gps').value;   // la T3 non ha il GPS: il comando non si manda
+  const keys={callsign:'CALLSIGN',freq:'FREQ',freqmsg:'FREQMSG',freqqual:'FREQQUAL',power:'POWER',volume:'VOLUME',micfloor:'MICFLOOR',profile:'PROFILE',pos:'POS',qth:'QTH',gps:'GPS'};  // il GPS e' in want solo sulla T-Beam
   try{
-    for(const k of Object.keys(keys)){const r=await cmd('CFG SET '+keys[k]+' '+want[k]);if(!r.startsWith('CFG OK')){st('Rifiutato ('+keys[k]+'): '+r,'err');return;}}
+    for(const k of Object.keys(keys)){if(want[k]===undefined)continue;const r=await cmd('CFG SET '+keys[k]+' '+want[k]);if(!r.startsWith('CFG OK')){st('Rifiutato ('+keys[k]+'): '+r,'err');return;}}
     const back=parse(await cmd('CFG GET'));const bad=[];
     for(const k of Object.keys(want)){let a=String(back[k]),b=String(want[k]);if(k.startsWith('freq')){a=parseFloat(a);b=parseFloat(b);}else if(k==='qth'&&b!=='none'){const x=b.split(',').map(parseFloat),y=a.split(',').map(parseFloat);if(Math.abs(x[0]-y[0])<2e-5&&Math.abs(x[1]-y[1])<2e-5)continue;}else if(k==='callsign'||k==='profile'){a=a.toLowerCase();b=b.toLowerCase();}else if(!isNaN(a)&&!isNaN(b)){a=Number(a);b=Number(b);}
       if(a!==b)bad.push(k);}
