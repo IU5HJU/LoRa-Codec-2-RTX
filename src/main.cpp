@@ -484,10 +484,7 @@ static void runWifiConfigMode() {
     ESP.restart();
   }
   Serial.printf("[wifi] rete %s, password %s, pagina http://192.168.4.1 (trasmissione disattivata)\n", ssid, pass);
-  char l2[28], l3[28];
-  snprintf(l2, sizeof(l2), "Rete: %s", ssid);
-  snprintf(l3, sizeof(l3), "Password: %s", pass);
-  ui.showLines("CONFIGURAZIONE Wi-Fi", l2, l3, "Pagina: 192.168.4.1", "TX spenta. VOL lungo=esci");
+  ui.showWifi(ssid, pass);
   uint32_t noClientsSince = millis();
   for (;;) {
     const uint32_t now = millis();

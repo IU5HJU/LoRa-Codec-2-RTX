@@ -84,6 +84,29 @@ void UiNotifier::showLines(const char* l1, const char* l2, const char* l3, const
   display_.display();
 }
 
+// Schermata della configurazione Wi-Fi: la password e' in carattere doppio (e in grassetto) per leggerla senza occhiali.
+void UiNotifier::showWifi(const char* ssid, const char* password) {
+  if (!ok_) return;
+  display_.clearDisplay();
+  display_.setTextColor(SSD1306_WHITE);
+  display_.setTextSize(1);
+  display_.setCursor(0, 0);
+  display_.printf("WiFi %s", ssid);
+  display_.setCursor(0, 12);
+  display_.print("Password:");
+  display_.setTextSize(2);  // 12x16 punti per carattere: 8 cifre = 96 punti
+  for (int dx = 0; dx < 2; dx++) {  // stampata due volte con 1 punto di scarto: tratto piu' spesso
+    display_.setCursor(dx, 24);
+    display_.print(password);
+  }
+  display_.setTextSize(1);
+  display_.setCursor(0, 46);
+  display_.print("http://192.168.4.1");
+  display_.setCursor(0, 56);
+  display_.print("VOL lungo = esci");
+  display_.display();
+}
+
 void UiNotifier::txStarted() {
   txPct_ = 0;
   txStartMs_ = millis();
