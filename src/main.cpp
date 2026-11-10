@@ -656,13 +656,19 @@ void loop() {
     printFrameHex("[rx-hex]", codec.decLog(), codec.decLogCount());
     codec.logReset();
     if (codec.decodeAvgUs() > 0)
-      Serial.printf("[rx-codec] decodifica Codec2: media %u ms, massimo %u ms per frame (limite 40 ms)\n",
-                    static_cast<unsigned>(codec.decodeAvgUs() / 1000), static_cast<unsigned>(codec.decodeMaxUs() / 1000));
+      Serial.printf("[rx-codec] decodifica Codec2: media %u.%u ms, massimo %u.%u ms per frame (limite 40 ms)\n",
+                    static_cast<unsigned>(codec.decodeAvgUs() / 1000), static_cast<unsigned>((codec.decodeAvgUs() % 1000) / 100),
+                    static_cast<unsigned>(codec.decodeMaxUs() / 1000), static_cast<unsigned>((codec.decodeMaxUs() % 1000) / 100));
     codec.resetTiming();
   }
   if (prevState == lcr::VoiceNode::State::Transmitting && st != lcr::VoiceNode::State::Transmitting) {
     printFrameHex("[tx-hex]", codec.encLog(), codec.encLogCount());
     codec.logReset();
+    if (codec.encodeAvgUs() > 0)
+      Serial.printf("[tx-codec] codifica Codec2: media %u.%u ms, massimo %u.%u ms per frame (limite 40 ms)\n",
+                    static_cast<unsigned>(codec.encodeAvgUs() / 1000), static_cast<unsigned>((codec.encodeAvgUs() % 1000) / 100),
+                    static_cast<unsigned>(codec.encodeMaxUs() / 1000), static_cast<unsigned>((codec.encodeMaxUs() % 1000) / 100));
+    codec.resetTiming();
   }
   prevState = st;
 
