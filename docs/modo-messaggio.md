@@ -7,7 +7,7 @@
 Il profilo **Messaggio** serve per il **lungo raggio estremo**. Non è una conversazione: si **registra un messaggio**, la scheda lo **trasmette molto più lentamente del parlato** e chi riceve lo **memorizza e lo riproduce a ricezione conclusa**.
 
 - Radio: **SF12, banda 125 kHz**, coding rate 4/5 (circa **+13 dB** di sensibilità rispetto allo Standard SF8/BW250).
-- Codec2 **1200** (per ora: il 450 o il 700C, più compatti, arriveranno nel passo successivo).
+- Codec2 **1200**: **scelta definitiva** (10/11/2026). Il 450 e il 700C, più compatti (meno 43% e meno 28% di tempo in aria), non si faranno: il 1200 è un compromesso accettabile e il loro suono è molto peggiore ([codec2.md](codec2.md)).
 - Durata massima di un messaggio: **30 secondi di voce** (deciso il 09/11/2026, "al momento": come lo Standard).
 
 | Voce | Tempo in aria (stima, Codec2 1200) |
@@ -17,7 +17,7 @@ Il profilo **Messaggio** serve per il **lungo raggio estremo**. Non è una conve
 | 10 s | circa 94 s |
 | **30 s (il massimo)** | **circa 271 s (4,5 minuti)** |
 
-Il tetto di 30 secondi occupa il canale per quasi cinque minuti con il Codec2 1200 (circa 160 s con il 450, quando ci sarà): è un limite, non un obiettivo. Per le prove usa messaggi brevi. Il limite in tempo in aria, come il budget di 60 s della roadmap, resta da decidere.
+Il tetto di 30 secondi occupa il canale per quasi cinque minuti con il Codec2 1200 (il 450, che non faremo, ne richiederebbe circa 156): è un limite, non un obiettivo. Per le prove usa messaggi brevi. Il limite in tempo in aria, come il budget di 60 s della roadmap, resta da decidere.
 
 Un pacchetto da 77 byte dura circa 3,4 secondi in aria: per questo il ricevitore aspetta la fine del messaggio (o 12 secondi di silenzio) prima di riprodurlo.
 
@@ -45,7 +45,7 @@ Per le prime prove usa messaggi **brevi** (3-5 secondi): bastano 30-50 secondi i
 
 ## Cosa manca (prossimi passi, in ordine)
 
-1. **Codec2 450 o 700C** con impacchettamento dei bit (circa il 40 % di tempo in aria in meno): da scegliere ad orecchio.
+1. ~~Codec2 450 o 700C con impacchettamento dei bit~~: **scartato il 10/11/2026**, il Messaggio resta a 1200.
 2. **Intestazione del messaggio** (nel pacchetto START): identificatore del messaggio, flag **emergenza** e **ripetibile**, e la **posizione**.
 3. **Ripetizione automatica a un salto** da un altro dispositivo in ascolto sulla stessa frequenza: identificatore per non ripetere due volte, contatore di salti, nominativo di chi ripete, ritardo casuale con soppressione.
 4. **GPS** sulla T-Beam (NMEA dal NEO-M8N) e **posizione fissa** da `CFG` per le schede senza GPS.

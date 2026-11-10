@@ -103,6 +103,6 @@ ffplay -nodisp -autoexit confronto/1200.wav
 
 ## 6. Cosa resta da fare
 
-1. **Ascoltare** i file di confronto con una voce vera e scegliere il codec del Messaggio (1200, 700C o 450) e confermare 3200 o 2400 per la Qualità.
+1. ~~Scegliere il codec del Messaggio~~: **deciso il 10/11/2026, resta il 1200** (il 450 farebbe risparmiare il 43% del tempo in aria, il 700C il 28%, ma il 1200 è già un compromesso accettabile e il loro suono è molto peggiore). Da ascoltare con una voce vera il **3200 e il 2400** per confermare la Qualità.
 2. **Cronometrare sulla scheda** codifica e decodifica dei modi scelti (stima: circa 50% e 31% per il 3200).
-3. Scrivere l'**impacchettamento a bit** (28 e 18 bit per frame) e i **blocchi da 20 ms** del 3200 e del 2400.
+3. ~~Impacchettamento a bit (28 e 18 bit per frame)~~: **non serve più**. Restano i **blocchi da 20 ms** del 3200 e del 2400, che hanno frame di 8 e 6 byte interi.

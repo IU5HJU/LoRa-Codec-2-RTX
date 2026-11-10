@@ -24,17 +24,17 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 |---|---|---|
 | 1 | ~~Pagina web: campi `POS`, `QTH` e `GPS`~~ | **fatto il 10/11/2026** (da provare con una scheda vera) |
 | 2 | Menu, **passo 3**: voce "Configurazione Wi-Fi" e pagina interna alla scheda | vedi "Cambio di modalità a bordo" |
-| 3 | **Verifiche sul Codec2** 3200, 450 e 700C | **fatta la parte sul PC il 10/11/2026** ([codec2.md](codec2.md): modi disponibili, CPU e RAM stimate, tempo in aria, strumento `codec_compare`); da fare l'**ascolto comparativo** con una voce vera e la misura della CPU sulla scheda |
+| 3 | **Verifiche sul Codec2** 3200 (e 450, 700C: scartati per il Messaggio) | **fatta la parte sul PC il 10/11/2026** ([codec2.md](codec2.md): modi disponibili, CPU e RAM stimate, tempo in aria, strumento `codec_compare`); da fare l'**ascolto del 3200 e del 2400** per la Qualità e la misura della CPU sulla scheda quando si scrive il modo Qualità |
 | 4 | **Modo Qualità** (Codec2 3200, SF7/BW250): blocchi da 20 ms, sequenza a 16 bit | la voce nel menu è già grigia |
 | 5 | **Misure sul campo:** RSSI, SNR, deriva di frequenza, perdite, anche in movimento | decidono quanta protezione serve |
-| 6 | Intestazione del messaggio (identificatore, flag emergenza e ripetibile); Codec2 450/700C nel Messaggio | dopo le verifiche del punto 3 |
+| 6 | Intestazione del messaggio (identificatore, flag emergenza e ripetibile) | il Messaggio **resta a 1200** (decisione del 10/11/2026, vedi sotto) |
 | 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **dopo** la verifica normativa (ARI): sono stazioni automatiche |
 | 8 | **Memorie** (profilo e frequenze per ogni canale) e frequenze di lavoro col band plan IARU/ARI | |
 | 9 | Locatore Maidenhead e ora precisa dal GPS | |
 
 **Piccole cose in sospeso:** note di rilascio della beta da incollare a mano su GitHub; PDF di protocollo con 138 ms invece di 137; verifica file per file della licenza di `third_party/` prima di una versione stabile.
 
-**Decisioni di rinuncia:** nessun ACK sui messaggi (valutato il 10 novembre: broadcast con risposte che si scontrano, finestre di attesa, trasmissione automatica, nessuna autenticazione); Opus escluso per la modalità Qualità (resta il Codec2 3200).
+**Decisioni di rinuncia:** il **Messaggio resta con il Codec2 1200** (10/11/2026): il 450 farebbe risparmiare circa il 43% del tempo in aria (155,6 s invece di 271 s per 30 s di voce) e il 700C il 28%, ma il 1200 è già "un compromesso accettabile" e il suono dei modi più compatti è molto peggiore; **cade quindi anche l'impacchettamento a bit** (28 e 18 bit per frame), che serviva solo a loro: il 3200 e il 2400 hanno frame di 8 e 6 byte interi. nessun ACK sui messaggi (valutato il 10 novembre: broadcast con risposte che si scontrano, finestre di attesa, trasmissione automatica, nessuna autenticazione); Opus escluso per la modalità Qualità (resta il Codec2 3200).
 
 ## 1. Prima trasmissione (fatta; resta la voce)
 
@@ -66,7 +66,7 @@ di più. Alternative da confrontare sul campo: 450 con parità, 700C a SF9/BW125
 Modifiche al codice previste:
 
 - sequenza dei pacchetti a 16 bit e finestra scorrevole in ricezione (al posto dei 128 slot fissi);
-- frame di dimensione variabile in bit (700C: 28 bit, 450: 18 bit) con impacchettamento a bit;
+- ~~frame di dimensione variabile in bit (700C: 28 bit, 450: 18 bit) con impacchettamento a bit~~: **non serve più** (10 novembre: il Messaggio resta a 1200; il 3200 e il 2400 hanno frame di 8 e 6 byte interi);
 - modi a 20 ms (2400, 3200) come due blocchi per frame audio;
 - tabella dei profili nel core, guidata da dati, con test sul PC che verifica il limite del 70 % per ogni profilo;
 - facoltativo: bip a 10 s dalla fine del TOT;
@@ -120,7 +120,7 @@ Differenze rispetto alla tabella del 5 novembre: il livello Qualità diventa 320
 
 | Profilo | Codec2 | Radio | Uso | TOT |
 |---|---|---|---|---|
-| **Messaggio** (lungo raggio estremo) | 450 o 700C, da scegliere ad orecchio | **SF12/BW125** (+13 dB) | registra e invia, ricezione che memorizza e riproduce | **30 s di voce, al momento** (deciso il 9 novembre; a 1200 bps sono circa 271 s in aria): il limite in tempo in aria resta da decidere |
+| **Messaggio** (lungo raggio estremo) | **1200** (deciso il 10 novembre; il 450 e il 700C non servono) | **SF12/BW125** (+13 dB) | registra e invia, ricezione che memorizza e riproduce | **30 s di voce, al momento** (deciso il 9 novembre; a 1200 bps sono circa 271 s in aria): il limite in tempo in aria resta da decidere |
 | **Standard** (oggi) | 1200 | SF8/BW250 | tempo reale | 180 s (regola del 5 novembre) |
 | **Qualità** | **3200**, ripiego **2400** se la CPU non regge | **SF7/BW250** (-2,5 dB) | tempo reale, breve distanza | 120 s (41 % in aria: 60 s / 0,41 = 146 s, gradino 120) |
 
