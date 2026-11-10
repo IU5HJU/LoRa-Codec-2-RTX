@@ -186,3 +186,7 @@ All'avvio la seriale stampa la riga `CFG GET` in fondo al log. Il resto dei para
 ## Configurazione dal Wi-Fi della scheda (voce "Wi-Fi" del menu)
 
 Senza cavo e senza PC con Chrome: tieni premuto il **volume** (circa 2 s) per aprire il menu, scegli **Wi-Fi** con il PTT e conferma con il volume breve. La scheda **smette di trasmettere e di ricevere**, crea la rete `LoRaCodec2-XXXX` (XXXX dall'indirizzo della scheda) con una **password casuale di 8 cifre** mostrata sul display (e sulla seriale). Collegati con telefono o computer e apri **http://192.168.4.1**: è la stessa configurazione della pagina web (nominativo, profilo, tre frequenze, potenza, volume, fondo del microfono, posizione, GPS), con gli stessi comandi `CFG`. Dopo "Salva" la pagina **rilegge i valori dalla scheda** e segnala quelli che non coincidono. Per uscire: pulsante "Riavvia la scheda" nella pagina oppure pressione lunga del volume. Le prove audio e la misura del microfono non sono disponibili da qui (restano nella pagina con il cavo). Non provato su scheda al 10/11/2026.
+
+## Riquadro del profilo sul display
+
+In alto a destra, su ogni schermata, un riquadro pieno con una lettera indica il profilo in uso: **S** Standard, **M** Messaggio, **Q** Qualità. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per fargli posto.

@@ -268,7 +268,13 @@ void UiNotifier::draw(uint32_t nowMs) {
 
   display_.setTextSize(1);
   display_.setCursor(0, 0);
-  display_.printf("%s  %.3f MHz", settings_.callsign, static_cast<double>(settings_.freqMhz()));
+  display_.printf("%s %.3fMHz", settings_.callsign, static_cast<double>(settings_.freqMhz()));
+  // Profilo in uso: riquadro pieno con la lettera (S Standard, M Messaggio, Q Qualita'), sempre visibile a destra.
+  display_.fillRect(116, 0, 12, 9, SSD1306_WHITE);
+  display_.setTextColor(SSD1306_BLACK);
+  display_.setCursor(119, 1);
+  display_.print(badge_);
+  display_.setTextColor(SSD1306_WHITE);
   display_.drawFastHLine(0, 10, 128, SSD1306_WHITE);
 
   if (menu_ && menu_->isOpen()) {
