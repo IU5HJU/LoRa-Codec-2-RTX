@@ -45,14 +45,9 @@ Una SX127x **demodula un solo SF e una sola banda alla volta**. Non ascolta tre 
 - **A SF8 la Qualità è al 94%** con le pause: non regge con margine. Un canale universale a SF8 non va bene.
 - Un **messaggio** (registrato) trasmesso a SF7 occupa circa 12,5 s per 30 s di voce: nessun problema.
 
-## Fisica del sito: isolamento (il punto più delicato)
+## Separazione fisica
 
-Due moduli a 433 MHz **a pochi centimetri**, uno che trasmette (fino a 17 dBm) e uno che riceve (sensibilità fino a -135 dBm): la ricezione si **desensibilizza** se il segnale trasmesso entra nel ricevitore. Misure da fare, non stime:
-
-- **Distanza in frequenza** fra ingresso e uscita: più è ampia, meglio (alcuni MHz), con i limiti del piano di banda.
-- **Antenne separate**, con distanza verticale o laterale grande; potenza di uscita ridotta al necessario.
-- Se non basta: **filtri** passa-banda (SAW o a cavità) sull'ingresso.
-- Prova semplice con **due T3**: trasmettere in continuo su una e misurare l'RSSI e le perdite sull'altra, a distanze e frequenze diverse.
+**Gestita dall'operatore** (esperienza con filtri e cavità): non rientra in questo studio. Si assume che la separazione fra l'ingresso e l'uscita sia risolta in modo adeguato.
 
 ## Modifiche al firmware (da fare solo se lo studio passa)
 
@@ -68,11 +63,31 @@ Il ripetitore è una **stazione automatica**: serve la **verifica normativa con 
 
 - **Fattibile con due schede**: ripetizione a livello di pacchetto, rigenerata con la parità, un solo profilo o il canale universale a SF7 (opzioni A e B).
 - **Ripetere "qualsiasi modo" con due schede si può solo con il canale universale** (opzione B, SF7): niente cambia per il codec, cambia il profilo radio. Per **ripetere ogni profilo con i suoi parametri** servono più schede (opzione C).
-- **Rischio principale: l'isolamento** fra le due antenne (da misurare), non il software.
-- **Ordine consigliato:** (1) prova di isolamento con due T3 sul banco; (2) ripetitore di pacchetti con un profilo (A) in modalità di prova, **senza trasmettere sull'aria libera**; (3) valutare B; (4) C solo se serve; (5) solo dopo la verifica ARI, prove sul campo.
+- **Ordine consigliato:** (1) ripetitore di pacchetti con un profilo (A) in modalità di prova, **senza trasmettere sull'aria libera**; (2) valutare B; (3) C solo se serve; (4) solo dopo la verifica ARI, prove sul campo.
 
 ## Da decidere
 
 1. Opzione A o B come primo passo (B implica un modo "ripetitore" anche nelle stazioni).
 2. Frequenze di ingresso e di uscita e la procedura con l'ARI.
 3. Quante schede e che hardware per il ripetitore (alimentazione fissa, antenne, filtri).
+
+## Variante: ripetitore del solo modo 1200 con i comandi (idea del 10/11/2026)
+
+La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitore Standard"): ripete **solo il modo 1 (Codec2 1200)** e **consuma** i pacchetti di comando indirizzati a lui. Le **bandiere e i campi liberi** del protocollo (versione 2) permettono di aggiungere i comandi **senza cambiare versione**:
+
+| Dove | Libero | Note |
+|---|---|---|
+| **Modo** (4 bit bassi del byte 0) | **10 valori: da 5 a 14** (1, 2, 3, 4 e 15 sono usati) | **la via migliore per i comandi**: un modo nuovo, per esempio 5 = comando. I ricevitori con il firmware attuale scartano i modi sconosciuti (nessun disturbo), e non tocca i bit delle bandiere |
+| **Bandiere** (byte 4) | **bit 7** (valore 128) | oggi `kFlagsKnown` è 127: un pacchetto con il bit 7 viene scartato. Serve al flag **"ripetuto"** contro gli anelli; conviene **riservarlo** a quello |
+| **Sequenza** (byte 3) | **bit 7** (la sequenza vale 0..127) | un solo bit per pacchetto: per esempio "non ripetere" o "emergenza"; oggi un valore da 128 in su viene scartato |
+| **Pacchetto START** | **nessun frame audio**, quindi il suo carico è libero | potrebbe portare dati in più, ma un comando a sé è più pulito |
+
+**Pacchetto di comando (modo 5, bozza):** stessa intestazione dei pacchetti di oggi (sessione, sequenza, bandiere), **nominativo di chi comanda** (già previsto), carico con un **codice di comando e i parametri**. Il ripetitore **non lo ripete**; risponde con un pacchetto di stato dello stesso modo.
+
+**Comandi possibili** (da scegliere, nessuno è deciso):
+- **Dalla stazione al ripetitore:** richiesta di stato (versione, carico, ora, pacchetti ripetuti), prova di collegamento attraverso il ripetitore (come la prova di oggi, ma con risposta del ripetitore), richiesta di identificazione, spegnimento o accensione temporanea, cambio di potenza o di frequenza (solo con autenticazione).
+- **Dal ripetitore alle stazioni:** pacchetto periodico di **identificazione e stato** (nominativo del ripetitore, frequenza, carico), avvisi di servizio.
+
+**Autenticazione:** un comando che cambia lo stato del ripetitore non può essere accettato da chiunque. Si può autenticare con un **codice a firma** (HMAC con un segreto condiviso e un contatore contro la ripetizione), che **non cifra il contenuto**: il testo resta leggibile e solo l'origine si verifica. Se questa scelta sia compatibile con le regole per i radioamatori (nessuna cifratura, controllo remoto delle stazioni automatiche) va **chiarito con l'ARI** prima di usarla; finché non è chiarito si limitano i comandi a quelli **senza autenticazione e senza effetti** (stato, prova, identificazione).
+
+**Compatibilità:** con i comandi nel modo 5, nessun cambio di versione del protocollo. Con il bit 7 delle bandiere come "ripetuto", le schede già in uso non sentono le copie ripetute (come già scritto sopra): è lo stesso costo dell'unico cambio di formato richiesto dal ripetitore.
