@@ -74,7 +74,7 @@ Aggiornato il 10/11/2026.
 | Impostazioni nella scheda e comandi `CFG` | fatti e provati; salvate in NVS |
 | Pagina web di installazione e configurazione (GitHub Pages, Web Serial) con menu delle versioni | **online** e provata |
 | Prova di collegamento (frame noti, confronto bit per bit) | fatta e **provata sulle schede** |
-| Ricezione con SDR (NESDR, GNU Radio): decodifica e ascolto in tempo reale, anche in Qualità | fatta e provata in Standard; l'ascolto in Qualità è ancora da confermare |
+| Ricezione con SDR (NESDR, GNU Radio): decodifica e ascolto in tempo reale, anche in Qualità | fatta e **provata** in Standard, in Messaggio e in Qualità (10/11/2026) |
 | Misure sul campo, distanze lunghe, mezzi in movimento | **da fare** |
 | Ripetizione dei messaggi, memorie, locatore Maidenhead | da fare ([roadmap](docs/roadmap.md)) |
 
