@@ -78,7 +78,8 @@ static short *load(const char *path, int raw, size_t *n, const char **err) {
       } else if (!memcmp(buf + pos, "data", 4)) {
         data = buf + pos + 8;
         bytes = len;
-        if (pos + 8 + bytes > (size_t)size) bytes = (size_t)size - pos - 8;
+        /* un file interrotto (arecord chiuso male) puo' avere la lunghezza a zero o sbagliata: si usa tutto il resto del file */
+        if (bytes == 0 || pos + 8 + bytes > (size_t)size) bytes = (size_t)size - pos - 8;
         break;
       }
       pos += 8 + len + (len & 1);

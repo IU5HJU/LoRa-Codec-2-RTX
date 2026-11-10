@@ -55,11 +55,16 @@ scegli_microfono() {
     if [[ "$c" =~ ^[0-9]+,[0-9]+$ ]]; then ALSADEV="plughw:$c"; NOME="scheda $c"; fi
   fi
 }
-rec() {   # rec <file> [secondi]: registra a 8 kHz, mono, 16 bit dal microfono scelto
+# Comando di registrazione (a 8 kHz, mono, 16 bit) dal microfono scelto, in RECCMD.
+set_reccmd() {
+  if [ -n "$SRC" ]; then RECCMD=(env PULSE_SOURCE="$SRC" arecord -q -D pulse -f S16_LE -r 8000 -c 1)
+  elif [ -n "$ALSADEV" ]; then RECCMD=(arecord -q -D "$ALSADEV" -f S16_LE -r 8000 -c 1)
+  else RECCMD=(arecord -q -f S16_LE -r 8000 -c 1); fi
+}
+rec() {   # rec <file> [opzioni]: registrazione in primo piano (per la prova di 3 secondi)
   local f=$1; shift
-  if [ -n "$SRC" ]; then PULSE_SOURCE="$SRC" arecord -q -D pulse -f S16_LE -r 8000 -c 1 "$@" "$f"
-  elif [ -n "$ALSADEV" ]; then arecord -q -D "$ALSADEV" -f S16_LE -r 8000 -c 1 "$@" "$f"
-  else arecord -q -f S16_LE -r 8000 -c 1 "$@" "$f"; fi
+  set_reccmd
+  "${RECCMD[@]}" "$@" "$f"
 }
 while true; do
   scegli_microfono
@@ -86,10 +91,16 @@ echo
 read -rp "Premi Invio quando sei pronto: "
 for n in 3 2 1; do echo "$n..."; sleep 1; done
 echo ">>> REGISTRO: parla adesso <<<"
-rec "$DIR/voce.wav" &
+# arecord parte DIRETTAMENTE in background (non dentro una funzione): cosi' REC e' il suo PID e il segnale di fine lo
+# raggiunge. Un comando in background ignora il Ctrl+C del guscio, ma arecord installa il proprio gestore di SIGINT.
+set_reccmd
+"${RECCMD[@]}" "$DIR/voce.wav" &
 REC=$!
 read -rp "(Premi Invio per FINIRE la registrazione) "
-kill -INT "$REC" 2>/dev/null
+kill -INT "$REC" 2>/dev/null            # fine normale: arecord chiude e completa il file WAV
+for _ in 1 2 3 4 5 6; do kill -0 "$REC" 2>/dev/null || break; sleep 0.5; done
+if kill -0 "$REC" 2>/dev/null; then kill -TERM "$REC" 2>/dev/null; sleep 1; fi
+if kill -0 "$REC" 2>/dev/null; then kill -KILL "$REC" 2>/dev/null; fi   # ultima risorsa: lo script non resta mai bloccato qui
 wait "$REC" 2>/dev/null
 echo "Registrazione finita."
 
