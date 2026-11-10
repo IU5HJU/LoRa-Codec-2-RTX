@@ -84,10 +84,29 @@ La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitor
 
 **Pacchetto di comando (modo 5, bozza):** stessa intestazione dei pacchetti di oggi (sessione, sequenza, bandiere), **nominativo di chi comanda** (già previsto), carico con un **codice di comando e i parametri**. Il ripetitore **non lo ripete**; risponde con un pacchetto di stato dello stesso modo.
 
-**Comandi possibili** (da scegliere, nessuno è deciso):
-- **Dalla stazione al ripetitore:** richiesta di stato (versione, carico, ora, pacchetti ripetuti), prova di collegamento attraverso il ripetitore (come la prova di oggi, ma con risposta del ripetitore), richiesta di identificazione, spegnimento o accensione temporanea, cambio di potenza o di frequenza (solo con autenticazione).
-- **Dal ripetitore alle stazioni:** pacchetto periodico di **identificazione e stato** (nominativo del ripetitore, frequenza, carico), avvisi di servizio.
+**Chi può comandare (precisazione del 10/11/2026):** i comandi di gestione del ripetitore servono alla **gestione e allo spegnimento in caso di disturbo**, quindi li può inviare **solo il sysop**. Il ripetitore **ignora** ogni comando che non sia autenticato come proveniente dal sysop: nessun comando senza firma, nemmeno "stato". Le regole di fondo (comandi ammessi per la gestione) sono quelle indicate dall'operatore; resta da confermare con l'ARI la procedura per le stazioni automatiche.
 
-**Autenticazione:** un comando che cambia lo stato del ripetitore non può essere accettato da chiunque. Si può autenticare con un **codice a firma** (HMAC con un segreto condiviso e un contatore contro la ripetizione), che **non cifra il contenuto**: il testo resta leggibile e solo l'origine si verifica. Se questa scelta sia compatibile con le regole per i radioamatori (nessuna cifratura, controllo remoto delle stazioni automatiche) va **chiarito con l'ARI** prima di usarla; finché non è chiarito si limitano i comandi a quelli **senza autenticazione e senza effetti** (stato, prova, identificazione).
+**Comandi del sysop (bozza):**
+
+| Codice | Comando | Effetto |
+|---|---|---|
+| 1 | STATO | il ripetitore risponde con versione, carico, pacchetti ripetuti, ultimo errore |
+| 2 | SPEGNI | la scheda TX smette di trasmettere (e spegne l'amplificatore con un pin, se previsto) finché non arriva RIACCENDI; la scheda RX continua ad ascoltare: **il comando di riaccensione arriva comunque** |
+| 3 | RIACCENDI | torna in servizio |
+| 4 | SPEGNI PER N MINUTI | spegnimento a tempo, utile contro un disturbo temporaneo |
+| 5 | RIAVVIA | riavvio delle due schede |
+| 6 | IDENTIFICA | trasmette subito il proprio nominativo |
+| 7 | POTENZA | imposta la potenza di uscita, entro i limiti |
+
+**Firma del comando (bozza di struttura):** modo **5**, nominativo del sysop in chiaro (campo già esistente) e un carico di questa forma:
+
+`[codice 1 byte][parametro 0..2 byte][contatore 4 byte][firma 8 byte]`
+
+- La **firma** è un **HMAC** (per esempio HMAC-SHA256 troncato a 8 byte) di tutto il pacchetto con una **chiave condivisa** fra ripetitore e sysop (16 byte casuali, scritti nella memoria delle schede dalla pagina di configurazione, mai trasmessi). **Non cifra nulla**: il comando resta leggibile e la firma serve solo a provare che viene dal sysop.
+- Il **contatore** cresce a ogni comando e il ripetitore accetta solo valori **maggiori dell'ultimo** (memorizzato): una registrazione del pacchetto, riascoltata, **non funziona**. Non serve un orologio.
+- La scheda del sysop è una stazione normale con un comando in più (da seriale o dalla pagina) che trasmette il pacchetto, senza PTT e senza voce.
+- Il ripetitore **risponde sempre** con un pacchetto di stato dello stesso modo (comando eseguito, rifiutato, contatore non valido), così il sysop sa se ha funzionato.
+
+**Sicurezze del ripetitore stesso** (indipendenti dai comandi): **limite di durata di una trasmissione** continua (come il TOT delle stazioni) e spegnimento automatico se la scheda TX resta in trasmissione oltre un tempo massimo, così un guasto o un disturbo continuo non lo blocca in aria.
 
 **Compatibilità:** con i comandi nel modo 5, nessun cambio di versione del protocollo. Con il bit 7 delle bandiere come "ripetuto", le schede già in uso non sentono le copie ripetute (come già scritto sopra): è lo stesso costo dell'unico cambio di formato richiesto dal ripetitore.
