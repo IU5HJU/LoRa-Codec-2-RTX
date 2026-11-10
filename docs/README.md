@@ -22,6 +22,7 @@
 | [sdr.md](sdr.md) | Ricevere e decodificare le trasmissioni con un SDR (NESDR / RTL-SDR, GNU Radio, `lcr_decode`) |
 | [prove.md](prove.md) | Registro delle prove sulle schede e aiuto per la diagnosi |
 | [roadmap.md](roadmap.md) | Decisioni e prossimi lavori |
+| [studio-ripetitore.md](studio-ripetitore.md) | Studio di fattibilità del ripetitore con due schede (RX e TX), opzioni per ripetere tutti i profili |
 | [progetti-simili.md](progetti-simili.md) | Altri progetti LoRa e Codec2 e scelte che ne derivano |
 
 Il README del repository riassume il progetto e lo stato.
