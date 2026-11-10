@@ -178,10 +178,10 @@ static void testTotal() {
   memcpy(cut, buf, full);
   cut[4] = kFlagParity | kFlagTotal;
   CHECK(!decodePacket(cut, full, q));
-  // Il bit 7 resta riservato.
+  // Il bit 7 e' il flag "ripetuto" (ripetitore): un pacchetto dati con quel bit e' valido e il bit si conserva.
   memcpy(cut, buf, full);
-  cut[4] |= 0x80;
-  CHECK(!decodePacket(cut, full, q));
+  cut[4] |= kFlagRelayed;
+  CHECK(decodePacket(cut, full, q) && (q.flags & kFlagRelayed));
 }
 
 static void testRejects() {
@@ -197,7 +197,7 @@ static void testRejects() {
   bad[0] = 0x11;                           // versione 1 (vecchia): scartata
   CHECK(!decodePacket(bad, n, q));
   memcpy(bad, buf, n);
-  bad[4] = 0x80;                           // flag riservato
+  bad[4] = kFlagParity | kFlagStart;      // parita' con START: combinazione non valida
   CHECK(!decodePacket(bad, n, q));
   memcpy(bad, buf, n);
   bad[3] = kMaxPackets;                    // seq fuori range

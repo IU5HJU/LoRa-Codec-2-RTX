@@ -42,8 +42,8 @@ byte 4     flag
 resto      payload
 ```
 
-Flag: `1 START`, `2 END`, `4 PARITY`, `8 CALLSIGN`, `16 NOFEC` (trasmissione senza parità), `32 POSITION`, `64 TOTAL`.
-Il bit 7 è riservato: i pacchetti che li usano vengono scartati.
+Flag: `1 START`, `2 END`, `4 PARITY`, `8 CALLSIGN`, `16 NOFEC` (trasmissione senza parità), `32 POSITION`, `64 TOTAL`, `128 RELAYED`.
+**`RELAYED` (bit 7, 10/11/2026):** il pacchetto è stato **ritrasmesso da un ripetitore** ([studio-ripetitore.md](studio-ripetitore.md), `lib/voicecore/repeater.*`). Un ripetitore non ripete mai un pacchetto con questo bit. Il resto del pacchetto è identico all'originale. Con il bit 7 tutti gli 8 bit del byte sono in uso; le schede con la beta.2 scartano i pacchetti con il bit 7 (non sentono le copie ripetute, ma nessun disturbo).
 
 **Blocco posizione** (protocollo 2, `lib/voicecore/position.h`): 7 byte dopo il nominativo, solo nel pacchetto `START` (le trasmissioni sono brevi: una posizione ogni turno basta, anche per un mezzo in movimento).
 

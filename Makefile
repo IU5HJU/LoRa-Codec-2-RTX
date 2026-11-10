@@ -5,7 +5,7 @@ CXXFLAGS ?= -std=c++17 -Wall -Wextra -O1 -g -fsanitize=address,undefined -Ilib/v
 
 CORE := $(wildcard lib/voicecore/*.cpp)
 HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
-TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live
+TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live repeater
 
 .PHONY: test test-page test-py lcr_decode lcr_live codec_compare pdf clean
 test: $(addprefix build/test_,$(TESTS))

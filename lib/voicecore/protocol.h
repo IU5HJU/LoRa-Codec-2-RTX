@@ -94,8 +94,9 @@ enum Flags : uint8_t {
   kFlagNoFec = 16,    // la trasmissione non usa parita'
   kFlagTotal = 64,    // dopo il blocco posizione c'e' 1 byte: numero totale di pacchetti della trasmissione (solo START, messaggi)
   kFlagPosition = 32, // dopo il nominativo c'e' il blocco posizione (position.h), solo nel pacchetto START
+  kFlagRelayed = 128, // pacchetto ritrasmesso da un ripetitore (repeater.h): un ripetitore non lo ripete di nuovo
 };
-constexpr uint8_t kFlagsKnown = 127;
+constexpr uint8_t kFlagsKnown = 255;  // tutti gli 8 bit sono in uso
 // Flag protetti dalla parita' (gli altri sono derivabili o non utili).
 constexpr uint8_t kFlagsParityMask = kFlagStart | kFlagEnd;
 
