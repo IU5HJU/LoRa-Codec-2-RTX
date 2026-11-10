@@ -16,8 +16,9 @@ Funzionamento in breve:
 3. Al rilascio del PTT (massimo 30 s) si invia l'ultimo audio e il segnale di fine turno (OVER).
 4. Tutte le stazioni in ascolto sulla frequenza ricevono e riproducono. Dopo 5-10 s di attesa si risponde.
 
-> **Progetto sperimentale (beta).** La voce passa da una scheda all'altra ed è **provata sulle schede** (T3 e T-Beam,
-> nei tre profili, 10/11/2026: esiti in [docs/prove.md](docs/prove.md)). **Manca ancora la misura sul campo**: distanze
+> **Progetto sperimentale (beta).** La voce passa da una scheda all'altra ed è **provata sulle schede** (la T3 con microfono e
+> altoparlante, nei tre profili, in collegamento con la T-Beam; 10/11/2026: esiti in [docs/prove.md](docs/prove.md)). **La T-Beam di
+> prova non ha ancora microfono né altoparlante**: la sua parte audio non è provata. **Manca ancora la misura sul campo**: distanze
 > lunghe, mezzi in movimento. Possono trasmettere solo radioamatori con il proprio nominativo, sulle frequenze e con le
 > potenze consentite. Il nominativo viaggia in chiaro e i contenuti non sono cifrati.
 
@@ -64,7 +65,7 @@ Aggiornato il 10/11/2026.
 | Parte | Stato |
 |---|---|
 | Formato pacchetti (protocollo v2), parità XOR, sessioni TX/RX, pausa tra i pacchetti | fatto, testato sul PC |
-| Voce a turni in Standard (Codec2 1200, SF8/BW250) | **provata sulle schede** (T3 e T-Beam); cause dei crepitii trovate e corrette |
+| Voce a turni in Standard (Codec2 1200, SF8/BW250) | **provata** sulla T3 (con microfono e altoparlante); la T-Beam di prova non ha ancora l'audio; cause dei crepitii trovate e corrette |
 | Profilo **Messaggio** (SF12/BW125): registra e invia, riproduzione a messaggio completo, percentuale e suono "MSG" in Morse | **provato sulle schede** |
 | Profilo **Qualità** (Codec2 3200, SF7/BW250) | **provato sulle schede**: suona meglio del 1200; CPU misurata sulla scheda: codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms (25% e 33%) |
 | Menu a bordo (volume lungo, PTT, conferma; riavvio sul profilo scelto) e lettera S/M/Q sul display | **provato** |

@@ -5,7 +5,7 @@ Schede supportate (un ambiente PlatformIO e un artefatto di Actions ciascuna):
 | Scheda | Ambiente | Artefatto di GitHub Actions | Stato |
 |---|---|---|---|
 | LILYGO LoRa32 T3 V1.6.1 | `lora32` | `firmware-t3-v161` | **provata** (tre profili, menu, Wi-Fi di configurazione, volume; 10/11/2026) |
-| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **provata** (avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, batteria sull'OLED, GPS con fix, trasmissione tra T3 e T-Beam nei tre profili; 10/11/2026) |
+| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **provata** (avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, batteria sull'OLED, GPS con fix, collegamento radio con la T3 nei tre profili; 10/11/2026); **microfono e altoparlante non montati** sulla scheda di prova, quindi l'audio della T-Beam non è provato |
 
 I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 
@@ -13,7 +13,7 @@ I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 > solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
 > carico si può danneggiare. Prima l'antenna, poi il cavo USB.
 
-**Stato (10/11/2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam): voce a turni nei tre profili (Standard, Messaggio, Qualità), microfono e altoparlante, menu a bordo, configurazione dal Wi-Fi della scheda, volume con guadagno, posizione e GPS, impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da misurare:** distanze lunghe, mezzi in movimento. **CPU del Codec2 3200 misurata:** codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms ([codec2.md](codec2.md)).
+**Stato (10/11/2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede:** sulla T3 la voce a turni nei tre profili (Standard, Messaggio, Qualità), microfono e altoparlante; su T3 e T-Beam il collegamento radio, menu a bordo, configurazione dal Wi-Fi della scheda, volume con guadagno, posizione e GPS, impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da misurare:** distanze lunghe, mezzi in movimento. **CPU del Codec2 3200 misurata:** codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms ([codec2.md](codec2.md)).
 Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protocollo
 (`lib/voicecore/`) è testata sul PC. Il workflow `.github/workflows/build.yml` produce
 `web_factory.bin` e `ota_update.bin` come artefatti di ogni esecuzione.
