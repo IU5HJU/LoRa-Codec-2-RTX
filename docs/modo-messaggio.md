@@ -1,6 +1,6 @@
 # Modo Messaggio (profilo "Messaggio")
 
-**Stato (09/11/2026): primo passo scritto, da provare sulle schede.** Le prove sul PC passano (`make test`, tutti i test); la compilazione per la scheda e la prova radio sono ancora da fare. Decisioni e ragionamento: [roadmap.md](roadmap.md) ("Tre profili" e "Chi ripete cosa").
+**Stato (10/11/2026): scritto e provato sulle schede** (T3 e T-Beam: registrazione, invio, riproduzione a messaggio completo, percentuale, suono "MSG" in Morse, posizione e distanza; prove del 9-10 novembre in [prove.md](prove.md)). Le prove sul PC passano (`make test`). Manca la misura sul campo (distanze lunghe). Decisioni e ragionamento: [roadmap.md](roadmap.md) ("Tre profili" e "Chi ripete cosa").
 
 ## Cos'è
 

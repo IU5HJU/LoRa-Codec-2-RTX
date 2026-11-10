@@ -44,7 +44,7 @@ La documentazione completa è in **`docs/sdr.md`** del repository: leggila per p
 - **Mai alimentare una scheda senza antenna.** Il nominativo predefinito è **N0CALL** e non trasmette; l'utente imposta il proprio, **non scrivere mai il nominativo di un altro** nel firmware.
 - **Se l'utente dice "aspetta", non scrivere codice.** Ragiona e rispondi.
 - **Date sempre in formato europeo GG/MM/AAAA.** L'utente non sopporta il formato americano.
-- Pubblica direttamente su `main`. **Non creare tag di release** (né `v0.1.0-beta.1`) senza consenso esplicito: il primo tag beta arriverà solo quando la voce sarà comprensibile.
+- Pubblica direttamente su `main`. **Non creare tag di release** senza consenso esplicito dell'utente (la beta.1 è stata pubblicata l'8/11/2026, la beta.2 il 10/11/2026).
 - **Dopo ogni push controlla che Actions sia verde** (quando l'utente lo chiede o prima di dirgli di aggiornare la scheda). Per riprovare la pubblicazione su Pages serve una **nuova esecuzione**, non il solo "re-run" del job fallito.
 - Messaggi di errore **ben visibili**; niente testo che va a capo sul display OLED (128x64, testo grande max 10 caratteri).
 

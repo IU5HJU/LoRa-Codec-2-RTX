@@ -17,15 +17,19 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 | **Percentuale 1-100%** del messaggio (campo `TOTAL` nello START) e segnale **"MSG" in Morse** all'inizio della ricezione | 10 novembre |
 | **GPS del T-Beam** (`CFG SET GPS ON`): fix con 4 satelliti, posizione dal GPS nel pacchetto START, vista dall'SDR come "(GPS)" | 10 novembre |
 | **SDR:** ricezione, decodifica e **ascolto in tempo reale** (`lcr_live`) con icone su Ubuntu MATE | 10 novembre |
+| Profilo **Qualità** (Codec2 3200, SF7/BW250, `FREQQUAL`, modo 4 del protocollo): suona meglio del 1200 | 10 novembre |
+| **Configurazione dal Wi-Fi della scheda** (voce "Wi-Fi" del menu, modo dedicato all'avvio come nel Tracker di Guzman, password salvata, server asincrono) | 10 novembre |
+| **Lettera del profilo** (S, M, Q) sul display, **volume con guadagno** (passo 5 = 0 dB, fino a +15 dB), pagina web con messaggio di stato fisso | 10 novembre |
+| Prove su scheda per la **beta.2** (versione, display, Wi-Fi, trasmissione nei tre profili): superate; tag **`v0.1.0-beta.2`** pubblicato | 10 novembre |
 
 **Da fare**, in ordine di priorità proposto:
 
 | # | Voce | Note |
 |---|---|---|
 | 1 | ~~Pagina web: campi `POS`, `QTH` e `GPS`~~ | **fatto il 10/11/2026** (da provare con una scheda vera) |
-| 2 | ~~Menu, **passo 3**: voce "Wi-Fi" e pagina interna alla scheda~~ | **scritta il 10/11/2026** (voce "Wi-Fi" nel menu, rete `LoRaCodec2-XXXX` con password casuale sul display, pagina su 192.168.4.1, TX e RX spente); **da provare su scheda** |
+| 2 | ~~Menu, **passo 3**: voce "Wi-Fi" e pagina interna alla scheda~~ | **fatto e provato il 10/11/2026** (rete `LoRaCodec2-XXXX`, password casuale salvata, pagina su 192.168.4.1, TX e RX spente) |
 | 3 | **Verifiche sul Codec2** 3200 (e 450, 700C: scartati per il Messaggio) | **fatta la parte sul PC il 10/11/2026** ([codec2.md](codec2.md): modi disponibili, CPU e RAM stimate, tempo in aria, strumento `codec_compare`); da fare l'**ascolto del 3200 e del 2400** per la Qualità e la misura della CPU sulla scheda quando si scrive il modo Qualità |
-| 4 | **Modo Qualità** (Codec2 3200, SF7/BW250) | **scritto il 10/11/2026** (modo 4 del protocollo, profilo `qua`, `CFG SET PROFILE QUA` e `FREQQUAL`, voce del menu attiva, `lcr_live`/`lcr_decode`/`ricevitore-live.sh`); **da provare su scheda** (ascolto e CPU). Resta la sequenza a 16 bit per durate oltre i 30 s |
+| 4 | **Modo Qualità** (Codec2 3200, SF7/BW250) | **fatto e provato sulle schede il 10/11/2026** (suona meglio del 1200). Restano la **misura della CPU di codifica** sulla scheda, l'**ascolto in Qualità con l'SDR** (corretto un `lcr_live` vecchio, da riprovare) e la sequenza a 16 bit per durate oltre i 30 s |
 | 5 | **Misure sul campo:** RSSI, SNR, deriva di frequenza, perdite, anche in movimento | decidono quanta protezione serve |
 | 6 | Intestazione del messaggio (identificatore, flag emergenza e ripetibile) | il Messaggio **resta a 1200** (decisione del 10/11/2026, vedi sotto) |
 | 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **dopo** la verifica normativa (ARI): sono stazioni automatiche |
@@ -39,7 +43,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 - **Materiale di supporto:** schema dei collegamenti, tabella dei profili (portata, tempo in aria, qualità), schermate del display e della pagina, i messaggi da non dimenticare (nominativo, antenna collegata, frequenze, niente cifratura).
 - **Prima delle riprese:** le prove su scheda ancora aperte (Wi-Fi, profili, Qualità) e la beta pubblicata, così il video mostra una versione che esiste.
 
-**Piccole cose in sospeso:** note di rilascio della beta da incollare a mano su GitHub; PDF di protocollo con 138 ms invece di 137; verifica file per file della licenza di `third_party/` prima di una versione stabile.
+**Piccole cose in sospeso:** **note di rilascio della beta.2 da incollare a mano** nella release (testo in [note-rilascio/v0.1.0-beta.2.md](note-rilascio/v0.1.0-beta.2.md); la release ha ora solo il testo generato) e correggere nelle note della beta.1 "protocollo versione 1" (era già la 2); PDF di protocollo con 138 ms invece di 137; verifica file per file della licenza di `third_party/` prima di una versione stabile.
 
 **Decisioni di rinuncia:** il **Messaggio resta con il Codec2 1200** (10/11/2026): il 450 farebbe risparmiare circa il 43% del tempo in aria (155,6 s invece di 271 s per 30 s di voce) e il 700C il 28%, ma il 1200 è già "un compromesso accettabile" e il suono dei modi più compatti è molto peggiore; **cade quindi anche l'impacchettamento a bit** (28 e 18 bit per frame), che serviva solo a loro: il 3200 e il 2400 hanno frame di 8 e 6 byte interi. nessun ACK sui messaggi (valutato il 10 novembre: broadcast con risposte che si scontrano, finestre di attesa, trasmissione automatica, nessuna autenticazione); Opus escluso per la modalità Qualità (resta il Codec2 3200).
 

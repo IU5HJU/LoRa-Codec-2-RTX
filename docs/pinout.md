@@ -6,7 +6,7 @@ Le schede supportate sono due. La mappa in codice è un file per scheda, scelto 
 | Scheda | Ambiente | File dei pin | Stato |
 |---|---|---|---|
 | LILYGO LoRa32 T3 V1.6.1 | `lora32` | [`src/board_pins_t3_v161.h`](../src/board_pins_t3_v161.h) | provata (avvio, OLED, PTT, trasmissione) |
-| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) | **fase 1, provata:** avvio, AXP2101, radio, tasto IO38 e trasmissione (4 novembre) |
+| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) | **provata:** avvio, AXP2101, radio, tasto IO38, GPS e voce (4-10 novembre) |
 
 La sezione seguente riguarda la **T3**; quella della T-Beam è più sotto.
 
@@ -93,7 +93,7 @@ Collegare sempre l'antenna a 433 MHz **prima** di alimentare o trasmettere: senz
 
 **Display OLED esterno (per esempio una T-Beam senza OLED di bordo):** si collega ai pin **IO21 (SDA)** e **IO22 (SCL)**, più `3V3` e `GND`: sono gli stessi dell'OLED di bordo e dell'AXP2101, quindi il firmware `tbeam` va bene così. Il firmware cerca il display a **0x3C** e poi a **0x3D** e, all'avvio, scrive sulla seriale i dispositivi I2C trovati (`[avvio] dispositivi I2C trovati: 0x34 0x3C`: 0x34 è l'AXP2101). Il driver è per controller **SSD1306 128x64**; un display da 1,3" con controller SH1106 funziona ma può apparire spostato di 2 pixel o con la prima colonna sporca.
 
-**Fase 1: supporto scritto, compilato e provato sulla scheda (4-5 novembre 2026):** avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, trasmissione e ricezione con la T3 (SNR circa 11-12 dB a 1-2 m). Ancora da provare: audio (microfono, amplificatore, altoparlante) sulla T-Beam.
+**Fase 1: supporto scritto, compilato e provato sulla scheda (4-5 novembre 2026):** avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, trasmissione e ricezione con la T3 (SNR circa 11-12 dB a 1-2 m). Dal 5 al 10 novembre: GPS con fix (4 satelliti) e trasmissione di voce tra T3 e T-Beam nei tre profili ([prove.md](prove.md)).
 Scheda riconosciuta dalla serigrafia **T-BEAM-AXP2101-V1.2** (8 maggio 2023): ESP32 con 4 MB di flash (e 8 MB di PSRAM, non usata),
 modulo LoRa "LORA32 433/470MHz" (famiglia SX127x come la T3; il primo avvio lo conferma, RadioLib controlla il chip),
 GPS u-blox NEO-6M, **OLED** SSD1306 montato, tasti PWR / IO38 / RST, pila a bottone per il GPS, vano per la batteria 18650.

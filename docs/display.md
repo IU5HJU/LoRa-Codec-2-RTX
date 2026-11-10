@@ -6,6 +6,14 @@ Il display è l'SSD1306 128×64 della T3 V1.6.1. L'immagine **non è una foto**:
 `tools/render_display.py` con lo stesso font 5×7 di Adafruit_GFX, le stesse coordinate e lo stesso ritorno a capo
 automatico del codice in `src/ui.cpp`. Sul display reale i colori dipendono dal pannello (di solito bianco o azzurro).
 
+## Novità del 10/11/2026
+
+- **Lettera del profilo:** in alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10×9 punti) indica il profilo in uso: **S** Standard, **M** Messaggio, **Q** Qualità. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per farle posto.
+- **Menu a bordo:** quattro voci (Standard, Messaggio, Qualità, Wi-Fi), una per riga; la scelta in negativo e il profilo in uso con `*`.
+- **Schermata Wi-Fi** (voce "Wi-Fi" del menu): in alto il nome della rete `LoRaCodec2-XXXX`, poi `Password:` e la **password in carattere doppio e in grassetto** (8 cifre), in basso `http://192.168.4.1` e `VOL lungo = esci`. Con questa schermata la scheda non trasmette e non riceve.
+- **Messaggio:** durante l'invio e la ricezione compare la percentuale (1-100%) con una barra di avanzamento.
+- Le immagini in `images/display.png` sono i mockup della prima versione e **non** mostrano ancora queste novità.
+
 ## Struttura di una schermata
 
 ```

@@ -1,6 +1,6 @@
 # Protocollo (v2)
 
-Trasmissione vocale **broadcast** a turni (stile QSO) su LoRa, con voce Codec2 1200 bps.
+Trasmissione vocale **broadcast** a turni (stile QSO) su LoRa, con voce Codec2 a 1200 bps (profili Standard e Messaggio) o a 3200 bps (profilo Qualità, modo 4).
 Nessun indirizzamento, nessun ACK: chiunque sia in ascolto sulla frequenza decodifica.
 
 ## Sequenza di un turno
@@ -22,7 +22,7 @@ Durata massima di un turno: **30 s** (750 frame). Al limite la trasmissione si c
 |---|---|
 | Codec | Codec2 1200 bps: 6 byte ogni 40 ms (320 campioni a 8 kHz) |
 | Pacchetto dati | 12 frame = 480 ms = 72 byte |
-| Radio | SX1278 433 MHz, SF8, BW250, CR 4/5 (impostazioni in `src/user_config.h`) |
+| Radio | SX1278 433 MHz, CR 4/5. Per profilo: **Standard** SF8/BW250, **Messaggio** SF12/BW125, **Qualità** SF7/BW250 (`lib/voicecore/profile.cpp`; i valori storici in `src/user_config.h`) |
 | Parità | 1 pacchetto XOR ogni 4 pacchetti dati (disattivabile) |
 | Nominativo | in `START`, in `END` e ogni 10 pacchetti (~5 s) |
 

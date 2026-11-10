@@ -4,8 +4,8 @@ Schede supportate (un ambiente PlatformIO e un artefatto di Actions ciascuna):
 
 | Scheda | Ambiente | Artefatto di GitHub Actions | Stato |
 |---|---|---|---|
-| LILYGO LoRa32 T3 V1.6.1 | `lora32` | `firmware-t3-v161` | provata: avvio, OLED, PTT, trasmissione |
-| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **fase 1: provata** (avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, trasmissione e ricezione, batteria sull'OLED); audio da provare |
+| LILYGO LoRa32 T3 V1.6.1 | `lora32` | `firmware-t3-v161` | **provata** (tre profili, menu, Wi-Fi di configurazione, volume; 10/11/2026) |
+| LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **provata** (avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, batteria sull'OLED, GPS con fix, trasmissione tra T3 e T-Beam nei tre profili; 10/11/2026) |
 
 I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 
@@ -13,9 +13,7 @@ I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 > solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
 > carico si può danneggiare. Prima l'antenna, poi il cavo USB.
 
-**Stato (5 novembre 2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam, senza
-amplificatore né altoparlante): avvio fino a "ASCOLTO", OLED, PTT, trasmissione e ricezione nei due versi, microfono (livelli),
-impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da provare:** altoparlante e voce a turni (manca l'hardware).
+**Stato (10/11/2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam): voce a turni nei tre profili (Standard, Messaggio, Qualità), microfono e altoparlante, menu a bordo, configurazione dal Wi-Fi della scheda, volume con guadagno, posizione e GPS, impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da misurare:** distanze lunghe, mezzi in movimento e il tempo di codifica del Codec2 3200 sulla scheda.
 Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protocollo
 (`lib/voicecore/`) è testata sul PC. Il workflow `.github/workflows/build.yml` produce
 `web_factory.bin` e `ota_update.bin` come artefatti di ogni esecuzione.
@@ -26,7 +24,11 @@ Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protoco
 |---|---|
 | `src/main.cpp` | Avvio, pulsanti PTT e volume, ciclo principale |
 | `src/radio_lora.*` | SX1278 con RadioLib: parametri LoRa, CAD, invio, ricezione (`IRadio`) |
-| `src/codec2_adapter.*` | Codec2 modo 1200 bps (`ICodec`) |
+| `src/codec2_adapter.*` | Codec2 a 1200 bps o a 3200 bps (due blocchi da 20 ms per frame) (`ICodec`) |
+| `src/wifi_config.*`, `src/wifi_page.h` | Configurazione dal Wi-Fi della scheda: rete con password salvata, server asincrono, pagina su 192.168.4.1 |
+| `src/gps.*`, `lib/voicecore/nmea.*`, `position.*` | GPS della T-Beam (letture NMEA), posizione, QTH e distanza |
+| `lib/voicecore/profile.*`, `menu.*` | Profili (Standard, Messaggio, Qualità) e menu a bordo |
+| `lib/voicecore/morse.*` | Segnale "MSG" in Morse all'arrivo di un messaggio |
 | `src/audio_io.*` | I2S full duplex a 16 kHz, task di cattura, pre-roll, amplificatore, toni (`IAudioIn`/`IAudioOut`) |
 | `src/ui.*` | OLED SSD1306 128x64 e segnali acustici (`INotifier`) |
 | `src/board_pins.h`, `src/board_pins_t3_v161.h`, `src/board_pins_tbeam_v12.h` | Pin per scheda: `board_pins.h` sceglie il file in base al flag di compilazione |
@@ -129,7 +131,7 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | Comando | Risposta | Note |
 |---|---|---|
 | `CFG GET` | `CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0` | `reboot=1` se i valori salvati differiscono da quelli in uso |
-| `CFG VERSION` | `CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=2` | versione del firmware (da `git describe`, "dev" se compilato senza git), scheda e **versione del protocollo** ([versioni.md](versioni.md)); la pagina web la confronta con quella pubblicata |
+| `CFG VERSION` | `CFG VERSION fw=v0.1.0-beta.2 board=t3 proto=2` | versione del firmware (da `git describe`, "dev" se compilato senza git), scheda e **versione del protocollo** ([versioni.md](versioni.md)); la pagina web la confronta con quella pubblicata |
 | `CFG SET CALLSIGN iu5hju` | `CFG OK callsign=IU5HJU` | solo A-Z, 0-9 e `/`, massimo 8 caratteri |
 | `CFG SET FREQ 433.900` | `CFG OK freq=433.900` | MHz, da 430.000 a 440.000 (70 cm); **segnaposto**: scegli il canale col band plan IARU R1 / ARI |
 | `CFG SET POWER 10` | `CFG OK power=10` | dBm, da 2 a 17 |
