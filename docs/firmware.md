@@ -189,4 +189,4 @@ Senza cavo e senza PC con Chrome: tieni premuto il **volume** (circa 2 s) per ap
 
 ## Riquadro del profilo sul display
 
-In alto a destra, su ogni schermata, un riquadro pieno con una lettera indica il profilo in uso: **S** Standard, **M** Messaggio, **Q** Qualità. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per fargli posto.
+In alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10x9 punti) indica il profilo in uso: **S** Standard, **M** Messaggio, **Q** Qualità. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per fargli posto.

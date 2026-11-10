@@ -39,6 +39,21 @@ bool UiNotifier::begin() {
   return ok_;
 }
 
+// Lettera del profilo in uso (S Standard, M Messaggio, Q Qualita') in alto a destra: bianca su sfondo nero (in positivo),
+// disegnata a mano su 10x9 punti con tratti di 2 punti per occupare tutto lo spazio sopra la riga e restare leggibile.
+void UiNotifier::drawProfileBadge() {
+  static const char* const kS[9] = {".XXXXXXXX.", "XXXXXXXXXX", "XX........", "XXXXXXXX..", ".XXXXXXXX.",
+                                    "..XXXXXXXX", "........XX", "XXXXXXXXXX", ".XXXXXXXX."};
+  static const char* const kM[9] = {"XX......XX", "XXX....XXX", "XXXX..XXXX", "XX.XXXX.XX", "XX..XX..XX",
+                                    "XX......XX", "XX......XX", "XX......XX", "XX......XX"};
+  static const char* const kQ[9] = {".XXXXXXXX.", "XXXXXXXXXX", "XX......XX", "XX......XX", "XX......XX",
+                                    "XX..XX..XX", "XX...XXXXX", "XXXXXXXXX.", ".XXXXXX.XX"};
+  const char* const* g = badge_ == 'M' ? kM : (badge_ == 'Q' ? kQ : kS);
+  for (int y = 0; y < 9; y++)
+    for (int x = 0; x < 10; x++)
+      if (g[y][x] == 'X') display_.drawPixel(118 + x, y, SSD1306_WHITE);
+}
+
 void UiNotifier::showMessage(const char* line1, const char* line2) {
   if (!ok_) return;
   display_.clearDisplay();
@@ -269,12 +284,7 @@ void UiNotifier::draw(uint32_t nowMs) {
   display_.setTextSize(1);
   display_.setCursor(0, 0);
   display_.printf("%s %.3fMHz", settings_.callsign, static_cast<double>(settings_.freqMhz()));
-  // Profilo in uso: riquadro pieno con la lettera (S Standard, M Messaggio, Q Qualita'), sempre visibile a destra.
-  display_.fillRect(116, 0, 12, 9, SSD1306_WHITE);
-  display_.setTextColor(SSD1306_BLACK);
-  display_.setCursor(119, 1);
-  display_.print(badge_);
-  display_.setTextColor(SSD1306_WHITE);
+  drawProfileBadge();
   display_.drawFastHLine(0, 10, 128, SSD1306_WHITE);
 
   if (menu_ && menu_->isOpen()) {

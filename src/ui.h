@@ -91,6 +91,7 @@ class UiNotifier : public lcr::INotifier {
   void draw(uint32_t nowMs);
   void drawTestReport();
   void drawMenu();
+  void drawProfileBadge();
 
   AudioIo& audio_;
   lcr::Settings settings_;
