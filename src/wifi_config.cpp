@@ -24,12 +24,20 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
   snprintf(password, passCap, "%08lu", static_cast<unsigned long>(esp_random() % 100000000UL));
 
   WiFi.mode(WIFI_AP);
+  // Indirizzo della scheda e rete esplicitamente (come il valore predefinito): se il telefono non raggiunge la pagina
+  // le righe [wifi] sulla seriale dicono se si e' collegato, che indirizzo ha ricevuto e se le richieste arrivano.
+  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
+  WiFi.onEvent([](WiFiEvent_t ev, WiFiEventInfo_t info) {
+    if (ev == ARDUINO_EVENT_WIFI_AP_STACONNECTED) Serial.println("[wifi] un client si e' collegato alla rete");
+    if (ev == ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED) Serial.printf("[wifi] indirizzo assegnato al client: %s\n", IPAddress(info.wifi_ap_staipassigned.ip.addr).toString().c_str());
+    if (ev == ARDUINO_EVENT_WIFI_AP_STADISCONNECTED) Serial.println("[wifi] il client si e' scollegato");
+  });
   if (!WiFi.softAP(ssid, password, 1, 0, 2)) {  // canale 1, non nascosta, al massimo 2 client
     WiFi.mode(WIFI_OFF);
     return false;
   }
   server = new WebServer(80);
-  server->on("/", HTTP_GET, []() { server->send_P(200, "text/html; charset=utf-8", kWifiPage); });
+  server->on("/", HTTP_GET, []() { Serial.println("[wifi] richiesta della pagina"); server->send_P(200, "text/html; charset=utf-8", kWifiPage); });
   server->on("/cfg", HTTP_GET, []() {
     String line = server->arg("c");
     char reply[260];
@@ -57,6 +65,7 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
   dns = new DNSServer();
   dns->start(53, "*", WiFi.softAPIP());
   server->begin();
+  Serial.printf("[wifi] punto di accesso %s, indirizzo %s, canale 1\n", ssid, WiFi.softAPIP().toString().c_str());
   active_ = true;
   return true;
 }
