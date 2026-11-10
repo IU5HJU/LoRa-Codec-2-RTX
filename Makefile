@@ -29,7 +29,7 @@ test-page:
 # Decodificatore offline dei pacchetti catturati con un SDR (tools/lcr_decode.cpp): build/lcr_decode
 lcr_decode: build/lcr_decode
 
-# Confronto dei modi del Codec2 sulla stessa registrazione (tools/codec_compare.c): build/codec_compare. Usa gli stessi
+# Confronto dei modi del Codec2 sulla stessa registrazione, con la catena audio della scheda (tools/codec_compare.cpp): build/codec_compare. Usa gli stessi
 # sorgenti del Codec2 che gira sulle schede (third_party/esp32_codec2-1.0.7); serve solo un compilatore C.
 CODEC2_DIR := third_party/esp32_codec2-1.0.7/src
 CODEC2_SRC := codec2.c codec2_fft.c kiss_fft.c kiss_fftr.c lpc.c lsp.c nlp.c pack.c phase.c postfilter.c quantise.c sine.c \
@@ -38,9 +38,10 @@ CODEC2_SRC := codec2.c codec2_fft.c kiss_fft.c kiss_fftr.c lpc.c lsp.c nlp.c pac
   dump.c mpdecode_core.c phi0.c golay23.c
 codec_compare: build/codec_compare
 
-build/codec_compare: tools/codec_compare.c $(addprefix $(CODEC2_DIR)/,$(CODEC2_SRC))
-	@mkdir -p build
-	$(CC) -O2 -w -I$(CODEC2_DIR) -o $@ $^ -lm
+build/codec_compare: tools/codec_compare.cpp lib/voicecore/audio_frontend.cpp lib/voicecore/audio_frontend.h $(addprefix $(CODEC2_DIR)/,$(CODEC2_SRC))
+	@mkdir -p build/c2obj
+	@for f in $(CODEC2_SRC); do $(CC) -O2 -w -I$(CODEC2_DIR) -c $(CODEC2_DIR)/$$f -o build/c2obj/$${f%.c}.o || exit 1; done
+	$(CXX) -std=c++17 -O2 -Wall -Wextra -Ilib/voicecore -I$(CODEC2_DIR) -o $@ tools/codec_compare.cpp lib/voicecore/audio_frontend.cpp build/c2obj/*.o -lm
 
 # Ricezione in tempo reale (tools/lcr_live.cpp): build/lcr_live
 lcr_live: build/lcr_live

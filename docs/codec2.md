@@ -75,21 +75,24 @@ Con la stessa struttura di pacchetti di oggi (12 frame per pacchetto, parità 1 
 
 ## 5. Ascolto comparativo
 
-**Il modo più semplice:** `tools/confronta-codec.sh` guida tutto: **mostra i microfoni trovati e fa scegliere quello da usare**, con una prova di 3 secondi che si riascolta; poi Invio per iniziare (conto alla rovescia di 3 secondi), Invio per finire la registrazione, poi confronta con tutti i modi e mostra un menu per ascoltare l'originale, ogni modo e i tre modi compatti con il 5% di frame persi, quante volte si vuole. Le registrazioni restano in `~/confronto-codec/`. Sotto il funzionamento a mano.
+**Il modo più semplice:** `tools/confronta-codec.sh` guida tutto: **mostra i microfoni trovati e fa scegliere quello da usare**, con una prova di 3 secondi che si riascolta; poi Invio per iniziare (conto alla rovescia di 3 secondi), Invio per finire la registrazione, confronto con tutti i modi e un menu per ascoltare quante volte si vuole: la voce originale, **quello che il codec riceve davvero**, ogni modo, i tre modi compatti con il 5% di frame persi e il 1200 senza la catena audio della scheda. Le registrazioni restano in `~/confronto-codec/`.
 
-Lo strumento **`codec_compare`** (`tools/codec_compare.c`) codifica e decodifica la stessa registrazione con tutti i modi e scrive un file WAV per ciascuno, con la tabella di bit al secondo, byte totali e CPU del PC.
+**La catena audio della scheda (importante).** Le schede non danno al Codec2 l'audio grezzo del microfono: lo passano da un **filtro passa-alto a 300 Hz**, dalla decimazione da 16 a 8 kHz e da un **AGC che porta la voce a circa −24 dBFS** (`lib/voicecore/audio_frontend.*`). Una prima versione dello strumento (10/11/2026) non lo faceva: il microfono di un portatile registra a circa −48 dBFS e con il rimbombo di fondo, così il Codec2 riceveva un segnale 24 dB più basso di quello che arriva sulla scheda e suonava molto peggio, e la registrazione originale si sentiva appena. **Ora lo strumento usa lo stesso codice della scheda** e registra a 16 kHz come il suo microfono. Con `--grezzo` si può ancora sentire il confronto senza la catena (e con il menu dello script: "1200 SENZA la catena audio della scheda").
+
+Lo strumento **`codec_compare`** (`tools/codec_compare.cpp`) fa lo stesso a mano:
 
 ```bash
-make codec_compare                                  # serve solo un compilatore C
-arecord -f S16_LE -r 8000 -c 1 -d 10 voce.wav      # 10 secondi di voce a 8 kHz (alsa-utils)
-build/codec_compare voce.wav confronto             # scrive confronto/originale.wav, 3200.wav, 1200.wav, ...
+make codec_compare                                  # serve solo un compilatore C e C++
+arecord -f S16_LE -r 16000 -c 1 -d 10 voce.wav     # 10 secondi a 16 kHz (alsa-utils)
+build/codec_compare voce.wav confronto             # scrive confronto/originale.wav, ingresso-scheda.wav, 3200.wav, 1200.wav, ...
 build/codec_compare voce.wav confronto --modi 1200,700C,450 --perdita 5
 ffplay -nodisp -autoexit confronto/1200.wav
 ```
 
-- Ingresso: WAV PCM a 16 bit, mono, 8000 Hz (`--raw` per s16le grezzo). Altri formati: `ffmpeg -i in.wav -ar 8000 -ac 1 -sample_fmt s16 voce.wav`.
-- `--perdita N` butta via il N% dei frame a caso, con frame a zero come fa la ricezione quando un pacchetto non si recupera: serve a sentire **come degrada** ogni modo.
-- **Cosa ascoltare:** per il **Messaggio** confronta 1200, 700C e 450 (si capiscono le parole? i nominativi? i numeri?); per la **Qualità** 3200, 2400 e 1200 (quanto è più "vera" la voce?). L'audio di una scheda passa dal microfono INMP441 e dall'AGC: parla a un livello normale (picchi attorno a -6 dBFS) per un confronto equo.
+- Ingresso: WAV PCM a 16 bit, mono, a **16000 Hz** (come il microfono della scheda) oppure a 8000 Hz. Altri formati: `ffmpeg -i in.wav -ar 16000 -ac 1 -sample_fmt s16 voce.wav`.
+- Stampa il livello della registrazione e quello dopo la catena della scheda (deve avvicinarsi a −24 dBFS), e avvisa se la registrazione è troppo bassa (sotto −55 dBFS) o satura.
+- `--perdita N` butta via il N% dei frame a caso, con frame a zero come fa la ricezione quando un pacchetto non si recupera: serve a sentire **come degrada** ogni modo. `--fondo DBFS` è il fondo del microfono per la soglia dell'AGC (predefinito −60, come la scheda).
+- **Cosa ascoltare:** per il **Messaggio** confronta 1200, 700C e 450 (si capiscono le parole? i nominativi? i numeri?); per la **Qualità** 3200, 2400 e 1200. Il microfono resta diverso da quello della scheda (l'INMP441 è digitale e pulito, quello di un portatile è più rumoroso): per un confronto equo parla a circa 20 cm.
 - Lo strumento **non** è nei test automatici di GitHub Actions (non è codice di prodotto): si prova a mano.
 
 ## 6. Cosa resta da fare
