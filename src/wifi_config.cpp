@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <WebServer.h>
+#include <Preferences.h>
 #include <WiFi.h>
 #include <esp_random.h>
 
@@ -15,8 +16,26 @@ bool rebootRequested = false;
 
 bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, size_t passCap) {
   handler = h;
-  // Password casuale di 8 cifre (esp_random usa l'hardware): non esiste una password uguale per tutte le schede.
-  snprintf(password, passCap, "%08lu", static_cast<unsigned long>(esp_random() % 100000000UL));
+  // Password casuale di 8 cifre (esp_random usa l'hardware), generata la prima volta e poi salvata nella scheda: resta
+  // la stessa a ogni avvio del Wi-Fi (si rigenera solo con i valori di fabbrica). Non esiste una password uguale per
+  // tutte le schede.
+  {
+    Preferences pref;
+    String saved;
+    if (pref.begin("lcr", true)) {
+      saved = pref.getString("wpass", "");
+      pref.end();
+    }
+    if (saved.length() == 8) {
+      snprintf(password, passCap, "%s", saved.c_str());
+    } else {
+      snprintf(password, passCap, "%08lu", static_cast<unsigned long>(esp_random() % 100000000UL));
+      if (pref.begin("lcr", false)) {
+        pref.putString("wpass", password);
+        pref.end();
+      }
+    }
+  }
 
   // Come nel Tracker LoRa APRS di Guzman (wifi_utils.cpp, startAutoAP): modo NULL, poi AP, softAP(nome, password) con i
   // valori predefiniti, nessun indirizzo configurato a mano e nessun DNS. Le righe [wifi] sulla seriale dicono se il
@@ -39,6 +58,7 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
   server->on("/", HTTP_GET, []() { Serial.println("[wifi] richiesta della pagina"); server->send_P(200, "text/html; charset=utf-8", kWifiPage); });
   server->on("/cfg", HTTP_GET, []() {
     String line = server->arg("c");
+    Serial.printf("[wifi] comando dalla pagina: %s\n", line.c_str());
     char reply[260];
     reply[0] = 0;
     // Solo comandi CFG: il resto non ha senso da qui. I comandi che usano audio o radio non ci sono (la scheda e' ferma).
