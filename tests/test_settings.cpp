@@ -30,6 +30,14 @@ struct FakeStorage : ISettingsStorage {
   }
 };
 
+static void testVolumeMigration() {
+  CHECK(migrateOldVolume(0) == 0);
+  CHECK(migrateOldVolume(10) == 5 && migrateOldVolume(9) == 4 && migrateOldVolume(8) == 3);  // stesso livello di prima
+  CHECK(migrateOldVolume(7) == 2 && migrateOldVolume(6) == 1);
+  CHECK(migrateOldVolume(3) == 1 && migrateOldVolume(1) == 1);  // piu' bassi di prima non esistono piu': il minimo
+  CHECK(kDefaultVolume == 5);
+}
+
 Settings make(const char* cs, uint32_t khz, int dbm, int vol = kDefaultVolume, int floorDb = kDefaultMicFloorDb) {
   Settings s;
   memcpy(s.callsign, cs, strlen(cs) < kMaxCallsign ? strlen(cs) : kMaxCallsign);
@@ -148,7 +156,7 @@ void testGpsSetting() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=5 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -380,6 +388,7 @@ void testSmallBuffer() {
 }  // namespace
 
 int main() {
+  testVolumeMigration();
   testValidate();
   testLoad();
   testNotCommand();

@@ -336,7 +336,7 @@ void AudioIo::beep(float freqHz, uint32_t durationMs) {
   if (back_.muted()) return;
   if (durationMs > 600) durationMs = 600;
   ampOn();
-  const float amp = 0.25f * std::pow(10.0f, back_.volumeDb() / 20.0f) * 32767.0f;
+  const float amp = 0.25f * std::pow(10.0f, std::min(back_.volumeDb(), 0.0f) / 20.0f) * 32767.0f;  // i bip non salgono col guadagno
   const size_t total = static_cast<size_t>(kSampleRate / 1000) * durationMs;
   const size_t fade = 80;  // 5 ms: evita i clic
   size_t done = 0;

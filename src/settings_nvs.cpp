@@ -35,7 +35,9 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.freqMsgKhz = p.getUInt("fmsg", out.freqKhz);  // assente nelle versioni precedenti: stessa frequenza dello Standard
     out.freqQualKhz = p.getUInt("fqua", out.freqKhz);
     out.powerDbm = p.getInt("pwr", 0);
-    out.volume = p.getInt("vol", lcr::kDefaultVolume);  // assente nelle versioni precedenti
+    // "vol2" = scala nuova (5 = 0 dB, fino a +15 dB). Se manca c'e' al massimo il vecchio "vol" (10 = 0 dB): si converte.
+    out.volume = p.isKey("vol2") ? p.getInt("vol2", lcr::kDefaultVolume)
+                                 : (p.isKey("vol") ? lcr::migrateOldVolume(p.getInt("vol", 10)) : lcr::kDefaultVolume);
     out.micFloorDb = p.getInt("floor", lcr::kDefaultMicFloorDb);
     out.profile = static_cast<uint8_t>(p.getUChar("prof", lcr::kProfileStandard));  // assente nelle versioni precedenti
     out.gpsOn = p.getBool("gps", false);  // assenti nelle versioni precedenti
@@ -52,7 +54,7 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
   Preferences p;
   if (!p.begin(kNamespace, false)) return false;
   const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putUInt("fqua", s.qualFreqKhz()) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
-                    p.putInt("vol", s.volume) > 0 &&
+                    p.putInt("vol2", s.volume) > 0 &&
                     p.putInt("floor", s.micFloorDb) > 0 && p.putUChar("prof", s.profile) > 0 &&
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;

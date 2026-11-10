@@ -77,12 +77,14 @@ static void testVolume() {
   const double half = runTone(be, 1000, -30, 4).rmsDb;
   CHECK(std::fabs((ref - half) - 6.0) < 0.3);
 
-  be.setVolumeStep(10);
+  be.setVolumeStep(5);  // il passo 5 e' 0 dB (il vecchio massimo)
   CHECK(std::fabs(be.volumeDb()) < 0.01 && !be.muted());
-  be.setVolumeStep(5);
-  CHECK(std::fabs(be.volumeDb() - (-15.0)) < 0.01);
+  be.setVolumeStep(10);  // guadagno: +15 dB
+  CHECK(std::fabs(be.volumeDb() - 15.0) < 0.01);
+  be.setVolumeStep(7);
+  CHECK(std::fabs(be.volumeDb() - 6.0) < 0.01);
   be.setVolumeStep(1);
-  CHECK(std::fabs(be.volumeDb() - (-27.0)) < 0.01);
+  CHECK(std::fabs(be.volumeDb() - (-12.0)) < 0.01);
   be.setVolumeStep(0);
   CHECK(be.muted());
   const Result silent = runTone(be, 1000, -10, 4);
@@ -90,8 +92,8 @@ static void testVolume() {
   be.setVolumeStep(3);  // il muto si toglie
   CHECK(!be.muted() && runTone(be, 1000, -10, 4).peak > 0);
 
-  be.setVolumeDb(+12);  // mai oltre 0 dB
-  CHECK(be.volumeDb() <= 0.0f);
+  be.setVolumeDb(+30);  // mai oltre +15 dB
+  CHECK(std::fabs(be.volumeDb() - 15.0) < 0.01);
   be.setVolumeDb(-200);
   CHECK(be.volumeDb() >= -60.0f);
 }

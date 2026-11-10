@@ -146,8 +146,8 @@
       <p class="hint">Da 2 a 17 dBm.</p>
 
       <label for="volume">Volume iniziale dell'altoparlante</label>
-      <input id="volume" type="number" min="0" max="10" step="1" placeholder="7" disabled required>
-      <p class="hint">Da 0 (muto) a 10, in passi da 3 dB. Con il pulsante volume (GPIO15) si cambia poi a scheda accesa; allo spegnimento torna a questo valore.</p>
+      <input id="volume" type="number" min="0" max="10" step="1" placeholder="5" disabled required>
+      <p class="hint">Da 0 (muto) a 10, in passi da 3 dB: il <strong>5</strong> è il livello di prima (0 dB), da 6 a 10 la voce si alza fino a +15 dB (con il limitatore che evita la saturazione). Con il pulsante volume (GPIO15) si cambia poi a scheda accesa; allo spegnimento torna a questo valore.</p>
 
       <label for="micfloor">Fondo del microfono (dBFS)</label>
       <p class="hint floorhint"><strong>Per misurarlo: resta in silenzio, non toccare il microfono e premi "Misura il fondo"</strong> (3 secondi). Il valore trovato viene salvato e vale subito.

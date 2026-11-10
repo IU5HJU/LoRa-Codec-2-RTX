@@ -238,7 +238,7 @@ static void runTonePhase(bool rf) {
 // o nell'amplificatore. La fase 2 richiede un nominativo vero e l'antenna collegata, come ogni trasmissione.
 // I risultati tornano alla pagina di configurazione; il giudizio e' dell'operatore.
 static void runAudioTest() {
-  constexpr int kTestVolumeStep = 5;  // -15 dB: udibile ma non forte
+  constexpr int kTestVolumeStep = 1;  // -12 dB: udibile ma non forte (prima della scala nuova era il passo 5, -15 dB)
   const int savedVolume = audio.volumeStep();
   audio.setVolumeStep(kTestVolumeStep);
 
@@ -361,7 +361,7 @@ static void runCodecTest() {
   };
 
   const int savedVolume = audio.volumeStep();
-  audio.setVolumeStep(10);
+  audio.setVolumeStep(lcr::AudioBackEnd::kUnityStep);  // 0 dB
   ui.showMessage("ASCOLTO 1", "senza codec");
   delay(500);
   audio.resetBackEnd();

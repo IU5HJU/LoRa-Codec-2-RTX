@@ -8,14 +8,14 @@
 // configurazione (Web Serial) ma usabile anche a mano:
 //
 //   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=2   (versione del firmware e del protocollo)
-//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0 pos=off qth=none gps=off
+//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=5 micfloor=-60 profile=std board=t3 reboot=0 test=0 pos=off qth=none gps=off
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
 //   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000; frequenza del profilo Standard)
 //   CFG SET FREQMSG 433.900      -> CFG OK freqmsg=433.900     (come FREQ, per il profilo Messaggio; puo' essere uguale a FREQ)
 //   CFG SET POWER 10             -> CFG OK power=10            (dBm, 2-17)
 //   CFG SET MICFLOOR -60         -> CFG OK micfloor=-60        (fondo del microfono in dBFS, da -80 a -36)
 //   CFG MIC MEASURE              -> misura il fondo per 3 s (stare in silenzio), poi: CFG MIC fondo=-61 min=-63 max=-58 frames=75
-//   CFG SET VOLUME 7             -> CFG OK volume=7            (0 = muto, 1-10 in passi da 3 dB)
+//   CFG SET VOLUME 7             -> CFG OK volume=7            (0 = muto, 1-10 in passi da 3 dB; 5 = 0 dB, 6-10 = guadagno fino a +15 dB)
 //   CFG SET FREQQUAL 433.900     -> CFG OK freqqual=433.900    (come FREQ, per il profilo Qualita')
 //   CFG SET PROFILE MSG          -> CFG OK profile=msg         (STD = Standard, MSG = Messaggio SF12/BW125, QUA = Qualita' 3200 SF7; vale dal riavvio)
 //   CFG SET POS ON               -> CFG OK pos=on             (trasmette la posizione nel pacchetto START; di default OFF; serve il QTH o un GPS)
@@ -43,8 +43,12 @@ constexpr uint32_t kMaxFreqKhz = 440000;
 constexpr int kMinPowerDbm = 2;   // limiti dell'SX1278 senza PA_BOOST
 constexpr int kMaxPowerDbm = 17;
 constexpr int kMinVolume = 0;  // muto
-constexpr int kMaxVolume = 10;  // 0 dB
-constexpr int kDefaultVolume = 7;
+constexpr int kMaxVolume = 10;  // +15 dB (il passo 5 e' 0 dB; vedi AudioBackEnd)
+constexpr int kDefaultVolume = 5;  // 0 dB
+
+// Fino al 10/11/2026 il passo 10 era 0 dB e i passi scendevano di 3 dB; ora il passo 5 e' 0 dB. Un volume salvato con la
+// scala vecchia (v) si porta al passo che dava lo stesso livello: v-5, almeno 1 (0 = muto resta muto).
+inline int migrateOldVolume(int v) { return v <= 0 ? 0 : (v - 5 < 1 ? 1 : (v - 5 > 5 ? 5 : v - 5)); }
 
 // Fondo del microfono: livello dell'ingresso dell'AGC (dopo il passa-alto) in silenzio. Sopra il fondo + kMicGateMarginDb
 // l'AGC lavora (e amplifica); sotto, il guadagno scende e il rumore non viene amplificato.

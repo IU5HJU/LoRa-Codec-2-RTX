@@ -106,3 +106,9 @@ frame Codec2 decodificato (int16 @ 8 kHz, 320 campioni)
 
 I valori sono verificati con segnali sintetici sul PC (`tests/test_output.cpp`) e vanno regolati con altoparlante e amplificatore reali.
 Il consumo di stack del raddoppio (`Interpolator2`) è circa 3 kB.
+
+## Volume e guadagno (10/11/2026)
+
+Il volume ha ancora i passi da 1 a 10 (0 = muto, passi da 3 dB), ma la scala è stata spostata: il **passo 5 è 0 dB** (il vecchio passo 10) e i **passi 6-10 aggiungono guadagno digitale fino a +15 dB**, perché in uso reale il volume stava sempre al massimo. L'AGC porta il parlato a -24 dBFS, poi il volume lo moltiplica; il **limitatore morbido** (soglia 0,6, picco massimo 0,9 del fondo scala) comprime i picchi, quindi a +15 dB la voce è molto più forte ma più compressa e, sui picchi, può distorcere. I bip e i toni di prova non salgono oltre il livello a 0 dB. Il volume iniziale predefinito è il passo 5; quelli salvati con la scala vecchia vengono convertiti.
+
+**Se serve ancora più volume, una modifica hardware semplice:** il pin `GAIN` del MAX98357A, oggi libero (9 dB), si può collegare a `GND` per **12 dB (+3 dB)** oppure a `GND` con una resistenza da 100 kΩ per **15 dB (+6 dB)**. Non conviene farla prima di aver provato il guadagno software: con l'alimentazione a 3,3 V (a batteria) l'amplificatore ha meno potenza che a 5 V (USB) e il guadagno in più si limita a saturare.

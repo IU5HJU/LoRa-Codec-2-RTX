@@ -37,7 +37,7 @@ AudioBackEnd::AudioBackEnd(const BackEndConfig& cfg) : cfg_(cfg), volumeDb_(cfg.
 }
 
 void AudioBackEnd::setVolumeDb(float db) {
-  if (db > 0.0f) db = 0.0f;
+  if (db > kMaxVolumeDb) db = kMaxVolumeDb;
   if (db < -60.0f) db = -60.0f;
   volumeDb_ = db;
   muted_ = false;
@@ -49,7 +49,7 @@ void AudioBackEnd::setVolumeStep(int step) {
     return;
   }
   if (step > kVolumeSteps) step = kVolumeSteps;
-  setVolumeDb(-3.0f * static_cast<float>(kVolumeSteps - step));
+  setVolumeDb(kStepDb * static_cast<float>(step - kUnityStep));
 }
 
 void AudioBackEnd::reset() {

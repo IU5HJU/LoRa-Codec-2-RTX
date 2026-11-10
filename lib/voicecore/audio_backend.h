@@ -50,7 +50,12 @@ struct BackEndConfig {
 
 class AudioBackEnd {
  public:
-  static constexpr int kVolumeSteps = 10;  // 0 = muto, 10 = 0 dB
+  // Volume: 0 = muto; 1..10 in passi da 3 dB. Il passo 5 e' 0 dB (il vecchio massimo); i passi 6..10 danno guadagno digitale
+  // (fino a +15 dB), con il limitatore morbido che tiene i picchi sotto il fondo scala. Passo 1 = -12 dB.
+  static constexpr int kVolumeSteps = 10;
+  static constexpr int kUnityStep = 5;
+  static constexpr float kStepDb = 3.0f;
+  static constexpr float kMaxVolumeDb = kStepDb * (kVolumeSteps - kUnityStep);  // +15 dB
 
   explicit AudioBackEnd(const BackEndConfig& cfg = BackEndConfig());
 

@@ -50,7 +50,7 @@
 
 // Volume iniziale dell'altoparlante (0 = muto, 1-10 in passi da 3 dB, 10 = massimo). Si cambia anche
 // dalla configurazione (CFG SET VOLUME) e, a scheda accesa, con il pulsante volume su GPIO15.
-#define LCR_VOLUME_STEP 7
+#define LCR_VOLUME_STEP 5  // 5 = 0 dB (fino a 10 = +15 dB)
 
 // Versione del firmware: la imposta tools/git_version.py in compilazione (git describe); senza git vale "dev".
 #ifndef LCR_VERSION
