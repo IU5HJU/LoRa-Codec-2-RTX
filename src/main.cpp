@@ -544,6 +544,8 @@ void loop() {
   if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) {
     if (act.outcome.id == lcr::kMenuWifiId) startWifiConfig();
     else applyProfileChoice(act.outcome.id);
+    // Wi-Fi attivo: lo schermo con rete e password non deve essere ridisegnato da ui.loop() in fondo a questo giro
+    if (wifiConfig.active()) return;
   }
 
   // GPS: lettura della seriale e posizione da usare (il GPS se ha un fix recente, altrimenti il QTH fisso). Si aggiorna
