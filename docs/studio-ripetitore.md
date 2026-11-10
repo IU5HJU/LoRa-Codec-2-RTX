@@ -2,6 +2,10 @@
 
 Data: 10/11/2026. Stato: **studio, nessun codice scritto**. I numeri di tempo in aria sono calcolati con la formula di Semtech, non misurati. Premesse e decisioni già prese sul ripetitore: [roadmap.md](roadmap.md) ("Chi ripete cosa").
 
+## Stato (10/11/2026)
+
+**Scelta l'opzione A** (due schede, un solo profilo: il Codec2 1200 Standard). **Fase 1 scritta e provata sul PC:** flag `RELAYED` (bit 7) nel protocollo e logica di decisione del ripetitore (`lib/voicecore/repeater.*`, test `tests/test_repeater.cpp`: flag, anelli, duplicati, filtro dei modi, durata della sessione e catena completa con un pacchetto perso e ricostruito dalla parità). **Ancora da fare:** firmware delle due schede (ruolo RX e ruolo TX con la seriale), comandi del sysop, identificazione periodica, prove sul banco.
+
 ## Obiettivo
 
 Un ripetitore fatto da **due schede**: una sempre in **ricezione** (frequenza di ingresso) e una sempre in **trasmissione** (frequenza di uscita), che lavorano **nello stesso momento**. Il vincolo da superare: ripetere **qualsiasi modo** del progetto (Standard, Messaggio, Qualità), cosa che la roadmap dell'8/11/2026 escludeva per la Qualità ("solo collegamento diretto"). Qui si valuta se e come si può.
