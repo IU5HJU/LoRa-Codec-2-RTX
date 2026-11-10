@@ -75,7 +75,7 @@ Con la stessa struttura di pacchetti di oggi (12 frame per pacchetto, parità 1 
 
 ## 5. Ascolto comparativo
 
-**Il modo più semplice:** `tools/confronta-codec.sh` guida tutto: Invio per iniziare (conto alla rovescia di 3 secondi), Invio per finire la registrazione, poi confronta con tutti i modi e mostra un menu per ascoltare l'originale, ogni modo e i tre modi compatti con il 5% di frame persi, quante volte si vuole. Le registrazioni restano in `~/confronto-codec/`. Sotto il funzionamento a mano.
+**Il modo più semplice:** `tools/confronta-codec.sh` guida tutto: **mostra i microfoni trovati e fa scegliere quello da usare**, con una prova di 3 secondi che si riascolta; poi Invio per iniziare (conto alla rovescia di 3 secondi), Invio per finire la registrazione, poi confronta con tutti i modi e mostra un menu per ascoltare l'originale, ogni modo e i tre modi compatti con il 5% di frame persi, quante volte si vuole. Le registrazioni restano in `~/confronto-codec/`. Sotto il funzionamento a mano.
 
 Lo strumento **`codec_compare`** (`tools/codec_compare.c`) codifica e decodifica la stessa registrazione con tutti i modi e scrive un file WAV per ciascuno, con la tabella di bit al secondo, byte totali e CPU del PC.
 

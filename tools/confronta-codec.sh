@@ -20,16 +20,73 @@ fi
 DIR="$OUT/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$DIR"
 
+# --- Scelta del microfono ---
+# Con PulseAudio (Ubuntu MATE) si elencano le sorgenti di ingresso (senza i "monitor", che sono l'audio in uscita);
+# altrimenti si elencano le schede audio di ALSA.
+SRC=""      # sorgente PulseAudio scelta ("" = predefinita)
+ALSADEV=""  # dispositivo ALSA scelto ("" = predefinito)
+NOME="predefinito del sistema"
+scegli_microfono() {
+  local names=() descs=() n d
+  if command -v pactl >/dev/null 2>&1 && pactl info >/dev/null 2>&1; then
+    while IFS='|' read -r n d; do names+=("$n"); descs+=("$d"); done < <(
+      pactl list sources | awk -F': ' '$1 ~ /Name$/ {name=$2} $1 ~ /Description$/ {if (name !~ /\.monitor$/) print name "|" $2}')
+    if [ ${#names[@]} -eq 0 ]; then echo "Nessun microfono trovato da PulseAudio: si usa quello predefinito."; return; fi
+    local def; def=$(pactl get-default-source 2>/dev/null || pactl info | sed -n 's/^Default Source: //p')
+    echo
+    echo "Microfoni trovati (scrivi il numero di quello che vuoi usare):"
+    local i
+    for i in "${!names[@]}"; do
+      echo "  $((i+1))) ${descs[$i]}$([ "${names[$i]}" = "$def" ] && echo "   <-- predefinito del sistema")"
+    done
+    local c
+    read -rp "Scelta [Invio = il predefinito]: " c
+    if [ -n "$c" ] && [ "$c" -ge 1 ] 2>/dev/null && [ "$c" -le ${#names[@]} ]; then
+      SRC="${names[$((c-1))]}"; NOME="${descs[$((c-1))]}"
+    elif [ -n "$def" ]; then
+      for i in "${!names[@]}"; do [ "${names[$i]}" = "$def" ] && NOME="${descs[$i]}"; done
+    fi
+  else
+    echo
+    echo "Schede audio di registrazione trovate (ALSA):"
+    arecord -l 2>/dev/null | grep '^card' | sed 's/^/  /'
+    local c dv
+    read -rp "Numero della scheda e del dispositivo, per esempio 1,0 [Invio = il predefinito]: " c
+    if [[ "$c" =~ ^[0-9]+,[0-9]+$ ]]; then ALSADEV="plughw:$c"; NOME="scheda $c"; fi
+  fi
+}
+rec() {   # rec <file> [secondi]: registra a 8 kHz, mono, 16 bit dal microfono scelto
+  local f=$1; shift
+  if [ -n "$SRC" ]; then PULSE_SOURCE="$SRC" arecord -q -D pulse -f S16_LE -r 8000 -c 1 "$@" "$f"
+  elif [ -n "$ALSADEV" ]; then arecord -q -D "$ALSADEV" -f S16_LE -r 8000 -c 1 "$@" "$f"
+  else arecord -q -f S16_LE -r 8000 -c 1 "$@" "$f"; fi
+}
+while true; do
+  scegli_microfono
+  echo
+  echo "Uso il microfono: $NOME"
+  echo "Prova rapida: dopo il conto alla rovescia di 3 secondi parla per 3 secondi, poi riascolti."
+  read -rp "Premi Invio per la prova: "
+  for n in 3 2 1; do echo "$n..."; sleep 1; done
+  echo ">>> parla adesso (3 secondi) <<<"
+  rec "$DIR/prova-microfono.wav" -d 3
+  echo "Riascolto..."
+  ffplay -nodisp -autoexit -loglevel quiet "$DIR/prova-microfono.wav"
+  read -rp "Ti sei sentito bene? [S = si, procedo; n = scelgo un altro microfono] " ok
+  case "$ok" in [nN]*) SRC=""; ALSADEV=""; NOME="predefinito del sistema"; continue ;; esac
+  break
+done
+
 echo "=== Confronto dei modi del Codec2 ==="
 echo
-echo "Leggi una frase come questa, a voce normale, a circa 20 cm dal microfono:"
+echo "Poi si registra la voce vera. Leggi una frase come questa, a voce normale, a circa 20 cm dal microfono:"
 echo "  \"Qui IU5HJU, prova numero 4 5 7. Ripeto: 4 5 7. Passo.\""
 echo "Meglio 10-20 secondi, anche piu' frasi. Poi aspetta un secondo e premi Invio per finire."
 echo
 read -rp "Premi Invio quando sei pronto: "
 for n in 3 2 1; do echo "$n..."; sleep 1; done
 echo ">>> REGISTRO: parla adesso <<<"
-arecord -q -f S16_LE -r 8000 -c 1 "$DIR/voce.wav" &
+rec "$DIR/voce.wav" &
 REC=$!
 read -rp "(Premi Invio per FINIRE la registrazione) "
 kill -INT "$REC" 2>/dev/null
