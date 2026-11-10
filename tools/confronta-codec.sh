@@ -66,20 +66,38 @@ rec() {   # rec <file> [opzioni]: registrazione in primo piano (per la prova di 
   set_reccmd
   "${RECCMD[@]}" "$@" "$f"
 }
+# Il livello del microfono e' CRITICO: il Codec2 (come FreeDV) e' tarato su un livello preciso, e le schede lo ottengono
+# con un filtro passa-alto e un AGC. Qui lo strumento di confronto normalizza la registrazione, ma una registrazione troppo
+# bassa, satura o rumorosa resta una cattiva registrazione: per questo la prova rapida misura il livello e lo giudica.
 while true; do
   scegli_microfono
-  echo
-  echo "Uso il microfono: $NOME"
-  echo "Prova rapida: dopo il conto alla rovescia di 3 secondi parla per 3 secondi, poi riascolti."
-  read -rp "Premi Invio per la prova: "
-  for n in 3 2 1; do echo "$n..."; sleep 1; done
-  echo ">>> parla adesso (3 secondi) <<<"
-  rec "$DIR/prova-microfono.wav" -d 3
-  echo "Riascolto..."
-  ffplay -nodisp -autoexit -loglevel quiet "$DIR/prova-microfono.wav"
-  read -rp "Ti sei sentito bene? [S = si, procedo; n = scelgo un altro microfono] " ok
-  case "$ok" in [nN]*) SRC=""; ALSADEV=""; NOME="predefinito del sistema"; continue ;; esac
-  break
+  NEXT=""
+  while [ -z "$NEXT" ]; do
+    echo
+    echo "Uso il microfono: $NOME"
+    echo "Prova rapida: dopo il conto alla rovescia di 3 secondi parla per 3 secondi con voce normale, poi riascolti."
+    read -rp "Premi Invio per la prova: "
+    for n in 3 2 1; do echo "$n..."; sleep 1; done
+    echo ">>> parla adesso (3 secondi) <<<"
+    rec "$DIR/prova-microfono.wav" -d 3
+    echo "Riascolto..."
+    ffplay -nodisp -autoexit -loglevel quiet "$DIR/prova-microfono.wav"
+    LIV=$("$REPO/build/codec_compare" "$DIR/prova-microfono.wav" --livello 2>&1)
+    echo
+    echo "$LIV" | sed 's/^/  /'
+    if echo "$LIV" | grep -q "VERDETTO: OK"; then
+      read -rp "Livello giusto. Procedo con la registrazione? [S = si, r = rifaccio la prova, n = scelgo un altro microfono] " ok
+      case "$ok" in [rR]*) ;; [nN]*) NEXT=cambia ;; *) NEXT=avanti ;; esac
+    else
+      echo
+      echo "Il livello NON e' quello giusto. Sistema il volume di ingresso: impostazioni audio -> Suono -> Ingresso, e guarda la"
+      echo "barra del livello mentre parli (deve salire bene oltre meta' senza arrivare in fondo). Poi rifai la prova."
+      read -rp "[Invio = rifaccio la prova, c = continuo comunque, n = scelgo un altro microfono] " ok
+      case "$ok" in [cC]*) NEXT=avanti ;; [nN]*) NEXT=cambia ;; *) ;; esac
+    fi
+  done
+  [ "$NEXT" = "avanti" ] && break
+  SRC=""; ALSADEV=""; NOME="predefinito del sistema"
 done
 
 echo "=== Confronto dei modi del Codec2 ==="
@@ -116,6 +134,7 @@ echo
 echo "=== Confronto dei modi ==="
 "$REPO/build/codec_compare" "$DIR/voce.wav" "$DIR/confronto" || fine 1
 "$REPO/build/codec_compare" "$DIR/voce.wav" "$DIR/con-perdita" --modi 1200,700C,450 --perdita 5 >/dev/null || fine 1
+"$REPO/build/codec_compare" "$DIR/voce.wav" "$DIR/grezzo" --modi 1200 --grezzo >/dev/null || fine 1
 
 play() { echo "  > $1"; ffplay -nodisp -autoexit -loglevel quiet "$1"; }
 
@@ -124,23 +143,27 @@ while true; do
   echo "Cosa vuoi ascoltare? (scrivi il numero)"
   PS3="Scelta: "
   select S in \
-    "La tua voce originale" \
+    "La tua voce originale (come registrata)" \
+    "Quello che il codec riceve: la tua voce al livello giusto (-24 dBFS) e senza rimbombo" \
     "1200 (lo Standard di oggi)" "700C (Messaggio, piu' compatto)" "450 (Messaggio, il piu' compatto)" \
     "3200 (Qualita')" "2400 (Qualita', ripiego)" \
     "1200 con il 5% di frame persi" "700C con il 5% di frame persi" "450 con il 5% di frame persi" \
+    "1200 SENZA normalizzare il livello (per capire la differenza)" \
     "Tutti di seguito, in ordine" "Esci"; do
     case $REPLY in
       1) play "$DIR/confronto/originale.wav" ;;
-      2) play "$DIR/confronto/1200.wav" ;;
-      3) play "$DIR/confronto/700C.wav" ;;
-      4) play "$DIR/confronto/450.wav" ;;
-      5) play "$DIR/confronto/3200.wav" ;;
-      6) play "$DIR/confronto/2400.wav" ;;
-      7) play "$DIR/con-perdita/1200.wav" ;;
-      8) play "$DIR/con-perdita/700C.wav" ;;
-      9) play "$DIR/con-perdita/450.wav" ;;
-      10) for f in confronto/originale confronto/1200 confronto/700C confronto/450 confronto/3200 confronto/2400; do play "$DIR/$f.wav"; sleep 1; done ;;
-      11) echo "I file restano in $DIR"; fine 0 ;;
+      2) play "$DIR/confronto/ingresso-codec.wav" ;;
+      3) play "$DIR/confronto/1200.wav" ;;
+      4) play "$DIR/confronto/700C.wav" ;;
+      5) play "$DIR/confronto/450.wav" ;;
+      6) play "$DIR/confronto/3200.wav" ;;
+      7) play "$DIR/confronto/2400.wav" ;;
+      8) play "$DIR/con-perdita/1200.wav" ;;
+      9) play "$DIR/con-perdita/700C.wav" ;;
+      10) play "$DIR/con-perdita/450.wav" ;;
+      11) play "$DIR/grezzo/1200.wav" ;;
+      12) for f in confronto/originale confronto/ingresso-codec confronto/1200 confronto/700C confronto/450 confronto/3200 confronto/2400; do play "$DIR/$f.wav"; sleep 1; done ;;
+      13) echo "I file restano in $DIR"; fine 0 ;;
       *) echo "Scelta non valida" ;;
     esac
     break

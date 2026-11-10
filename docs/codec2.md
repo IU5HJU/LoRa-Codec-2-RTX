@@ -75,22 +75,30 @@ Con la stessa struttura di pacchetti di oggi (12 frame per pacchetto, parità 1 
 
 ## 5. Ascolto comparativo
 
-**Il modo più semplice:** `tools/confronta-codec.sh` guida tutto: **mostra i microfoni trovati e fa scegliere quello da usare**, con una prova di 3 secondi che si riascolta; poi Invio per iniziare (conto alla rovescia di 3 secondi), Invio per finire la registrazione, poi confronta con tutti i modi e mostra un menu per ascoltare l'originale, ogni modo e i tre modi compatti con il 5% di frame persi, quante volte si vuole. Le registrazioni restano in `~/confronto-codec/`. Sotto il funzionamento a mano.
+**Il livello del microfono è critico** (10/11/2026). Il Codec2, come FreeDV, è tarato su un livello preciso dell'ingresso: troppo basso la voce si perde nel rumore di quantizzazione e di fondo, troppo alto il segnale satura. Una prima prova con il microfono di un portatile suonava "pessima" proprio per questo, rispetto alle schede: sulle schede il **filtro passa-alto a 300 Hz e l'AGC che porta la voce a −24 dBFS** (`lib/voicecore/audio_frontend.*`) tengono il livello giusto qualunque sia il microfono, la distanza e la voce. È uno dei pezzi più importanti del progetto.
 
-Lo strumento **`codec_compare`** (`tools/codec_compare.c`) codifica e decodifica la stessa registrazione con tutti i modi e scrive un file WAV per ciascuno, con la tabella di bit al secondo, byte totali e CPU del PC.
+**Il modo più semplice:** `tools/confronta-codec.sh` guida tutto:
+1. **sceglie il microfono** (elenco con i nomi leggibili) e fa una **prova di 3 secondi che si riascolta e si misura**: dice se il livello è giusto, troppo basso, troppo alto (satura), con troppo rumore di fondo o muto, e fa rifare la prova dopo aver regolato il volume di ingresso (Suono → Ingresso);
+2. registra la voce vera: Invio per iniziare (conto alla rovescia di 3 secondi), Invio per finire;
+3. confronta con tutti i modi e mostra un menu: la voce originale, **quello che il codec riceve davvero**, ogni modo, i tre modi compatti con il 5% di frame persi, il 1200 senza normalizzare. Le registrazioni restano in `~/confronto-codec/`.
+
+**Normalizzazione dello strumento.** `codec_compare` non rifà l'AGC della scheda (con la sua soglia, che con un microfono molto basso non basta): misura la registrazione **intera**, toglie il rimbombo con lo stesso passa-alto a 300 Hz e applica **un solo guadagno** che porta il **parlato** (i frame entro 15 dB dal 90° percentile) a **−24 dBFS**, come la scheda, riducendolo se i picchi satureranno. Funziona con un microfono basso, medio o alto; non può salvare una registrazione satura, muta o piena di rumore, e lo dice (`VERDETTO`). È provato con registrazioni sintetiche a livelli diversi (`tests/codec/test_compare.py`, in `make test-py`).
+
+Lo strumento **`codec_compare`** (`tools/codec_compare.c`) fa lo stesso a mano:
 
 ```bash
 make codec_compare                                  # serve solo un compilatore C
-arecord -f S16_LE -r 8000 -c 1 -d 10 voce.wav      # 10 secondi di voce a 8 kHz (alsa-utils)
-build/codec_compare voce.wav confronto             # scrive confronto/originale.wav, 3200.wav, 1200.wav, ...
+arecord -f S16_LE -r 8000 -c 1 -d 10 voce.wav      # 10 secondi a 8 kHz (alsa-utils)
+build/codec_compare voce.wav --livello             # misura soltanto e dice se il livello e' giusto
+build/codec_compare voce.wav confronto             # scrive confronto/originale.wav, ingresso-codec.wav, 3200.wav, 1200.wav, ...
 build/codec_compare voce.wav confronto --modi 1200,700C,450 --perdita 5
 ffplay -nodisp -autoexit confronto/1200.wav
 ```
 
 - Ingresso: WAV PCM a 16 bit, mono, 8000 Hz (`--raw` per s16le grezzo). Altri formati: `ffmpeg -i in.wav -ar 8000 -ac 1 -sample_fmt s16 voce.wav`.
-- `--perdita N` butta via il N% dei frame a caso, con frame a zero come fa la ricezione quando un pacchetto non si recupera: serve a sentire **come degrada** ogni modo.
-- **Cosa ascoltare:** per il **Messaggio** confronta 1200, 700C e 450 (si capiscono le parole? i nominativi? i numeri?); per la **Qualità** 3200, 2400 e 1200 (quanto è più "vera" la voce?). L'audio di una scheda passa dal microfono INMP441 e dall'AGC: parla a un livello normale (picchi attorno a -6 dBFS) per un confronto equo.
-- Lo strumento **non** è nei test automatici di GitHub Actions (non è codice di prodotto): si prova a mano.
+- Opzioni: `--perdita N` butta via il N% dei frame a caso (frame a zero, come la ricezione quando un pacchetto non si recupera); `--grezzo` salta la normalizzazione (per sentire la differenza); `--bersaglio DBFS` cambia il livello (predefinito −24, come la scheda).
+- **Cosa ascoltare:** per il **Messaggio** confronta 1200, 700C e 450 (si capiscono le parole? i nominativi? i numeri?); per la **Qualità** 3200, 2400 e 1200. Il microfono di un portatile resta più rumoroso dell'INMP441 della scheda: parla a circa 20 cm.
+- Lo strumento non è nei test di GitHub Actions per l'audio, ma la sua normalizzazione sì (`make test-py`).
 
 ## 6. Cosa resta da fare
 

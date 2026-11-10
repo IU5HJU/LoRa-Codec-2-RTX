@@ -100,6 +100,10 @@ Servono la scheda, il cavo USB e un monitor seriale; la radio non trasmette (nom
 
 Nota per i microfoni analogici o a elettrete: l'adattatore I2S del firmware è per microfoni digitali (INMP441 e simili). Altri richiederebbero un ingresso diverso.
 
+## Una conferma dal PC (10/11/2026)
+
+Provando i modi del Codec2 con la voce registrata da un normale portatile ([codec2.md](codec2.md)) è emerso quanto il **livello dell'ingresso sia critico**: con il microfono troppo basso la voce era quasi impercettibile e il Codec2 suonava "pessimo", con il microfono troppo alto la registrazione saturava, e solo in una finestra stretta di livelli il risultato era buono, **molto peggio di quanto fanno le schede**. Il motivo è che le schede portano la voce al livello giusto con un **filtro passa-alto a 300 Hz e un AGC a −24 dBFS, tarati con il fondo del microfono**: è la stessa sensibilità ai livelli che si conosce da FreeDV, e non va sottovalutata. Chi vuole adattare il progetto a un altro microfono deve ripartire da qui. Lo strumento di confronto dei codec ha una normalizzazione che rimedia sul PC e misura il livello della prova.
+
 ## Domande aperte per chi se ne intende di audio
 
 - **Passa-alto a 300 Hz:** adatto per Codec2 1200 e per il rumore osservato, o conviene una frequenza diversa? Sotto i 300 Hz il codec non ha comunque contenuto utile.
