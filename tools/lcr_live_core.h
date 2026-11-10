@@ -73,7 +73,9 @@ class LiveRx {
       pctShown_ = 0;
       if (isTest_) lt_.begin(p.session);
       char b[96];
-      std::snprintf(b, sizeof(b), "inizio %s, sessione %u", isTest_ ? "prova di collegamento" : "trasmissione", p.session);
+      const char* what = isTest_ ? "prova di collegamento"
+                                 : (p.mode == kModeCodec2_3200 ? "trasmissione Qualita' (Codec2 3200)" : "trasmissione (Codec2 1200)");
+      std::snprintf(b, sizeof(b), "inizio %s, sessione %u", what, p.session);
       info(b);
     }
     progress();
