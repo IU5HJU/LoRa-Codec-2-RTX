@@ -37,13 +37,15 @@ struct Session {
   uint16_t id = 0;
   std::string callsign;
   bool isTest = false;
+  uint8_t mode = kModeCodec2_1200;  // modo del pacchetto di avvio (1200 o 3200)
+  size_t frameBytes = kFrameBytes;
   uint32_t packets = 0;        // pacchetti accettati
   uint32_t frames = 0;         // frame consegnati (buoni)
   uint32_t framesLost = 0;     // frame persi e non recuperabili
   uint32_t recovered = 0;      // pacchetti ricostruiti con la parita'
   bool ended = false;          // visto il pacchetto di fine (OVER) o chiusa per tempo
   double startSec = 0.0;
-  std::vector<uint8_t> c2;     // frame Codec2 1200 consecutivi (6 byte l'uno; i persi sono a zero)
+  std::vector<uint8_t> c2;     // frame Codec2 consecutivi (6 byte l'uno a 1200, 16 a 3200; i persi sono a zero)
   TestReport test;             // solo per le prove di collegamento
 };
 
@@ -193,7 +195,7 @@ inline std::vector<Session> reassemble(const std::vector<Capture>& caps, Summary
       }
       return;
     }
-    if (p.mode != kModeCodec2_1200 && p.mode != kModeTest) {
+    if (p.mode != kModeCodec2_1200 && p.mode != kModeCodec2_3200 && p.mode != kModeTest) {
       if (sum) sum->otherModes++;
       return;
     }
@@ -205,6 +207,8 @@ inline std::vector<Session> reassemble(const std::vector<Capture>& caps, Summary
       cur = Session();
       cur.id = p.session;
       cur.isTest = isTest;
+      cur.mode = p.mode;
+      cur.frameBytes = frameBytesFor(p.mode);
       cur.startSec = c.hasTime ? c.tSec : 0.0;
       nextPlay = now;
       if (isTest) lt.begin(p.session);
@@ -224,7 +228,7 @@ inline std::vector<Session> reassemble(const std::vector<Capture>& caps, Summary
         if (isTest) {
           lt.onFrame(o.frame);
         } else {
-          cur.c2.insert(cur.c2.end(), o.frame, o.frame + kFrameBytes);
+          cur.c2.insert(cur.c2.end(), o.frame, o.frame + cur.frameBytes);
         }
         break;
       case RxStream::Kind::Lost:
@@ -232,7 +236,7 @@ inline std::vector<Session> reassemble(const std::vector<Capture>& caps, Summary
         if (isTest) {
           lt.onLost();
         } else {
-          cur.c2.insert(cur.c2.end(), kFrameBytes, 0);
+          cur.c2.insert(cur.c2.end(), cur.frameBytes, 0);
         }
         break;
       case RxStream::Kind::End:

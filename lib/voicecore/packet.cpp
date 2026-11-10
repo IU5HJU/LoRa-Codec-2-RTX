@@ -101,7 +101,8 @@ bool decodePacket(const uint8_t* in, size_t len, Packet& out) {
     if (count == 0 || count > kParityGroup) return false;
     if (xorLen >= 16) return false;  // XOR dei conteggi di frame (ognuno <= 12)
   } else {
-    if (pl > kMaxDataPayload || pl % kFrameBytes != 0) return false;
+    const size_t fb = frameBytesFor(q.mode);
+    if (pl > kFramesPerPacket * fb || pl % fb != 0) return false;
   }
 
   q.payloadLen = static_cast<uint8_t>(pl);
@@ -111,6 +112,7 @@ bool decodePacket(const uint8_t* in, size_t len, Packet& out) {
 }
 
 void ParityAccumulator::reset() {
+  frameBytes_ = kFrameBytes;
   count_ = 0;
   xorLen_ = 0;
   xorFlags_ = 0;
@@ -120,7 +122,8 @@ void ParityAccumulator::reset() {
 
 void ParityAccumulator::add(const Packet& d) {
   count_++;
-  xorLen_ ^= static_cast<uint8_t>(d.payloadLen / kFrameBytes);  // XOR dei frame per pacchetto
+  frameBytes_ = frameBytesFor(d.mode);
+  xorLen_ ^= static_cast<uint8_t>(d.payloadLen / frameBytes_);  // XOR dei frame per pacchetto
   xorFlags_ ^= (d.flags & kFlagsParityMask);
   if (d.payloadLen > maxLen_) maxLen_ = d.payloadLen;
   for (size_t i = 0; i < d.payloadLen; i++) buf_[i] ^= d.payload[i];
@@ -155,6 +158,7 @@ bool recoverFromParity(const Packet& parity, const Packet* const* group, size_t 
   }
   if (missing != 1) return false;
 
+  const size_t fb = frameBytesFor(parity.mode);
   uint8_t buf[kMaxDataPayload];
   memset(buf, 0, sizeof(buf));
   if (xorBytes > sizeof(buf)) return false;
@@ -163,11 +167,11 @@ bool recoverFromParity(const Packet& parity, const Packet* const* group, size_t 
   uint8_t flags = parity.payload[2];
   for (size_t i = 0; i < n; i++) {
     if (!group[i]) continue;
-    frames ^= static_cast<uint8_t>(group[i]->payloadLen / kFrameBytes);
+    frames ^= static_cast<uint8_t>(group[i]->payloadLen / fb);
     flags ^= (group[i]->flags & kFlagsParityMask);
     for (size_t k = 0; k < group[i]->payloadLen; k++) buf[k] ^= group[i]->payload[k];
   }
-  const size_t len = static_cast<size_t>(frames) * kFrameBytes;
+  const size_t len = static_cast<size_t>(frames) * fb;
   if (frames > kFramesPerPacket || len > xorBytes) return false;
 
   Packet r;

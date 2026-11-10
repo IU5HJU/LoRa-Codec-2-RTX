@@ -26,11 +26,12 @@ echo "=== Ricevitore SDR in tempo reale ==="
 echo "Antenna collegata e scheda a piu' di un metro dalla chiavetta."
 echo
 echo "Che modo ascolti?"
-select M in "Standard (SF8, banda 250 kHz): voce in diretta" "Messaggio (SF12, banda 125 kHz): si sente a messaggio completo" "Esci"; do
+select M in "Standard (SF8, banda 250 kHz): voce in diretta" "Messaggio (SF12, banda 125 kHz): si sente a messaggio completo" "Qualita' (SF7, banda 250 kHz, Codec2 3200): voce in diretta" "Esci"; do
   case $REPLY in
-    1) SF=8;  BW=250000; OPT=""; break ;;
-    2) SF=12; BW=125000; OPT="--messaggio"; break ;;
-    3) exit 0 ;;
+    1) SF=8;  BW=250000; OPT=""; C2=1200; break ;;
+    2) SF=12; BW=125000; OPT="--messaggio"; C2=1200; break ;;
+    3) SF=7;  BW=250000; OPT=""; C2=3200; break ;;
+    4) exit 0 ;;
     *) echo "Scelta non valida" ;;
   esac
 done
@@ -58,7 +59,7 @@ if ! kill -0 "$RX" 2>/dev/null; then
   echo "Il ricevitore non e' partito. Ultime righe del registro:"; tail -8 "$LOG"; fine 1
 fi
 echo "Pronto: fai trasmettere la scheda."
-tail -n0 -F "$FILE" 2>/dev/null | "$REPO/build/lcr_live" $OPT | c2dec 1200 - - | aplay -q -t raw -f S16_LE -r 8000 -c 1
+tail -n0 -F "$FILE" 2>/dev/null | "$REPO/build/lcr_live" $OPT | c2dec $C2 - - | aplay -q -t raw -f S16_LE -r 8000 -c 1
 kill "$RX" 2>/dev/null
 wait "$RX" 2>/dev/null
 trap - INT

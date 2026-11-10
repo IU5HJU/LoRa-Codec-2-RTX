@@ -95,7 +95,7 @@ void VoiceNode::startTx(uint32_t nowMs) {
     lastTestValid_ = true;
   }
   replyPending_ = false;
-  tx_ = TxSession(cfg_.callsign, sid, cfg_.fec, txTest_ ? kModeTest : kModeCodec2_1200);
+  tx_ = TxSession(cfg_.callsign, sid, cfg_.fec, txTest_ ? kModeTest : prof_.codecMode);
   if (cfg_.sendPosition && !txTest_) tx_.setPosition(cfg_.position);
   framesCaptured_ = 0;
   releasing_ = false;
@@ -139,7 +139,7 @@ void VoiceNode::recTick(uint32_t nowMs) {
           finishRecording(nowMs, true);
           break;
         }
-        codec_.encode(pcm, recBuf_ + recCount_ * kFrameBytes);
+        codec_.encode(pcm, recBuf_ + recCount_ * frameBytesFor(prof_.codecMode));
         recCount_++;
       }
       if (recPhase_ == RecPhase::Recording && recCount_ >= maxTurnFrames_) finishRecording(nowMs, true);
@@ -160,7 +160,7 @@ void VoiceNode::recTick(uint32_t nowMs) {
     case RecPhase::Sending:
       // Frame verso la coda dei pacchetti, senza riempirla: ogni frame puo' produrre dati e parita'.
       for (int guard = 0; guard < 24 && !releasing_ && recSent_ < recCount_ && tx_.queued() <= 4; guard++) {
-        if (!tx_.pushFrame(recBuf_ + recSent_ * kFrameBytes)) {
+        if (!tx_.pushFrame(recBuf_ + recSent_ * frameBytesFor(prof_.codecMode))) {
           limitHit_ = true;
           recSent_ = recCount_;
           break;
@@ -244,7 +244,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
     if (!releasing_ && testFramesSent_ >= kTestFrames) finishCapture(false);
   } else if (!releasing_) {
     int16_t pcm[kFrameSamples];
-    uint8_t frame[kFrameBytes];
+    uint8_t frame[kMaxFrameBytes];
     for (int guard = 0; guard < 8 && !releasing_ && in_.readFrame(pcm); guard++) {
       if (framesCaptured_ >= maxTurnFrames_) {
         finishCapture(true);
@@ -300,7 +300,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       }
       continue;
     }
-    if (p.mode != kModeCodec2_1200 && p.mode != kModeTest) continue;  // modi sconosciuti
+    if (p.mode != prof_.codecMode && p.mode != kModeTest) continue;  // modi sconosciuti
     if (state_ == State::Receiving && (p.mode == kModeTest) != rxIsTest_) continue;  // niente mescolanze
     if (!rx_.onPacket(p, nowMs)) continue;
     if (p.mode == kModeTest) linkRx_.onPacket(rssi, radio_.lastSnr(), radio_.hasSnr());

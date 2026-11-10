@@ -31,7 +31,7 @@ Sintesi in due pagine, da girare a chi lo chiede: [formato-pacchetto.pdf](format
 ## Formato del pacchetto
 
 ```
-byte 0     versione (4 bit alti, = 2) | modo (4 bit bassi: 1 = Codec2 1200 bps, 2 = prova di collegamento, 3 = risposta alla prova)
+byte 0     versione (4 bit alti, = 2) | modo (4 bit bassi: 1 = Codec2 1200 bps, 2 = prova di collegamento, 3 = risposta alla prova, 4 = Codec2 3200 bps)
 byte 1-2   ID di sessione (casuale per ogni PTT), big endian
 byte 3     numero di sequenza (0..127)
 byte 4     flag
@@ -76,6 +76,10 @@ Nel modo 2 i frame non sono voce ma una sequenza pseudocasuale determinata da (s
 Una prova dura 300 frame (12 s) con gli stessi pacchetti e la stessa parità della voce. Con la prova attiva anche sul ricevitore, questo risponde dopo circa 0,7 s con un solo pacchetto di modo 3
 (`START`+`END`, nominativo, stessa sessione) che porta 12 byte: frame consegnati, ok, danneggiati, persi, pacchetti recuperati, RSSI e SNR medi. Un ricevitore con una versione precedente scarta i pacchetti di modo sconosciuto.
 Dettagli in [prova-collegamento.md](prova-collegamento.md).
+
+## Modo 4: Codec2 3200 bps (profilo Qualità)
+
+Stessa struttura del modo 1, ma ogni frame di 40 ms occupa **16 byte** (due blocchi Codec2 da 20 ms e 8 byte, uno dopo l'altro: il flusso si decodifica con `c2dec 3200`). Un pacchetto dati porta 12 frame = 192 byte (totale 197 byte con intestazione; la parità XOR è lunga come il pacchetto più lungo del gruppo). Un payload che non sia multiplo di 16 byte è scartato. 30 s di voce occupano circa 12,5 s in aria su SF7/BW250 (42 %). Il numero di sequenza resta a 7 bit (massimo 128 pacchetti, cioè 30 s a 3200): per durate maggiori servirà la sequenza a 16 bit.
 
 ## Controllo hardware (modo 15)
 

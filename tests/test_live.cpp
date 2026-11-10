@@ -18,8 +18,8 @@ struct Out : LiveRx::Sink {
   std::vector<uint32_t> at;  // ora di ogni frame
   std::vector<std::string> lines;
   uint32_t* clock = nullptr;
-  void frame(const uint8_t* f, bool l) override {
-    frames.emplace_back(f, f + kFrameBytes);
+  void frame(const uint8_t* f, size_t n, bool l) override {
+    frames.emplace_back(f, f + n);
     lost.push_back(l);
     at.push_back(clock ? *clock : 0);
   }
@@ -93,6 +93,40 @@ void run(LiveRx& live, const Stream& s, uint32_t gapMs, const std::vector<size_t
     }
     live.tick(clock);
   }
+}
+
+void testQuality3200() {
+  // Sessione a 3200: i frame escono da 16 byte
+  Stream g;
+  TxSession tx("IU5HJU", 777, true, kModeCodec2_3200);
+  auto drain = [&]() {
+    Packet p;
+    while (tx.popPacket(p)) {
+      uint8_t buf[kMaxWireBytes];
+      const size_t n = encodePacket(p, buf, sizeof(buf));
+      g.pkts.emplace_back(buf, buf + n);
+    }
+  };
+  tx.begin();
+  drain();
+  for (int i = 0; i < 100; i++) {
+    uint8_t f[kMaxFrameBytes];
+    for (size_t k = 0; k < kMaxFrameBytes; k++) f[k] = static_cast<uint8_t>(i * 5 + k * 17 + 3);
+    g.frames.emplace_back(f, f + kMaxFrameBytes);
+    tx.pushFrame(f);
+    drain();
+  }
+  tx.finish();
+  drain();
+  Out out;
+  uint32_t clock = 0;
+  out.clock = &clock;
+  LiveRx live(out, false, false, 0);
+  run(live, g, 100, {}, clock, 8000);
+  CHECK(out.frames.size() == 100);
+  bool same = out.frames.size() == 100;
+  for (size_t i = 0; same && i < 100; i++) same = out.frames[i] == g.frames[i] && out.frames[i].size() == 16;
+  CHECK(same);
 }
 
 void testStandard() {
@@ -251,6 +285,7 @@ void testTestSession() {
 
 int main() {
   testStandard();
+  testQuality3200();
   testLead();
   testRecovery();
   testMessage();

@@ -49,6 +49,7 @@ class ParityAccumulator {
   void build(Packet& out, uint16_t session, uint8_t mode, uint8_t seq) const;
 
  private:
+  size_t frameBytes_ = kFrameBytes;  // byte di un frame nel modo dei pacchetti accumulati
   uint8_t count_;
   uint8_t xorLen_;
   uint8_t xorFlags_;

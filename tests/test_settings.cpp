@@ -148,7 +148,7 @@ void testGpsSetting() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=7 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -283,6 +283,14 @@ void testProfile() {
   CHECK(f.st.data.profile == kProfileMessage);
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "profile=msg") && strstr(f.reply, "reboot=1"));  // vale dal riavvio
   CHECK(f.run("cfg set profile std") == ConsoleResult::Ok && f.st.data.profile == kProfileStandard);
+  CHECK(f.run("CFG SET PROFILE QUA") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK profile=qua") == 0);
+  CHECK(f.st.data.profile == kProfileQuality);
+  CHECK(f.run("CFG SET FREQQUAL 434.250") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK freqqual=434.250") == 0);
+  CHECK(f.st.data.profileFreqKhz() == 434250 && f.st.data.freqKhz == 433900);
+  CHECK(f.run("CFG SET FREQQUAL 500.000") == ConsoleResult::Error);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "freqqual=434.250"));
+  f.run("CFG SET FREQQUAL 433.900");
+  f.run("CFG SET PROFILE STD");
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=0"));
   const char* bad[] = {"CFG SET PROFILE", "CFG SET PROFILE XYZ", "CFG SET PROFILE MESSAGGIO", "CFG SET PROFILE 1"};
   for (const char* b : bad) CHECK(f.run(b) == ConsoleResult::Error);

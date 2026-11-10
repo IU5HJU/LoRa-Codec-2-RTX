@@ -25,7 +25,7 @@ struct NodeConfig {
   bool fec = true;  // parita' XOR 1 su 4
   // Generatore di ID di sessione (uno per PTT). Se nullptr usa un contatore.
   uint16_t (*newSessionId)() = nullptr;
-  // Profilo di trasmissione (profile.h): Standard o Messaggio.
+  // Profilo di trasmissione (profile.h): Standard, Messaggio o Qualita'.
   uint8_t profile = kProfileStandard;
   // Posizione di questa stazione e se trasmetterla nel pacchetto START (disattivato di default: la posizione e' un dato
   // personale, si trasmette solo se l'operatore lo sceglie). Vedi position.h.
@@ -125,7 +125,7 @@ class VoiceNode {
   // Registra e poi trasmetti
   bool recMode_ = false;
   RecPhase recPhase_ = RecPhase::None;
-  uint8_t recBuf_[kMaxTurnFrames * kFrameBytes];
+  uint8_t recBuf_[kMaxTurnFrames * kMaxFrameBytes];
   uint32_t recCount_ = 0;
   uint32_t recSent_ = 0;
   uint32_t recReleaseMs_ = 0;

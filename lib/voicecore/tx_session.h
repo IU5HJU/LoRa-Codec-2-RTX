@@ -33,7 +33,7 @@ class TxSession {
 
   // Accoda il pacchetto iniziale col nominativo. Chiamato in automatico da pushFrame.
   void begin();
-  // Aggiunge un frame Codec2 (kFrameBytes). Ritorna false se il limite di
+  // Aggiunge un frame Codec2 (frameBytes() byte: 6 per il 1200, 16 per il 3200). Ritorna false se il limite di
   // pacchetti e' raggiunto o la coda e' piena: il frame e' scartato.
   bool pushFrame(const uint8_t* frame);
   // Chiude la trasmissione: pacchetto END con i frame residui e parita' finale.
@@ -42,6 +42,7 @@ class TxSession {
   bool hasPacket() const { return qCount_ > 0; }
   size_t queued() const { return qCount_; }
   bool popPacket(Packet& out);
+  size_t frameBytes() const { return frameBytes_; }
   bool finished() const { return finished_; }
   bool overflowed() const { return overflow_; }
   uint8_t nextSeq() const { return seq_; }
@@ -68,6 +69,7 @@ class TxSession {
   uint8_t seq_ = 0;
   uint8_t lastCallsignSeq_ = 0;
 
+  size_t frameBytes_ = kFrameBytes;   // byte di un frame nel modo di questa trasmissione
   uint8_t frames_[kMaxDataPayload] = {0};
   size_t frameCount_ = 0;
   ParityAccumulator parity_;

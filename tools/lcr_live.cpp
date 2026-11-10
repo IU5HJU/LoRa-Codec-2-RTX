@@ -1,10 +1,10 @@
 // lcr_live: ricezione in tempo reale dai pacchetti catturati con un SDR (vedi tools/lcr_live_core.h).
 //
 //   make lcr_live
-//   tail -n0 -F cattura.txt | build/lcr_live | c2dec 1200 - - | aplay -q -t raw -f S16_LE -r 8000 -c 1
+//   tail -n0 -F cattura.txt | build/lcr_live | c2dec 1200 - -   (a 3200: c2dec 3200 - -) | aplay -q -t raw -f S16_LE -r 8000 -c 1
 //
 // Legge dallo standard input le righe di tools/sdr/lora_rx.py ("t=... crc=1 hex=...") man mano che arrivano e scrive sullo
-// standard output i frame Codec2 1200 (6 byte l'uno) a ritmo reale, uno ogni 40 ms. Le righe di stato (nominativo, posizione,
+// standard output i frame Codec2 (6 byte l'uno a 1200, 16 a 3200) a ritmo reale, uno ogni 40 ms. Le righe di stato (nominativo, posizione,
 // avanzamento, fine) vanno sullo standard error, cosi' non si mescolano con l'audio.
 //   --messaggio        ascolta il profilo Messaggio (SF12): la riproduzione parte a messaggio completo
 //   --accept-bad-crc   non scarta i pacchetti con CRC errato
@@ -29,8 +29,8 @@ namespace {
 
 class StdSink : public LiveRx::Sink {
  public:
-  void frame(const uint8_t* f, bool) override {
-    std::fwrite(f, 1, kFrameBytes, stdout);
+  void frame(const uint8_t* f, size_t n, bool) override {
+    std::fwrite(f, 1, n, stdout);
     std::fflush(stdout);  // a ogni frame: l'audio non deve aspettare che si riempia un buffer
   }
   void info(const std::string& line) override {

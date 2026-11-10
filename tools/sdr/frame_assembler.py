@@ -58,7 +58,7 @@ def describe_packet(data):
     if version != 2:
         return "non e' un pacchetto del progetto (versione %d)" % version
     names = [n for bit, n in ((1, "START"), (2, "END"), (4, "PARITA'"), (8, "NOMINATIVO"), (16, "NOFEC"), (32, "POSIZIONE"), (64, "TOTALE")) if flags & bit]
-    modes = {1: "voce Codec2 1200", 2: "prova di collegamento", 3: "risposta alla prova"}
+    modes = {1: "voce Codec2 1200", 4: "voce Codec2 3200", 2: "prova di collegamento", 3: "risposta alla prova"}
     pos, call = 5, ""
     if flags & 8 and len(data) > 5:
         n = data[5]

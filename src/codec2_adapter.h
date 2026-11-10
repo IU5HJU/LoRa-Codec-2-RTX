@@ -1,4 +1,4 @@
-// Adattatore Codec2 (modo 1200 bps): implementa lcr::ICodec.
+// Adattatore Codec2 (modo 1200 bps o 3200 bps): implementa lcr::ICodec.
 // Solo per ESP32 (libreria esp32_codec2): non e' compilato nei test sul PC.
 #pragma once
 
@@ -12,7 +12,9 @@ class Codec2Adapter : public lcr::ICodec {
   ~Codec2Adapter() override;
   // false se Codec2 non si crea o le dimensioni non sono quelle del protocollo
   // (320 campioni, 6 byte per frame).
-  bool begin();
+  // mode: lcr::kModeCodec2_1200 (default) o lcr::kModeCodec2_3200 (due blocchi da 20 ms per ogni frame di 40 ms).
+  bool begin(uint8_t mode = lcr::kModeCodec2_1200);
+  size_t frameBytes() const { return frameBytes_; }
 
   void encode(const int16_t* pcm, uint8_t* frame) override;
   void decode(const uint8_t* frame, int16_t* pcm) override;
@@ -34,10 +36,14 @@ class Codec2Adapter : public lcr::ICodec {
   const uint8_t* decLog() const { return decLog_; }
 
  private:
-  uint8_t encLog_[kLogFrames * lcr::kFrameBytes];
-  uint8_t decLog_[kLogFrames * lcr::kFrameBytes];
+  uint8_t encLog_[kLogFrames * lcr::kMaxFrameBytes];
+  uint8_t decLog_[kLogFrames * lcr::kMaxFrameBytes];
   size_t encLogN_ = 0, decLogN_ = 0;
   uint32_t encMaxUs_ = 0, decMaxUs_ = 0, encN_ = 0, decN_ = 0;
   uint64_t encSumUs_ = 0, decSumUs_ = 0;
   struct CODEC2* c2_ = nullptr;
+  size_t frameBytes_ = lcr::kFrameBytes;
+  size_t blocks_ = 1;  // blocchi del codec per ogni frame del protocollo (2 a 3200)
+  size_t blockSamples_ = lcr::kFrameSamples;
+  size_t blockBytes_ = lcr::kFrameBytes;
 };

@@ -11,6 +11,8 @@ constexpr uint8_t kProtocolVersion = 2;  // v2 (09/11/2026): flag kFlagPosition 
 
 // Modo Codec2 trasportato (nibble basso del primo byte dell'header).
 constexpr uint8_t kModeCodec2_1200 = 1;
+// Codec2 3200 bps (profilo Qualita'): 2 blocchi da 20 ms e 8 byte = un frame da 40 ms e 16 byte.
+constexpr uint8_t kModeCodec2_3200 = 4;
 // Prova di collegamento: i frame sono una sequenza nota (non voce) che il ricevitore confronta bit per bit.
 constexpr uint8_t kModeTest = 2;
 // Risposta del ricevitore alla prova (un solo pacchetto con il risultato).
@@ -27,12 +29,18 @@ constexpr size_t kFrameBytes = 6;
 // sovrascritto nel FIFO della radio e va perso. Costa meno di un frame di voce (40 ms * 2).
 constexpr uint32_t kInterPacketGapMs = 80;
 
+// Dimensione massima di un frame audio da 40 ms (Codec2 3200: 16 byte).
+constexpr size_t kMaxFrameBytes = 16;
+
+// Byte di un frame da 40 ms nel modo dato (i modi sconosciuti o di servizio si trattano come il 1200: 6 byte).
+inline size_t frameBytesFor(uint8_t mode) { return mode == kModeCodec2_3200 ? kMaxFrameBytes : kFrameBytes; }
+
 constexpr size_t kFrameSamples = 320;
 constexpr uint32_t kFrameMs = 40;
 
 // Un pacchetto dati trasporta 12 frame = 480 ms di voce = 72 byte.
 constexpr size_t kFramesPerPacket = 12;
-constexpr size_t kMaxDataPayload = kFramesPerPacket * kFrameBytes;
+constexpr size_t kMaxDataPayload = kFramesPerPacket * kMaxFrameBytes;
 
 // Parita' XOR: un pacchetto di parita' ogni 4 pacchetti dati.
 // Layout in sequenza: D D D D P D D D D P ... (seq % 5 == 4 e' parita').

@@ -41,7 +41,7 @@ Misura sul PC (x86, `-O2`) con un segnale armonico sintetico, non voce vera: **s
 | 700C | circa 22% | circa 57% |
 | 450 | circa 24% | circa 56% |
 
-Sono stime: il fattore vale per il 1200 e potrebbe cambiare con le altre routine (700C e 450 usano la "newamp"). La codifica del 1200 sulla scheda non è mai stata cronometrata. Da **misurare sulla scheda** quando si scrive il modo Qualità.
+Sono stime: il fattore vale per il 1200 e potrebbe cambiare con le altre routine (700C e 450 usano la "newamp"). La codifica del 1200 sulla scheda non è mai stata cronometrata. Il modo Qualità è scritto (10/11/2026): da **misurare sulla scheda** con il registro `[rx-codec]` (decodifica) e `CFG TEST CODEC` (codifica).
 
 **Cadenza a 20 ms:** il 3200 produce un frame ogni 20 ms. La catena audio lavora a blocchi da 40 ms: basta codificare **due blocchi da 160 campioni** per ogni blocco audio, senza cambiare il ritmo del ciclo principale (il ridisegno del display da solo dura circa 25 ms, più di 20).
 

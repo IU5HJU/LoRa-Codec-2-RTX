@@ -14,7 +14,7 @@ class RxStream {
  public:
   enum class Kind {
     Wait,   // nessun frame disponibile ora (pre-buffer o attesa pacchetti)
-    Frame,  // frame valido in Out::frame (kFrameBytes)
+    Frame,  // frame valido in Out::frame (frameBytes())
     Lost,   // frame perso e non recuperabile: mascherare/silenzio
     End,    // trasmissione terminata
   };
@@ -50,6 +50,7 @@ class RxStream {
   // Pacchetti totali dichiarati nel pacchetto START (0 = non dichiarati) e il piu' alto numero di sequenza visto finora.
   size_t totalPackets() const { return total_; }
   size_t highestSeq() const { return highest_; }
+  size_t frameBytes() const { return fb_; }
   uint16_t session() const { return session_; }
   uint32_t recoveredPackets() const { return recovered_; }
   uint32_t lostFrames() const { return lostFrames_; }
@@ -73,6 +74,7 @@ class RxStream {
   Phase phase_;
   uint16_t session_;
   bool fec_;
+  size_t fb_;  // byte per frame della trasmissione in corso
   char callsign_[kMaxCallsign + 1];
   Position position_;
   size_t total_;

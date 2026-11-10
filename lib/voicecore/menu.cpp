@@ -6,7 +6,7 @@ const MenuItem* defaultMenuItems(size_t& count) {
   static const MenuItem kItems[] = {
       {"Standard", 0, true},
       {"Messaggio", 1, true},
-      {"Qualita'", 2, false},  // il modo 3 non esiste ancora
+      {"Qualita'", 2, true},
   };
   count = sizeof(kItems) / sizeof(kItems[0]);
   return kItems;

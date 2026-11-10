@@ -10,6 +10,7 @@ namespace lcr {
 
 bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
+         a.qualFreqKhz() == b.qualFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
          a.profile == b.profile && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
@@ -17,7 +18,7 @@ bool operator==(const Settings& a, const Settings& b) {
 
 bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
-         s.freqMsgKhz <= kMaxFreqKhz &&
+         s.freqMsgKhz <= kMaxFreqKhz && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
          s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount &&
@@ -199,9 +200,10 @@ ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
     } else {
       snprintf(qthText, sizeof(qthText), "none");
     }
-    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d pos=%s qth=%s gps=%s",
+    snprintf(reply, cap, "CFG callsign=%s freq=%u.%03u freqmsg=%u.%03u freqqual=%u.%03u power=%d volume=%d micfloor=%d profile=%s board=%s reboot=%d test=%d pos=%s qth=%s gps=%s",
              stored_.callsign, static_cast<unsigned>(stored_.freqKhz / 1000), static_cast<unsigned>(stored_.freqKhz % 1000),
              static_cast<unsigned>(stored_.freqMsgKhz / 1000), static_cast<unsigned>(stored_.freqMsgKhz % 1000),
+             static_cast<unsigned>(stored_.qualFreqKhz() / 1000), static_cast<unsigned>(stored_.qualFreqKhz() % 1000),
              stored_.powerDbm, stored_.volume, stored_.micFloorDb, profileFor(stored_.profile).code, board_, stored_ != active_ ? 1 : 0, testMode_ ? 1 : 0, stored_.posTx ? "on" : "off", qthText, stored_.gpsOn ? "on" : "off");
   }
   return ConsoleResult::Ok;
@@ -245,6 +247,14 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.freqMsgKhz = khz;
     snprintf(shown, sizeof(shown), "freqmsg=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
+  } else if (equalsIgnoreCase(key, "FREQQUAL")) {
+    uint32_t khz = 0;
+    if (!parseFreqKhz(value, khz) || khz < kMinFreqKhz || khz > kMaxFreqKhz) {
+      say(reply, cap, "CFG ERR freqqual %s", "in MHz, da 430.000 a 440.000");
+      return ConsoleResult::Error;
+    }
+    next.freqQualKhz = khz;
+    snprintf(shown, sizeof(shown), "freqqual=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "POWER")) {
     int dbm = 0;
     if (!parseInt(value, dbm) || dbm < kMinPowerDbm || dbm > kMaxPowerDbm) {
@@ -272,7 +282,7 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
   } else if (equalsIgnoreCase(key, "PROFILE")) {
     uint8_t id = 0;
     if (!profileFromCode(value, id)) {
-      say(reply, cap, "CFG ERR profile %s", "usa STD (Standard) oppure MSG (Messaggio)");
+      say(reply, cap, "CFG ERR profile %s", "usa STD (Standard), MSG (Messaggio) oppure QUA (Qualita')");
       return ConsoleResult::Error;
     }
     next.profile = id;

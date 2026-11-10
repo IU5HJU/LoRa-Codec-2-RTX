@@ -147,7 +147,7 @@ void setup() {
   Serial.printf("[avvio] heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
   ui.showMessage("CODEC2");
   Serial.println("[avvio] Codec2...");
-  if (!codec.begin()) fatal("Codec2");
+  if (!codec.begin(lcr::profileFor(settings.profile).codecMode)) fatal("Codec2");
   Serial.printf("[avvio] Codec2 ok, heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
 
   ui.showMessage("AUDIO");
@@ -271,13 +271,18 @@ static void runAudioTest() {
 // riceve (stesso numero di frame e stessi byte se la radio e il protocollo non alterano nulla).
 static void printFrameHex(const char* tag, const uint8_t* data, size_t frames) {
   Serial.printf("%s %u frame\n", tag, static_cast<unsigned>(frames));
-  const size_t total = frames * lcr::kFrameBytes;
-  for (size_t i = 0; i < total; i += 60) {
-    Serial.print(tag);
-    Serial.print(' ');
-    for (size_t k = i; k < i + 60 && k < total; k++) Serial.printf("%02x", data[k]);
-    Serial.println();
+  // I registri del codec hanno un passo fisso di kMaxFrameBytes; si stampano solo i byte di ogni frame (una riga per frame
+  // a 3200, righe da 60 byte a 1200).
+  const size_t fb = codec.frameBytes();
+  for (size_t f = 0; f < frames; f++) {
+    if (f % (60 / fb) == 0) {
+      if (f) Serial.println();
+      Serial.print(tag);
+      Serial.print(' ');
+    }
+    for (size_t k = 0; k < fb; k++) Serial.printf("%02x", data[f * lcr::kMaxFrameBytes + k]);
   }
+  if (frames) Serial.println();
 }
 
 static void runCodecTest() {
@@ -288,7 +293,8 @@ static void runCodecTest() {
   }
   // Un blocco da 640 byte per frame: la memoria libera e' frammentata e un unico buffer da 48 KB non si trova.
   static int16_t* raw[kFrames];
-  static uint8_t frames[kFrames * lcr::kFrameBytes];
+  static uint8_t frames[kFrames * lcr::kMaxFrameBytes];
+  const size_t fb = codec.frameBytes();
   size_t allocated = 0;
   for (; allocated < kFrames; allocated++) {
     raw[allocated] = static_cast<int16_t*>(malloc(lcr::kFrameSamples * sizeof(int16_t)));
@@ -327,11 +333,11 @@ static void runCodecTest() {
   }
 
   const uint32_t e0 = millis();
-  for (size_t i = 0; i < kFrames; i++) codec.encode(raw[i], frames + i * lcr::kFrameBytes);
+  for (size_t i = 0; i < kFrames; i++) codec.encode(raw[i], frames + i * fb);
   const uint32_t encMs = millis() - e0;
-  for (size_t i = 0; i < kFrames * lcr::kFrameBytes; i += 60) {
+  for (size_t i = 0; i < kFrames * fb; i += 60) {
     Serial.print("CFG CODEC hex ");
-    for (size_t k = i; k < i + 60 && k < kFrames * lcr::kFrameBytes; k++) Serial.printf("%02x", frames[k]);
+    for (size_t k = i; k < i + 60 && k < kFrames * fb; k++) Serial.printf("%02x", frames[k]);
     Serial.println();
   }
 
@@ -363,7 +369,7 @@ static void runCodecTest() {
   uint32_t decUs = 0;
   for (size_t i = 0; i < kFrames; i++) {
     const uint32_t d0 = micros();
-    codec.decode(frames + i * lcr::kFrameBytes, dec);
+    codec.decode(frames + i * fb, dec);
     decUs += micros() - d0;
     accumulate(dec, sqDec, pkDec);
     audio.speaker().playFrame(dec);
@@ -387,7 +393,7 @@ static void runCodecTest() {
         }
         delay(1);
       }
-      codec.decode(frames + i * lcr::kFrameBytes, dec);
+      codec.decode(frames + i * fb, dec);
       audio.speaker().playFrame(dec);
       next += lcr::kFrameMs;
     }

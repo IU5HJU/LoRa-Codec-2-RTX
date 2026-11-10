@@ -5,7 +5,7 @@
 namespace lcr {
 
 TxSession::TxSession(const char* callsign, uint16_t session, bool fec, uint8_t mode)
-    : session_(session), fec_(fec), mode_(mode) {
+    : session_(session), fec_(fec), mode_(mode), frameBytes_(frameBytesFor(mode)) {
   if (callsign) {
     strncpy(callsign_, callsign, kMaxCallsign);
     callsign_[kMaxCallsign] = 0;
@@ -53,7 +53,7 @@ bool TxSession::emitData(uint8_t extraFlags) {
   }
   if (seq_ == 0 && expectedTotal_) p.totalPackets = expectedTotal_;
 
-  p.payloadLen = static_cast<uint8_t>(frameCount_ * kFrameBytes);
+  p.payloadLen = static_cast<uint8_t>(frameCount_ * frameBytes_);
   if (p.payloadLen) memcpy(p.payload, frames_, p.payloadLen);
   frameCount_ = 0;
 
@@ -83,7 +83,7 @@ bool TxSession::pushFrame(const uint8_t* frame) {
   if (finished_) return false;
   if (!begun_) begin();
   if (seq_ >= kTxSeqLimit || overflow_) return false;
-  memcpy(frames_ + frameCount_ * kFrameBytes, frame, kFrameBytes);
+  memcpy(frames_ + frameCount_ * frameBytes_, frame, frameBytes_);
   frameCount_++;
   if (frameCount_ == kFramesPerPacket) return emitData(0);
   return true;

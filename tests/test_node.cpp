@@ -16,7 +16,7 @@ static uint16_t nextSession() {
 
 struct Station {
   Station(fake::Air& air, int id, const char* cs, const uint32_t& clock, uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0)
-      : radio(air, id), mic(clock), node(makeCfg(cs, profile, extraGapMs), radio, codec, mic, spk, note) {}
+      : radio(air, id), codec(frameBytesFor(profileFor(profile).codecMode)), mic(clock), node(makeCfg(cs, profile, extraGapMs), radio, codec, mic, spk, note) {}
   static NodeConfig makeCfg(const char* cs, uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0) {
     NodeConfig c;
     strcpy(c.callsign, cs);
@@ -391,6 +391,31 @@ static void testMessageProfile() {
   CHECK(s.a.node.recordMode());
 }
 
+static void testQualityProfile() {
+  Sim s(kProfileQuality);
+  s.air.clock = &s.clock;
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(3000);
+  s.a.node.pttReleased(s.clock);
+  s.run(4000);
+  const int n = static_cast<int>(s.a.mic.produced());
+  CHECK(n >= 70 && n <= 90);
+  CHECK(s.b.spk.played == seq(n));  // tutti i frame da 16 byte, in ordine e con il contenuto intatto
+  CHECK(s.b.note.callsign == "IU5HJU");
+  CHECK(s.b.note.rxEnds == 1);
+  // Nessuna comunicazione con il profilo Standard: modo diverso, il pacchetto e' ignorato
+  Sim x(kProfileStandard);
+  x.air.clock = &x.clock;
+  x.run(100);
+  x.a.node.pttPressed(x.clock);
+  x.run(1500);
+  x.a.node.pttReleased(x.clock);
+  x.run(2000);
+  CHECK(x.b.spk.played.size() > 5);
+  CHECK(profileFor(kProfileQuality).codecMode == kModeCodec2_3200 && !profileFor(kProfileQuality).message);
+}
+
 static void testMessageEndLost() {
   // Pacchetto END e relativa parita' persi: dopo 12 s senza altro il messaggio si riproduce comunque.
   int total = 0;
@@ -606,6 +631,7 @@ int main() {
   testPositionInStartOnly();
   testPositionNotSentWithoutFix();
   testMessageProfile();
+  testQualityProfile();
   testMessageEndLost();
   testMessageProfileRules();
   testRecordThenSend();

@@ -4,7 +4,7 @@
 // il test lo legge (cmds = comandi ricevuti) e lo modifica per simulare situazioni diverse.
 (() => {
   const st = window.__st = {
-    cfg: { callsign: 'N0CALL', freq: '433.900', freqmsg: '433.900', power: 10, volume: 7, micfloor: -60, profile: 'std', pos: 'off', qth: 'none', gps: 'off' },
+    cfg: { callsign: 'N0CALL', freq: '433.900', freqmsg: '433.900', freqqual: '433.900', power: 10, volume: 7, micfloor: -60, profile: 'std', pos: 'off', qth: 'none', gps: 'off' },
     active: { callsign: 'N0CALL', freq: '433.900', freqmsg: '433.900', power: 10, volume: 7, profile: 'std' },
     noFreqMsg: false,     // firmware con una sola frequenza (piu' vecchio)
     noPos: false,         // firmware senza posizione (piu' vecchio): CFG GET senza pos=/qth= e CFG SET POS/QTH sconosciuti
@@ -25,8 +25,8 @@
   const later = (f) => setTimeout(f, st.delay);
   const get = () => {
     const c = st.cfg, a = st.active;
-    const reboot = (c.callsign !== a.callsign || c.freq !== a.freq || c.power !== a.power || c.volume !== a.volume || c.profile !== a.profile || c.freqmsg !== a.freqmsg) ? 1 : 0;
-    return `CFG callsign=${c.callsign} freq=${c.freq}${st.noFreqMsg ? '' : ' freqmsg=' + c.freqmsg} power=${c.power} volume=${c.volume} micfloor=${c.micfloor}${st.noProfile ? '' : ' profile=' + c.profile} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}${st.noPos ? '' : ' pos=' + c.pos + ' qth=' + c.qth}${st.noGps ? '' : ' gps=' + c.gps}`;
+    const reboot = (c.callsign !== a.callsign || c.freq !== a.freq || c.power !== a.power || c.volume !== a.volume || c.profile !== a.profile || c.freqmsg !== a.freqmsg || c.freqqual !== a.freqqual) ? 1 : 0;
+    return `CFG callsign=${c.callsign} freq=${c.freq}${st.noFreqMsg ? '' : ' freqmsg=' + c.freqmsg + ' freqqual=' + c.freqqual} power=${c.power} volume=${c.volume} micfloor=${c.micfloor}${st.noProfile ? '' : ' profile=' + c.profile} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}${st.noPos ? '' : ' pos=' + c.pos + ' qth=' + c.qth}${st.noGps ? '' : ' gps=' + c.gps}`;
   };
   const inRange = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
   const handle = (line) => {
@@ -48,6 +48,10 @@
         const khz = Math.round(parseFloat(v) * 1000);
         if (!(khz >= 430000 && khz <= 440000)) return out('CFG ERR freq fuori dai limiti');
         st.cfg.freq = v; out('CFG OK freq=' + v);
+      } else if (key === 'FREQQUAL' && !st.noFreqMsg) {
+        const khz = Math.round(parseFloat(v) * 1000);
+        if (!(khz >= 430000 && khz <= 440000)) return out('CFG ERR freqqual fuori dai limiti');
+        st.cfg.freqqual = v; out('CFG OK freqqual=' + v);
       } else if (key === 'FREQMSG' && !st.noFreqMsg) {
         const khz = Math.round(parseFloat(v) * 1000);
         if (!(khz >= 430000 && khz <= 440000)) return out('CFG ERR freqmsg fuori dai limiti');
@@ -60,7 +64,7 @@
         st.cfg.volume = +v; out('CFG OK volume=' + v);
       } else if (key === 'PROFILE' && !st.noProfile) {
         const pv = v.toLowerCase();
-        if (pv !== 'std' && pv !== 'msg') return out('CFG ERR profile usa STD (Standard) oppure MSG (Messaggio)');
+        if (pv !== 'std' && pv !== 'msg' && pv !== 'qua') return out('CFG ERR profile usa STD (Standard) oppure MSG (Messaggio)');
         st.cfg.profile = pv; out('CFG OK profile=' + pv);
       } else if (key === 'POS' && !st.noPos) {
         const pv = v.toLowerCase();
@@ -84,7 +88,7 @@
     } else if (cmd === 'RESET') {
       st.cfg = { callsign: 'N0CALL', freq: '433.900', power: 10, volume: 7, micfloor: -60 }; out('CFG OK reset');
     } else if (cmd === 'REBOOT') {
-      out('CFG OK reboot'); st.active = { callsign: st.cfg.callsign, freq: st.cfg.freq, power: st.cfg.power, volume: st.cfg.volume, profile: st.cfg.profile, freqmsg: st.cfg.freqmsg };
+      out('CFG OK reboot'); st.active = { callsign: st.cfg.callsign, freq: st.cfg.freq, power: st.cfg.power, volume: st.cfg.volume, profile: st.cfg.profile, freqmsg: st.cfg.freqmsg, freqqual: st.cfg.freqqual };
       later(() => out(get()));
     } else if (cmd === 'TEST' && (t[2] === 'ON' || t[2] === 'OFF')) {
       st.test = t[2] === 'ON'; out('CFG OK test=' + (st.test ? 'on' : 'off'));

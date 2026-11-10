@@ -12,6 +12,7 @@ lcr::Settings compileTimeSettings() {
   lcr::Settings s;
   strncpy(s.callsign, LCR_CALLSIGN, lcr::kMaxCallsign);
   s.freqKhz = static_cast<uint32_t>(LCR_FREQUENCY_MHZ * 1000.0f + 0.5f);
+  s.freqQualKhz = s.freqKhz;
   s.freqMsgKhz = s.freqKhz;  // tutte le frequenze dei profili partono uguali
   s.powerDbm = LCR_TX_POWER_DBM;
   s.volume = LCR_VOLUME_STEP;
@@ -32,6 +33,7 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     p.getString("call", out.callsign, sizeof(out.callsign));
     out.freqKhz = p.getUInt("freq", 0);
     out.freqMsgKhz = p.getUInt("fmsg", out.freqKhz);  // assente nelle versioni precedenti: stessa frequenza dello Standard
+    out.freqQualKhz = p.getUInt("fqua", out.freqKhz);
     out.powerDbm = p.getInt("pwr", 0);
     out.volume = p.getInt("vol", lcr::kDefaultVolume);  // assente nelle versioni precedenti
     out.micFloorDb = p.getInt("floor", lcr::kDefaultMicFloorDb);
@@ -49,7 +51,7 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
 bool NvsSettingsStorage::save(const lcr::Settings& s) {
   Preferences p;
   if (!p.begin(kNamespace, false)) return false;
-  const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
+  const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putUInt("fqua", s.qualFreqKhz()) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
                     p.putInt("vol", s.volume) > 0 &&
                     p.putInt("floor", s.micFloorDb) > 0 && p.putUChar("prof", s.profile) > 0 &&
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&

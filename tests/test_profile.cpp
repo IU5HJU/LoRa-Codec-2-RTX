@@ -13,7 +13,11 @@ static void testTable() {
   // Lo Standard e' quello di sempre
   const Profile& s = profileFor(kProfileStandard);
   CHECK(s.maxTurnMs == kMaxTurnMs && s.rxPrebufferFrames == kPrebufferFrames && s.rxSessionTimeoutMs == kSessionTimeoutMs);
+  const Profile& q = profileFor(kProfileQuality);
+  CHECK(q.sf == 7 && q.bwKhz == 250.0f && !q.message && q.codecMode == kModeCodec2_3200);
+  CHECK(frameBytesFor(q.codecMode) == 16 && frameBytesFor(kModeCodec2_1200) == 6);
   uint8_t id = 9;
+  CHECK(profileFromCode("qua", id) && id == kProfileQuality);
   CHECK(profileFromCode("msg", id) && id == kProfileMessage);
   CHECK(profileFromCode("MSG", id) && id == kProfileMessage);
   CHECK(profileFromCode("Std", id) && id == kProfileStandard);
@@ -40,6 +44,11 @@ static void testMessageBudget() {
   CHECK(messageAirtimeMs(10000, 6, m) > 85000 && messageAirtimeMs(10000, 6, m) < 100000);
   // Un messaggio corto costa poco
   CHECK(messageAirtimeMs(3000, 6, m) < 40000);
+  // Qualita': 30 s a 3200 bps in circa 12,5 s in aria (42 %), entro il budget del 70 %
+  const Profile& q = profileFor(kProfileQuality);
+  const double qa = messageAirtimeMs(q.maxTurnMs, 6, q);
+  CHECK(qa > 11000 && qa < 14500);
+  CHECK(qa < 0.70 * q.maxTurnMs);
   // Lo Standard resta entro il 70 % del tempo di voce (budget del 5 novembre), parita' compresa, senza pause
   const Profile& s = profileFor(kProfileStandard);
   CHECK(messageAirtimeMs(s.maxTurnMs, 6, s) < 0.70 * s.maxTurnMs);

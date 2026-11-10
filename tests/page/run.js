@@ -158,7 +158,7 @@ async function scenario(name, fn, opts = {}) {
     const c = await cmds(p);
     const idx = (s) => c.indexOf(s);
     check('callsign maiuscolo', idx('CFG SET CALLSIGN IU5HJU') >= 0, c.join(' | '));
-    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET FREQMSG 433.900', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
+    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET FREQMSG 433.900', 'CFG SET FREQQUAL 433.900', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
     check('ordine dei comandi', order.every((v, i) => v >= 0 && (i === 0 || v > order[i - 1])), c.join(' | '));
     check('messaggio di salvataggio', (await status(p)).includes('Salvato'));
     const st = await p.evaluate(() => window.__st.cfg);

@@ -12,12 +12,16 @@ constexpr size_t kNever = static_cast<size_t>(kMaxPackets) * kFramesPerPacket;  
 
 const Profile kProfiles[kProfileCount] = {
     // Standard: i valori storici di protocol.h e user_config.h
-    {kProfileStandard, "std", "Standard", 8, 250.0f, 5, 12, kMaxTurnMs, false, kPrebufferFrames, kPrebufferTimeoutMs,
+    {kProfileStandard, "std", "Standard", 8, 250.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, false, kPrebufferFrames, kPrebufferTimeoutMs,
      kSessionTimeoutMs},
     // Messaggio: SF12/BW125 (+13 dB). Un pacchetto da 77 byte dura circa 3,4 s in aria: la ricezione aspetta la fine del
     // messaggio (o 12 s di silenzio) prima di riprodurlo. Limite di durata: 30 s di voce, come lo Standard (deciso il
     // 9 novembre, "al momento"); a 1200 bps sono circa 271 s (4,5 minuti) in aria, con il Codec2 450 circa 160 s.
-    {kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, kMaxTurnMs, true, kNever, 0x7FFFFFFFu, 12000},
+    {kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, true, kNever, 0x7FFFFFFFu, 12000},
+    // Qualita': SF7/BW250 (circa -5 dB rispetto allo Standard) e Codec2 3200 (frame da 16 byte per 40 ms). 30 s di voce
+    // occupano circa 12,5 s in aria (42%). Pre-buffer come lo Standard.
+    {kProfileQuality, "qua", "Qualita'", 7, 250.0f, 5, 12, kModeCodec2_3200, kMaxTurnMs, false, kPrebufferFrames,
+     kPrebufferTimeoutMs, kSessionTimeoutMs},
 };
 
 }  // namespace
@@ -73,12 +77,13 @@ double messageAirtimeMs(uint32_t voiceMs, size_t callsignLen, const Profile& p) 
     }
   };
   data(0, true);  // START
+  const size_t fb = frameBytesFor(p.codecMode);
   size_t left = frames;
   while (left >= kFramesPerPacket) {
-    data(kFramesPerPacket * kFrameBytes, false);
+    data(kFramesPerPacket * fb, false);
     left -= kFramesPerPacket;
   }
-  data(left * kFrameBytes, true);  // END con i frame residui
+  data(left * fb, true);  // END con i frame residui
   if (groupCount > 0) t += airtimeMs(5 + kParityHeader + groupMax, p);
   return t;
 }

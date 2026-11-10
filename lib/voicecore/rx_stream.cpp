@@ -8,6 +8,7 @@ void RxStream::reset() {
   phase_ = Phase::Idle;
   session_ = 0;
   fec_ = true;
+  fb_ = kFrameBytes;
   memset(callsign_, 0, sizeof(callsign_));
   position_ = Position();
   total_ = 0;
@@ -41,6 +42,7 @@ bool RxStream::onPacket(const Packet& p, uint32_t nowMs) {
     phase_ = Phase::Buffering;
     firstRxMs_ = nowMs;
     fec_ = (p.flags & kFlagNoFec) == 0 || p.isParity();
+    fb_ = frameBytesFor(p.mode);
     cursor_ = p.seq;
   } else if (phase_ == Phase::Buffering && p.seq < cursor_) {
     cursor_ = p.seq;
@@ -124,7 +126,7 @@ size_t RxStream::bufferedFrames() const {
     if (endSeq_ >= 0 && s > static_cast<size_t>(endSeq_)) break;
     if (isParitySeq(s)) continue;
     if (!slots_[s].have) break;
-    total += slots_[s].pkt.payloadLen / kFrameBytes;
+    total += slots_[s].pkt.payloadLen / fb_;
   }
   return total;
 }
@@ -161,9 +163,9 @@ RxStream::Out RxStream::nextFrame(uint32_t nowMs) {
     }
     const Slot& s = slots_[cursor_];
     if (s.have) {
-      const size_t n = s.pkt.payloadLen / kFrameBytes;
+      const size_t n = s.pkt.payloadLen / fb_;
       if (curFrame_ < n) {
-        const uint8_t* f = s.pkt.payload + curFrame_ * kFrameBytes;
+        const uint8_t* f = s.pkt.payload + curFrame_ * fb_;
         curFrame_++;
         return Out{Kind::Frame, f};
       }

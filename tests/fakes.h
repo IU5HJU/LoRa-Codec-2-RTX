@@ -56,15 +56,20 @@ class Radio : public lcr::IRadio {
 // reversibili e permettono di verificare l'ordine dei frame.
 class Codec : public lcr::ICodec {
  public:
+  explicit Codec(size_t frameBytes = lcr::kFrameBytes) : fb_(frameBytes) {}
   void encode(const int16_t* pcm, uint8_t* f) override {
     f[0] = static_cast<uint8_t>(pcm[0] & 0xFF);
     f[1] = static_cast<uint8_t>((pcm[0] >> 8) & 0xFF);
-    memset(f + 2, 0x5A, 4);
+    for (size_t i = 2; i < fb_; i++) f[i] = static_cast<uint8_t>(0x5A + i);
   }
   void decode(const uint8_t* f, int16_t* pcm) override {
     memset(pcm, 0, lcr::kFrameSamples * sizeof(int16_t));
     pcm[0] = static_cast<int16_t>(f[0] | (f[1] << 8));
+    for (size_t i = 2; i < fb_; i++) {
+      if (f[i] != static_cast<uint8_t>(0x5A + i)) pcm[1] = 1;  // payload alterato
+    }
   }
+  size_t fb_;
 };
 
 // Microfono: produce un frame ogni 40 ms di tempo simulato, con contatore 1,2,3...

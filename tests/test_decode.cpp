@@ -23,7 +23,7 @@ static std::string toHex(const uint8_t* d, size_t n) {
 
 // Frame di prova numero i: contenuto riconoscibile.
 static void voiceFrame(uint32_t i, uint8_t* f) {
-  for (size_t k = 0; k < kFrameBytes; k++) f[k] = static_cast<uint8_t>(i * 7 + k * 31 + 1);
+  for (size_t k = 0; k < kMaxFrameBytes; k++) f[k] = static_cast<uint8_t>(i * 7 + k * 31 + 1);
 }
 
 struct Gen {
@@ -45,13 +45,13 @@ static Gen makeSession(uint16_t id, int nframes, uint8_t mode, bool fec = true) 
   tx.begin();
   drain();
   for (int i = 0; i < nframes; i++) {
-    uint8_t f[kFrameBytes];
+    uint8_t f[kMaxFrameBytes];
     if (mode == kModeTest) {
       testFramePattern(id, static_cast<uint32_t>(i), f);
     } else {
       voiceFrame(static_cast<uint32_t>(i), f);
     }
-    g.frames.emplace_back(f, f + kFrameBytes);
+    g.frames.emplace_back(f, f + frameBytesFor(mode));
     tx.pushFrame(f);
     drain();  // la coda di trasmissione tiene 8 pacchetti: si svuota man mano, come fa il nodo
   }
@@ -116,6 +116,25 @@ static void testLossesAndParity() {
     for (size_t k = 0; k < kFrameBytes; k++) z = z && s.c2[i * kFrameBytes + k] == 0;
     if (z) zeros++;
     else CHECK(memcmp(&s.c2[i * kFrameBytes], g.frames[i].data(), kFrameBytes) == 0);
+  }
+  CHECK(zeros == 24);
+}
+
+static void testVoice3200() {
+  const Gen g = makeSession(555, 200, kModeCodec2_3200);
+  const size_t fb = 16;
+  // pacchetto 2 recuperato dalla parita', pacchetti 6 e 7 persi (24 frame)
+  const auto ss = reassemble(parseCaptures(capture(g, {2, 6, 7})));
+  CHECK(ss.size() == 1);
+  const Session& s = ss[0];
+  CHECK(s.mode == kModeCodec2_3200 && s.frameBytes == fb && s.recovered >= 1 && s.framesLost == 24);
+  CHECK(s.c2.size() == 200 * fb);
+  size_t zeros = 0;
+  for (size_t i = 0; i < 200; i++) {
+    bool z = true;
+    for (size_t k = 0; k < fb; k++) z = z && s.c2[i * fb + k] == 0;
+    if (z) zeros++;
+    else CHECK(memcmp(&s.c2[i * fb], g.frames[i].data(), fb) == 0);
   }
   CHECK(zeros == 24);
 }
@@ -186,6 +205,7 @@ int main() {
   testParse();
   testVoiceClean();
   testLossesAndParity();
+  testVoice3200();
   testTestSession();
   testSessionsAndNoise();
   testNoTimestamps();

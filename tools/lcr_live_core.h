@@ -21,8 +21,8 @@ class LiveRx {
   class Sink {
    public:
     virtual ~Sink() {}
-    // Un frame Codec2 (kFrameBytes byte); lost = frame perso e non recuperabile (i byte sono a zero, come in lcr_decode).
-    virtual void frame(const uint8_t* f, bool lost) = 0;
+    // Un frame Codec2 (rx_.frameBytes() byte); lost = frame perso e non recuperabile (i byte sono a zero, come in lcr_decode).
+    virtual void frame(const uint8_t* f, size_t n, bool lost) = 0;  // n = byte del frame (6 a 1200, 16 a 3200)
     // Riga di stato per l'operatore (nominativo, posizione, avanzamento, fine della trasmissione).
     virtual void info(const std::string& line) = 0;
   };
@@ -60,7 +60,7 @@ class LiveRx {
       }
       return;
     }
-    if (p.mode != kModeCodec2_1200 && p.mode != kModeTest) return;
+    if (p.mode != kModeCodec2_1200 && p.mode != kModeCodec2_3200 && p.mode != kModeTest) return;
     if (receiving_ && (p.mode == kModeTest) != isTest_) return;
     if (!rx_.onPacket(p, now)) return;
     if (!receiving_) {
@@ -126,15 +126,15 @@ class LiveRx {
       case RxStream::Kind::Frame:
         frames_++;
         if (isTest_) lt_.onFrame(o.frame);
-        else sink_.frame(o.frame, false);
+        else sink_.frame(o.frame, rx_.frameBytes(), false);
         break;
       case RxStream::Kind::Lost:
         lostFrames_++;
         if (isTest_) {
           lt_.onLost();
         } else {
-          const uint8_t zero[kFrameBytes] = {0};
-          sink_.frame(zero, true);
+          const uint8_t zero[kMaxFrameBytes] = {0};
+          sink_.frame(zero, rx_.frameBytes(), true);
         }
         break;
       case RxStream::Kind::End:

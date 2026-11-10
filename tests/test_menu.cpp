@@ -52,8 +52,10 @@ static void testMenu() {
   // Si apre sulla voce in uso.
   CHECK(m.open(1, 0));
   CHECK(m.isOpen() && m.selectedIndex() == 1);
-  // Messaggio -> (Qualita' saltata) -> Standard -> Messaggio
+  // Messaggio -> Qualita' -> Standard -> Messaggio
   m.next(100);
+  CHECK(m.selectedIndex() == 2);
+  m.next(150);
   CHECK(m.selectedIndex() == 0);
   m.next(200);
   CHECK(m.selectedIndex() == 1);
@@ -75,10 +77,14 @@ static void testMenu() {
   CHECK(!m.tick(30000));
 
   // Profilo in uso non disponibile: si evidenzia la prima voce scegliibile.
-  CHECK(m.open(2, 0));
-  CHECK(m.selectedIndex() == 0);
+  static const MenuItem part[] = {{"A", 0, true}, {"B", 1, true}, {"C", 2, false}};
+  Menu pm(part, 3);
+  CHECK(pm.open(2, 0));
+  CHECK(pm.selectedIndex() == 0);
+  pm.cancel();
+  CHECK(!pm.isOpen());
+  CHECK(m.open(2, 0) && m.selectedIndex() == 2);  // Qualita' scegliibile
   m.cancel();
-  CHECK(!m.isOpen());
 
   // Nessuna voce disponibile: non si apre.
   static const MenuItem none[] = {{"A", 0, false}};

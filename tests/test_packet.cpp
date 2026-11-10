@@ -40,6 +40,50 @@ static void testRoundTrip() {
   CHECK(!q.hasCallsign() && q.payloadLen == 0);
 }
 
+static void testCodec3200() {
+  // Modo 4: frame da 16 byte, 12 per pacchetto = 192 byte
+  Packet p;
+  p.session = 0x1234;
+  p.seq = 2;
+  p.mode = kModeCodec2_3200;
+  p.payloadLen = static_cast<uint8_t>(12 * 16);
+  for (size_t i = 0; i < p.payloadLen; i++) p.payload[i] = static_cast<uint8_t>(i * 3 + 1);
+  uint8_t buf[kMaxWireBytes];
+  const size_t n = encodePacket(p, buf, sizeof(buf));
+  CHECK(n == 5 + 192);
+  Packet q;
+  CHECK(decodePacket(buf, n, q));
+  CHECK(q.mode == kModeCodec2_3200 && q.payloadLen == 192 && samePayload(p, q));
+  // Lunghezza non multipla di 16: scartato; 6 byte (un frame del 1200) non e' valido nel modo 4
+  CHECK(!decodePacket(buf, n - 1, q));
+  uint8_t shortBuf[5 + 6];
+  memcpy(shortBuf, buf, 5);
+  memset(shortBuf + 5, 1, 6);
+  CHECK(!decodePacket(shortBuf, sizeof(shortBuf), q));
+  // Parita' su pacchetti da 16 byte per frame
+  Packet d[4];
+  for (int i = 0; i < 4; i++) {
+    d[i] = p;
+    d[i].seq = static_cast<uint8_t>(5 + i);
+    d[i].payloadLen = static_cast<uint8_t>((i == 3 ? 5 : 12) * 16);
+    for (size_t k = 0; k < d[i].payloadLen; k++) d[i].payload[k] = static_cast<uint8_t>(i * 40 + k * 7);
+  }
+  ParityAccumulator acc;
+  for (auto& x : d) acc.add(x);
+  Packet par;
+  acc.build(par, 0x1234, kModeCodec2_3200, 9);
+  const size_t pn = encodePacket(par, buf, sizeof(buf));
+  Packet par2;
+  CHECK(decodePacket(buf, pn, par2));
+  for (size_t miss = 0; miss < 4; miss++) {
+    const Packet* g[4];
+    for (size_t i = 0; i < 4; i++) g[i] = (i == miss) ? nullptr : &d[i];
+    Packet rec;
+    CHECK(recoverFromParity(par2, g, 4, rec));
+    CHECK(samePayload(rec, d[miss]));
+  }
+}
+
 static void testPosition() {
   Packet p = makeData(0, 0, 1, kFlagStart);
   strcpy(p.callsign, "IU5HJU");
@@ -223,6 +267,7 @@ static void testPartialGroupParity() {
 
 int main() {
   testRoundTrip();
+  testCodec3200();
   testPosition();
   testTotal();
   testRejects();
