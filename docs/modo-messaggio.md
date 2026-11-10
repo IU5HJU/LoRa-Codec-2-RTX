@@ -60,4 +60,4 @@ Per le prime prove usa messaggi **brevi** (3-5 secondi): bastano 30-50 secondi i
 
 ## Ripetizione e normativa
 
-Un nodo che ripete messaggi in automatico è una **stazione ad azionamento automatico**: la normativa italiana e l'ARI vanno consultate **prima** di qualsiasi prova con ripetizione automatica (identificazione, autorizzazioni, controllo).
+Un nodo che ripete messaggi in automatico è una **stazione ad azionamento automatico**: la normativa italiana (l'autorizzazione dei ripetitori viene dal **Ministero**, non dall'ARI) va consultata **prima** di qualsiasi prova con ripetizione automatica (identificazione, autorizzazioni, controllo).

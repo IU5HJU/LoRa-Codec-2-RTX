@@ -32,7 +32,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 | 4 | **Modo Qualità** (Codec2 3200, SF7/BW250) | **fatto e provato sulle schede il 10/11/2026** (suona meglio del 1200). L'**ascolto in Qualità con l'SDR** (`lcr_live` ricompilato) è **riuscito il 10/11/2026**. La **CPU è misurata** (vedi riga 3). Resta la sequenza a 16 bit per durate oltre i 30 s |
 | 5 | **Misure sul campo:** RSSI, SNR, deriva di frequenza, perdite, anche in movimento | decidono quanta protezione serve |
 | 6 | Intestazione del messaggio (identificatore, flag emergenza e ripetibile) | il Messaggio **resta a 1200** (decisione del 10/11/2026, vedi sotto) |
-| 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **dopo** la verifica normativa (ARI): sono stazioni automatiche |
+| 7 | Ripetizione a un salto del messaggio; ripetitore Standard a due schede | **dopo** l'autorizzazione del Ministero (non dell'ARI): sono stazioni automatiche |
 | 8 | **Memorie** (profilo e frequenze per ogni canale) e frequenze di lavoro col band plan IARU/ARI | |
 | 9 | Locatore Maidenhead e ora precisa dal GPS | |
 | 10 | **Documentazione e testo per un video esplicativo** del progetto | vedi sotto: da preparare **prima** delle riprese, senza scrivere codice |
@@ -159,7 +159,7 @@ Conseguenze da tenere presenti (ragionamento, non ancora progettato):
 - **Un ripetitore Standard con due frequenze ascolta e trasmette nello stesso momento**: servono **due radio** (una in RX, una in TX) e un buon isolamento tra le antenne (distanza, filtri). Una sola SX127x non basta in tempo reale. Con una sola radio si potrebbe solo memorizzare il turno e ritrasmetterlo dopo, cioè fare un store-and-forward, che non è un ripetitore.
 - **Il ripetitore può rigenerare la protezione:** recupera i pacchetti persi con la parità e trasmette con una parità nuova, quindi ogni tratta ha la sua correzione degli errori.
 - **Le schede Standard hanno bisogno di frequenza di ricezione e di trasmissione separate** (scostamento, "shift") come in un ripetitore analogico, oltre al collegamento diretto sulla frequenza simplex: da prevedere nelle impostazioni e nella pagina.
-- **Un ripetitore (e un nodo che ripete messaggi) è una stazione ad azionamento automatico**: da verificare con la normativa italiana e con l'ARI prima di qualsiasi prova con ripetizione automatica; il ripetitore deve anche identificarsi.
+- **Un ripetitore (e un nodo che ripete messaggi) è una stazione ad azionamento automatico**: da autorizzare secondo la normativa italiana (**Ministero**, non ARI) prima di qualsiasi prova con ripetizione automatica; il ripetitore deve anche identificarsi.
 - **Frequenze da concordare, almeno cinque:** Messaggio, Standard diretto, ingresso e uscita del ripetitore Standard, Qualità (voce "Frequenza di lavoro" in "Aperto").
 - **Messaggio ripetuto:** serve un identificatore univoco del messaggio (nominativo di origine e sessione) per non ripeterlo due volte, un contatore di salti con limite basso, il nominativo di chi ripete e un flag "ripetibile"; ritardi casuali con soppressione se un altro lo ha già ripetuto. Prima un solo salto; la mesh con più salti si valuta dopo le misure sul campo.
 
