@@ -157,3 +157,19 @@ Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa du
 2. **Priorità**: vince il messaggio (a) o vince la voce (b), oppure **terza scheda**.
 3. **Frequenze**: i messaggi entrano e escono sulle stesse frequenze della voce (cambia solo il profilo radio) o su altre.
 4. L'**annuncio di occupato** nel modo 6, come proposto.
+
+### Decisioni dell'11/11/2026 sulla ripetizione dei messaggi
+
+1. **Durata massima: 15 s di voce** per messaggio ripetuto (circa 139 s in aria a SF12/125 kHz). Il pacchetto `START` dichiara già il numero totale di pacchetti (`TOTAL`): la TX sa subito se un messaggio supera il limite e, in quel caso, **non lo memorizza né lo ripete** (nessuna ripetizione parziale).
+2. **Priorità alla voce.** La TX **memorizza** i messaggi ricevuti e li **ritrasmette appena il ripetitore è libero**. La voce in arrivo dalla scheda RX ha sempre la precedenza.
+3. **Frequenza:** i messaggi usano la **frequenza di trasmissione del ripetitore** (la frequenza di uscita), con il profilo radio del Messaggio (SF12, banda 125 kHz). Interpretazione da confermare: le stazioni in Messaggio trasmettono e ascoltano sull'uscita del ripetitore (in simplex), e la TX, quando è libera, ascolta lì; la voce in tempo reale ha invece ingresso e uscita separati.
+4. **Annuncio di "occupato" non bloccante** (modo nuovo, per esempio il 6): prima di ritrasmettere un messaggio la TX manda, con i parametri dello Standard, un pacchetto con il **tempo di blocco** (ricavato dal messaggio stesso: ha tutti i pacchetti memorizzati, quindi il tempo in aria è esatto). Le radio **lo mostrano sul display ma non rifiutano il PTT**: una stazione può **forzare la voce** e la TX interrompe il messaggio e **ritenta appena possibile**.
+
+**Cosa regge:** la TX non ritrasmette mai insieme voce e messaggio, il blocco è solo informativo, e la voce non aspetta mai un messaggio. La memorizzazione e la ripetizione usano la logica della parità già provata.
+
+**Punti da sistemare nel progetto:**
+- **Ripresa = nuova trasmissione dall'inizio con un nuovo ID di sessione.** Un ricevitore chiude la sessione dopo 12 s di silenzio e ignora i ritardatari: con la stessa sessione non riascolterebbe il messaggio. Chi aveva ricevuto metà messaggio ne **riproduce una copia incompleta**, poi arriva quello intero. Si accetta come costo di "priorità alla voce"; si potrà ridurre più avanti.
+- **Mentre la TX ritrasmette voce non ascolta messaggi:** un messaggio inviato in quel momento **si perde** (il progetto non ha ACK). La parità ne recupera uno su quattro se i pacchetti persi sono pochi. Finché c'è una sessione vocale attiva (più un tempo di coda di qualche secondo) la TX **resta sui parametri della voce** e non torna in ascolto SF12 fra un pacchetto e l'altro.
+- **I messaggi sull'uscita del ripetitore interferiscono con la voce** dei ricevitori vicini a chi trasmette il messaggio (SF12/125 kHz sulla stessa frequenza di SF8/250 kHz: diversi ma non ortogonali del tutto). Rischio da misurare.
+- **Coda e scadenza:** la TX tiene alcuni messaggi (per esempio 3, circa 3 kB ciascuno) e scarta quelli troppo vecchi (da decidere: per esempio 30 minuti) se il ripetitore resta impegnato con la voce.
+- **Un messaggio ripetuto non si ritrasmette due volte** (memoria degli ultimi pacchetti, come per la voce).
