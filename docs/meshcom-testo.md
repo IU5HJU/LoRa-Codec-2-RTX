@@ -75,7 +75,7 @@ chiede la conferma dei propri testi.
 
 **Diagnostica:** durante l'escursione la seriale (115200) scrive una riga per ogni frame ricevuto, con il motivo se non viene
 mostrato: `[meshcom] : da IU5ABC-9 a IU5HJU-99: MOSTRATO`, `... scartato, non e' per noi (IU5HJU-99)`, `... copia gia' vista`,
-`... messaggio di servizio`, `... FCS sbagliata`, `frame non valido (... byte)`. Serve a capire perché una risposta non compare.
+`... messaggio di servizio`, `... FCS sbagliata`, `frame non valido (... byte)`. A fine escursione una riga di riepilogo (`fine escursione: 12 frame ricevuti (testi 10, posizioni e rapporti 0, FCS sbagliata 1, non validi 1)`) distingue "non ha sentito niente" da "ha sentito ma scartato". Serve a capire perché una risposta non compare.
 
 ## Formato dei frame
 

@@ -1023,6 +1023,10 @@ static void testMeshcomGroups() {
   CHECK(logHas("servizio"));
   push(meshFrame("IU5YYY-9", "IZ5ABC-99", "IZ5ABC-99:ack1", id++));
   CHECK(logHas("conferma di un nostro testo"));
+  // riepilogo a fine escursione: tutti i frame ricevuti divisi per tipo
+  g_meshLog.clear();
+  s.b.node.endMeshcom();
+  CHECK(logHas("fine escursione: 12 frame ricevuti (testi 10, posizioni e rapporti 0, FCS sbagliata 1, non validi 1)"));
   // senza gruppi impostati nessun gruppo e' mostrato
   Sim t;
   t.run(100);

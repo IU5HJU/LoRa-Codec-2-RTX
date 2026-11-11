@@ -192,6 +192,8 @@ class VoiceNode {
   static constexpr size_t kMcGroupSlots = 5;
   char mcGroups_[kMcGroupSlots][8] = {{0}};
   size_t mcGroupN_ = 0;
+  // Frame ricevuti nell'escursione in corso: tutti, di testo, di altro tipo, con FCS sbagliata, non validi (riepilogo in meshLog)
+  uint32_t mcRxAll_ = 0, mcRxText_ = 0, mcRxOther_ = 0, mcRxBadFcs_ = 0, mcRxInvalid_ = 0;
 
   // Casella dei messaggi
   Inbox inbox_;

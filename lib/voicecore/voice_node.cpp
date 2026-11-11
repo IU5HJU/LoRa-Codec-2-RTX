@@ -616,7 +616,9 @@ void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
     cfg_.meshLog(msg);
   };
   mc::Frame f;
+  mcRxAll_++;
   if (!mc::decode(b, n, f)) {
+    mcRxInvalid_++;
     char t[24];
     snprintf(t, sizeof(t), "%u byte, tipo %02X", static_cast<unsigned>(n), n ? b[0] : 0);
     log("frame non valido (%s)", t);
@@ -627,10 +629,15 @@ void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
   snprintf(hdr, sizeof(hdr), "%c da %.*s a %s", f.type == mc::kTypeText ? ':' : (f.type == mc::kTypePos ? '!' : '@'),
            static_cast<int>(comma0 ? comma0 - f.path : strlen(f.path)), f.path, f.dest);
   if (!f.fcsOk) {
+    mcRxBadFcs_++;
     log("%s: scartato, FCS sbagliata", hdr);
     return;
   }
-  if (f.type != mc::kTypeText) return;  // posizioni e rapporti dei nodi: troppi per scriverli tutti
+  if (f.type != mc::kTypeText) {
+    mcRxOther_++;
+    return;
+  }
+  mcRxText_++;  // posizioni e rapporti dei nodi: troppi per scriverli tutti
   // Diretto a noi: il nostro nominativo-SSID o il solo nominativo (alcuni client scrivono senza SSID)
   const bool forUs = cfg_.mcCall[0] && (equalsNoCase(f.dest, cfg_.mcCall) || (cfg_.callsign[0] && equalsNoCase(f.dest, cfg_.callsign)));
   // Un gruppo tra i destinatari impostati (per vedere le risposte ai propri QRV)
@@ -792,6 +799,7 @@ bool VoiceNode::startMeshcom(const char* text, const char* dest, uint32_t nowMs,
     }
     if (!radio_.setMeshcom(true)) return false;  // la radio non e' passata ai parametri della rete: resta com'era
     guest_ = true;
+    mcRxAll_ = mcRxText_ = mcRxOther_ = mcRxBadFcs_ = mcRxInvalid_ = 0;
     ackPending_ = false;
     playing_ = false;
     textOpen_ = false;
@@ -810,6 +818,13 @@ void VoiceNode::endMeshcom() {
   if (!guest_) return;
   guest_ = false;
   ackPending_ = false;
+  if (cfg_.meshLog) {  // riepilogo: distingue "non ha sentito niente" da "ha sentito ma scartato"
+    char r[120];
+    snprintf(r, sizeof(r), "fine escursione: %u frame ricevuti (testi %u, posizioni e rapporti %u, FCS sbagliata %u, non validi %u)",
+             static_cast<unsigned>(mcRxAll_), static_cast<unsigned>(mcRxText_), static_cast<unsigned>(mcRxOther_),
+             static_cast<unsigned>(mcRxBadFcs_), static_cast<unsigned>(mcRxInvalid_));
+    cfg_.meshLog(r);
+  }
   radio_.setMeshcom(false);
   radio_.startReceive();
   notify_.meshcomChanged(false);
