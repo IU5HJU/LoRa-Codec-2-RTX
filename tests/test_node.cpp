@@ -847,6 +847,44 @@ static void testMeshcomWindow() {
   CHECK(t.a.radio.meshcomSwitches == 2);
 }
 
+static void testMeshcomEarlyExit() {
+  // fine anticipata a riposo: la radio torna subito al profilo voce (riepilogo in diagnostica) e la voce funziona
+  Sim s;
+  s.air.clock = &s.clock;
+  s.run(100);
+  CHECK(s.b.node.startMeshcom(nullptr, nullptr, s.clock, 10 * kWin));
+  s.run(1000);
+  CHECK(s.b.node.meshcomActive() && s.b.radio.meshcom);
+  s.b.node.endMeshcom();
+  CHECK(!s.b.node.meshcomActive() && !s.b.radio.meshcom && s.b.note.meshcomEvents.size() == 2 && !s.b.note.meshcomEvents[1]);
+  // dopo l'uscita il PTT trasmette di nuovo (voce) e una ricezione vocale arriva
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50 + 1500);
+  s.a.node.pttReleased(s.clock);
+  s.run(3000);
+  CHECK(s.b.note.rxStarts == 1 && !s.b.spk.played.empty());
+
+  // fine anticipata durante un invio: la radio non cambia a meta', torna appena l'invio e' finito
+  Sim t;
+  t.run(100);
+  CHECK(t.a.node.startMeshcom("Ciao", "22251", t.clock, 10 * kWin));
+  CHECK(t.a.node.state() == VoiceNode::State::Transmitting);
+  t.a.node.endMeshcom();
+  CHECK(t.a.node.meshcomActive() && t.a.radio.meshcom && t.a.radio.meshcomSwitches == 1);  // ancora sulla rete
+  t.run(2000);
+  CHECK(t.air.sent[0] == 1 && !t.a.node.meshcomActive() && !t.a.radio.meshcom && t.a.radio.meshcomSwitches == 2);
+  // una fine anticipata chiesta e non eseguita non si porta nell'escursione successiva
+  Sim u;
+  u.run(100);
+  CHECK(u.a.node.startMeshcom("Uno", "222", u.clock, kWin));
+  u.a.node.endMeshcom();
+  u.run(2000);
+  CHECK(!u.a.node.meshcomActive());
+  CHECK(u.a.node.startMeshcom("Due", "222", u.clock, kWin));
+  u.run(2000);
+  CHECK(u.a.node.meshcomActive() && u.a.node.meshcomRemainingMs(u.clock) > 50000);  // la richiesta di prima non l'ha chiusa
+}
+
 static void testMeshcomRefused() {
   Sim s;
   s.run(100);
@@ -1057,6 +1095,7 @@ int main() {
   testMeshcomSendReceive();
   testMeshcomSignature();
   testMeshcomWindow();
+  testMeshcomEarlyExit();
   testMeshcomRefused();
   testMeshcomFilters();
   testMeshcomAck();

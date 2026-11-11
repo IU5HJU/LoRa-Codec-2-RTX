@@ -94,7 +94,9 @@ class VoiceNode {
   // Gruppi (numeri) di cui mostrare i messaggi durante l'escursione, oltre a quelli diretti al nostro nominativo-SSID: di solito i
   // destinatari impostati, per vedere le risposte ai propri QRV. Si chiama prima di startMeshcom.
   void setMeshcomGroups(const char* const* groups, size_t n);
-  void endMeshcom();  // fine anticipata (altrimenti alla scadenza della finestra)
+  // Fine anticipata (altrimenti alla scadenza della finestra), per esempio con il volume lungo: la radio torna subito al profilo
+  // in uso. Se in quel momento sta trasmettendo, torna appena l'invio e' finito.
+  void endMeshcom();
   bool meshcomActive() const { return guest_; }
   uint32_t meshcomRemainingMs(uint32_t nowMs) const;
 
@@ -189,6 +191,7 @@ class VoiceNode {
   // Escursione sulla rete di testo in corso
   bool guest_ = false;
   uint32_t guestUntilMs_ = 0;
+  bool endRequested_ = false;  // fine anticipata chiesta durante un invio
   static constexpr size_t kMcGroupSlots = 5;
   char mcGroups_[kMcGroupSlots][8] = {{0}};
   size_t mcGroupN_ = 0;

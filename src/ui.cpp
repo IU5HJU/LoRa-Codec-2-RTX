@@ -584,9 +584,12 @@ void UiNotifier::draw(uint32_t nowMs) {
     display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
                     static_cast<unsigned long>(lastRecovered_));
   } else {
-    if (meshSec_ > 0) display_.printf("Ascolto %d:%02d", meshSec_ / 60, meshSec_ % 60);
-    else display_.print(message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare"));
-    if (gpsEnabled_) {  // riga libera a riposo: stato del GPS
+    if (meshSec_ > 0) {
+      display_.printf("Ascolto %d:%02d", meshSec_ / 60, meshSec_ % 60);
+      display_.setCursor(0, 47);
+      display_.print("VOL lungo = esci");  // torna subito alla voce
+    } else display_.print(message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare"));
+    if (gpsEnabled_ && meshSec_ <= 0) {  // riga libera a riposo: stato del GPS (durante l'escursione c'e' il promemoria)
       display_.setCursor(0, 47);
       if (gpsFix_) {
         display_.printf("GPS fix, %d satelliti", gpsSats_);

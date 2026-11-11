@@ -649,7 +649,13 @@ void loop() {
   // ferma = menu delle modalita'. Nel menu il PTT sceglie la voce e non trasmette mai (vedi lib/voicecore/menu.h).
   const bool volRaw = digitalRead(pins::kVolume) == LOW;
   if (!volRaw) volumeArmed = true;
-  const lcr::ButtonGesture::Event volEvent = volumeButton.update(volumeArmed && volRaw, now);
+  lcr::ButtonGesture::Event volEvent = volumeButton.update(volumeArmed && volRaw, now);
+  // Escursione MeshCom in corso: il volume lungo la termina subito e la radio torna al profilo voce (invece di aprire il menu)
+  if (volEvent == lcr::ButtonGesture::Event::Long && node->meshcomActive() && !menu->isOpen() && !textPicker.isOpen() && !mcPicker.isOpen()) {
+    Serial.println("[meshcom] escursione terminata con il volume lungo");
+    node->endMeshcom();
+    volEvent = lcr::ButtonGesture::Event::None;
+  }
   const bool nodeIdle = node->state() == lcr::VoiceNode::State::Idle && node->recPhase() == lcr::VoiceNode::RecPhase::None;
   lcr::MenuFlow::Actions act;  // niente di fatto finche' e' aperta la scelta del testo (i tasti vanno a lei)
   if (textPicker.isOpen()) {

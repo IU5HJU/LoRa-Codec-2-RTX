@@ -24,7 +24,7 @@ solo per qualche minuto, quando lo chiedi.
    [modo-messaggio.md](modo-messaggio.md)) i testi **diretti al tuo nominativo-SSID** (o al solo nominativo) e quelli dei **gruppi**
    che hai tra i destinatari impostati: così vedi le risposte ai tuoi QRV. Il testo di gruppo inizia con il gruppo, `[22251] ...`. Restano leggibili anche dopo il rientro. Il PTT lungo non
    trasmette ("SOLO TESTO").
-4. Alla scadenza la radio **torna da sola ai parametri del profilo voce** di prima. Nessun riavvio, nessun profilo da cambiare.
+4. Alla scadenza la radio **torna da sola ai parametri del profilo voce** di prima. Nessun riavvio, nessun profilo da cambiare. **Per uscire prima: volume lungo** (sul display, durante l'ascolto, c'è il promemoria "VOL lungo = esci"); se in quel momento la scheda sta ancora trasmettendo, il ritorno avviene appena l'invio è finito.
 
 **Durante l'ascolto la scheda non sente la voce del progetto** (una radio ascolta un solo insieme di parametri alla volta). Le
 risposte che arrivano **dopo** la finestra non si sentono: serve un altro dispositivo MeshCom, oppure riaprire l'ascolto dal menu.

@@ -231,7 +231,7 @@ void VoiceNode::tick(uint32_t nowMs) {
     txTick(nowMs);
   } else {
     playTick(nowMs);
-    if (guest_ && state_ == State::Idle && static_cast<int32_t>(nowMs - guestUntilMs_) >= 0) endMeshcom();
+    if (guest_ && state_ == State::Idle && (endRequested_ || static_cast<int32_t>(nowMs - guestUntilMs_) >= 0)) endMeshcom();
     if (meshActive()) meshAckTick(nowMs);
     rxTick(nowMs);
     if (replyPending_ && state_ == State::Idle && static_cast<int32_t>(nowMs - replyAtMs_) >= 0) sendTestReply(nowMs);
@@ -805,6 +805,7 @@ bool VoiceNode::startMeshcom(const char* text, const char* dest, uint32_t nowMs,
     }
     if (!radio_.setMeshcom(true)) return false;  // la radio non e' passata ai parametri della rete: resta com'era
     guest_ = true;
+    endRequested_ = false;
     mcRxAll_ = mcRxText_ = mcRxOther_ = mcRxBadFcs_ = mcRxInvalid_ = 0;
     ackPending_ = false;
     playing_ = false;
@@ -822,6 +823,11 @@ bool VoiceNode::startMeshcom(const char* text, const char* dest, uint32_t nowMs,
 
 void VoiceNode::endMeshcom() {
   if (!guest_) return;
+  if (state_ == State::Transmitting) {  // non si cambia la radio a meta' di un invio: finisce subito dopo (tick)
+    endRequested_ = true;
+    return;
+  }
+  endRequested_ = false;
   guest_ = false;
   ackPending_ = false;
   if (cfg_.meshLog) {  // riepilogo: distingue "non ha sentito niente" da "ha sentito ma scartato"
