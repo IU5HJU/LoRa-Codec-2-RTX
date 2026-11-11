@@ -126,9 +126,8 @@
         <option value="std">Standard: voce in tempo reale (SF8, 250 kHz)</option>
         <option value="msg">Messaggio: lungo raggio, registra e invia (SF12, 125 kHz)</option>
         <option value="qua">Qualità: voce più fedele, meno portata (SF7, 250 kHz, Codec2 3200)</option>
-        <option value="mc">MeshCom: solo testi (SF11, 250 kHz, 433,175 MHz)</option>
       </select>
-      <p class="hint" id="profilehint"><strong>Standard</strong>: la voce di sempre, in tempo reale. <strong>Messaggio</strong>: tieni premuto il PTT e registra fino a 30 secondi; un secondo dopo il rilascio la scheda trasmette il messaggio, molto più lentamente del parlato (circa 94 secondi in aria ogni 10 secondi di voce) e con circa 13 dB di sensibilità in più; chi riceve lo ascolta <strong>a ricezione conclusa</strong>. <strong>Qualità</strong>: voce in tempo reale con Codec2 3200 (più naturale, circa 5 dB di portata in meno dello Standard). <strong>MeshCom</strong>: solo testi (SMS) compatibili con le reti radioamatoriali a pacchetto, senza voce. <strong>Le schede con profili diversi non si sentono</strong>: usa lo stesso profilo (e la stessa frequenza) su tutte. Vale dal riavvio.</p>
+      <p class="hint" id="profilehint"><strong>Standard</strong>: la voce di sempre, in tempo reale. <strong>Messaggio</strong>: tieni premuto il PTT e registra fino a 30 secondi; un secondo dopo il rilascio la scheda trasmette il messaggio, molto più lentamente del parlato (circa 94 secondi in aria ogni 10 secondi di voce) e con circa 13 dB di sensibilità in più; chi riceve lo ascolta <strong>a ricezione conclusa</strong>. <strong>Qualità</strong>: voce in tempo reale con Codec2 3200 (più naturale, circa 5 dB di portata in meno dello Standard). <strong>Le schede con profili diversi non si sentono</strong>: usa lo stesso profilo (e la stessa frequenza) su tutte. Vale dal riavvio.</p>
 
       <label for="freq">Frequenza (MHz)</label>
       <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
@@ -184,14 +183,20 @@
       </select>
       <p class="hint" id="gpshint">Il GPS assorbe decine di mA: accendilo solo se serve. Con un <strong>fix recente</strong> (cielo aperto; il primo può richiedere alcuni minuti) la posizione viene dal GPS, altrimenti dalla posizione fissa. Il display a riposo dice "GPS cerco satelliti" o "GPS fix, N satelliti".</p>
 
-      <h3>Testi su rete MeshCom (profilo MeshCom)</h3>
-      <p class="hint" id="mchint">Con il profilo <strong>MeshCom</strong> la scheda scambia <strong>solo testi</strong> (niente voce) con le reti radioamatoriali a pacchetto sui 433,175 MHz. I testi si scelgono dal menu a bordo (volume lungo &rarr; <strong>Invia testo</strong>) e partono verso il destinatario indicato qui; i testi diretti al tuo nominativo-SSID compaiono come un SMS (busta sul display) e si leggono col PTT. Il <strong>nominativo-SSID</strong> è il tuo nominativo seguito da &ldquo;-&rdquo; e dall'SSID (per esempio IU5HJU-99). Il destinatario è un nominativo-SSID (per esempio IU5ABC-9) o <strong>*</strong> per scrivere a tutti: usalo con parsimonia, il traffico pesa su una rete di altri. Prima di trasmettere accordati con chi gestisce la rete della tua zona. Vale dal riavvio.</p>
-      <label for="mcfreq">Frequenza MeshCom (MHz)</label>
+      <h3>MeshCom: avvisi e accordi sulle reti di testo</h3>
+      <p class="hint" id="mchint">Dal menu a bordo (volume lungo &rarr; <strong>MeshCom</strong>) la scheda passa per qualche minuto ai <strong>433,175 MHz</strong> delle reti radioamatoriali a pacchetto, invia uno dei testi qui sotto a un destinatario (un <strong>gruppo</strong> come 22251 o 222, un <strong>nominativo-SSID</strong> come IU5ABC-9, oppure <strong>*</strong> per tutti), ascolta le risposte dirette a te e poi <strong>torna da sola al profilo voce</strong>. È pensato per avvisare (&ldquo;IU5HJU QRV su VoLora modo Q&rdquo;) o fissare un QSO, non per sostituire un nodo MeshCom. Durante l'ascolto la scheda non sente la voce del progetto. I testi diretti al tuo <strong>nominativo-SSID</strong> (il tuo nominativo, &ldquo;-&rdquo; e l'SSID, per esempio IU5HJU-99) compaiono come un SMS e si leggono col PTT. Un messaggio a un gruppo o a * è ripetuto da molti nodi: usalo con parsimonia, e prima di trasmettere accordati con chi gestisce la rete della tua zona.</p>
+      <label for="mcfreq">Frequenza della rete di testo (MHz)</label>
       <input id="mcfreq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.175" disabled>
-      <label for="mcdest">Destinatario dei testi (nominativo-SSID, * per tutti, vuoto = nessuno)</label>
-      <input id="mcdest" maxlength="15" autocomplete="off" placeholder="IU5ABC-9" disabled>
-      <label for="mcssid">SSID del tuo nominativo (0-99, 0 = nessuno)</label>
+      <label for="mcssid">SSID del tuo nominativo in rete (0-99, 0 = nessuno)</label>
       <input id="mcssid" type="number" min="0" max="99" step="1" placeholder="99" disabled>
+      <label for="mcwindow">Secondi di ascolto dopo l'invio (30-1800)</label>
+      <input id="mcwindow" type="number" min="30" max="1800" step="1" placeholder="300" disabled>
+      <label for="mcdest1">Destinatario 1 (gruppo, nominativo-SSID o * per tutti)</label><input id="mcdest1" maxlength="15" autocomplete="off" placeholder="22251" disabled>
+      <label for="mcdest2">Destinatario 2</label><input id="mcdest2" maxlength="15" autocomplete="off" placeholder="222" disabled>
+      <label for="mcdest3">Destinatario 3</label><input id="mcdest3" maxlength="15" autocomplete="off" placeholder="*" disabled>
+      <label for="mcdest4">Destinatario 4</label><input id="mcdest4" maxlength="15" autocomplete="off" disabled>
+      <label for="mcdest5">Destinatario 5</label><input id="mcdest5" maxlength="15" autocomplete="off" disabled>
+      <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S, M o Q), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo Q 433.900&rdquo;.</p>
 
       <h3>Testi predefiniti (SMS)</h3>
       <p class="hint" id="texthint">Fino a <strong>5 testi brevi</strong> (massimo 150 caratteri ciascuno, solo lettere, cifre e simboli senza accenti e senza le parentesi graffe) da inviare dalla scheda: menu a bordo (volume lungo) &rarr; <strong>Invia testo</strong>. Chi riceve sente &ldquo;SMS&rdquo; in Morse, vede una busta sul display e preme il PTT per leggere. Lascia vuoto un posto per non usarlo. Valgono subito, senza riavvio.</p>
@@ -372,16 +377,22 @@
   let freqMsgSeen = false;   // l'ultimo CFG GET conteneva la frequenza del profilo Messaggio
   let posSeen = false, gpsSeen = false;   // l'ultimo CFG GET conteneva pos=/qth= e gps= (firmware piu' vecchi: no)
   let textSeen = false;      // la scheda risponde a CFG GET TEXTn (firmware piu' vecchi: no)
-  let mcSeen = false;        // la scheda risponde a CFG GET MC (profilo MeshCom: firmware piu' vecchi: no)
-  function updateMcControls(on) { for (const id of ['mcfreq', 'mcdest', 'mcssid']) $(id).disabled = !on || !mcSeen; }
+  let mcSeen = false;        // la scheda risponde a CFG GET MC (escursione MeshCom: firmware piu' vecchi: no)
+  const MC_IDS = ['mcfreq', 'mcssid', 'mcwindow', 'mcdest1', 'mcdest2', 'mcdest3', 'mcdest4', 'mcdest5'];
+  function updateMcControls(on) { for (const id of MC_IDS) $(id).disabled = !on || !mcSeen; }
   async function readMc() {
     try {
       const r = await send('CFG GET MC', /^CFG MC /, 2500);
       const m = {};
       for (const kv of r.slice(7).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = kv.slice(i + 1); }
       $('mcfreq').value = m.freqmc || '';
-      $('mcdest').value = m.dest || '';
       $('mcssid').value = m.ssid || '';
+      $('mcwindow').value = m.window || '';
+      for (let i = 1; i <= 5; i++) {   // un comando per destinatario (come i testi)
+        const head = 'CFG MCDEST' + i + '=';
+        const d = await send('CFG GET MCDEST' + i, new RegExp('^CFG MCDEST' + i + '='), 2500);
+        $('mcdest' + i).value = d.slice(head.length);
+      }
       mcSeen = true;
     } catch (e) { mcSeen = false; }
     updateMcControls(!!port);
@@ -581,7 +592,7 @@
     const fl = Number($('micfloor').value);
     if ($('micfloor').value === '' || !Number.isInteger(fl) || fl < -80 || fl > -36) return { err: 'Il fondo del microfono deve essere un intero da -80 a -36 dBFS.' };
     const prof = $('profile').value;
-    if (!$('profile').disabled && prof !== 'std' && prof !== 'msg' && prof !== 'qua' && prof !== 'mc') return { err: 'Profilo non valido.' };
+    if (!$('profile').disabled && prof !== 'std' && prof !== 'msg' && prof !== 'qua') return { err: 'Profilo non valido.' };
     let pos = null, qth = null, gps = null;
     if (!$('pos').disabled) pos = $('pos').value === 'on' ? 'on' : 'off';
     if (!$('qthlat').disabled) {
@@ -599,14 +610,20 @@
     }
     if (!$('gps').disabled) gps = $('gps').value === 'on' ? 'on' : 'off';
     let mc = null;
-    if (!$('mcdest').disabled) {
+    if (!$('mcdest1').disabled) {
       const mf = $('mcfreq').value.trim();
       if (!/^\d{3}(\.\d{1,3})?$/.test(mf) || Math.round(parseFloat(mf) * 1000) < LIMITS.freqMin || Math.round(parseFloat(mf) * 1000) > LIMITS.freqMax) return { err: 'La frequenza MeshCom deve essere tra 430.000 e 440.000 MHz (formato 433.175).' };
-      const md = $('mcdest').value.trim().toUpperCase();
-      if (md !== '' && !/^(\*|[A-Z0-9\/-]{1,15})$/.test(md)) return { err: 'Destinatario non valido: nominativo-SSID (lettere, cifre, / e -, massimo 15), * per tutti, oppure vuoto.' };
+      const dests = [];
+      for (let i = 1; i <= 5; i++) {
+        const md = $('mcdest' + i).value.trim().toUpperCase();
+        if (md !== '' && !/^(\*|[A-Z0-9\/-]{1,15})$/.test(md)) return { err: 'Destinatario ' + i + ' non valido: gruppo (22251), nominativo-SSID (lettere, cifre, / e -, massimo 15), * per tutti, oppure vuoto.' };
+        dests.push(md);
+      }
       const ms = $('mcssid').value.trim();
       if (!/^\d{1,2}$/.test(ms)) return { err: 'L\'SSID deve essere un numero da 0 a 99.' };
-      mc = { freq: mf, dest: md, ssid: String(parseInt(ms, 10)) };
+      const mw = $('mcwindow').value.trim();
+      if (!/^\d{2,4}$/.test(mw) || +mw < 30 || +mw > 1800) return { err: 'L\'ascolto dopo l\'invio deve durare da 30 a 1800 secondi.' };
+      mc = { freq: mf, dests, ssid: String(parseInt(ms, 10)), window: String(parseInt(mw, 10)) };
     }
     let texts = null;
     if (!$('text1').disabled) {
@@ -650,8 +667,9 @@
       if (v.gps !== null) replies.push(await send('CFG SET GPS ' + v.gps, /^CFG (OK|ERR)/));
       if (v.mc !== null) {
         replies.push(await send('CFG SET FREQMC ' + v.mc.freq, /^CFG (OK|ERR)/));
-        replies.push(await send('CFG SET MCDEST ' + (v.mc.dest || 'NONE'), /^CFG (OK|ERR)/));
         replies.push(await send('CFG SET MCSSID ' + v.mc.ssid, /^CFG (OK|ERR)/));
+        replies.push(await send('CFG SET MCWINDOW ' + v.mc.window, /^CFG (OK|ERR)/));
+        for (let i = 0; i < 5; i++) replies.push(await send('CFG SET MCDEST' + (i + 1) + ' ' + (v.mc.dests[i] || 'NONE'), /^CFG (OK|ERR)/));
       }
       if (v.texts !== null) for (let i = 0; i < 5; i++) replies.push(await send('CFG SET TEXT' + (i + 1) + ' ' + (v.texts[i] || 'NONE'), /^CFG (OK|ERR)/));
       const bad = replies.find(r => r.startsWith('CFG ERR'));

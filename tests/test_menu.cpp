@@ -57,9 +57,9 @@ static void testMenu() {
   m.next(100);
   CHECK(m.selectedIndex() == 2);
   m.next(120);
-  CHECK(m.selectedIndex() == 3 && m.item(3).id == kProfileMeshcom);  // MeshCom (solo testo)
+  CHECK(m.selectedIndex() == 3 && m.item(3).id == kMenuTextId);  // Invia testo
   m.next(125);
-  CHECK(m.selectedIndex() == 4 && m.item(4).id == kMenuTextId);  // Invia testo
+  CHECK(m.selectedIndex() == 4 && m.item(4).id == kMenuMeshId);  // MeshCom (escursione)
   m.next(130);
   CHECK(m.selectedIndex() == 5 && m.item(5).id == kMenuWifiId);
   m.next(150);
@@ -80,12 +80,12 @@ static void testMenu() {
   CHECK(m.open(2, 500));
   m.next(510);
   o = m.confirm(520);
-  CHECK(o.kind == K::Selected && o.id == kProfileMeshcom);  // MeshCom e' un profilo (id 3): salva e riavvia
+  CHECK(o.kind == K::Selected && o.id == kMenuTextId);  // Invia testo: id 101
   CHECK(m.open(2, 600));
   m.next(610);
   m.next(615);
   o = m.confirm(620);
-  CHECK(o.kind == K::Selected && o.id == kMenuTextId);  // Invia testo: id 101
+  CHECK(o.kind == K::Selected && o.id == kMenuMeshId);  // MeshCom: id 102, non e' un profilo
   CHECK(m.open(2, 700));
   m.next(710);
   m.next(720);

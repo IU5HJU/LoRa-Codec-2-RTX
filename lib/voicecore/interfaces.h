@@ -19,6 +19,12 @@ class IRadio {
   // resta in standby finche' non si chiama startReceive().
   virtual bool send(const uint8_t* data, size_t len) = 0;
   virtual void startReceive() = 0;
+  // Escursione sulle reti di testo (docs/meshcom-testo.md): true porta la radio ai parametri MeshCom (frequenza, SF, banda, CR,
+  // sync word, preambolo), false la riporta a quelli del profilo in uso. Ritorna false se non riesce (la radio resta com'era).
+  virtual bool setMeshcom(bool on) {
+    (void)on;
+    return true;
+  }
   // Non bloccante. Ritorna i byte copiati in buf, 0 se non c'e' nulla.
   virtual size_t receive(uint8_t* buf, size_t cap, int* rssi) = 0;
   // SNR (dB) dell'ultimo pacchetto ricevuto, se la radio lo fornisce.
@@ -83,6 +89,8 @@ class INotifier {
   virtual void messageOpened(bool isText) { (void)isText; }
   // Messaggio ascoltato, letto o interrotto: cancellato dalla casella.
   virtual void messageClosed() {}
+  // L'escursione sulla rete di testo e' iniziata (on = true) o finita (on = false, la scheda e' tornata al profilo in uso).
+  virtual void meshcomChanged(bool on) { (void)on; }
   // Modo "registra e poi trasmetti": fase in corso (0 = nessuna, 1 = registra, 2 = attesa, 3 = trasmette).
   virtual void recPhaseChanged(int phase) { (void)phase; }
   // La prova di collegamento e' stata attivata o disattivata da tre clic sul PTT.

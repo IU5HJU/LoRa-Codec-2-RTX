@@ -20,12 +20,13 @@ void IRAM_ATTR RadioLora::onPacketIsr() {
 }
 
 bool RadioLora::begin(const lcr::Settings& settings) {
+  settings_ = settings;
   SPI.begin(pins::kRadioSclk, pins::kRadioMiso, pins::kRadioMosi, pins::kRadioCs);
   radio_ = new SX1278(new Module(pins::kRadioCs, pins::kRadioDio0, pins::kRadioRst, pins::kRadioDio1, SPI));
 
   // I parametri LoRa vengono dal profilo scelto (profile.h): Standard SF8/BW250, Messaggio SF12/BW125.
   const lcr::Profile& prof = lcr::profileFor(settings.profile);
-  // La sync word e' quella del profilo (0 = LCR_SYNC_WORD): il profilo MeshCom usa quella della rete a pacchetto (0x2B)
+  // La sync word e' quella del profilo (0 = LCR_SYNC_WORD): l'escursione MeshCom usa quella della rete a pacchetto (0x2B)
   int state = radio_->begin(settings.freqMhz(), prof.bwKhz, prof.sf, prof.cr, prof.syncWord ? prof.syncWord : LCR_SYNC_WORD,
                             static_cast<int8_t>(settings.powerDbm), prof.preambleSymbols);
   if (state != RADIOLIB_ERR_NONE) {
@@ -37,6 +38,33 @@ bool RadioLora::begin(const lcr::Settings& settings) {
   radio_->setPacketReceivedAction(onPacketIsr);
   startReceive();
   return true;
+}
+
+// Porta frequenza, banda, SF, CR, sync word e preambolo ai valori dati (i setter di RadioLib mettono la radio in standby e ricalcolano da
+// soli l'ottimizzazione per le basse velocita'). Il CRC e l'intestazione esplicita restano come da begin().
+bool RadioLora::applyParams(const lcr::Profile& prof, float mhz) {
+  radio_->standby();
+  int state = radio_->setFrequency(mhz);
+  if (state == RADIOLIB_ERR_NONE) state = radio_->setBandwidth(prof.bwKhz);
+  if (state == RADIOLIB_ERR_NONE) state = radio_->setSpreadingFactor(prof.sf);
+  if (state == RADIOLIB_ERR_NONE) state = radio_->setCodingRate(prof.cr);
+  if (state == RADIOLIB_ERR_NONE) state = radio_->setSyncWord(prof.syncWord ? prof.syncWord : LCR_SYNC_WORD);
+  if (state == RADIOLIB_ERR_NONE) state = radio_->setPreambleLength(prof.preambleSymbols);
+  if (state != RADIOLIB_ERR_NONE) lastError_ = state;
+  return state == RADIOLIB_ERR_NONE;
+}
+
+bool RadioLora::setMeshcom(bool on) {
+  const lcr::Profile& primary = lcr::profileFor(settings_.profile);
+  bool ok;
+  if (on) {
+    ok = applyParams(lcr::meshcomProfile(), static_cast<float>(settings_.freqMcKhz) / 1000.0f);
+    if (!ok) applyParams(primary, settings_.freqMhz());  // non e' riuscita: si torna com'era
+  } else {
+    ok = applyParams(primary, settings_.freqMhz());
+  }
+  startReceive();
+  return ok;
 }
 
 void RadioLora::startReceive() {

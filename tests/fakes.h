@@ -37,6 +37,14 @@ class Radio : public lcr::IRadio {
     return true;
   }
   void startReceive() override {}
+  bool setMeshcom(bool on) override {
+    meshcom = on;
+    meshcomSwitches++;
+    return !failMeshcom;
+  }
+  bool meshcom = false;
+  int meshcomSwitches = 0;
+  bool failMeshcom = false;
   size_t receive(uint8_t* buf, size_t cap, int* rssi) override {
     auto& q = air_.inbox[id_];
     if (q.empty()) return 0;
@@ -140,6 +148,8 @@ class Notifier : public lcr::INotifier {
   }
   void messageOpened(bool isText) override { opened.push_back(isText); }
   void messageClosed() override { closed++; }
+  void meshcomChanged(bool on) override { meshcomEvents.push_back(on); }
+  std::vector<bool> meshcomEvents;
   struct Msg {
     bool isText;
     std::string callsign;

@@ -10,7 +10,7 @@
     noPos: false,         // firmware senza posizione (piu' vecchio): CFG GET senza pos=/qth= e CFG SET POS/QTH sconosciuti
     noGps: false,
     noMc: false,          // firmware senza profilo MeshCom (piu' vecchio): CFG GET MC e CFG SET FREQMC/MCDEST/MCSSID sconosciuti
-    mc: { freq: '433.175', dest: '', ssid: '99' },
+    mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
     noTexts: false,       // firmware senza testi predefiniti (piu' vecchio): CFG GET TEXTn e CFG SET TEXTn sconosciuti
     texts: ['QRV, sono in ascolto', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
     // (riga seguente: firmware senza GPS)
@@ -47,7 +47,9 @@
       if (!/^[\x20-\x7A\x7C\x7E]{1,150}$/.test(tm[2])) return out('CFG ERR text' + n + ' testo ASCII da 1 a 150 caratteri (NONE per svuotare)');
       st.texts[n - 1] = tm[2]; return out('CFG OK text' + n + '=' + tm[2]);
     }
-    if (/^CFG\s+GET\s+MC$/i.test(line.trim()) && !st.noMc) return out(`CFG MC freqmc=${st.mc.freq} dest=${st.mc.dest} ssid=${st.mc.ssid}`);
+    if (/^CFG\s+GET\s+MC$/i.test(line.trim()) && !st.noMc) return out(`CFG MC freqmc=${st.mc.freq} ssid=${st.mc.ssid} window=${st.mc.window}`);
+    const gd = /^CFG\s+GET\s+MCDEST([1-5])$/i.exec(line.trim());
+    if (gd && !st.noMc) return out('CFG MCDEST' + gd[1] + '=' + st.mc.dests[+gd[1] - 1]);
     const tg = /^CFG\s+GET\s+TEXT([1-5])$/i.exec(line.trim());
     if (tg && !st.noTexts) return out('CFG TEXT' + tg[1] + '=' + st.texts[+tg[1] - 1]);
     if (cmd === 'GET') out(get());
@@ -68,11 +70,15 @@
         const khz = Math.round(parseFloat(v) * 1000);
         if (!(khz >= 430000 && khz <= 440000)) return out('CFG ERR freqmc fuori dai limiti');
         st.mc.freq = v; out('CFG OK freqmc=' + v);
-      } else if (key === 'MCDEST' && !st.noMc) {
+      } else if (/^MCDEST[1-5]$/.test(key) && !st.noMc) {
+        const n = +key[6];
         const d = v.toUpperCase();
-        if (d === 'NONE') { st.mc.dest = ''; return out('CFG OK mcdest='); }
+        if (d === 'NONE') { st.mc.dests[n - 1] = ''; return out('CFG OK mcdest' + n + '='); }
         if (!/^(\*|[A-Z0-9\/-]{1,15})$/.test(d)) return out('CFG ERR mcdest non valido');
-        st.mc.dest = d; out('CFG OK mcdest=' + d);
+        st.mc.dests[n - 1] = d; out('CFG OK mcdest' + n + '=' + d);
+      } else if (key === 'MCWINDOW' && !st.noMc) {
+        if (!inRange(+v, 30, 1800)) return out('CFG ERR mcwindow da 30 a 1800');
+        st.mc.window = String(+v); out('CFG OK mcwindow=' + v);
       } else if (key === 'MCSSID' && !st.noMc) {
         if (!inRange(+v, 0, 99)) return out('CFG ERR mcssid da 0 a 99');
         st.mc.ssid = String(+v); out('CFG OK mcssid=' + v);
@@ -92,7 +98,7 @@
         st.cfg.volume = +v; out('CFG OK volume=' + v);
       } else if (key === 'PROFILE' && !st.noProfile) {
         const pv = v.toLowerCase();
-        if (pv !== 'std' && pv !== 'msg' && pv !== 'qua' && pv !== 'mc') return out('CFG ERR profile usa STD (Standard), MSG (Messaggio), QUA (Qualita) oppure MC (MeshCom)');
+        if (pv !== 'std' && pv !== 'msg' && pv !== 'qua') return out('CFG ERR profile usa STD (Standard), MSG (Messaggio) oppure QUA (Qualita)');
         st.cfg.profile = pv; out('CFG OK profile=' + pv);
       } else if (key === 'POS' && !st.noPos) {
         const pv = v.toLowerCase();

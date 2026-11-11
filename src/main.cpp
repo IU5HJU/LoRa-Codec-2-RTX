@@ -15,7 +15,9 @@
 #include "codec2_adapter.h"
 #include "gps.h"
 #include "menu.h"
+#include "choice_picker.h"
 #include "text_picker.h"
+#include "text_template.h"
 #include "packet.h"
 #include "pmu.h"
 #include "ptt_button.h"
@@ -61,13 +63,20 @@ static lcr::ButtonGesture volumeButton(30, 2000);  // volume: breve = alza, lung
 static lcr::Menu* menu = nullptr;
 static lcr::MenuFlow* menuFlow = nullptr;
 static lcr::TextPicker textPicker;  // voce "Invia testo" del menu
+// Voce "MeshCom" del menu (escursione sulla rete di testo): prima si sceglie il testo (o il solo ascolto), poi il destinatario.
+enum class McStage { None, Text, Dest };
+static lcr::ChoicePicker mcPicker;
+static McStage mcStage = McStage::None;
+static const char* mcItems[lcr::ChoicePicker::kMaxItems];
+static int mcSlots[lcr::ChoicePicker::kMaxItems];  // posto dell'elemento scelto (testo 0-4 o destinatario 0-4), -1 = solo ascolto
+static char mcText[lcr::kMaxTextChars + 1];        // testo scelto, con i segnaposti gia' sostituiti
 static bool volumeArmed = false;  // come il PTT: un volume gia' premuto all'accensione non apre il menu
 
 static bool pttUsable = true;   // false se il pin PTT risulta instabile all'avvio
 static bool pttArmed = false;   // il PTT vale solo dopo essere stato rilasciato almeno una volta
 
 static uint16_t newSessionId() { return static_cast<uint16_t>(esp_random()); }
-static uint32_t newMsgId() { return esp_random(); }  // ID a 32 bit di un testo nel profilo MeshCom
+static uint32_t newMsgId() { return esp_random(); }  // ID a 32 bit di un testo MeshCom
 
 static void fatal(const char* what, int code = 0) {
   Serial.printf("ERRORE: %s (%d)\n", what, code);
@@ -197,10 +206,9 @@ void setup() {
   strncpy(cfg.callsign, settings.callsign, lcr::kMaxCallsign);
   cfg.fec = LCR_FEC != 0;
   cfg.newSessionId = newSessionId;
-  // Profilo MeshCom (solo testo): nominativo-SSID, destinatario, identificatore hardware del frame (T-Beam con AXP2101 = 12,
+  // Escursione MeshCom (solo testo): nominativo-SSID, identificatore hardware del frame (T-Beam con AXP2101 = 12,
   // LoRa32 T3 = 3: tabella delle schede della rete) e ID casuale a 32 bit per ogni testo
   settings.mcCallsign(cfg.mcCall, sizeof(cfg.mcCall));
-  snprintf(cfg.mcDest, sizeof(cfg.mcDest), "%s", settings.mcDest);
   cfg.mcHw = strcmp(kBoardShort, "tbeam") == 0 ? 12 : 3;
   cfg.newMsgId = newMsgId;
   cfg.profile = settings.profile;
@@ -209,6 +217,7 @@ void setup() {
   node = new lcr::VoiceNode(cfg, radio, codec, audio.mic(), audio.speaker(), ui);
   ui.setInbox(&node->inbox());  // il display legge da qui il testo ricevuto
   ui.setPicker(&textPicker);
+  ui.setChoicePicker(&mcPicker);
 
   Serial.printf("[avvio] stack libero minimo del task principale: %u byte\n",
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
@@ -552,6 +561,74 @@ static void applyProfileChoice(uint8_t id) {
   ESP.restart();
 }
 
+// ---- Escursione MeshCom dal menu: testo (o solo ascolto), poi destinatario ----
+
+static char modeLetter() { return settings.profile == lcr::kProfileMessage ? 'M' : (settings.profile == lcr::kProfileQuality ? 'Q' : 'S'); }
+
+static void mcOpenText(uint32_t now) {
+  const lcr::Settings& st = console->stored();
+  size_t n = 0;
+  for (size_t i = 0; i < lcr::kTextSlots && n < 7; i++) {
+    if (st.texts[i][0]) {
+      mcItems[n] = st.texts[i];
+      mcSlots[n++] = static_cast<int>(i);
+    }
+  }
+  mcItems[n] = "(solo ascolto)";
+  mcSlots[n++] = -1;
+  ui.setChoiceTitle("MESHCOM TESTO");
+  mcStage = McStage::Text;
+  if (!mcPicker.open(mcItems, n, now)) mcStage = McStage::None;
+}
+
+static void mcStart(const char* text, const char* dest, uint32_t now) {
+  const uint32_t windowMs = static_cast<uint32_t>(console->stored().mcWindowS) * 1000u;
+  if (node->startMeshcom(text, dest, now, windowMs)) {
+    Serial.printf("[meshcom] escursione di %u s\n", static_cast<unsigned>(console->stored().mcWindowS));
+    if (text) Serial.printf("[meshcom] testo verso %s: %s\n", dest, text);
+  }  // altrimenti il motivo e' gia' sul display
+}
+
+// Scelta confermata: nello stadio del testo, poi in quello del destinatario
+static void mcChosen(size_t index, uint32_t now) {
+  const lcr::Settings& st = console->stored();
+  if (mcStage == McStage::Text) {
+    const int slot = mcSlots[index];
+    if (slot < 0) {  // solo ascolto
+      mcStage = McStage::None;
+      mcStart(nullptr, nullptr, now);
+      return;
+    }
+    if (lcr::expandTextTemplate(st.texts[slot], settings.callsign, modeLetter(), settings.profileFreqKhz(), mcText, sizeof(mcText)) == 0) {
+      ui.showMessage("TESTO NON VALIDO", "troppo lungo?");
+      delay(1500);
+      mcStage = McStage::None;
+      return;
+    }
+    size_t n = 0;
+    for (size_t i = 0; i < lcr::kMcDestSlots; i++) {
+      if (st.mcDests[i][0]) {
+        mcItems[n] = st.mcDests[i];
+        mcSlots[n++] = static_cast<int>(i);
+      }
+    }
+    if (n == 0) {
+      ui.showMessage("NESSUN DESTINAT.", "Impostalo dal Wi-Fi");
+      delay(1500);
+      mcStage = McStage::None;
+      return;
+    }
+    ui.setChoiceTitle("MESHCOM A");
+    mcStage = McStage::Dest;
+    if (!mcPicker.open(mcItems, n, now)) mcStage = McStage::None;
+    return;
+  }
+  if (mcStage == McStage::Dest) {
+    mcStage = McStage::None;
+    mcStart(mcText, st.mcDests[mcSlots[index]], now);
+  }
+}
+
 void loop() {
   const uint32_t now = millis();
   serviceConsole();
@@ -581,9 +658,17 @@ void loop() {
         ui.setSendingText(false);  // rifiutato (canale occupato, ricezione in corso...): il motivo e' gia' sul display
       }
     }
+  } else if (mcPicker.isOpen()) {
+    const lcr::ChoicePicker::Actions ca = mcPicker.update(pttEvent, volEvent, nodeIdle, now);
+    act.redraw = ca.redraw;
+    act.beep = ca.beep;
+    if (!mcPicker.isOpen() && !ca.chosen) mcStage = McStage::None;  // uscito senza scegliere
+    if (ca.chosen) mcChosen(ca.index, now);
   } else {
     act = menuFlow->update(pttEvent, volEvent, nodeIdle, settings.profile, now);
   }
+  // Secondi che restano all'escursione MeshCom (0 se non e' in corso): lettera T, frequenza e schermo
+  ui.setMeshcomRemaining(node->meshcomActive() ? static_cast<int>((node->meshcomRemainingMs(now) + 999) / 1000) : 0);
   if (act.pttToNode) {
     if (pttEvent == lcr::PttButton::Event::Pressed) node->pttPressed(now);
     if (pttEvent == lcr::PttButton::Event::Released) node->pttReleased(now);
@@ -606,6 +691,9 @@ void loop() {
   if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) {
     if (act.outcome.id == lcr::kMenuWifiId) {
       rebootIntoWifiConfig();
+    } else if (act.outcome.id == lcr::kMenuMeshId) {
+      mcOpenText(now);
+      ui.refresh();
     } else if (act.outcome.id == lcr::kMenuTextId) {
       if (!textPicker.open(console->stored(), now)) {
         ui.showMessage("NESSUN TESTO", "Impostalo dal Wi-Fi");

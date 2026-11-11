@@ -37,8 +37,14 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.role = static_cast<uint8_t>(p.getUChar("role", lcr::kRoleNormal));  // assenti nelle versioni precedenti
     out.freqOutKhz = p.getUInt("fout", 0);
     out.freqMcKhz = p.getUInt("fmc", 433175);  // assenti nelle versioni precedenti
-    memset(out.mcDest, 0, sizeof(out.mcDest));
-    p.getString("mcd", out.mcDest, sizeof(out.mcDest));
+    out.mcWindowS = p.getUShort("mcw", 300);
+    for (size_t i = 0; i < lcr::kMcDestSlots; i++) {  // assenti nelle versioni precedenti: restano i destinatari di esempio
+      char key[4] = {'m', 'd', static_cast<char>('1' + i), 0};
+      if (p.isKey(key)) {
+        memset(out.mcDests[i], 0, sizeof(out.mcDests[i]));
+        p.getString(key, out.mcDests[i], sizeof(out.mcDests[i]));
+      }
+    }
     out.mcSsid = static_cast<uint8_t>(p.getUChar("mcs", 99));
     out.rxMonitor = p.getBool("mon", false);  // assente nelle versioni precedenti
     out.powerDbm = p.getInt("pwr", 0);
@@ -72,7 +78,11 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
                     p.putInt("floor", s.micFloorDb) > 0 && p.putUChar("prof", s.profile) > 0 &&
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;
-  p.putString("mcd", s.mcDest);  // vuoto = nessun destinatario (put restituisce 0: non e' un errore)
+  p.putUShort("mcw", s.mcWindowS);
+  for (size_t i = 0; i < lcr::kMcDestSlots; i++) {  // un posto vuoto salva una stringa vuota
+    char key[4] = {'m', 'd', static_cast<char>('1' + i), 0};
+    p.putString(key, s.mcDests[i]);
+  }
   for (size_t i = 0; i < lcr::kTextSlots; i++) {  // un posto vuoto salva una stringa vuota (put restituisce 0: non e' un errore)
     char key[4] = {'t', static_cast<char>('1' + i), 0, 0};
     p.putString(key, s.texts[i]);

@@ -50,7 +50,8 @@ void UiNotifier::drawProfileBadge() {
                                     "XX..XX..XX", "XX...XXXXX", "XXXXXXXXX.", ".XXXXXX.XX"};
   static const char* const kT[9] = {"XXXXXXXXXX", "XXXXXXXXXX", "....XX....", "....XX....", "....XX....",
                                     "....XX....", "....XX....", "....XX....", "....XX...."};
-  const char* const* g = badge_ == 'M' ? kM : (badge_ == 'Q' ? kQ : (badge_ == 'T' ? kT : kS));
+  const char b = meshSec_ > 0 ? 'T' : badge_;  // durante l'escursione MeshCom la lettera e' T
+  const char* const* g = b == 'M' ? kM : (b == 'Q' ? kQ : (b == 'T' ? kT : kS));
   for (int y = 0; y < 9; y++)
     for (int x = 0; x < 10; x++)
       if (g[y][x] == 'X') display_.drawPixel(118 + x, y, SSD1306_WHITE);
@@ -354,6 +355,35 @@ void UiNotifier::drawPicker() {
   display_.display();
 }
 
+// Inizio e fine dell'escursione sulla rete di testo: un bip diverso e il ridisegno.
+void UiNotifier::meshcomChanged(bool on) {
+  dirty_ = true;
+  if (on) {
+    audio_.beep(900, 50);
+    audio_.beep(1200, 50);
+  } else {
+    audio_.beep(1200, 50);
+    audio_.beep(700, 80);
+  }
+}
+
+// Scelta del testo o del destinatario dell'escursione MeshCom: titolo, posizione, voce a capo e istruzioni.
+void UiNotifier::drawChoice() {
+  display_.clearDisplay();
+  display_.setTextSize(1);
+  display_.setCursor(0, 0);
+  display_.printf("%s %u/%u", choiceTitle_, static_cast<unsigned>(choice_->index() + 1), static_cast<unsigned>(choice_->count()));
+  display_.drawFastHLine(0, 9, 128, SSD1306_WHITE);
+  wrapText(choice_->text());
+  for (int r = 0; r < 5 && r < textLineCount_; r++) {
+    display_.setCursor(0, 12 + r * 8);
+    display_.print(textLines_[r]);
+  }
+  display_.setCursor(0, 55);
+  display_.print("PTT=altro  VOL=scegli");
+  display_.display();
+}
+
 void UiNotifier::testModeChanged(bool on) {
   notice_ = on ? "PROVA ATTIVA" : "PROVA SPENTA";
   noticeUntilMs_ = millis() + 1500;
@@ -456,12 +486,17 @@ void UiNotifier::draw(uint32_t nowMs) {
 
   display_.setTextSize(1);
   display_.setCursor(0, 0);
-  display_.printf("%s %.3fMHz", settings_.callsign, static_cast<double>(settings_.freqMhz()));
+  const double shownMhz = meshSec_ > 0 ? settings_.freqMcKhz / 1000.0 : static_cast<double>(settings_.freqMhz());
+  display_.printf("%s %.3fMHz", settings_.callsign, shownMhz);
   drawProfileBadge();
   display_.drawFastHLine(0, 10, 128, SSD1306_WHITE);
 
   if (picker_ && picker_->isOpen()) {
     drawPicker();
+    return;
+  }
+  if (choice_ && choice_->isOpen()) {
+    drawChoice();
     return;
   }
 
@@ -484,7 +519,7 @@ void UiNotifier::draw(uint32_t nowMs) {
 
   char big[24];
   switch (state_) {
-    case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", textOnly_ ? "MESHCOM" : (message_ ? "MESSAGGIO" : (testMode_ ? "PROVA ON" : "ASCOLTO"))); break;
+    case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", meshSec_ > 0 ? "MESHCOM" : (message_ ? "MESSAGGIO" : (testMode_ ? "PROVA ON" : "ASCOLTO"))); break;
     case lcr::VoiceNode::State::Receiving: snprintf(big, sizeof(big), "RX %s", rxCall_); break;
     default:
       if (sendingText_) snprintf(big, sizeof(big), "INVIO SMS");
@@ -549,7 +584,8 @@ void UiNotifier::draw(uint32_t nowMs) {
     display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
                     static_cast<unsigned long>(lastRecovered_));
   } else {
-    display_.print(textOnly_ ? "Testi: VOL lungo, menu" : (message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare")));
+    if (meshSec_ > 0) display_.printf("Ascolto %d:%02d", meshSec_ / 60, meshSec_ % 60);
+    else display_.print(message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare"));
     if (gpsEnabled_) {  // riga libera a riposo: stato del GPS
       display_.setCursor(0, 47);
       if (gpsFix_) {

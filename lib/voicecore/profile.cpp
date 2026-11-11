@@ -22,13 +22,17 @@ const Profile kProfiles[kProfileCount] = {
     // occupano circa 12,5 s in aria (42%). Pre-buffer come lo Standard.
     {kProfileQuality, "qua", "Qualita'", 7, 250.0f, 5, 12, kModeCodec2_3200, kMaxTurnMs, false, kPrebufferFrames,
      kPrebufferTimeoutMs, kSessionTimeoutMs, 0, false},
-    // MeshCom: solo testo. Parametri della rete (profilo EU8): 433,175 MHz, SF11/BW250/CR4/6, sync word 0x2B, preambolo 8.
-    // Nessuna voce (maxTurnMs 0): il codec non serve.
-    {kProfileMeshcom, "mc", "MeshCom", 11, 250.0f, 6, 8, kModeCodec2_1200, 0, false, kPrebufferFrames, kPrebufferTimeoutMs,
-     kSessionTimeoutMs, 0x2B, true},
 };
 
 }  // namespace
+
+// Parametri della rete di testo (profilo EU8 delle reti a pacchetto): 433,175 MHz, SF11/BW250/CR4/6, sync word 0x2B, preambolo 8.
+// Nessuna voce (maxTurnMs 0): il codec non serve.
+const Profile& meshcomProfile() {
+  static const Profile kMesh = {255, "mc", "MeshCom", 11, 250.0f, 6, 8, kModeCodec2_1200, 0, false, kPrebufferFrames, kPrebufferTimeoutMs,
+                                kSessionTimeoutMs, 0x2B, true};
+  return kMesh;
+}
 
 const Profile& profileFor(uint8_t id) { return id < kProfileCount ? kProfiles[id] : kProfiles[kProfileStandard]; }
 

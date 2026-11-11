@@ -26,14 +26,15 @@ static void testTable() {
 }
 
 static void testMeshcom() {
-  const Profile& p = profileFor(kProfileMeshcom);
+  // Escursione sulle reti di testo: non e' un profilo selezionabile
+  const Profile& p = meshcomProfile();
   CHECK(strcmp(p.code, "mc") == 0 && strcmp(p.name, "MeshCom") == 0 && p.textOnly && !p.message);
   CHECK(p.sf == 11 && p.bwKhz == 250.0f && p.cr == 6 && p.preambleSymbols == 8 && p.syncWord == 0x2B);
   CHECK(p.maxTurnMs == 0);  // niente voce
   uint8_t id = 0;
-  CHECK(profileFromCode("MC", id) && id == kProfileMeshcom && kProfileCount == 4);
-  // gli altri profili non sono di solo testo e usano la sync word di user_config.h
-  for (uint8_t i = 0; i < kProfileMeshcom; i++) CHECK(!profileFor(i).textOnly && profileFor(i).syncWord == 0);
+  CHECK(!profileFromCode("mc", id) && kProfileCount == 3);
+  // i profili veri non sono di solo testo e usano la sync word di user_config.h
+  for (uint8_t i = 0; i < kProfileCount; i++) CHECK(!profileFor(i).textOnly && profileFor(i).syncWord == 0);
   // Confronto con i tempi in aria misurati da un nodo vero (CHANNEL_UTIL: 43 byte 566 ms, 58 byte 711 ms, 106 byte 1154 ms)
   CHECK(std::fabs(airtimeMs(43, p) - 566) < 15 && std::fabs(airtimeMs(58, p) - 711) < 15 && std::fabs(airtimeMs(106, p) - 1154) < 15);
   CHECK(airtimeMs(100, p) > airtimeMs(60, p));

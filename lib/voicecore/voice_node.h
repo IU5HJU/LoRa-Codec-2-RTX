@@ -33,10 +33,9 @@ struct NodeConfig {
   // personale, si trasmette solo se l'operatore lo sceglie). Vedi position.h.
   bool sendPosition = false;
   Position position;
-  // Profilo MeshCom (solo testo, profile.h): nominativo-SSID, destinatario dei testi, identificatore hardware del frame e
-  // generatore di ID a 32 bit (uno per messaggio).
+  // Escursione sulla rete di testo (MeshCom): nominativo-SSID, identificatore hardware del frame e generatore di ID a 32 bit
+  // (uno per messaggio).
   char mcCall[16] = {0};
-  char mcDest[16] = {0};
   uint8_t mcHw = 0;
   uint32_t (*newMsgId)() = nullptr;
   // Solo per i test: tempo aggiunto alla pausa tra i pacchetti per simulare il tempo in aria (la radio finta e' istantanea).
@@ -65,7 +64,7 @@ class VoiceNode {
   // Prova di collegamento (non persistente): con la prova attiva il PTT trasmette frame di prova
   // invece della voce, e dopo aver ricevuto una prova la scheda risponde con il risultato.
   // Nel profilo Messaggio la prova di collegamento non c'e' (12 s di frame a SF12 sarebbero circa 17 minuti in aria).
-  void setTestMode(bool on) { testMode_ = on && !prof_.message && !prof_.textOnly; }
+  void setTestMode(bool on) { testMode_ = on && !prof_.message && !guest_; }
   bool testMode() const { return testMode_; }
 
   // Modo "registra e poi trasmetti" (prova, non persistente): il PTT registra il messaggio senza trasmettere; dopo il
@@ -73,7 +72,7 @@ class VoiceNode {
   // radio (nessuna elaborazione audio mentre la radio trasmette). Ignorato con la prova di collegamento attiva.
   enum class RecPhase { None, Recording, Waiting, Sending };
   // Nel profilo Messaggio il modo e' sempre acceso (non si puo' spegnere).
-  void setRecordMode(bool on) { recMode_ = (on && !prof_.textOnly) || prof_.message; }
+  void setRecordMode(bool on) { recMode_ = (on && !guest_) || prof_.message; }
   bool recordMode() const { return recMode_; }
   RecPhase recPhase() const { return recPhase_; }
   uint32_t recFrames() const { return recCount_; }
@@ -84,6 +83,15 @@ class VoiceNode {
   bool messageOpen() const { return playing_ || textOpen_; }
   // Trasmette un breve testo (ASCII stampabile senza graffe, 1-150 caratteri), in due copie. false (con pttDenied) se non si puo'.
   bool sendText(const char* text, uint32_t nowMs);
+
+  // Escursione sulla rete di testo (docs/meshcom-testo.md): porta la radio ai parametri MeshCom, invia 'text' a 'dest' (un gruppo, un
+  // nominativo-SSID o "*") e ascolta per windowMs; poi la radio torna da sola al profilo in uso. text = nullptr: solo ascolto.
+  // Con l'escursione gia' in corso invia un altro testo e allunga l'ascolto. Si parte solo a riposo (ne' ricezione, ne'
+  // trasmissione, ne' registrazione). false (con pttDenied) se non si puo'; se l'invio e' rifiutato la radio torna subito com'era.
+  bool startMeshcom(const char* text, const char* dest, uint32_t nowMs, uint32_t windowMs);
+  void endMeshcom();  // fine anticipata (altrimenti alla scadenza della finestra)
+  bool meshcomActive() const { return guest_; }
+  uint32_t meshcomRemainingMs(uint32_t nowMs) const;
 
   State state() const { return state_; }
   const RxStream& rx() const { return rx_; }
@@ -100,7 +108,8 @@ class VoiceNode {
   void reportRxProgress();
   void rxTick(uint32_t nowMs);
   void handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs);
-  bool sendMeshText(const char* text, uint32_t nowMs);
+  bool sendMeshText(const char* text, const char* dest, uint32_t nowMs);
+  bool meshActive() const { return guest_; }
   void meshAckTick(uint32_t nowMs);
   uint32_t makeMsgId();
   // ID gia' visti (anello di 70 come i nodi della rete): true se e' una copia; l'indice nell'anello in *slot
@@ -172,6 +181,10 @@ class VoiceNode {
   uint16_t replySession_ = 0;
   TestReport replyReport_;
   uint16_t notifiedSession_ = 0;
+  // Escursione sulla rete di testo in corso
+  bool guest_ = false;
+  uint32_t guestUntilMs_ = 0;
+
   // Casella dei messaggi
   Inbox inbox_;
   bool storing_ = false;     // frame di un messaggio vocale in corso di salvataggio
@@ -185,7 +198,7 @@ class VoiceNode {
   uint8_t textWire_[kMaxRxBytes];
   size_t textWireLen_ = 0;
   uint8_t textCopies_ = 0;
-  // Profilo MeshCom: ID visti (con l'ultima conferma mandata) e conferma di ricezione da trasmettere
+  // Escursione MeshCom: ID visti (con l'ultima conferma mandata) e conferma di ricezione da trasmettere
   struct MeshSeen {
     uint32_t id = 0;
     uint32_t ackedAtMs = 0;

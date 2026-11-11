@@ -18,6 +18,9 @@ class RadioLora : public lcr::IRadio {
   bool send(const uint8_t* data, size_t len) override;
   void startReceive() override;
   size_t receive(uint8_t* buf, size_t cap, int* rssi) override;
+  // Escursione sulla rete di testo: parametri MeshCom (profile.h, meshcomProfile) e frequenza delle impostazioni (freqMcKhz), oppure
+  // di nuovo quelli del profilo in uso. Se non riesce riporta la radio al profilo in uso e ritorna false.
+  bool setMeshcom(bool on) override;
 
   float lastRssi() const { return lastRssi_; }
   bool hasSnr() const override { return true; }
@@ -42,7 +45,9 @@ class RadioLora : public lcr::IRadio {
   static volatile uint32_t rxIsrUs_;
   static volatile uint32_t rxIsrCount_;
 
+  bool applyParams(const lcr::Profile& prof, float mhz);
   SX1278* radio_ = nullptr;
+  lcr::Settings settings_;  // impostazioni con cui e' partita la radio (profilo in uso e frequenze)
   float lastRssi_ = 0;
   float lastSnr_ = 0;
   int lastError_ = 0;

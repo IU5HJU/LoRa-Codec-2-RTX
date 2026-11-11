@@ -47,7 +47,7 @@ void VoiceNode::pttPressed(uint32_t nowMs) {
   }
   // A riposo la pressione e' un clic oppure l'inizio di una trasmissione: lo si capisce da quanto dura.
   if (clickCount_ > 0 && nowMs - lastClickMs_ > kPttClickGapMs) clickCount_ = 0;
-  if (clickCount_ >= 2 && !prof_.message && !prof_.textOnly) {
+  if (clickCount_ >= 2 && !prof_.message && !meshActive()) {
     // Terzo clic veloce: attiva o disattiva la prova di collegamento, senza trasmettere.
     clickCount_ = 0;
     testMode_ = !testMode_;
@@ -57,15 +57,15 @@ void VoiceNode::pttPressed(uint32_t nowMs) {
   pendingStart_ = true;
   pressMs_ = nowMs;
   // Il microfono si bufferizza subito, cosi' l'inizio della frase non si perde.
-  if (!testMode_ && !micStarted_ && !prof_.textOnly) {
+  if (!testMode_ && !micStarted_ && !meshActive()) {
     in_.start();
     micStarted_ = true;
   }
 }
 
 void VoiceNode::beginPtt(uint32_t nowMs) {
-  // Profilo di solo testo: il PTT non trasmette voce (i testi si scrivono dal menu).
-  if (prof_.textOnly) {
+  // Durante l'escursione sulla rete di testo il PTT non trasmette voce (i testi si scrivono dal menu).
+  if (meshActive()) {
     stopMic();
     notify_.pttDenied(DenyReason::TextOnly);
     return;
@@ -230,7 +230,8 @@ void VoiceNode::tick(uint32_t nowMs) {
     txTick(nowMs);
   } else {
     playTick(nowMs);
-    if (prof_.textOnly) meshAckTick(nowMs);
+    if (guest_ && state_ == State::Idle && static_cast<int32_t>(nowMs - guestUntilMs_) >= 0) endMeshcom();
+    if (meshActive()) meshAckTick(nowMs);
     rxTick(nowMs);
     if (replyPending_ && state_ == State::Idle && static_cast<int32_t>(nowMs - replyAtMs_) >= 0) sendTestReply(nowMs);
   }
@@ -329,7 +330,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
     int rssi = 0;
     const size_t n = radio_.receive(buf, sizeof(buf), &rssi);
     if (n == 0) break;
-    if (prof_.textOnly) {  // profilo MeshCom: frame di un'altra rete, non pacchetti del progetto
+    if (meshActive()) {  // escursione MeshCom: frame di un'altra rete, non pacchetti del progetto
       handleMeshFrame(buf, n, nowMs);
       continue;
     }
@@ -522,7 +523,10 @@ void VoiceNode::playTick(uint32_t nowMs) {
 bool VoiceNode::sendText(const char* text, uint32_t nowMs) {
   const size_t len = text ? strlen(text) : 0;
   if (!isValidText(text, len)) return false;
-  if (prof_.textOnly) return sendMeshText(text, nowMs);
+  if (meshActive()) {  // durante l'escursione i testi partono dal menu MeshCom (startMeshcom)
+    notify_.pttDenied(DenyReason::TextOnly);
+    return false;
+  }
   if (isPlaceholderCallsign(cfg_.callsign) || !isValidCallsign(cfg_.callsign)) {
     notify_.pttDenied(DenyReason::NoCallsign);
     return false;
@@ -560,7 +564,7 @@ bool VoiceNode::sendText(const char* text, uint32_t nowMs) {
   return true;
 }
 
-// ---- Profilo MeshCom: testi compatibili con la rete a pacchetto (meshcom_frame.h) ----
+// ---- Escursione MeshCom: testi compatibili con la rete a pacchetto (meshcom_frame.h) ----
 
 namespace {
 bool equalsNoCase(const char* a, const char* b) {
@@ -599,7 +603,7 @@ void VoiceNode::meshRemember(uint32_t id, uint32_t nowMs) {
   meshNext_ = (meshNext_ + 1) % kMeshSeenSlots;
 }
 
-// Un frame arrivato dalla radio nel profilo MeshCom. Si leggono solo i testi (':') con la FCS giusta, mai visti prima (le
+// Un frame arrivato dalla radio durante l'escursione MeshCom. Si leggono solo i testi (':') con la FCS giusta, mai visti prima (le
 // copie ripetute dai nodi hanno lo stesso ID), diretti al nostro nominativo-SSID. I messaggi di servizio ("{CET}..." e simili)
 // e le conferme di ricezione dei nostri testi non si mostrano. Un "{NNN" in fondo chiede la conferma: si risponde con
 // "MITTENTE:ackNNN".
@@ -701,14 +705,65 @@ void VoiceNode::meshAckTick(uint32_t nowMs) {
   radio_.startReceive();
 }
 
-// Testo verso il destinatario scelto nelle impostazioni (CFG SET MCDEST): un solo invio, senza richiesta di conferma. Le
+// Testo verso il destinatario scelto (gruppo, nominativo-SSID o "*"): un solo invio, senza richiesta di conferma. Le
 // copie ripetute dai nodi tornano con lo stesso ID e si scartano.
-bool VoiceNode::sendMeshText(const char* text, uint32_t nowMs) {
+uint32_t VoiceNode::meshcomRemainingMs(uint32_t nowMs) const {
+  if (!guest_) return 0;
+  const int32_t left = static_cast<int32_t>(guestUntilMs_ - nowMs);
+  return left > 0 ? static_cast<uint32_t>(left) : 0;
+}
+
+bool VoiceNode::startMeshcom(const char* text, const char* dest, uint32_t nowMs, uint32_t windowMs) {
+  if (text && !isValidText(text, strlen(text))) return false;  // vuoto, non ASCII o con le graffe (le graffe sono campi di servizio)
   if (isPlaceholderCallsign(cfg_.callsign) || !cfg_.mcCall[0]) {
     notify_.pttDenied(DenyReason::NoCallsign);
     return false;
   }
-  if (!cfg_.mcDest[0]) {
+  const bool wasGuest = guest_;
+  if (wasGuest && state_ == State::Transmitting) {  // gia' sulla rete e sta ancora trasmettendo: si aspetta
+    notify_.pttDenied(DenyReason::Transmitting);
+    return false;
+  }
+  if (!guest_) {
+    if (state_ == State::Transmitting || recPhase_ != RecPhase::None || pendingStart_) {
+      notify_.pttDenied(DenyReason::Transmitting);
+      return false;
+    }
+    if (state_ == State::Receiving) {
+      notify_.pttDenied(DenyReason::Receiving);
+      return false;
+    }
+    if (!radio_.setMeshcom(true)) return false;  // la radio non e' passata ai parametri della rete: resta com'era
+    guest_ = true;
+    ackPending_ = false;
+    playing_ = false;
+    textOpen_ = false;
+    stopMic();
+    notify_.meshcomChanged(true);
+  }
+  guestUntilMs_ = nowMs + windowMs;
+  if (text && !sendMeshText(text, dest, nowMs)) {
+    if (!wasGuest) endMeshcom();  // invio rifiutato (canale occupato, nessun destinatario...): non si resta sulla rete
+    return false;
+  }
+  return true;
+}
+
+void VoiceNode::endMeshcom() {
+  if (!guest_) return;
+  guest_ = false;
+  ackPending_ = false;
+  radio_.setMeshcom(false);
+  radio_.startReceive();
+  notify_.meshcomChanged(false);
+}
+
+bool VoiceNode::sendMeshText(const char* text, const char* dest, uint32_t nowMs) {
+  if (isPlaceholderCallsign(cfg_.callsign) || !cfg_.mcCall[0]) {
+    notify_.pttDenied(DenyReason::NoCallsign);
+    return false;
+  }
+  if (!dest || !dest[0]) {
     notify_.pttDenied(DenyReason::NoDestination);
     return false;
   }
@@ -726,7 +781,7 @@ bool VoiceNode::sendMeshText(const char* text, uint32_t nowMs) {
   f.flags = mc::kFlagMesh;
   f.maxHop = 4;
   snprintf(f.path, sizeof(f.path), "%s", cfg_.mcCall);
-  snprintf(f.dest, sizeof(f.dest), "%s", cfg_.mcDest);
+  snprintf(f.dest, sizeof(f.dest), "%s", dest);
   snprintf(f.payload, sizeof(f.payload), "%s", text);
   f.hw = cfg_.mcHw;
   textWireLen_ = mc::encode(f, textWire_, sizeof(textWire_));
