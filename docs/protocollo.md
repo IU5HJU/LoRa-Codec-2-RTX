@@ -83,7 +83,9 @@ Stessa struttura del modo 1, ma ogni frame di 40 ms occupa **16 byte** (due bloc
 
 ## Messaggio di testo (modo 7)
 
-Un breve testo stile SMS (**1-160 caratteri**, ASCII stampabile `0x20-0x7E`, senza accenti). È **un solo pacchetto** con `START`+`END`+`CALLSIGN`: intestazione del modo 7, nominativo di chi scrive e, come payload, il testo (al massimo 160 byte: il pacchetto più lungo è 5 + 1 + 8 + 160 byte). Niente parità, niente posizione, niente totale (flag `POSITION`/`TOTAL`/`PARITY` rifiutati), `seq` 0. Un pacchetto di testo senza nominativo, con un carattere non stampabile, vuoto o più lungo di 160 byte è scartato (anche in trasmissione: `encodePacket` restituisce 0).
+Un breve testo stile SMS (**1-150 caratteri**, ASCII stampabile `0x20-0x7E`, senza accenti e **senza le parentesi graffe** `{` `}`). È **un solo pacchetto** con `START`+`END`+`CALLSIGN`: intestazione del modo 7, nominativo di chi scrive e, come payload, il testo (al massimo 150 byte: il pacchetto più lungo è 5 + 1 + 8 + 150 byte). Niente parità, niente posizione, niente totale (flag `POSITION`/`TOTAL`/`PARITY` rifiutati), `seq` 0. Un pacchetto di testo senza nominativo, con un carattere non stampabile, vuoto o più lungo di 150 byte è scartato (anche in trasmissione: `encodePacket` restituisce 0).
+
+**Perché 150 e senza graffe (11/11/2026):** il limite e i caratteri ammessi sono scelti in modo che lo stesso testo si possa inoltrare **senza modifiche** su altre reti di messaggi radioamatoriali a pacchetto (frame massimo di circa 255 byte, con un percorso che cresce a ogni salto; le graffe hanno lì un significato di servizio). Così non ci sono testi validi da noi e rifiutati altrove.
 
 Il mittente lo trasmette **due volte** (stessa sessione, a 1 s di distanza: `kTextRepeatGapMs`), perché non c'è altra protezione; il ricevitore scarta la seconda copia (stessa sessione e stesso nominativo dell'ultimo testo ricevuto). Il testo si può ricevere con qualunque profilo; una scheda con una versione precedente scarta il modo 7 come ogni modo sconosciuto. Non c'è conferma di ricezione.
 

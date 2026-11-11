@@ -184,12 +184,12 @@
       <p class="hint" id="gpshint">Il GPS assorbe decine di mA: accendilo solo se serve. Con un <strong>fix recente</strong> (cielo aperto; il primo può richiedere alcuni minuti) la posizione viene dal GPS, altrimenti dalla posizione fissa. Il display a riposo dice "GPS cerco satelliti" o "GPS fix, N satelliti".</p>
 
       <h3>Testi predefiniti (SMS)</h3>
-      <p class="hint" id="texthint">Fino a <strong>5 testi brevi</strong> (massimo 160 caratteri ciascuno, solo lettere, cifre e simboli senza accenti) da inviare dalla scheda: menu a bordo (volume lungo) &rarr; <strong>Invia testo</strong>. Chi riceve sente &ldquo;SMS&rdquo; in Morse, vede una busta sul display e preme il PTT per leggere. Lascia vuoto un posto per non usarlo. Valgono subito, senza riavvio.</p>
-      <label for="text1">Testo 1</label><input id="text1" maxlength="160" autocomplete="off" disabled>
-      <label for="text2">Testo 2</label><input id="text2" maxlength="160" autocomplete="off" disabled>
-      <label for="text3">Testo 3</label><input id="text3" maxlength="160" autocomplete="off" disabled>
-      <label for="text4">Testo 4</label><input id="text4" maxlength="160" autocomplete="off" disabled>
-      <label for="text5">Testo 5</label><input id="text5" maxlength="160" autocomplete="off" disabled>
+      <p class="hint" id="texthint">Fino a <strong>5 testi brevi</strong> (massimo 150 caratteri ciascuno, solo lettere, cifre e simboli senza accenti e senza le parentesi graffe) da inviare dalla scheda: menu a bordo (volume lungo) &rarr; <strong>Invia testo</strong>. Chi riceve sente &ldquo;SMS&rdquo; in Morse, vede una busta sul display e preme il PTT per leggere. Lascia vuoto un posto per non usarlo. Valgono subito, senza riavvio.</p>
+      <label for="text1">Testo 1</label><input id="text1" maxlength="150" autocomplete="off" disabled>
+      <label for="text2">Testo 2</label><input id="text2" maxlength="150" autocomplete="off" disabled>
+      <label for="text3">Testo 3</label><input id="text3" maxlength="150" autocomplete="off" disabled>
+      <label for="text4">Testo 4</label><input id="text4" maxlength="150" autocomplete="off" disabled>
+      <label for="text5">Testo 5</label><input id="text5" maxlength="150" autocomplete="off" disabled>
 
       <button id="save" type="submit" disabled>Salva e riavvia</button>
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
@@ -577,8 +577,8 @@
       texts = [];
       for (let i = 1; i <= 5; i++) {
         const t = $('text' + i).value.trim();
-        if (t.length > 160) return { err: 'Il testo ' + i + ' supera i 160 caratteri.' };
-        if (t !== '' && !/^[\x20-\x7E]+$/.test(t)) return { err: 'Il testo ' + i + ' ha caratteri non ammessi: solo ASCII, senza accenti (usa e\' invece di è).' };
+        if (t.length > 150) return { err: 'Il testo ' + i + ' supera i 150 caratteri.' };
+        if (t !== '' && !/^[\x20-\x7A\x7C\x7E]+$/.test(t)) return { err: 'Il testo ' + i + ' ha caratteri non ammessi: solo ASCII, senza accenti (usa e\' invece di è).' };
         texts.push(t);
       }
     }

@@ -22,7 +22,7 @@
 //   CFG SET PROFILE MSG          -> CFG OK profile=msg         (STD = Standard, MSG = Messaggio SF12/BW125, QUA = Qualita' 3200 SF7; vale dal riavvio)
 //   CFG SET POS ON               -> CFG OK pos=on             (trasmette la posizione nel pacchetto START; di default OFF; serve il QTH o un GPS)
 //   CFG SET QTH 43.7696,11.2558  -> CFG OK qth=43.76960,11.25580   (posizione fissa in gradi decimali, lat,lon; NONE la cancella)
-//   CFG SET TEXT1 Arrivo tra 10 minuti -> CFG OK text1=Arrivo tra 10 minuti   (testi predefiniti da inviare, TEXT1..TEXT5; ASCII, 1-160
+//   CFG SET TEXT1 Arrivo tra 10 minuti -> CFG OK text1=Arrivo tra 10 minuti   (testi predefiniti da inviare, TEXT1..TEXT5; ASCII senza '{' e '}', 1-150
 //                                   caratteri, anche con spazi fino a fine riga; NONE svuota il posto; valgono subito, senza riavvio)
 //   CFG GET TEXT1                -> CFG TEXT1=Arrivo tra 10 minuti   (vuoto: CFG TEXT1=)
 //   CFG SET GPS ON               -> CFG OK gps=on             (accende il GPS della T-Beam; di default OFF; vale dal riavvio; sulle altre schede errore)
@@ -70,7 +70,7 @@ constexpr int kMicGateMarginDb = 6;
 inline float micGateFromFloor(int floorDb) { return static_cast<float>(floorDb + kMicGateMarginDb); }
 
 // Testi predefiniti da inviare (messaggi di testo stile SMS, vedi protocol.h kModeText): cinque posti, ognuno vuoto oppure un
-// testo ASCII di 1-160 caratteri. All'inizio contengono i testi di esempio qui sotto.
+// testo ASCII di 1-150 caratteri. All'inizio contengono i testi di esempio qui sotto.
 constexpr size_t kTextSlots = 5;
 constexpr const char* kDefaultTexts[kTextSlots] = {"QRV, sono in ascolto", "Arrivo tra 10 minuti", "Chiamami appena puoi",
                                                    "Tutto OK", "73 e buona giornata"};

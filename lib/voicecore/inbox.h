@@ -1,6 +1,6 @@
 // Casella dei messaggi ricevuti: UN solo messaggio alla volta (vocale oppure di testo). Un messaggio nuovo cancella il
 // vecchio; dopo l'ascolto (o la lettura) il messaggio viene cancellato. Tutto in RAM: dopo un riavvio la casella e' vuota.
-// Memoria: voce 30 s Codec2 1200 = 750 frame da 6 byte (4500 byte) piu' la mappa dei frame persi; testo fino a 160 caratteri.
+// Memoria: voce 30 s Codec2 1200 = 750 frame da 6 byte (4500 byte) piu' la mappa dei frame persi; testo fino a 150 caratteri.
 // Indipendente dalla scheda e testato sul PC (tests/test_inbox.cpp).
 #pragma once
 

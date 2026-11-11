@@ -343,7 +343,7 @@ async function scenario(name, fn, opts = {}) {
     await until(p, () => document.getElementById('status').className === 'err');
     check('messaggio sui caratteri non ammessi', (await status(p)).includes('Il testo 1'), await status(p));
     check('nessun CFG SET inviato', !(await cmds(p)).some((x) => x.startsWith('CFG SET')));
-    check('il limite di 160 caratteri e\' sul campo', (await p.getAttribute('#text1', 'maxlength')) === '160');
+    check('il limite di 150 caratteri e\' sul campo', (await p.getAttribute('#text1', 'maxlength')) === '150');
   });
 
   await scenario('firmware senza testi predefiniti: campi spenti e nessun comando nuovo', async (p) => {

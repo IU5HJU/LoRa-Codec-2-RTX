@@ -673,15 +673,15 @@ static void testTextMessage() {
   // testo non valido o troppo lungo: rifiutato, niente in aria
   const int sent = s.air.sent[0];
   CHECK(!s.a.node.sendText("", s.clock) && !s.a.node.sendText("a\tb", s.clock));
-  std::string big(161, 'x');
+  std::string big(151, 'x');
   CHECK(!s.a.node.sendText(big.c_str(), s.clock));
   s.run(1000);
   CHECK(s.air.sent[0] == sent);
-  // 160 caratteri vanno
-  big.resize(160);
+  // 150 caratteri vanno
+  big.resize(150);
   CHECK(s.a.node.sendText(big.c_str(), s.clock));
   s.run(3000);
-  CHECK(s.b.node.inbox().textLen() == 160);
+  CHECK(s.b.node.inbox().textLen() == 150);
 }
 
 static void testTextRules() {

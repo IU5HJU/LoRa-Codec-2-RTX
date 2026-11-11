@@ -75,7 +75,7 @@ class VoiceNode {
   // (e lo cancella). La voce non si riproduce da sola nel profilo Messaggio.
   const Inbox& inbox() const { return inbox_; }
   bool messageOpen() const { return playing_ || textOpen_; }
-  // Trasmette un breve testo (ASCII stampabile, 1-160 caratteri), in due copie. false (con pttDenied) se non si puo'.
+  // Trasmette un breve testo (ASCII stampabile senza graffe, 1-150 caratteri), in due copie. false (con pttDenied) se non si puo'.
   bool sendText(const char* text, uint32_t nowMs);
 
   State state() const { return state_; }

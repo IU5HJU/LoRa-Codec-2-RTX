@@ -20,7 +20,7 @@ bool isValidText(const char* t, size_t len) {
   if (!t || len == 0 || len > kMaxTextChars) return false;
   for (size_t i = 0; i < len; i++) {
     const unsigned char c = static_cast<unsigned char>(t[i]);
-    if (c < 0x20 || c > 0x7E) return false;
+    if (c < 0x20 || c > 0x7E || c == '{' || c == '}') return false;  // le graffe hanno un significato in altre reti di testo
   }
   return true;
 }

@@ -285,21 +285,24 @@ static void testText() {
   CHECK(decodePacket(buf, n, q));
   CHECK(q.mode == kModeText && q.payloadLen == 30 && samePayload(p, q) && strcmp(q.callsign, "IU5HJU") == 0);
 
-  // 160 caratteri: massimo; 161 rifiutato in codifica
+  // 150 caratteri: massimo; 151 rifiutato in codifica
   char big[kMaxTextChars + 2];
   memset(big, 'A', sizeof(big));
   big[kMaxTextChars] = 0;
   p = makeText(big);
   n = encodePacket(p, buf, sizeof(buf));
-  CHECK(n == 5 + 1 + 6 + 160);
-  CHECK(decodePacket(buf, n, q) && q.payloadLen == 160);
-  p.payloadLen = 161;
+  CHECK(n == 5 + 1 + 6 + 150);
+  CHECK(decodePacket(buf, n, q) && q.payloadLen == 150);
+  p.payloadLen = 151;
   CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
 
   // vuoto, non stampabile, senza nominativo, senza START/END, con parita': rifiutati
   p = makeText("x");
   p.payloadLen = 0;
   CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
+  p = makeText("ciao {IU5ABC} ciao");  // le graffe non sono ammesse
+  CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
+  CHECK(!isValidText("{", 1) && !isValidText("}", 1) && isValidText("a,b;c:d/e-f_g", 13));
   p = makeText("a\nb");
   CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
   p = makeText("ciao");

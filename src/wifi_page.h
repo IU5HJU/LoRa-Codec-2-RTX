@@ -34,12 +34,12 @@ button.sec{background:#e5e7eb;color:#14181f}
 <label for="qth">Posizione fissa (latitudine,longitudine, oppure none)</label><input id="qth" placeholder="43.7696,11.2558">
 <div id="gpsbox" hidden><label for="gps">GPS (solo T-Beam)</label><select id="gps"><option value="off">Spento</option><option value="on">Acceso</option></select></div>
 <h2>Testi predefiniti (SMS)</h2>
-<p class="hint">Fino a 5 testi da 160 caratteri al massimo (solo ASCII, senza accenti), da inviare dal menu della scheda: <strong>Invia testo</strong>. Lascia vuoto un posto per non usarlo. Valgono subito.</p>
-<label for="text1">Testo 1</label><input id="text1" maxlength="160">
-<label for="text2">Testo 2</label><input id="text2" maxlength="160">
-<label for="text3">Testo 3</label><input id="text3" maxlength="160">
-<label for="text4">Testo 4</label><input id="text4" maxlength="160">
-<label for="text5">Testo 5</label><input id="text5" maxlength="160">
+<p class="hint">Fino a 5 testi da 150 caratteri al massimo (solo ASCII, senza accenti e senza le parentesi graffe), da inviare dal menu della scheda: <strong>Invia testo</strong>. Lascia vuoto un posto per non usarlo. Valgono subito.</p>
+<label for="text1">Testo 1</label><input id="text1" maxlength="150">
+<label for="text2">Testo 2</label><input id="text2" maxlength="150">
+<label for="text3">Testo 3</label><input id="text3" maxlength="150">
+<label for="text4">Testo 4</label><input id="text4" maxlength="150">
+<label for="text5">Testo 5</label><input id="text5" maxlength="150">
 <button type="submit" id="save">Salva</button>
 <button type="button" class="sec" id="reboot">Riavvia la scheda</button>
 </form>
@@ -57,7 +57,7 @@ $('f').addEventListener('submit',async ev=>{
   const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqqual:$('freqqual').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none'};
   if(board==='tbeam')want.gps=$('gps').value;   // la T3 non ha il GPS: il comando non si manda
   const keys={callsign:'CALLSIGN',freq:'FREQ',freqmsg:'FREQMSG',freqqual:'FREQQUAL',power:'POWER',volume:'VOLUME',micfloor:'MICFLOOR',profile:'PROFILE',pos:'POS',qth:'QTH',gps:'GPS'};  // il GPS e' in want solo sulla T-Beam
-  const texts=[];for(let i=1;i<=5;i++){const v=$('text'+i).value.trim();if(v!==''&&!/^[\x20-\x7E]+$/.test(v)){st('Il testo '+i+' ha caratteri non ammessi: solo ASCII, senza accenti.','err');return;}texts.push(v);}
+  const texts=[];for(let i=1;i<=5;i++){const v=$('text'+i).value.trim();if(v!==''&&!/^[\x20-\x7A\x7C\x7E]+$/.test(v)){st('Il testo '+i+' ha caratteri non ammessi: solo ASCII, senza accenti.','err');return;}texts.push(v);}
   try{
     for(const k of Object.keys(keys)){if(want[k]===undefined)continue;const r=await cmd('CFG SET '+keys[k]+' '+want[k]);if(!r.startsWith('CFG OK')){st('Rifiutato ('+keys[k]+'): '+r,'err');return;}}
     for(let i=0;i<5;i++){const r=await cmd('CFG SET TEXT'+(i+1)+' '+(texts[i]||'NONE'));if(!r.startsWith('CFG OK')){st('Rifiutato (testo '+(i+1)+'): '+r,'err');return;}}

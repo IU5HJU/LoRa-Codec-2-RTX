@@ -432,7 +432,7 @@ static void runCodecTest() {
 
 // Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
 static void serviceConsole() {
-  static char line[224];  // "CFG SET TEXTn " + fino a 160 caratteri
+  static char line[224];  // "CFG SET TEXTn " + fino a 150 caratteri
   static size_t len = 0;
   static bool tooLong = false;
   while (Serial.available() > 0) {

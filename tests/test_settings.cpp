@@ -74,11 +74,12 @@ static void testTexts() {
   CHECK(f.run("CFG GET TEXT5") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT5=ciao   a tutti") == 0);
   // una sola parola
   CHECK(f.run("CFG SET TEXT3 OK") == ConsoleResult::Ok && strcmp(f.st.data.texts[2], "OK") == 0);
-  // 160 caratteri vanno, 161 no
-  std::string big(160, 'x');
-  CHECK(f.run(("CFG SET TEXT4 " + big).c_str()) == ConsoleResult::Ok && strlen(f.st.data.texts[3]) == 160);
-  CHECK(f.run(("CFG SET TEXT4 " + big + "y").c_str()) == ConsoleResult::Error && strlen(f.st.data.texts[3]) == 160);
+  // 150 caratteri vanno, 151 no
+  std::string big(150, 'x');
+  CHECK(f.run(("CFG SET TEXT4 " + big).c_str()) == ConsoleResult::Ok && strlen(f.st.data.texts[3]) == 150);
+  CHECK(f.run(("CFG SET TEXT4 " + big + "y").c_str()) == ConsoleResult::Error && strlen(f.st.data.texts[3]) == 150);
   // posto inesistente, vuoto, caratteri non ASCII
+  CHECK(f.run("CFG SET TEXT1 ciao {IU5ABC} testo") == ConsoleResult::Error && strcmp(f.st.data.texts[0], "Sono QRV su 433.775, chiamami") == 0);
   CHECK(f.run("CFG SET TEXT6 ciao") == ConsoleResult::Error);
   CHECK(f.run("CFG SET TEXT0 ciao") == ConsoleResult::Error);
   CHECK(f.run("CFG SET TEXT1") == ConsoleResult::Error);

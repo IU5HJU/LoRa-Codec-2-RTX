@@ -406,7 +406,7 @@ ConsoleResult SettingsConsole::setText(int slot, const char* text, size_t len, c
     snprintf(shown, sizeof(shown), "text%d=", slot + 1);
   } else {
     if (!isValidText(text, len)) {
-      if (reply && cap > 0) snprintf(reply, cap, "CFG ERR text%d testo ASCII da 1 a %d caratteri (NONE per svuotare)", slot + 1, static_cast<int>(kMaxTextChars));
+      if (reply && cap > 0) snprintf(reply, cap, "CFG ERR text%d testo ASCII da 1 a %d caratteri, senza { e } (NONE per svuotare)", slot + 1, static_cast<int>(kMaxTextChars));
       return ConsoleResult::Error;
     }
     memset(next.texts[slot], 0, sizeof(next.texts[slot]));

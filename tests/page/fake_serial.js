@@ -42,7 +42,7 @@
     if (tm && !st.noTexts) {
       const n = +tm[1];
       if (tm[2].toUpperCase() === 'NONE') { st.texts[n - 1] = ''; return out('CFG OK text' + n + '='); }
-      if (!/^[\x20-\x7E]{1,160}$/.test(tm[2])) return out('CFG ERR text' + n + ' testo ASCII da 1 a 160 caratteri (NONE per svuotare)');
+      if (!/^[\x20-\x7A\x7C\x7E]{1,150}$/.test(tm[2])) return out('CFG ERR text' + n + ' testo ASCII da 1 a 150 caratteri (NONE per svuotare)');
       st.texts[n - 1] = tm[2]; return out('CFG OK text' + n + '=' + tm[2]);
     }
     const tg = /^CFG\s+GET\s+TEXT([1-5])$/i.exec(line.trim());
