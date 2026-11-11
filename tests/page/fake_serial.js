@@ -12,7 +12,7 @@
     noMc: false,          // firmware senza profilo MeshCom (piu' vecchio): CFG GET MC e CFG SET FREQMC/MCDEST/MCSSID sconosciuti
     mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
     noTexts: false,       // firmware senza testi predefiniti (piu' vecchio): CFG GET TEXTn e CFG SET TEXTn sconosciuti
-    texts: ['QRV, sono in ascolto', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
+    texts: ['%C QRV su VoLoRa modo %M %F', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
     // (riga seguente: firmware senza GPS)
     noProfile: false,     // firmware senza profili (piu' vecchio): CFG GET senza profile= e CFG SET PROFILE sconosciuto
     test: false,

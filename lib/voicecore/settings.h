@@ -80,9 +80,10 @@ constexpr int kMicGateMarginDb = 6;
 inline float micGateFromFloor(int floorDb) { return static_cast<float>(floorDb + kMicGateMarginDb); }
 
 // Testi predefiniti da inviare (messaggi di testo stile SMS, vedi protocol.h kModeText): cinque posti, ognuno vuoto oppure un
-// testo ASCII di 1-150 caratteri. All'inizio contengono i testi di esempio qui sotto.
+// testo ASCII di 1-150 caratteri. All'inizio contengono i testi di esempio qui sotto. Nel testo valgono i segnaposti di
+// text_template.h (%C nominativo, %M modo, %F frequenza), sostituiti all'invio; il primo e' "%C QRV su VoLoRa modo %M %F".
 constexpr size_t kTextSlots = 5;
-constexpr const char* kDefaultTexts[kTextSlots] = {"QRV, sono in ascolto", "Arrivo tra 10 minuti", "Chiamami appena puoi",
+constexpr const char* kDefaultTexts[kTextSlots] = {"%C QRV su VoLoRa modo %M %F", "Arrivo tra 10 minuti", "Chiamami appena puoi",
                                                    "Tutto OK", "73 e buona giornata"};
 
 constexpr size_t kMcDestSlots = 5;

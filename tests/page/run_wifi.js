@@ -14,7 +14,7 @@ const st = {
   cfg: { callsign: 'IU5HJU', profile: 'std', freq: '433.900', freqmsg: '433.900', freqqual: '433.900', power: 10, volume: 7, micfloor: -60, pos: 'off', qth: 'none', gps: 'off' },
   cmds: [],
   board: 't3',
-  texts: ['QRV, sono in ascolto', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
+  texts: ['%C QRV su VoLoRa modo %M %F', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
   mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
@@ -70,7 +70,7 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.waitForFunction(() => /letti/.test(document.getElementById('st').textContent), null, { timeout: 15000 });
   check('stato di lettura', /letti/.test(await p.textContent('#st')));
 
-  check('testi letti', (await p.inputValue('#text1')) === 'QRV, sono in ascolto' && (await p.inputValue('#text5')) === '73 e buona giornata');
+  check('testi letti', (await p.inputValue('#text1')) === '%C QRV su VoLoRa modo %M %F' && (await p.inputValue('#text5')) === '73 e buona giornata');
   await p.fill('#text2', 'Sono QRV su 433.775, chiamami'); await p.fill('#text4', '');
   check('valori MeshCom letti', (await p.inputValue('#mcfreq')) === '433.175' && (await p.inputValue('#mcssid')) === '99' && (await p.inputValue('#mcwindow')) === '300' && (await p.inputValue('#mcdest1')) === '22251' && (await p.inputValue('#mcdest3')) === '*');
   await p.fill('#mcdest4', 'iu5abc-9'); await p.fill('#mcssid', '12'); await p.fill('#mcwindow', '90');

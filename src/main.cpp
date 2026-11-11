@@ -657,11 +657,19 @@ void loop() {
     act.redraw = pa.redraw;
     act.beep = pa.beep;
     if (pa.send) {
-      ui.setSendingText(true);
-      if (node->sendText(console->stored().texts[pa.slot], now)) {
-        Serial.printf("[testo] invio del testo %d: %s\n", pa.slot + 1, console->stored().texts[pa.slot]);
+      // I segnaposti (%C nominativo, %M modo, %F frequenza) si sostituiscono qui, come per la voce MeshCom
+      char sendBuf[lcr::kMaxTextChars + 1];
+      if (lcr::expandTextTemplate(console->stored().texts[pa.slot], settings.callsign, modeLetter(), settings.profileFreqKhz(), sendBuf,
+                                  sizeof(sendBuf)) == 0) {
+        ui.showMessage("TESTO NON VALIDO", "troppo lungo?");
+        delay(1500);
       } else {
-        ui.setSendingText(false);  // rifiutato (canale occupato, ricezione in corso...): il motivo e' gia' sul display
+        ui.setSendingText(true);
+        if (node->sendText(sendBuf, now)) {
+          Serial.printf("[testo] invio del testo %d: %s\n", pa.slot + 1, sendBuf);
+        } else {
+          ui.setSendingText(false);  // rifiutato (canale occupato, ricezione in corso...): il motivo e' gia' sul display
+        }
       }
     }
   } else if (mcPicker.isOpen()) {

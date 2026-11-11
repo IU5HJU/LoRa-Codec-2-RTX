@@ -131,7 +131,7 @@ static void testMonitor() {
 static void testTexts() {
   Fixture f;
   // di partenza: i cinque testi di esempio, tutti validi
-  CHECK(strcmp(kDefaults.texts[0], "QRV, sono in ascolto") == 0 && isValidSettings(make("IU5HJU", 433900, 10)));
+  CHECK(strcmp(kDefaults.texts[0], "%C QRV su VoLoRa modo %M %F") == 0 && isValidSettings(make("IU5HJU", 433900, 10)));
   CHECK(f.run("CFG GET TEXT2") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT2=Arrivo tra 10 minuti") == 0);
   // il testo e' il resto della riga, con spazi; vale subito (nessun riavvio)
   CHECK(f.run("CFG SET TEXT1 Sono QRV su 433.775, chiamami") == ConsoleResult::Ok &&
@@ -163,7 +163,7 @@ static void testTexts() {
   CHECK(f.run("CFG GET TEXT3") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT3=OK") == 0);
   // reset: tornano i testi di esempio
   CHECK(f.run("CFG RESET") == ConsoleResult::Ok);
-  CHECK(f.run("CFG GET TEXT1") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT1=QRV, sono in ascolto") == 0);
+  CHECK(f.run("CFG GET TEXT1") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT1=%C QRV su VoLoRa modo %M %F") == 0);
   // impostazioni con un testo non valido non sono valide
   Settings bad = make("IU5HJU", 433900, 10);
   bad.texts[0][0] = '\n';
