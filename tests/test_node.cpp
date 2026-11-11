@@ -14,6 +14,9 @@ static uint16_t nextSession() {
   return s++;
 }
 
+static std::vector<std::string> g_meshLog;
+static void testMeshLog(const char* m) { g_meshLog.push_back(m); }
+
 struct Station {
   Station(fake::Air& air, int id, const char* cs, const uint32_t& clock, uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0)
       : radio(air, id), codec(frameBytesFor(profileFor(profile).codecMode)), mic(clock), node(makeCfg(cs, profile, extraGapMs), radio, codec, mic, spk, note) {}
@@ -25,6 +28,7 @@ struct Station {
     c.extraGapMs = extraGapMs;
     snprintf(c.mcCall, sizeof(c.mcCall), "%s-99", cs ? cs : "");  // escursione MeshCom: nominativo-SSID
     c.mcHw = 12;
+    c.meshLog = testMeshLog;
     return c;
   }
   fake::Radio radio;
@@ -964,6 +968,70 @@ static void testMeshcomAck() {
   CHECK(s.air.sent[1] == 3);
 }
 
+static bool logHas(const char* part) {
+  for (const auto& l : g_meshLog) {
+    if (l.find(part) != std::string::npos) return true;
+  }
+  return false;
+}
+
+static void testMeshcomGroups() {
+  Sim s;
+  s.run(100);
+  const char* groups[] = {"22251", "222", "*", "IU5ABC-9", ""};  // solo i numeri sono gruppi
+  s.b.node.setMeshcomGroups(groups, 5);
+  CHECK(s.b.node.startMeshcom(nullptr, nullptr, s.clock, 10 * kWin));
+  uint32_t id = 0x300;
+  auto push = [&](const std::vector<uint8_t>& v) {
+    s.air.inbox[1].push_back(v);
+    s.run(300);
+  };
+  g_meshLog.clear();
+  // risposta nel gruppo a cui abbiamo scritto: si vede, con il gruppo davanti al testo e il mittente
+  push(meshFrame("IU5XXX-12", "22251", "Ci sono, 59 qui", id++));
+  CHECK(s.b.note.received.size() == 1 && strcmp(s.b.node.inbox().text(), "[22251] Ci sono, 59 qui") == 0);
+  CHECK(strcmp(s.b.node.inbox().callsign(), "IU5XXX-12") == 0 && logHas("MOSTRATO"));
+  // altro gruppo impostato: si vede; un gruppo non impostato, o "tutti", no
+  push(meshFrame("IU5YYY-9", "222", "Ciao Italia", id++));
+  CHECK(s.b.note.received.size() == 2 && strcmp(s.b.node.inbox().text(), "[222] Ciao Italia") == 0);
+  push(meshFrame("IU5YYY-9", "22299", "altro gruppo", id++));
+  push(meshFrame("IU5YYY-9", "*", "a tutti", id++));
+  push(meshFrame("IU5YYY-9", "IU5ABC-9", "ad un altro", id++));  // un nominativo impostato non e' un gruppo: non e' per noi
+  CHECK(s.b.note.received.size() == 2 && logHas("non e' per noi"));
+  // la richiesta di conferma in un gruppo non e' un obbligo: il testo si mostra senza "{NNN" e nessuna conferma parte
+  s.air.clock = &s.clock;
+  push(meshFrame("IU5XXX-12", "22251", "Ricevuto{77", id++));
+  s.run(3000);
+  CHECK(strcmp(s.b.node.inbox().text(), "[22251] Ricevuto") == 0 && s.air.sent[1] == 0);
+  // messaggio diretto a noi con il solo nominativo (senza SSID): si accetta, e la conferma torna a chi ha scritto
+  push(meshFrame("IU5XXX-12", "IZ5ABC", "Privato senza SSID{5", id++));
+  s.run(3000);
+  CHECK(strcmp(s.b.node.inbox().text(), "Privato senza SSID") == 0 && s.air.sent[1] == 1);
+  // un testo di gruppo molto lungo: tagliato a 150 compreso il gruppo
+  std::string longText(190, 'a');
+  push(meshFrame("IU5XXX-12", "22251", longText.c_str(), id++));
+  CHECK(s.b.node.inbox().textLen() == kMaxTextChars && strncmp(s.b.node.inbox().text(), "[22251] aaa", 11) == 0);
+  // diagnostica: FCS sbagliata e frame non valido compaiono nel registro
+  g_meshLog.clear();
+  auto bad = meshFrame("IU5XXX-12", "22251", "FCS rotta", id++);
+  bad[12] ^= 0x01;
+  push(bad);
+  CHECK(logHas("FCS sbagliata"));
+  push(std::vector<uint8_t>(30, 0x55));
+  CHECK(logHas("frame non valido"));
+  push(meshFrame("OE1XAR-22", "*", "{CET}2026-11-11 15:32:42", id++));
+  CHECK(logHas("servizio"));
+  push(meshFrame("IU5YYY-9", "IZ5ABC-99", "IZ5ABC-99:ack1", id++));
+  CHECK(logHas("conferma di un nostro testo"));
+  // senza gruppi impostati nessun gruppo e' mostrato
+  Sim t;
+  t.run(100);
+  CHECK(t.b.node.startMeshcom(nullptr, nullptr, t.clock, kWin));
+  t.air.inbox[1].push_back(meshFrame("IU5XXX-12", "22251", "niente gruppi", 0x500));
+  t.run(300);
+  CHECK(t.b.note.received.empty());
+}
+
 int main() {
   testExpectedPackets();
   testMeshcomSendReceive();
@@ -971,6 +1039,7 @@ int main() {
   testMeshcomRefused();
   testMeshcomFilters();
   testMeshcomAck();
+  testMeshcomGroups();
   testTextMessage();
   testTextRules();
   testVoiceMessageStopAndReplace();

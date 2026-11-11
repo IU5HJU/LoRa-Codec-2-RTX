@@ -608,9 +608,34 @@ void VoiceNode::meshRemember(uint32_t id, uint32_t nowMs) {
 // e le conferme di ricezione dei nostri testi non si mostrano. Un "{NNN" in fondo chiede la conferma: si risponde con
 // "MITTENTE:ackNNN".
 void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
+  // Diagnostica (meshLog): una riga per ogni frame ricevuto durante l'escursione, con il motivo se non e' mostrato
+  char msg[160];
+  auto log = [&](const char* fmt, const char* a = "", const char* c = "", const char* d = "") {
+    if (!cfg_.meshLog) return;
+    snprintf(msg, sizeof(msg), fmt, a, c, d);
+    cfg_.meshLog(msg);
+  };
   mc::Frame f;
-  if (!mc::decode(b, n, f) || !f.fcsOk || f.type != mc::kTypeText) return;
-  const bool forUs = cfg_.mcCall[0] && equalsNoCase(f.dest, cfg_.mcCall);
+  if (!mc::decode(b, n, f)) {
+    char t[24];
+    snprintf(t, sizeof(t), "%u byte, tipo %02X", static_cast<unsigned>(n), n ? b[0] : 0);
+    log("frame non valido (%s)", t);
+    return;
+  }
+  char hdr[96];
+  const char* comma0 = strchr(f.path, ',');
+  snprintf(hdr, sizeof(hdr), "%c da %.*s a %s", f.type == mc::kTypeText ? ':' : (f.type == mc::kTypePos ? '!' : '@'),
+           static_cast<int>(comma0 ? comma0 - f.path : strlen(f.path)), f.path, f.dest);
+  if (!f.fcsOk) {
+    log("%s: scartato, FCS sbagliata", hdr);
+    return;
+  }
+  if (f.type != mc::kTypeText) return;  // posizioni e rapporti dei nodi: troppi per scriverli tutti
+  // Diretto a noi: il nostro nominativo-SSID o il solo nominativo (alcuni client scrivono senza SSID)
+  const bool forUs = cfg_.mcCall[0] && (equalsNoCase(f.dest, cfg_.mcCall) || (cfg_.callsign[0] && equalsNoCase(f.dest, cfg_.callsign)));
+  // Un gruppo tra i destinatari impostati (per vedere le risposte ai propri QRV)
+  bool forGroup = false;
+  for (size_t g = 0; g < mcGroupN_ && !forGroup; g++) forGroup = strcmp(f.dest, mcGroups_[g]) == 0;
   size_t slot = 0;
   if (meshSeen(f.msgId, &slot)) {
     // Copia gia' vista: se il mittente richiede ancora la conferma (la prima si e' persa) la si ripete, ma non prima di 30 s
@@ -628,14 +653,25 @@ void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
         meshSeen_[slot].ackedAtMs = nowMs;
       }
     }
+    log("%s: copia gia' vista", hdr);
     return;
   }
   meshRemember(f.msgId, nowMs);
   slot = (meshNext_ + kMeshSeenSlots - 1) % kMeshSeenSlots;
-  if (!forUs || f.payload[0] == '{') return;  // altri destinatari, messaggi di servizio
+  if (f.payload[0] == '{') {
+    log("%s: messaggio di servizio", hdr);
+    return;
+  }
+  if (!forUs && !forGroup) {
+    log("%s: scartato, non e' per noi (%s)", hdr, cfg_.mcCall);
+    return;
+  }
 
   const size_t cl = strlen(cfg_.mcCall);
-  if (strncmp(f.payload, cfg_.mcCall, cl) == 0 && f.payload[cl] == ':' && strncmp(f.payload + cl + 1, "ack", 3) == 0) return;  // conferma di un nostro testo
+  if (forUs && strncmp(f.payload, cfg_.mcCall, cl) == 0 && f.payload[cl] == ':' && strncmp(f.payload + cl + 1, "ack", 3) == 0) {
+    log("%s: conferma di un nostro testo", hdr);
+    return;
+  }
 
   // mittente: il primo del percorso
   char src[Inbox::kMaxFrom + 1];
@@ -643,7 +679,8 @@ void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
   const size_t sl = comma ? static_cast<size_t>(comma - f.path) : strlen(f.path);
   snprintf(src, sizeof(src), "%.*s", static_cast<int>(sl < Inbox::kMaxFrom ? sl : Inbox::kMaxFrom), f.path);
 
-  // testo: senza "{NNN" finale, solo ASCII stampabile senza graffe (il resto diventa '?'), al massimo kMaxTextChars
+  // testo: senza "{NNN" finale, solo ASCII stampabile senza graffe (il resto diventa '?'), al massimo kMaxTextChars; per un
+  // gruppo si premette "[gruppo] "
   char text[kMaxTextChars + 1];
   size_t tl = strlen(f.payload);
   char num[8] = {0};
@@ -657,18 +694,26 @@ void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
     }
   }
   size_t k = 0;
+  if (!forUs) {  // gruppo
+    k = static_cast<size_t>(snprintf(text, sizeof(text), "[%s] ", f.dest));
+    if (k >= kMaxTextChars) k = 0;
+  }
   for (size_t i = 0; i < tl && k < kMaxTextChars; i++) {
     const unsigned char c = static_cast<unsigned char>(f.payload[i]);
     text[k++] = (c < 0x20 || c > 0x7E || c == '{' || c == '}') ? '?' : static_cast<char>(c);
   }
   while (k > 0 && text[k - 1] == ' ') k--;
   text[k] = 0;
-  if (k == 0 || !inbox_.setText(src, text, k)) return;
+  if (k == 0 || !inbox_.setText(src, text, k)) {
+    log("%s: scartato, testo vuoto", hdr);
+    return;
+  }
   playing_ = false;
   textOpen_ = false;
+  log("%s: MOSTRATO", hdr);
   notify_.messageReceived(true, src);
 
-  if (num[0] && !ackPending_) {  // richiesta di conferma
+  if (forUs && num[0] && !ackPending_) {  // richiesta di conferma (solo per i messaggi diretti a noi)
     snprintf(ackNum_, sizeof(ackNum_), "%s", num);
     snprintf(ackDest_, sizeof(ackDest_), "%s", src);
     ackPending_ = true;
@@ -676,6 +721,18 @@ void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
     ackAtMs_ = nowMs + 1500;  // un attimo dopo, come i nodi: la copia del mittente e' ancora in giro
     meshSeen_[slot].acked = true;
     meshSeen_[slot].ackedAtMs = nowMs;
+  }
+}
+
+void VoiceNode::setMeshcomGroups(const char* const* groups, size_t n) {
+  mcGroupN_ = 0;
+  for (size_t i = 0; i < n && mcGroupN_ < kMcGroupSlots; i++) {
+    const char* g = groups[i];
+    if (!g || !g[0] || strlen(g) > 6) continue;
+    bool digits = true;
+    for (size_t k = 0; g[k]; k++) digits = digits && g[k] >= '0' && g[k] <= '9';
+    if (!digits) continue;  // solo i gruppi (numeri): "*" e i nominativi non sono gruppi
+    snprintf(mcGroups_[mcGroupN_++], sizeof(mcGroups_[0]), "%s", g);
   }
 }
 

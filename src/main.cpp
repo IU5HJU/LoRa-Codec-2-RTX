@@ -76,6 +76,7 @@ static bool pttUsable = true;   // false se il pin PTT risulta instabile all'avv
 static bool pttArmed = false;   // il PTT vale solo dopo essere stato rilasciato almeno una volta
 
 static uint16_t newSessionId() { return static_cast<uint16_t>(esp_random()); }
+static void meshLog(const char* m) { Serial.printf("[meshcom] %s\n", m); }  // una riga per ogni frame ricevuto durante l'escursione
 static uint32_t newMsgId() { return esp_random(); }  // ID a 32 bit di un testo MeshCom
 
 static void fatal(const char* what, int code = 0) {
@@ -211,6 +212,7 @@ void setup() {
   settings.mcCallsign(cfg.mcCall, sizeof(cfg.mcCall));
   cfg.mcHw = strcmp(kBoardShort, "tbeam") == 0 ? 12 : 3;
   cfg.newMsgId = newMsgId;
+  cfg.meshLog = meshLog;
   cfg.profile = settings.profile;
   cfg.sendPosition = settings.posTx;  // spenta di default; la posizione fissa e' il QTH (CFG SET QTH)
   cfg.position = settings.qth();
@@ -582,6 +584,10 @@ static void mcOpenText(uint32_t now) {
 }
 
 static void mcStart(const char* text, const char* dest, uint32_t now) {
+  // Oltre ai messaggi diretti a noi si vedono quelli dei gruppi impostati tra i destinatari (le risposte ai nostri QRV)
+  const char* groups[lcr::kMcDestSlots];
+  for (size_t i = 0; i < lcr::kMcDestSlots; i++) groups[i] = console->stored().mcDests[i];
+  node->setMeshcomGroups(groups, lcr::kMcDestSlots);
   const uint32_t windowMs = static_cast<uint32_t>(console->stored().mcWindowS) * 1000u;
   if (node->startMeshcom(text, dest, now, windowMs)) {
     Serial.printf("[meshcom] escursione di %u s\n", static_cast<unsigned>(console->stored().mcWindowS));

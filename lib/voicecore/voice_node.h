@@ -38,6 +38,8 @@ struct NodeConfig {
   char mcCall[16] = {0};
   uint8_t mcHw = 0;
   uint32_t (*newMsgId)() = nullptr;
+  // Diagnostica dell'escursione: una riga per ogni frame ricevuto, con il motivo se non e' mostrato (di solito la seriale)
+  void (*meshLog)(const char* msg) = nullptr;
   // Solo per i test: tempo aggiunto alla pausa tra i pacchetti per simulare il tempo in aria (la radio finta e' istantanea).
   uint32_t extraGapMs = 0;
 };
@@ -89,6 +91,9 @@ class VoiceNode {
   // Con l'escursione gia' in corso invia un altro testo e allunga l'ascolto. Si parte solo a riposo (ne' ricezione, ne'
   // trasmissione, ne' registrazione). false (con pttDenied) se non si puo'; se l'invio e' rifiutato la radio torna subito com'era.
   bool startMeshcom(const char* text, const char* dest, uint32_t nowMs, uint32_t windowMs);
+  // Gruppi (numeri) di cui mostrare i messaggi durante l'escursione, oltre a quelli diretti al nostro nominativo-SSID: di solito i
+  // destinatari impostati, per vedere le risposte ai propri QRV. Si chiama prima di startMeshcom.
+  void setMeshcomGroups(const char* const* groups, size_t n);
   void endMeshcom();  // fine anticipata (altrimenti alla scadenza della finestra)
   bool meshcomActive() const { return guest_; }
   uint32_t meshcomRemainingMs(uint32_t nowMs) const;
@@ -184,6 +189,9 @@ class VoiceNode {
   // Escursione sulla rete di testo in corso
   bool guest_ = false;
   uint32_t guestUntilMs_ = 0;
+  static constexpr size_t kMcGroupSlots = 5;
+  char mcGroups_[kMcGroupSlots][8] = {{0}};
+  size_t mcGroupN_ = 0;
 
   // Casella dei messaggi
   Inbox inbox_;

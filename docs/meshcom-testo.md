@@ -17,8 +17,9 @@ solo per qualche minuto, quando lo chiedi.
 2. La scheda **cambia i parametri della radio a caldo** (433,175 MHz, SF11, 250 kHz, CR 4/6, sync word 0x2B, preambolo 8), controlla
    che il canale sia libero e invia il testo **una volta sola**. Sul display compare la lettera **T**, "MESHCOM" e il conto alla rovescia
    dell'ascolto (di base 5 minuti).
-3. Durante l'ascolto i testi **diretti al tuo nominativo-SSID** finiscono nella casella degli SMS ("SMS" in Morse, la busta sul display,
-   PTT breve per leggere: [modo-messaggio.md](modo-messaggio.md)). Restano leggibili anche dopo il rientro. Il PTT lungo non
+3. Durante l'ascolto finiscono nella casella degli SMS ("SMS" in Morse, la busta sul display, PTT breve per leggere:
+   [modo-messaggio.md](modo-messaggio.md)) i testi **diretti al tuo nominativo-SSID** (o al solo nominativo) e quelli dei **gruppi**
+   che hai tra i destinatari impostati: così vedi le risposte ai tuoi QRV. Il testo di gruppo inizia con il gruppo, `[22251] ...`. Restano leggibili anche dopo il rientro. Il PTT lungo non
    trasmette ("SOLO TESTO").
 4. Alla scadenza la radio **torna da sola ai parametri del profilo voce** di prima. Nessun riavvio, nessun profilo da cambiare.
 
@@ -61,11 +62,20 @@ disegna, e un testo più lungo di 150 caratteri è tagliato.
 
 ## Ricezione e conferme
 
-Si leggono solo i testi **diretti al tuo nominativo-SSID**, con la FCS giusta e mai visti prima: le copie ripetute dai nodi hanno lo
-stesso ID e si scartano con una memoria di 70 ID, come fanno i nodi. Non si mostrano i testi per altri, quelli a un gruppo o a tutti,
-i messaggi di servizio della rete (per esempio l'ora, che inizia con `{`), le posizioni, i rapporti dei nodi e le conferme dei tuoi
-testi. Se chi scrive chiede la conferma (il suo testo finisce con `{NNN`) la scheda risponde dopo un attimo con `MITTENTE:ackNNN`,
-come un nodo. La nostra scheda **non** chiede la conferma dei propri testi.
+Si leggono i testi con la FCS giusta e mai visti prima (le copie ripetute dai nodi hanno lo stesso ID e si scartano con una memoria di
+70 ID, come fanno i nodi) che sono:
+
+- **diretti a te**: al nominativo-SSID (`IU5HJU-99`) o al solo nominativo (`IU5HJU`, perché alcuni client scrivono senza SSID);
+- **di un gruppo** (un numero) tra i tuoi destinatari impostati. Non di tutti i gruppi: solo di quelli.
+
+Non si mostrano i testi per altri nominativi, quelli a `*`, i messaggi di servizio della rete (per esempio l'ora, che inizia con `{`),
+le posizioni, i rapporti dei nodi e le conferme dei tuoi testi. Se chi scrive **a te** chiede la conferma (il suo testo finisce con
+`{NNN`) la scheda risponde dopo un attimo con `MITTENTE:ackNNN`, come un nodo; per i gruppi non si risponde. La nostra scheda **non**
+chiede la conferma dei propri testi.
+
+**Diagnostica:** durante l'escursione la seriale (115200) scrive una riga per ogni frame ricevuto, con il motivo se non viene
+mostrato: `[meshcom] : da IU5ABC-9 a IU5HJU-99: MOSTRATO`, `... scartato, non e' per noi (IU5HJU-99)`, `... copia gia' vista`,
+`... messaggio di servizio`, `... FCS sbagliata`, `frame non valido (... byte)`. Serve a capire perché una risposta non compare.
 
 ## Formato dei frame
 
