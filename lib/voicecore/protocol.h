@@ -17,6 +17,12 @@ constexpr uint8_t kModeCodec2_3200 = 4;
 constexpr uint8_t kModeTest = 2;
 // Risposta del ricevitore alla prova (un solo pacchetto con il risultato).
 constexpr uint8_t kModeTestReport = 3;
+// Messaggio di testo breve (stile SMS, fino a kMaxTextChars caratteri ASCII): un solo pacchetto START|END con il nominativo
+// di chi scrive; il payload e' il testo. Nessuna parita'. Il mittente lo trasmette due volte (stessa sessione): i duplicati si
+// scartano.
+constexpr uint8_t kModeText = 7;
+constexpr size_t kMaxTextChars = 160;
+
 // Pacchetto di controllo dell'hardware (CFG TEST AUDIO): la scheda trasmette per misurare se la radiofrequenza
 // rientra nel microfono. I ricevitori lo ignorano come ogni modo sconosciuto.
 constexpr uint8_t kModeRfCheck = 15;

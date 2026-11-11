@@ -265,6 +265,55 @@ static void testPartialGroupParity() {
   CHECK(rec.seq == 11 && (rec.flags & kFlagEnd) && samePayload(rec, d[1]));
 }
 
+static Packet makeText(const char* txt) {
+  Packet p;
+  p.session = 0x1234;
+  p.mode = kModeText;
+  p.flags = kFlagStart | kFlagEnd;
+  strcpy(p.callsign, "IU5HJU");
+  p.payloadLen = static_cast<uint8_t>(strlen(txt));
+  memcpy(p.payload, txt, p.payloadLen);
+  return p;
+}
+
+static void testText() {
+  uint8_t buf[kMaxWireBytes];
+  Packet p = makeText("Sono in frequenza, QRV 433.775");
+  size_t n = encodePacket(p, buf, sizeof(buf));
+  CHECK(n == 5 + 1 + 6 + 30);
+  Packet q;
+  CHECK(decodePacket(buf, n, q));
+  CHECK(q.mode == kModeText && q.payloadLen == 30 && samePayload(p, q) && strcmp(q.callsign, "IU5HJU") == 0);
+
+  // 160 caratteri: massimo; 161 rifiutato in codifica
+  char big[kMaxTextChars + 2];
+  memset(big, 'A', sizeof(big));
+  big[kMaxTextChars] = 0;
+  p = makeText(big);
+  n = encodePacket(p, buf, sizeof(buf));
+  CHECK(n == 5 + 1 + 6 + 160);
+  CHECK(decodePacket(buf, n, q) && q.payloadLen == 160);
+  p.payloadLen = 161;
+  CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
+
+  // vuoto, non stampabile, senza nominativo, senza START/END, con parita': rifiutati
+  p = makeText("x");
+  p.payloadLen = 0;
+  CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
+  p = makeText("a\nb");
+  CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
+  p = makeText("ciao");
+  p.callsign[0] = 0;
+  CHECK(encodePacket(p, buf, sizeof(buf)) == 0);
+  p = makeText("ciao");
+  n = encodePacket(p, buf, sizeof(buf));
+  CHECK(n > 0);
+  uint8_t b2[kMaxWireBytes];
+  memcpy(b2, buf, n);
+  b2[4] &= ~kFlagEnd;  // flags: byte 4 (seq a 1 byte dopo versione/sessione)
+  CHECK(!decodePacket(b2, n, q) || q.flags != (kFlagStart | kFlagEnd));
+}
+
 int main() {
   testRoundTrip();
   testCodec3200();
@@ -273,5 +322,6 @@ int main() {
   testRejects();
   testParityRecovery();
   testPartialGroupParity();
+  testText();
   TEST_MAIN_END();
 }

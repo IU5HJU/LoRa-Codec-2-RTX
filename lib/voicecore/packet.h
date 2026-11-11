@@ -26,6 +26,9 @@ struct Packet {
   bool hasTotal() const { return totalPackets != 0; }
 };
 
+// Testo ammesso nei messaggi: ASCII stampabile (0x20-0x7E). Lunghezza 1..kMaxTextChars.
+bool isValidText(const char* t, size_t len);
+
 // Nominativo: 1-8 caratteri tra A-Z, 0-9 e '/'.
 bool isValidCallsign(const char* cs);
 

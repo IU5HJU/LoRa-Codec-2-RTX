@@ -16,6 +16,15 @@ bool isValidCallsign(const char* cs) {
   return true;
 }
 
+bool isValidText(const char* t, size_t len) {
+  if (!t || len == 0 || len > kMaxTextChars) return false;
+  for (size_t i = 0; i < len; i++) {
+    const unsigned char c = static_cast<unsigned char>(t[i]);
+    if (c < 0x20 || c > 0x7E) return false;
+  }
+  return true;
+}
+
 bool isPlaceholderCallsign(const char* cs) {
   return cs && (strncmp(cs, "N0CALL", kMaxCallsign + 1) == 0 || strncmp(cs, "NOCALL", kMaxCallsign + 1) == 0);
 }
@@ -24,6 +33,7 @@ size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
   const bool cs = p.callsign[0] != 0;
   if (cs && !isValidCallsign(p.callsign)) return 0;
   if (p.payloadLen > kMaxPayload) return 0;
+  if (p.mode == kModeText && (!cs || !isValidText(reinterpret_cast<const char*>(p.payload), p.payloadLen))) return 0;
   const size_t csLen = cs ? strlen(p.callsign) : 0;
   const bool hasPos = p.position.valid;
   if (hasPos && (!cs || !isValidCoordinate(p.position.latE7, p.position.lonE7))) return 0;
@@ -94,12 +104,18 @@ bool decodePacket(const uint8_t* in, size_t len, Packet& out) {
   if (pl > kMaxPayload) return false;
 
   if (q.flags & kFlagParity) {
+    if (q.mode == kModeText) return false;
     if (q.flags & (kFlagStart | kFlagEnd | kFlagCallsign | kFlagPosition | kFlagTotal)) return false;
     if (pl < kParityHeader) return false;
     const uint8_t count = in[pos];
     const uint8_t xorLen = in[pos + 1];
     if (count == 0 || count > kParityGroup) return false;
     if (xorLen >= 16) return false;  // XOR dei conteggi di frame (ognuno <= 12)
+  } else if (q.mode == kModeText) {
+    // Messaggio di testo: un solo pacchetto START|END con il nominativo, senza posizione ne' totale.
+    if ((q.flags & (kFlagStart | kFlagEnd)) != (kFlagStart | kFlagEnd) || !(q.flags & kFlagCallsign)) return false;
+    if (q.flags & (kFlagPosition | kFlagTotal)) return false;
+    if (!isValidText(reinterpret_cast<const char*>(in + pos), pl)) return false;
   } else {
     const size_t fb = frameBytesFor(q.mode);
     if (pl > kFramesPerPacket * fb || pl % fb != 0) return false;
