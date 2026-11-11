@@ -1,9 +1,11 @@
 # MeshCom: avvisi e accordi sulle reti di testo
 
-**Stato (11/11/2026): scritto e provato sul PC; non ancora provato in aria con una nostra scheda.** Il formato dei frame è stato
-verificato su frame veri ricevuti da un nodo della rete (decodifica, FCS e ricodifica identica); i test del progetto usano frame
-di prova costruiti con quel formato e nominativi inventati. Restano da provare in aria: il cambio dei parametri radio a caldo,
-l'invio, la ripetizione da parte dei nodi e la conferma di ricezione.
+**Stato (11/11/2026): provato in aria con una T3 e un nodo MeshCom.** Funzionano: il cambio dei parametri radio a caldo, l'invio di un
+testo a un gruppo (con i segnaposti sostituiti), la ricezione di una **risposta diretta** e di una **risposta nel gruppo**, la busta
+sul display, il segnale "SMS" in Morse e l'apertura con il PTT breve. Il formato dei frame è stato verificato su frame veri
+ricevuti da un nodo della rete (decodifica, FCS e ricodifica identica); i test del progetto usano frame di prova costruiti con
+quel formato e nominativi inventati. **Non ancora provate in aria:** la conferma di ricezione (che la scheda manda a chi le scrive
+con `{NNN`), il rientro automatico alla voce a fine finestra con una voce in corso, e l'uso con altre schede o altre zone.
 
 **A cosa serve.** Alla scheda del progetto serve per **avvisare e accordarsi** sulle reti radioamatoriali a pacchetto sui
 **433,175 MHz** (MeshCom): per esempio "IU5HJU QRV su VoLora modo Q" a un gruppo, oppure data e ora di un possibile QSO a un amico.
