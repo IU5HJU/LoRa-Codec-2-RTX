@@ -1,7 +1,7 @@
 # MeshCom: avvisi e accordi sulle reti di testo
 
 **Stato (11/11/2026): provato in aria con una T3 e un nodo MeshCom.** Funzionano: il cambio dei parametri radio a caldo, l'invio di un
-testo a un gruppo (con i segnaposti sostituiti), la ricezione di una **risposta diretta** e di una **risposta nel gruppo**, la busta
+testo a un gruppo (con i segnaposti sostituiti: un dispositivo MeshCom con display lo mostra come messaggio del gruppo 22251, mittente `IU5HJU-99`, testo e firma interi), la ricezione di una **risposta diretta** e di una **risposta nel gruppo**, la busta
 sul display, il segnale "SMS" in Morse, l'apertura con il PTT breve e il **rientro automatico alla voce** a fine finestra. Il formato dei frame è stato verificato su frame veri
 ricevuti da un nodo della rete (decodifica, FCS e ricodifica identica); i test del progetto usano frame di prova costruiti con
 quel formato e nominativi inventati. **Conferma di ricezione:** a un messaggio privato scritto dall'app MeshCom ("ci sono" a `IU5HJU-99`) l'app mostra la spunta di consegna
