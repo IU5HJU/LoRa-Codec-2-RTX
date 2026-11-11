@@ -928,6 +928,13 @@ static void testMeshcomFilters() {
   CHECK(!s.b.node.sendText("ciao", s.clock));
 }
 
+static bool logHas(const char* part) {
+  for (const auto& l : g_meshLog) {
+    if (l.find(part) != std::string::npos) return true;
+  }
+  return false;
+}
+
 static void testMeshcomAck() {
   Sim s;
   s.air.clock = &s.clock;
@@ -944,6 +951,7 @@ static void testMeshcomAck() {
   CHECK(mc::decode(s.air.log[1][0].data(), s.air.log[1][0].size(), ack) && ack.fcsOk);
   CHECK(strcmp(ack.path, "IZ5ABC-99") == 0 && strcmp(ack.dest, "IU5XXX-12") == 0 && strcmp(ack.payload, "IU5XXX-12:ack123") == 0);
   CHECK(ack.msgId != 0x777 && ack.maxHop == 4);
+  CHECK(logHas("CONFERMA ack123 INVIATA"));
   // le copie ripetute dello stesso messaggio non fanno ripetere la conferma
   s.air.inbox[1].push_back(meshFrame("IU5XXX-12,IU5CCC-12", "IZ5ABC-99", "Prova{123", 0x777, mc::kTypeText, 0x91, 2));
   s.run(3000);
@@ -966,13 +974,6 @@ static void testMeshcomAck() {
   s.air.busy = false;
   s.run(1500);
   CHECK(s.air.sent[1] == 3);
-}
-
-static bool logHas(const char* part) {
-  for (const auto& l : g_meshLog) {
-    if (l.find(part) != std::string::npos) return true;
-  }
-  return false;
 }
 
 static void testMeshcomGroups() {

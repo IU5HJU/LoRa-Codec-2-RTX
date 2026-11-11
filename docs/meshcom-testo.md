@@ -2,10 +2,11 @@
 
 **Stato (11/11/2026): provato in aria con una T3 e un nodo MeshCom.** Funzionano: il cambio dei parametri radio a caldo, l'invio di un
 testo a un gruppo (con i segnaposti sostituiti), la ricezione di una **risposta diretta** e di una **risposta nel gruppo**, la busta
-sul display, il segnale "SMS" in Morse e l'apertura con il PTT breve. Il formato dei frame è stato verificato su frame veri
+sul display, il segnale "SMS" in Morse, l'apertura con il PTT breve e il **rientro automatico alla voce** a fine finestra. Il formato dei frame è stato verificato su frame veri
 ricevuti da un nodo della rete (decodifica, FCS e ricodifica identica); i test del progetto usano frame di prova costruiti con
-quel formato e nominativi inventati. **Non ancora provate in aria:** la conferma di ricezione (che la scheda manda a chi le scrive
-con `{NNN`), il rientro automatico alla voce a fine finestra con una voce in corso, e l'uso con altre schede o altre zone.
+quel formato e nominativi inventati. **Conferma di ricezione:** a un messaggio privato scritto dall'app MeshCom ("ci sono" a `IU5HJU-99`) l'app mostra la spunta di consegna
+con il nostro nominativo; la riga di diagnostica `CONFERMA ackNNN INVIATA` sulla seriale della scheda lo conferma dal lato nostro.
+**Non ancora provato:** l'uso con altre schede o altre zone.
 
 **A cosa serve.** Alla scheda del progetto serve per **avvisare e accordarsi** sulle reti radioamatoriali a pacchetto sui
 **433,175 MHz** (MeshCom): per esempio "IU5HJU QRV su VoLora modo Q" a un gruppo, oppure data e ora di un possibile QSO a un amico.
@@ -77,7 +78,7 @@ chiede la conferma dei propri testi.
 
 **Diagnostica:** durante l'escursione la seriale (115200) scrive una riga per ogni frame ricevuto, con il motivo se non viene
 mostrato: `[meshcom] : da IU5ABC-9 a IU5HJU-99: MOSTRATO`, `... scartato, non e' per noi (IU5HJU-99)`, `... copia gia' vista`,
-`... messaggio di servizio`, `... FCS sbagliata`, `frame non valido (... byte)`. A fine escursione una riga di riepilogo (`fine escursione: 12 frame ricevuti (testi 10, posizioni e rapporti 0, FCS sbagliata 1, non validi 1)`) distingue "non ha sentito niente" da "ha sentito ma scartato". Serve a capire perché una risposta non compare.
+`... messaggio di servizio`, `... CONFERMA ackNNN INVIATA` (la risposta che la scheda manda a chi ha chiesto la conferma), `... FCS sbagliata`, `frame non valido (... byte)`. A fine escursione una riga di riepilogo (`fine escursione: 12 frame ricevuti (testi 10, posizioni e rapporti 0, FCS sbagliata 1, non validi 1)`) distingue "non ha sentito niente" da "ha sentito ma scartato". Serve a capire perché una risposta non compare.
 
 ## Formato dei frame
 

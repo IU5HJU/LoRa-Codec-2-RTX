@@ -767,6 +767,11 @@ void VoiceNode::meshAckTick(uint32_t nowMs) {
   meshRemember(f.msgId, nowMs);  // la copia ripetuta di una nostra conferma non e' un messaggio nuovo
   radio_.send(wire, len);
   radio_.startReceive();
+  if (cfg_.meshLog) {
+    char m[80];
+    snprintf(m, sizeof(m), ": da %s a %s: CONFERMA ack%s INVIATA", cfg_.mcCall, ackDest_, ackNum_);
+    cfg_.meshLog(m);
+  }
 }
 
 // Testo verso il destinatario scelto (gruppo, nominativo-SSID o "*"): un solo invio, senza richiesta di conferma. Le
