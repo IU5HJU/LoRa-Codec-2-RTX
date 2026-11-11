@@ -66,6 +66,8 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.goto(url);
   await p.waitForFunction(() => document.getElementById('callsign').value !== '');
   check('lettura iniziale', (await p.inputValue('#callsign')) === 'IU5HJU' && (await p.inputValue('#freqqual')) === '433.900');
+  // La pagina legge prima i valori principali, poi MeshCom e i testi (decine di richieste): lo stato "letti" compare alla fine
+  await p.waitForFunction(() => /letti/.test(document.getElementById('st').textContent), null, { timeout: 15000 });
   check('stato di lettura', /letti/.test(await p.textContent('#st')));
 
   check('testi letti', (await p.inputValue('#text1')) === 'QRV, sono in ascolto' && (await p.inputValue('#text5')) === '73 e buona giornata');
