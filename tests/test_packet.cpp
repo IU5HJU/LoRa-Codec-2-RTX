@@ -317,7 +317,35 @@ static void testText() {
   CHECK(!decodePacket(b2, n, q) || q.flags != (kFlagStart | kFlagEnd));
 }
 
+static void testBusy() {
+  uint8_t buf[kMaxWireBytes];
+  const Packet p = makeBusyPacket(0x1234, "IZ0RPT", 139);
+  const size_t n = encodePacket(p, buf, sizeof(buf));
+  CHECK(n == 5 + 1 + 6 + 2);
+  CHECK((buf[0] & 0x0F) == kModeBusy);
+  Packet q;
+  CHECK(decodePacket(buf, n, q) && q.mode == kModeBusy && busySeconds(q) == 139 && strcmp(q.callsign, "IZ0RPT") == 0);
+  CHECK(busySeconds(makeBusyPacket(1, "IZ0RPT", 0)) == 0 && busySeconds(makeBusyPacket(1, "IZ0RPT", 65535)) == 65535);
+  Packet bad = p;
+  bad.callsign[0] = 0;
+  CHECK(encodePacket(bad, buf, sizeof(buf)) == 0);  // senza nominativo
+  bad = p;
+  bad.payloadLen = 1;
+  CHECK(encodePacket(bad, buf, sizeof(buf)) == 0);  // payload di lunghezza sbagliata
+  // in ricezione: flag e lunghezza controllati
+  const size_t m = encodePacket(p, buf, sizeof(buf));
+  CHECK(!decodePacket(buf, m - 1, q));
+  uint8_t t[kMaxWireBytes];
+  memcpy(t, buf, m);
+  t[4] = static_cast<uint8_t>(t[4] & ~kFlagEnd);
+  CHECK(!decodePacket(t, m, q));
+  CHECK(busySeconds(makeBusyPacket(1, "IZ0RPT", 5)) == 5);
+  Packet voice;
+  CHECK(busySeconds(voice) == 0);
+}
+
 int main() {
+  testBusy();
   testRoundTrip();
   testCodec3200();
   testPosition();

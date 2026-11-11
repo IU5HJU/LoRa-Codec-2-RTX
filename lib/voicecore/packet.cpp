@@ -25,6 +25,24 @@ bool isValidText(const char* t, size_t len) {
   return true;
 }
 
+Packet makeBusyPacket(uint16_t session, const char* callsign, uint16_t seconds) {
+  Packet p;
+  p.mode = kModeBusy;
+  p.session = session;
+  p.flags = kFlagStart | kFlagEnd;
+  strncpy(p.callsign, callsign, kMaxCallsign);
+  p.callsign[kMaxCallsign] = 0;
+  p.payloadLen = kBusyPayloadBytes;
+  p.payload[0] = static_cast<uint8_t>(seconds >> 8);
+  p.payload[1] = static_cast<uint8_t>(seconds & 0xFF);
+  return p;
+}
+
+uint16_t busySeconds(const Packet& p) {
+  if (p.mode != kModeBusy || p.payloadLen != kBusyPayloadBytes) return 0;
+  return static_cast<uint16_t>((p.payload[0] << 8) | p.payload[1]);
+}
+
 bool isPlaceholderCallsign(const char* cs) {
   return cs && (strncmp(cs, "N0CALL", kMaxCallsign + 1) == 0 || strncmp(cs, "NOCALL", kMaxCallsign + 1) == 0);
 }
@@ -33,6 +51,7 @@ size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
   const bool cs = p.callsign[0] != 0;
   if (cs && !isValidCallsign(p.callsign)) return 0;
   if (p.payloadLen > kMaxPayload) return 0;
+  if (p.mode == kModeBusy && (!cs || p.payloadLen != kBusyPayloadBytes)) return 0;
   if (p.mode == kModeText && (!cs || !isValidText(reinterpret_cast<const char*>(p.payload), p.payloadLen))) return 0;
   const size_t csLen = cs ? strlen(p.callsign) : 0;
   const bool hasPos = p.position.valid;
@@ -104,13 +123,17 @@ bool decodePacket(const uint8_t* in, size_t len, Packet& out) {
   if (pl > kMaxPayload) return false;
 
   if (q.flags & kFlagParity) {
-    if (q.mode == kModeText) return false;
+    if (q.mode == kModeText || q.mode == kModeBusy) return false;
     if (q.flags & (kFlagStart | kFlagEnd | kFlagCallsign | kFlagPosition | kFlagTotal)) return false;
     if (pl < kParityHeader) return false;
     const uint8_t count = in[pos];
     const uint8_t xorLen = in[pos + 1];
     if (count == 0 || count > kParityGroup) return false;
     if (xorLen >= 16) return false;  // XOR dei conteggi di frame (ognuno <= 12)
+  } else if (q.mode == kModeBusy) {
+    // Annuncio di occupato: un solo pacchetto START|END con il nominativo e 2 byte di secondi.
+    if ((q.flags & (kFlagStart | kFlagEnd)) != (kFlagStart | kFlagEnd) || !(q.flags & kFlagCallsign)) return false;
+    if (q.flags & (kFlagPosition | kFlagTotal) || pl != kBusyPayloadBytes) return false;
   } else if (q.mode == kModeText) {
     // Messaggio di testo: un solo pacchetto START|END con il nominativo, senza posizione ne' totale.
     if ((q.flags & (kFlagStart | kFlagEnd)) != (kFlagStart | kFlagEnd) || !(q.flags & kFlagCallsign)) return false;

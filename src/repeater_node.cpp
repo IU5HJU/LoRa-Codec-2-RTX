@@ -194,6 +194,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
   lcr::LinkParser parser;
   lcr::MessageStore* store = new lcr::MessageStore;
   lcr::TxScheduler sched(radio, *store, prof, lcr::profileFor(lcr::kProfileMessage), out.profileFreqKhz(), static_cast<uint16_t>(esp_random()));
+  sched.setCallsign(settings.callsign);  // annuncio di occupato (modo 6) prima e dopo i messaggi
   sched.setMessagesEnabled(!prof.message);  // se la voce e' gia' il profilo Messaggio non c'e' nulla da alternare
   const lcr::TxQueue& queue = sched.queue();
   UsbConsole usb(handler);

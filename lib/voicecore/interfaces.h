@@ -97,6 +97,11 @@ class INotifier {
   virtual void messageOpened(bool isText) { (void)isText; }
   // Messaggio ascoltato, letto o interrotto: cancellato dalla casella.
   virtual void messageClosed() {}
+  // Un ripetitore annuncia che e' occupato per 'seconds' secondi (0 = di nuovo libero). Solo informativo: il PTT non si blocca.
+  virtual void repeaterBusy(const char* callsign, uint16_t seconds) {
+    (void)callsign;
+    (void)seconds;
+  }
   // L'escursione sulla rete di testo e' iniziata (on = true) o finita (on = false, la scheda e' tornata al profilo in uso).
   virtual void meshcomChanged(bool on) { (void)on; }
   // Modo "registra e poi trasmetti": fase in corso (0 = nessuna, 1 = registra, 2 = attesa, 3 = trasmette).

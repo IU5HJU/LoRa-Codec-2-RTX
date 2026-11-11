@@ -12,6 +12,8 @@
 //   - un messaggio si ritrasmette solo dopo kTailMs di silenzio sull'uscita (non si entra nelle pause di un QSO);
 //   - prima di ogni pacchetto del messaggio si controlla che il canale sia libero (CAD); occupato oltre kBusyAbortMs il
 //     messaggio si interrompe e ripartira' dall'inizio;
+//   - prima della ritrasmissione, con i parametri della voce, l'annuncio di occupato (modo 6) con il tempo previsto, due volte; a
+//     ritrasmissione conclusa (non interrotta dalla voce) un annuncio con 0 secondi. Solo informativo: la voce passa lo stesso;
 //   - tra un messaggio e il successivo, e dopo l'ultimo pacchetto ricevuto in ascolto, passano kBetweenMsgMs.
 // Qui c'e' solo la logica, senza orologio ne' pause (si passa 'now'): provata sul PC (tests/test_tx_scheduler.cpp).
 #pragma once
@@ -35,7 +37,8 @@ class TxScheduler {
   static constexpr uint32_t kBetweenMsgMs = 5000;
   static constexpr uint32_t kParamRetryMs = 1000;
 
-  enum class State : uint8_t { Voice, Listen, Relay };
+  // Announce e Release usano i parametri della voce: mandano l'annuncio di occupato prima e dopo un messaggio.
+  enum class State : uint8_t { Voice, Listen, Relay, Announce, Release };
 
   struct Stats {
     uint32_t voiceSent = 0;
@@ -45,6 +48,7 @@ class TxScheduler {
     uint32_t busyAborts = 0;     // ritrasmissioni fermate dal canale occupato
     uint32_t paramErrors = 0;
     uint32_t messageRx = 0;      // pacchetti arrivati in ascolto
+    uint32_t announces = 0;      // annunci di occupato mandati (copie comprese)
   };
 
   TxScheduler(IRadio& radio, MessageStore& store, const Profile& voice, const Profile& message, uint32_t freqKhz, uint16_t sessionSeed);
@@ -54,6 +58,8 @@ class TxScheduler {
   // Un giro: al piu' una trasmissione. mayTransmit false (N0CALL): niente si trasmette, la voce in coda si scarta.
   void tick(uint32_t nowMs, bool mayTransmit);
 
+  // Nominativo del ripetitore: se c'e', prima di ritrasmettere un messaggio si manda l'annuncio di occupato (modo 6, protocol.h).
+  void setCallsign(const char* callsign);
   // false (profilo Messaggio ripetuto come voce, o messaggi spenti): la radio non va mai in ascolto messaggi ne' ritrasmette.
   void setMessagesEnabled(bool on) { messages_ = on; }
   State state() const { return state_; }
@@ -65,6 +71,12 @@ class TxScheduler {
   void listen(uint32_t nowMs);
   void abortRelay(uint32_t nowMs, bool byVoice);
   void relayStep(uint32_t nowMs);
+  void endRelayState(uint32_t nowMs);
+  void announceStep(uint32_t nowMs);
+  void releaseStep(uint32_t nowMs);
+  bool sendBusy(uint16_t seconds);
+  uint16_t busySecondsForReady() const;
+  static bool voiceParams(State s) { return s == State::Voice || s == State::Announce || s == State::Release; }
   bool tailElapsed(uint32_t nowMs) const { return !haveVoice_ || nowMs - lastVoiceMs_ >= kTailMs; }
 
   IRadio& radio_;
@@ -86,6 +98,11 @@ class TxScheduler {
   uint32_t busySinceMs_ = 0;
   bool busy_ = false;
   bool messages_ = true;
+  char callsign_[kMaxCallsign + 1] = {0};
+  uint8_t annSent_ = 0;  // copie dell'annuncio gia' mandate
+  uint32_t lastAnnMs_ = 0;
+  uint16_t annSession_ = 0;
+  uint16_t annSeconds_ = 0;
   Stats stats_;
 };
 

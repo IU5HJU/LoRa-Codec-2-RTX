@@ -17,6 +17,12 @@ constexpr uint8_t kModeCodec2_3200 = 4;
 constexpr uint8_t kModeTest = 2;
 // Risposta del ricevitore alla prova (un solo pacchetto con il risultato).
 constexpr uint8_t kModeTestReport = 3;
+// Annuncio di "ripetitore occupato" (docs/studio-ripetitore.md): un solo pacchetto START|END con il nominativo del ripetitore e, come
+// payload, 2 byte (big-endian) con i secondi di blocco previsti; 0 = di nuovo libero. E' solo un'informazione: le stazioni la
+// mostrano sul display e non rifiutano il PTT. Il ripetitore lo manda con i parametri della voce prima di ritrasmettere un
+// messaggio lungo (che le stazioni in Standard e Qualita' non vedono con il CAD) e due volte, a distanza di kTextRepeatGapMs.
+constexpr uint8_t kModeBusy = 6;
+constexpr size_t kBusyPayloadBytes = 2;
 // Messaggio di testo breve (stile SMS, fino a kMaxTextChars caratteri ASCII, senza '{' e '}'): un solo pacchetto START|END con il nominativo
 // di chi scrive; il payload e' il testo. Nessuna parita'. Il mittente lo trasmette due volte (stessa sessione): i duplicati si
 // scartano.

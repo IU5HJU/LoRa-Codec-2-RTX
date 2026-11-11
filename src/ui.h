@@ -60,6 +60,12 @@ class UiNotifier : public lcr::INotifier {
     if (sec != meshSec_) dirty_ = true;
     meshSec_ = sec;
   }
+  // Secondi che restano all'annuncio di "ripetitore occupato" (0 = nessuno): solo una riga in piu' a riposo, il PTT resta libero.
+  void setRepeaterBusy(int sec) {
+    if (sec != busySec_) dirty_ = true;
+    busySec_ = sec;
+  }
+  void repeaterBusy(const char* callsign, uint16_t seconds) override;
   // Pagina successiva del testo aperto (volume breve mentre si legge un testo lungo). false se il testo ha una sola pagina.
   bool nextTextPage();
   bool textOpen() const { return openedText_; }
@@ -133,6 +139,7 @@ class UiNotifier : public lcr::INotifier {
   lcr::Settings settings_;
   Adafruit_SSD1306 display_;
   bool ok_ = false;
+  int busySec_ = 0;
   bool dirty_ = true;
   uint32_t lastDrawMs_ = 0;
 

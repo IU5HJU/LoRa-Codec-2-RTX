@@ -241,4 +241,6 @@ Sulla RX **non va montato il microfono** (GPIO34/36 sono i pin dei suoi dati) e 
 
 **Messaggi (11/11/2026):** la scheda TX ascolta il profilo Messaggio sulla frequenza di uscita quando è libera, tiene fino a 3 messaggi (massimo 15 s di voce) e li ritrasmette dopo 20 s di silenzio vocale, con la voce sempre prioritaria; vedi [studio-ripetitore.md](studio-ripetitore.md) ("Il regista della TX"). Logica provata sul PC, **non ancora sulla scheda**.
 
-**Cosa non c'è ancora:** annuncio di "occupato" (modo 6), comandi del sysop (modo 5), identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).
+Prima della ritrasmissione la TX manda l'**annuncio di "occupato"** (modo 6); le stazioni lo mostrano sul display e non bloccano il PTT.
+
+**Cosa non c'è ancora:** comandi del sysop (modo 5), identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).

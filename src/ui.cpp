@@ -367,6 +367,13 @@ void UiNotifier::meshcomChanged(bool on) {
   }
 }
 
+// Il ripetitore dice che e' occupato: un bip, poi la riga compare a riposo (il PTT resta libero).
+void UiNotifier::repeaterBusy(const char* callsign, uint16_t seconds) {
+  (void)callsign;
+  dirty_ = true;
+  if (seconds > 0) audio_.beep(500, 80);
+}
+
 // Scelta del testo o del destinatario dell'escursione MeshCom: titolo, posizione, voce a capo e istruzioni.
 void UiNotifier::drawChoice() {
   display_.clearDisplay();
@@ -589,7 +596,10 @@ void UiNotifier::draw(uint32_t nowMs) {
       display_.setCursor(0, 47);
       display_.print("VOL lungo = esci");  // torna subito alla voce
     } else display_.print(message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare"));
-    if (gpsEnabled_ && meshSec_ <= 0) {  // riga libera a riposo: stato del GPS (durante l'escursione c'e' il promemoria)
+    if (busySec_ > 0 && meshSec_ <= 0) {  // un ripetitore sta ritrasmettendo un messaggio: solo un avviso
+      display_.setCursor(0, 47);
+      display_.printf("RIP. OCCUPATO %d:%02d", busySec_ / 60, busySec_ % 60);
+    } else if (gpsEnabled_ && meshSec_ <= 0) {  // riga libera a riposo: stato del GPS (durante l'escursione c'e' il promemoria)
       display_.setCursor(0, 47);
       if (gpsFix_) {
         display_.printf("GPS fix, %d satelliti", gpsSats_);

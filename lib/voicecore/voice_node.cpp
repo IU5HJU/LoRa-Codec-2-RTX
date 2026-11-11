@@ -98,6 +98,7 @@ void VoiceNode::stopMic() {
 }
 
 void VoiceNode::startTx(uint32_t nowMs) {
+  clearBusy();
   const uint16_t sid = makeSessionId();
   txTest_ = testMode_;
   const bool rec = recMode_ && !testMode_;
@@ -351,6 +352,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       handleText(p);
       continue;
     }
+    if (p.mode == kModeBusy) {
+      handleBusy(p, nowMs);
+      continue;
+    }
     if (p.mode != prof_.codecMode && p.mode != kModeTest) continue;  // modi sconosciuti
     if (state_ == State::Receiving && (p.mode == kModeTest) != rxIsTest_) continue;  // niente mescolanze
     if (!rx_.onPacket(p, nowMs)) continue;
@@ -370,6 +375,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
         playing_ = false;
         textOpen_ = false;
       }
+      if (!rxIsTest_) clearBusy();
       state_ = State::Receiving;
       nextPlayMs_ = nowMs;
       playbackNotified_ = false;
@@ -480,6 +486,31 @@ void VoiceNode::handleText(const Packet& p) {
   playing_ = false;
   textOpen_ = false;
   notify_.messageReceived(true, p.callsign);
+}
+
+// Annuncio di un ripetitore occupato: si ricorda per quanto tempo e si avvisa il display. Due copie: la seconda si scarta.
+// Un annuncio con 0 secondi libera subito.
+void VoiceNode::handleBusy(const Packet& p, uint32_t nowMs) {
+  if (lastBusyValid_ && p.session == lastBusySession_ && strncmp(p.callsign, lastBusyCall_, kMaxCallsign) == 0) return;
+  lastBusyValid_ = true;
+  lastBusySession_ = p.session;
+  strncpy(lastBusyCall_, p.callsign, kMaxCallsign);
+  lastBusyCall_[kMaxCallsign] = 0;
+  const uint16_t sec = busySeconds(p);
+  if (sec == 0) {
+    clearBusy();
+    return;
+  }
+  busyActive_ = true;
+  busyUntilMs_ = nowMs + static_cast<uint32_t>(sec) * 1000u;
+  notify_.repeaterBusy(p.callsign, sec);
+}
+
+// Una voce ricevuta o una trasmissione nostra: l'annuncio non vale piu' (il ripetitore ha smesso il messaggio o la voce passa).
+void VoiceNode::clearBusy() {
+  if (!busyActive_) return;
+  busyActive_ = false;
+  notify_.repeaterBusy(lastBusyCall_, 0);
 }
 
 void VoiceNode::openMessage(uint32_t nowMs) {

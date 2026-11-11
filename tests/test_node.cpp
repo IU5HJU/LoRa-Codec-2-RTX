@@ -644,6 +644,44 @@ static void testNoProgressInStandard() {
   CHECK(decodePacket(s.air.log[0][0].data(), s.air.log[0][0].size(), start) && !start.hasTotal());
 }
 
+static void injectBusy(Sim& s, uint16_t session, uint16_t seconds) {
+  uint8_t buf[kMaxWireBytes];
+  const size_t n = encodePacket(makeBusyPacket(session, "IZ0RPT", seconds), buf, sizeof(buf));
+  s.air.inbox[1].push_back(std::vector<uint8_t>(buf, buf + n));
+}
+
+static void testRepeaterBusy() {
+  Sim s;
+  s.run(100);
+  CHECK(s.b.node.repeaterBusyRemainingSec(s.clock) == 0);
+  injectBusy(s, 0x5001, 100);
+  injectBusy(s, 0x5001, 100);  // seconda copia: si scarta
+  s.run(200);
+  CHECK(s.b.note.busyEvents.size() == 1 && s.b.note.busyEvents[0].callsign == "IZ0RPT" && s.b.note.busyEvents[0].seconds == 100);
+  const int rem = s.b.node.repeaterBusyRemainingSec(s.clock);
+  CHECK(rem >= 99 && rem <= 100);
+  CHECK(!s.b.node.messageOpen() && !s.b.node.inbox().has());  // non e' un messaggio
+  // il PTT non si blocca: chi vuole parlare parla e l'avviso si cancella
+  s.b.node.pttPressed(s.clock);
+  s.run(500);
+  CHECK(s.b.node.state() == VoiceNode::State::Transmitting && s.b.note.denied == 0);
+  CHECK(s.b.node.repeaterBusyRemainingSec(s.clock) == 0 && s.b.note.busyEvents.back().seconds == 0);
+  s.b.node.pttReleased(s.clock);
+  s.run(3000);
+  // scadenza naturale
+  injectBusy(s, 0x5002, 5);
+  s.run(200);
+  CHECK(s.b.node.repeaterBusyRemainingSec(s.clock) > 0);
+  s.run(5500);
+  CHECK(s.b.node.repeaterBusyRemainingSec(s.clock) == 0);
+  // annuncio con 0 secondi: libera subito
+  injectBusy(s, 0x5003, 60);
+  s.run(200);
+  injectBusy(s, 0x5004, 0);
+  s.run(200);
+  CHECK(s.b.node.repeaterBusyRemainingSec(s.clock) == 0);
+}
+
 static void testTextMessage() {
   Sim s;
   s.air.clock = &s.clock;
@@ -1104,6 +1142,7 @@ int main() {
   testMeshcomFilters();
   testMeshcomAck();
   testMeshcomGroups();
+  testRepeaterBusy();
   testTextMessage();
   testTextRules();
   testVoiceMessageStopAndReplace();

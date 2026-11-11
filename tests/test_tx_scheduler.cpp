@@ -263,7 +263,79 @@ static void testMessagesDisabled() {
   CHECK(r.sch->state() == TxScheduler::State::Voice && r.radio.params.empty());
 }
 
+static Packet dec(const std::vector<uint8_t>& w) {
+  Packet p;
+  CHECK(decodePacket(w.data(), w.size(), p));
+  return p;
+}
+
+static void testAnnounceBeforeAndAfter() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.run(500);
+  const auto msg = makeMessage(0x1111, 100);
+  r.deliver(msg);
+  const uint32_t expect = (r.store->readyAirtimeMs(M) + static_cast<uint32_t>(msg.size()) * kInterPacketGapMs + 2000 + 999) / 1000;
+  r.run(15000);
+  CHECK(r.sch->stats().relayed == 1 && r.sch->state() == TxScheduler::State::Listen);
+  const auto& log = r.air.log[0];
+  CHECK(log.size() == msg.size() + 4);
+  const Packet a1 = dec(log[0]), a2 = dec(log[1]);
+  CHECK(a1.mode == kModeBusy && a2.mode == kModeBusy && a1.session == a2.session && strcmp(a1.callsign, "IZ0RPT") == 0);
+  CHECK(busySeconds(a1) == expect && expect > 5);
+  CHECK(dec(log[2]).mode == kModeCodec2_1200 && (dec(log[2]).flags & kFlagRelayed));
+  const Packet f1 = dec(log[log.size() - 2]), f2 = dec(log[log.size() - 1]);
+  CHECK(f1.mode == kModeBusy && f2.mode == kModeBusy && busySeconds(f1) == 0 && f1.session == f2.session && f1.session != a1.session);
+  // parametri: ascolto, voce (annuncio), messaggio (ritrasmissione), voce (fine), messaggio (ascolto)
+  CHECK(r.radio.params.size() == 5);
+  const uint8_t ids[5] = {kProfileMessage, kProfileStandard, kProfileMessage, kProfileStandard, kProfileMessage};
+  for (size_t i = 0; i < r.radio.params.size() && i < 5; i++) CHECK(r.radio.params[i].id == ids[i]);
+}
+
+static void testVoiceInterruptsAnnounce() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.run(500);
+  r.deliver(makeMessage(0x1111, 100));
+  while (r.sch->stats().announces < 1) r.run(100);
+  CHECK(r.sch->state() == TxScheduler::State::Announce);
+  r.voice(3);
+  CHECK(r.sch->state() == TxScheduler::State::Voice && r.sch->stats().relayPackets == 0 && r.store->readyCount() == 1);
+  r.run(TxScheduler::kTailMs + 20000);
+  CHECK(r.sch->stats().relayed == 1);  // alla fine riparte con un annuncio nuovo
+  CHECK(r.sch->stats().announces >= 5);
+}
+
+static void testBusyAbortReleases() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.run(500);
+  r.deliver(makeMessage(0x1111, 100));
+  while (r.sch->stats().relayPackets < 2) r.run(100);
+  r.air.busy = true;
+  r.run(TxScheduler::kBusyAbortMs + 3000);
+  CHECK(r.sch->stats().busyAborts == 1);
+  const auto& log = r.air.log[0];
+  const Packet last = dec(log.back());
+  CHECK(last.mode == kModeBusy && busySeconds(last) == 0);
+}
+
+static void testVoiceInterruptsRelayNoRelease() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.run(500);
+  r.deliver(makeMessage(0x1111, 100));
+  while (r.sch->stats().relayPackets < 3) r.run(100);
+  const int before = r.sch->stats().announces;
+  r.voice(2);
+  CHECK(r.sch->stats().interrupted == 1 && static_cast<int>(r.sch->stats().announces) == before);  // niente annuncio di fine: basta la voce
+}
+
 int main() {
+  testAnnounceBeforeAndAfter();
+  testVoiceInterruptsAnnounce();
+  testBusyAbortReleases();
+  testVoiceInterruptsRelayNoRelease();
   testMessagesDisabled();
   testStartsOnVoiceThenListens();
   testVoiceUsesVoiceParams();

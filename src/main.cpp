@@ -688,6 +688,7 @@ void loop() {
     act = menuFlow->update(pttEvent, volEvent, nodeIdle, settings.profile, now);
   }
   // Secondi che restano all'escursione MeshCom (0 se non e' in corso): lettera T, frequenza e schermo
+  ui.setRepeaterBusy(node->repeaterBusyRemainingSec(now));
   ui.setMeshcomRemaining(node->meshcomActive() ? static_cast<int>((node->meshcomRemainingMs(now) + 999) / 1000) : 0);
   if (act.pttToNode) {
     if (pttEvent == lcr::PttButton::Event::Pressed) node->pttPressed(now);

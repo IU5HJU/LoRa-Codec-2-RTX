@@ -159,6 +159,12 @@ class Notifier : public lcr::INotifier {
   void messageReceived(bool isText, const char* cs) override {
     received.push_back({isText, cs});
   }
+  void repeaterBusy(const char* cs, uint16_t sec) override { busyEvents.push_back({cs, sec}); }
+  struct BusyEv {
+    std::string callsign;
+    uint16_t seconds;
+  };
+  std::vector<BusyEv> busyEvents;
   void messageOpened(bool isText) override { opened.push_back(isText); }
   void messageClosed() override { closed++; }
   void meshcomChanged(bool on) override { meshcomEvents.push_back(on); }

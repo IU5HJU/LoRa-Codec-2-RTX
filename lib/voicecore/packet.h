@@ -26,6 +26,11 @@ struct Packet {
   bool hasTotal() const { return totalPackets != 0; }
 };
 
+// Annuncio di ripetitore occupato (modo 6): pacchetto START|END con nominativo e 'seconds' di blocco (0 = libero).
+Packet makeBusyPacket(uint16_t session, const char* callsign, uint16_t seconds);
+// Secondi dichiarati da un pacchetto del modo 6 (0 se non lo e').
+uint16_t busySeconds(const Packet& p);
+
 // Testo ammesso nei messaggi: ASCII stampabile (0x20-0x7E) senza '{' e '}'. Lunghezza 1..kMaxTextChars (150).
 bool isValidText(const char* t, size_t len);
 

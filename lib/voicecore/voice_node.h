@@ -82,6 +82,11 @@ class VoiceNode {
   // Messaggi (casella con un solo messaggio): un clic breve sul PTT apre il messaggio in attesa, un clic mentre e' aperto lo chiude
   // (e lo cancella). La voce non si riproduce da sola nel profilo Messaggio.
   const Inbox& inbox() const { return inbox_; }
+  // Secondi che restano all'annuncio di "ripetitore occupato" (0 = nessuno). Non blocca il PTT.
+  int repeaterBusyRemainingSec(uint32_t nowMs) const {
+    if (!busyActive_ || static_cast<int32_t>(busyUntilMs_ - nowMs) <= 0) return 0;
+    return static_cast<int>((busyUntilMs_ - nowMs + 999) / 1000);
+  }
   bool messageOpen() const { return playing_ || textOpen_; }
   // Trasmette un breve testo (ASCII stampabile senza graffe, 1-150 caratteri), in due copie. false (con pttDenied) se non si puo'.
   bool sendText(const char* text, uint32_t nowMs);
@@ -124,6 +129,8 @@ class VoiceNode {
   void meshRemember(uint32_t id, uint32_t nowMs);
   void drainToInbox(uint32_t nowMs);
   void handleText(const Packet& p);
+  void handleBusy(const Packet& p, uint32_t nowMs);
+  void clearBusy();
   void openMessage(uint32_t nowMs);
   void closeMessage();
   void playTick(uint32_t nowMs);
@@ -204,6 +211,11 @@ class VoiceNode {
   bool playing_ = false;     // riproduzione del messaggio vocale aperto
   bool textOpen_ = false;    // testo aperto e in mostra
   size_t playIdx_ = 0;
+  bool busyActive_ = false;  // annuncio di ripetitore occupato in corso (solo informativo)
+  uint32_t busyUntilMs_ = 0;
+  bool lastBusyValid_ = false;
+  uint16_t lastBusySession_ = 0;
+  char lastBusyCall_[kMaxCallsign + 1] = {0};
   bool lastTextValid_ = false;  // ultimo testo ricevuto (per scartare la seconda copia)
   uint16_t lastTextSession_ = 0;
   char lastTextCall_[kMaxCallsign + 1] = {0};

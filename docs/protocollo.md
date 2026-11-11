@@ -93,6 +93,12 @@ Nell'escursione **MeshCom** i testi non usano questo modo: viaggiano nel formato
 
 I testi da inviare sono cinque, predefiniti e impostabili dalla pagina web o dalla pagina Wi-Fi della scheda (`CFG SET TEXTn`, [firmware.md](firmware.md)).
 
+## Annuncio di ripetitore occupato (modo 6)
+
+Un solo pacchetto `START`+`END`+`CALLSIGN` con il nominativo del **ripetitore** e, come payload, **2 byte big-endian** con i secondi di blocco previsti (**0 = di nuovo libero**). Niente parità, posizione o totale; `seq` 0; payload di lunghezza diversa da 2 e pacchetto senza nominativo sono scartati. Lo manda un ripetitore con i parametri della voce prima di ritrasmettere un messaggio lungo (le stazioni in Standard e Qualità non vedono con il CAD una trasmissione SF12), **due volte a 1 s di distanza** (stessa sessione, la seconda copia si scarta), e una volta con 0 secondi a servizio concluso se la ritrasmissione non è stata interrotta dalla voce.
+
+Le stazioni **lo mostrano sul display** ("RIP. OCCUPATO m:ss" a riposo, con un bip) e **non rifiutano il PTT**: chi vuole parlare può farlo e il ripetitore interrompe il messaggio. L'avviso si cancella da solo allo scadere, con un annuncio a 0, quando si riceve voce o quando si trasmette. Una versione precedente scarta il modo 6 come ogni modo sconosciuto.
+
 ## Controllo hardware (modo 15)
 
 Il modo 15 è usato solo da "Suona i toni" della pagina (`CFG TEST AUDIO`): la scheda trasmette pacchetti dati in continuo, con payload fisso e il nominativo, mentre suona i toni, per vedere se la radiofrequenza rientra nel microfono o nell'amplificatore. Non è audio e nessun ricevitore lo elabora: i modi sconosciuti vengono scartati.
