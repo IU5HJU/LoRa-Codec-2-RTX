@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "menu.h"
 #include "profile.h"
 #include "testing.h"
@@ -47,6 +49,10 @@ static void testMenu() {
   size_t n = 0;
   const MenuItem* items = defaultMenuItems(n);
   CHECK(n == 6);
+  // i tre profili si chiamano "Modo ..." (con la a accentata del font dell'OLED, CP437 0x85); le altre voci no
+  CHECK(strcmp(items[0].label, "Modo Standard") == 0 && strcmp(items[1].label, "Modo Messaggio") == 0);
+  CHECK(strncmp(items[2].label, "Modo Qualit", 11) == 0 && static_cast<unsigned char>(items[2].label[11]) == 0x85 && items[2].label[12] == 0);
+  for (size_t i = 0; i < n; i++) CHECK(strlen(items[i].label) <= 16);  // entrano nelle righe del menu (21 caratteri con "* ")
   Menu m(items, n);
   CHECK(!m.isOpen());
 
