@@ -14,11 +14,16 @@ const st = {
   cfg: { callsign: 'IU5HJU', profile: 'std', freq: '433.900', freqmsg: '433.900', freqqual: '433.900', power: 10, volume: 7, micfloor: -60, pos: 'off', qth: 'none', gps: 'off' },
   cmds: [],
   board: 't3',
+  texts: ['QRV, sono in ascolto', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
 const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps'];
 function handle(line) {
   st.cmds.push(line);
+  const tm = /^CFG SET TEXT([1-5]) (.+)$/.exec(line);
+  if (tm) { st.texts[+tm[1] - 1] = tm[2] === 'NONE' ? '' : tm[2]; return 'CFG OK text' + tm[1] + '=' + (tm[2] === 'NONE' ? '' : tm[2]); }
+  const tg = /^CFG GET TEXT([1-5])$/.exec(line);
+  if (tg) return 'CFG TEXT' + tg[1] + '=' + st.texts[+tg[1] - 1];
   const t = line.split(' ');
   if (t[1] === 'GET') return 'CFG ' + KEYS.map((k) => k + '=' + st.cfg[k]).join(' ') + ' board=' + st.board + ' reboot=0 test=0';
   if (t[1] === 'SET') {
@@ -51,12 +56,15 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('lettura iniziale', (await p.inputValue('#callsign')) === 'IU5HJU' && (await p.inputValue('#freqqual')) === '433.900');
   check('stato di lettura', /letti/.test(await p.textContent('#st')));
 
+  check('testi letti', (await p.inputValue('#text1')) === 'QRV, sono in ascolto' && (await p.inputValue('#text5')) === '73 e buona giornata');
+  await p.fill('#text2', 'Sono QRV su 433.775, chiamami'); await p.fill('#text4', '');
   await p.fill('#callsign', 'iu5hju/p'); await p.selectOption('#profile', 'qua'); await p.fill('#freqqual', '434.250');
   await p.fill('#qth', '43.7696,11.2558'); await p.selectOption('#pos', 'on');
   await p.click('#save');
   await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
   check('salvato e riletto', /tutto coincide/.test(await p.textContent('#st')), await p.textContent('#st'));
   check('comandi inviati', st.cmds.includes('CFG SET PROFILE qua') && st.cmds.includes('CFG SET FREQQUAL 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
+  check('testi salvati (con spazi) e posto vuoto con NONE', st.cmds.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami') && st.cmds.includes('CFG SET TEXT4 NONE') && st.texts[1] === 'Sono QRV su 433.775, chiamami' && st.texts[3] === '', JSON.stringify(st.texts));
   check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 1] === 'CFG GET');
   check('nominativo maiuscolo', st.cfg.callsign === 'IU5HJU/P');
 

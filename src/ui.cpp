@@ -116,6 +116,7 @@ void UiNotifier::txStarted() {
 }
 
 void UiNotifier::txEnded(bool turnLimitReached) {
+  sendingText_ = false;
   limitHit_ = turnLimitReached;
   if (turnLimitReached) {
     snprintf(noticeBuf_, sizeof(noticeBuf_), "LIMITE %lu s", static_cast<unsigned long>(maxTurnSec_));
@@ -206,6 +207,149 @@ void UiNotifier::linkTestReport(bool fromRemote, const char* callsign, const lcr
   }
 }
 
+// Messaggio arrivato in casella: icona e invito a premere il PTT. Il testo suona "SMS" in Morse (il vocale ha gia' suonato
+// "MSG" all'inizio della ricezione).
+void UiNotifier::messageReceived(bool isText, const char* callsign) {
+  (void)callsign;
+  openedText_ = openedVoice_ = false;
+  dirty_ = true;
+  if (isText) {
+    state_ = lcr::VoiceNode::State::Idle;
+    draw(millis());  // prima l'icona, poi il suono (bloccante, circa 2 s)
+    lastDrawMs_ = millis();
+    dirty_ = false;
+    audio_.playMorse(lcr::kTextTone, lcr::kMessageToneHz, lcr::kMessageToneUnitMs);
+  }
+}
+
+void UiNotifier::messageOpened(bool isText) {
+  openedText_ = isText;
+  openedVoice_ = !isText;
+  textPage_ = 0;
+  if (isText && inbox_) wrapText(inbox_->text());
+  dirty_ = true;
+}
+
+void UiNotifier::messageClosed() {
+  openedText_ = openedVoice_ = false;
+  dirty_ = true;
+}
+
+bool UiNotifier::nextTextPage() {
+  if (!openedText_) return false;
+  const int pages = (textLineCount_ + 5) / 6;
+  if (pages <= 1) return false;
+  textPage_ = (textPage_ + 1) % pages;
+  dirty_ = true;
+  return true;
+}
+
+// Testo a capo per parole su righe di 21 caratteri (una parola piu' lunga si spezza).
+void UiNotifier::wrapText(const char* text) {
+  textLineCount_ = 0;
+  const size_t n = strlen(text);
+  size_t i = 0;
+  while (i < n && textLineCount_ < 16) {
+    size_t len = n - i < 21 ? n - i : 21;
+    if (n - i > 21) {  // dove spezzare: all'ultimo spazio entro la riga, altrimenti a 21
+      size_t cut = 0;
+      for (size_t k = 0; k <= 21 && i + k < n; k++) {
+        if (text[i + k] == ' ') cut = k;
+      }
+      if (cut > 0) len = cut;
+    }
+    memcpy(textLines_[textLineCount_], text + i, len);
+    textLines_[textLineCount_][len] = 0;
+    textLineCount_++;
+    i += len;
+    while (i < n && text[i] == ' ') i++;  // lo spazio dove si e' andati a capo non si mostra
+  }
+}
+
+// Busta: rettangolo con la linguetta a V (44x28 punti).
+void UiNotifier::drawEnvelope(int x, int y) {
+  display_.drawRect(x, y, 44, 28, SSD1306_WHITE);
+  display_.drawRect(x + 1, y + 1, 42, 26, SSD1306_WHITE);
+  for (int k = 0; k < 2; k++) {
+    display_.drawLine(x + 1, y + 1 + k, x + 22, y + 15 + k, SSD1306_WHITE);
+    display_.drawLine(x + 42, y + 1 + k, x + 22, y + 15 + k, SSD1306_WHITE);
+  }
+}
+
+// Altoparlante con le onde (44x32 punti).
+void UiNotifier::drawSpeaker(int x, int y) {
+  display_.fillRect(x, y + 10, 10, 12, SSD1306_WHITE);
+  display_.fillTriangle(x + 10, y + 10, x + 24, y, x + 24, y + 31, SSD1306_WHITE);
+  display_.fillTriangle(x + 10, y + 10, x + 10, y + 21, x + 24, y + 31, SSD1306_WHITE);
+  display_.drawCircleHelper(x + 26, y + 16, 8, 0x6, SSD1306_WHITE);
+  display_.drawCircleHelper(x + 26, y + 16, 15, 0x6, SSD1306_WHITE);
+}
+
+// Messaggio in casella, non ancora aperto: grande icona (altoparlante = voce, busta = testo) e come aprirlo.
+void UiNotifier::drawIncoming() {
+  const bool text = inbox_->kind() == lcr::Inbox::Kind::Text;
+  display_.clearDisplay();
+  display_.setTextSize(1);
+  display_.setCursor(0, 0);
+  display_.print(text ? "SMS da " : "Voce da ");
+  display_.print(inbox_->callsign());
+  if (text) drawEnvelope(42, 11); else drawSpeaker(40, 10);
+  display_.setCursor(0, 44);
+  display_.print("MESSAGGIO RICEVUTO");  // 18 caratteri
+  display_.setCursor(0, 55);
+  display_.print(text ? "Premi PTT: leggi" : "Premi PTT: ascolta");
+  display_.display();
+}
+
+void UiNotifier::drawPlaying() {
+  display_.clearDisplay();
+  display_.setTextSize(1);
+  display_.setCursor(0, 0);
+  display_.print("Voce da ");
+  display_.print(inbox_->callsign());
+  drawSpeaker(40, 10);
+  display_.setCursor(0, 44);
+  display_.print("Riproduco messaggio");
+  display_.setCursor(0, 55);
+  display_.print("PTT = stop");
+  display_.display();
+}
+
+// Testo aperto: titolo, righe a capo (6 per pagina); con piu' pagine il volume (pressione breve) passa alla successiva.
+void UiNotifier::drawText() {
+  display_.clearDisplay();
+  display_.setTextSize(1);
+  display_.setCursor(0, 0);
+  const int pages = (textLineCount_ + 5) / 6;
+  if (pages > 1) display_.printf("da %s  %d/%d  VOL>", inbox_->callsign(), textPage_ + 1, pages);
+  else display_.printf("da %s", inbox_->callsign());
+  display_.drawFastHLine(0, 9, 128, SSD1306_WHITE);
+  for (int r = 0; r < 6; r++) {
+    const int li = textPage_ * 6 + r;
+    if (li >= textLineCount_) break;
+    display_.setCursor(0, 12 + r * 8);
+    display_.print(textLines_[li]);
+  }
+  display_.display();
+}
+
+// Scelta del testo da inviare: numero, testo a capo (come drawText) e istruzioni.
+void UiNotifier::drawPicker() {
+  display_.clearDisplay();
+  display_.setTextSize(1);
+  display_.setCursor(0, 0);
+  display_.printf("INVIA TESTO %u/%u", static_cast<unsigned>(picker_->ordinal()), static_cast<unsigned>(picker_->usedCount()));
+  display_.drawFastHLine(0, 9, 128, SSD1306_WHITE);
+  wrapText(picker_->text());
+  for (int r = 0; r < 5 && r < textLineCount_; r++) {
+    display_.setCursor(0, 12 + r * 8);
+    display_.print(textLines_[r]);
+  }
+  display_.setCursor(0, 55);
+  display_.print("PTT=altro  VOL=invia");
+  display_.display();
+}
+
 void UiNotifier::testModeChanged(bool on) {
   notice_ = on ? "PROVA ATTIVA" : "PROVA SPENTA";
   noticeUntilMs_ = millis() + 1500;
@@ -243,15 +387,14 @@ void UiNotifier::drawTestReport() {
   display_.display();
 }
 
-// Menu delle modalita': titolo, una voce per riga (la scelta in negativo, la modalita' in uso con *, le voci non
+// Menu delle modalita': una voce per riga (la scelta in negativo, la modalita' in uso con *, le voci non
 // disponibili con "presto"), istruzioni in basso. Al massimo 21 caratteri per riga a testo piccolo.
 void UiNotifier::drawMenu() {
   display_.setTextSize(1);
-  display_.setCursor(0, 11);
-  display_.print("MODALITA'");
+  // Cinque voci da 9 punti: niente titolo, per lasciare posto alle istruzioni in basso (y 57).
   for (size_t i = 0; i < menu_->count(); i++) {
     const lcr::MenuItem& it = menu_->item(i);
-    const int y = 21 + static_cast<int>(i) * 9;
+    const int y = 12 + static_cast<int>(i) * 9;
     const bool sel = i == menu_->selectedIndex();
     if (sel) {
       display_.fillRect(0, y - 1, 128, 9, SSD1306_WHITE);
@@ -310,8 +453,20 @@ void UiNotifier::draw(uint32_t nowMs) {
   drawProfileBadge();
   display_.drawFastHLine(0, 10, 128, SSD1306_WHITE);
 
+  if (picker_ && picker_->isOpen()) {
+    drawPicker();
+    return;
+  }
+
   if (menu_ && menu_->isOpen()) {
     drawMenu();
+    return;
+  }
+
+  if (state_ == lcr::VoiceNode::State::Idle && inbox_ && inbox_->has()) {  // messaggio in casella
+    if (openedText_) drawText();
+    else if (openedVoice_) drawPlaying();
+    else drawIncoming();
     return;
   }
 
@@ -325,7 +480,8 @@ void UiNotifier::draw(uint32_t nowMs) {
     case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", message_ ? "MESSAGGIO" : (testMode_ ? "PROVA ON" : "ASCOLTO")); break;
     case lcr::VoiceNode::State::Receiving: snprintf(big, sizeof(big), "RX %s", rxCall_); break;
     default:
-      if (recPhase_ == 1) snprintf(big, sizeof(big), "REGISTRA");
+      if (sendingText_) snprintf(big, sizeof(big), "INVIO SMS");
+      else if (recPhase_ == 1) snprintf(big, sizeof(big), "REGISTRA");
       else if (recPhase_ == 2) snprintf(big, sizeof(big), "ATTESA");
       else if (recPhase_ == 3) snprintf(big, sizeof(big), "INVIO");
       else snprintf(big, sizeof(big), "TX %s", settings_.callsign);
@@ -337,6 +493,8 @@ void UiNotifier::draw(uint32_t nowMs) {
   display_.setCursor(0, 38);
   if (notice_) {
     display_.print(notice_);
+  } else if (state_ == lcr::VoiceNode::State::Transmitting && sendingText_) {
+    display_.print("Trasmetto il testo");
   } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 1) {
     display_.printf("Registro %lu/%lu s", static_cast<unsigned long>((nowMs - txStartMs_) / 1000),
                     static_cast<unsigned long>(maxTurnSec_));

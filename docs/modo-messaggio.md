@@ -35,12 +35,27 @@ Per le prime prove usa messaggi **brevi** (3-5 secondi): bastano 30-50 secondi i
 
 **Attenzione:** le schede con profili diversi **non si sentono**. Se una scheda Standard e una Messaggio sono accese insieme, non c'è collegamento. Il profilo vale dal riavvio.
 
+## Casella dei messaggi (11/11/2026)
+
+Il messaggio vocale ricevuto **non si riproduce più da solo**: finita la ricezione va in una **casella** (in RAM, **un solo messaggio alla volta**: uno nuovo cancella il vecchio) e la scheda aspetta il PTT.
+
+- All'**inizio** della ricezione suona **"MSG" in Morse** (come prima). Alla **fine** il display mostra una **grande icona** (altoparlante per la voce, busta per il testo), la scritta **"MESSAGGIO RICEVUTO"** e **"Premi PTT: ascolta"**.
+- Una **pressione breve del PTT** (meno di 300 ms) apre il messaggio: la voce parte (altoparlante e "Riproduco messaggio"). Una **pressione** durante l'ascolto lo ferma. Una pressione **lunga** del PTT trasmette sempre, come prima.
+- **Ascoltato (o interrotto), il messaggio si cancella**: niente riascolto. Dopo un riavvio la casella è vuota.
+- Se mentre la voce suona arriva un'altra ricezione, la riproduzione si interrompe e il messaggio resta in casella.
+- Occupazione: 30 s a Codec2 1200 sono 750 frame da 6 byte (4500 byte) più la mappa dei frame persi.
+- **Testo (modo 7, [protocollo.md](protocollo.md)):** stesso schema, ma all'arrivo suona **"SMS" in Morse** (stessa nota e stessa velocità di "MSG"), il display mostra la **busta** e **"Premi PTT: leggi"**. Il PTT breve apre il testo, che resta in mostra (6 righe da 21 caratteri; con più pagine il **volume breve** passa alla successiva); un'altra pressione del PTT lo chiude e lo cancella.
+- **Invio:** menu a bordo (volume lungo) → **"Invia testo"** → PTT per scegliere uno dei testi non vuoti, volume breve per inviare, volume lungo per uscire (10 s senza tasti: esce). I cinque testi si impostano dalla pagina web (passo 2) o dalla pagina Wi-Fi della scheda, o con `CFG SET TEXT1 ...` (massimo 160 caratteri ASCII, valgono subito, senza riavvio).
+- **Da definire insieme:** i gesti con più messaggi in coda (oggi ce n'è uno solo), l'ingresso nel menu dei messaggi dal tasto volume, e in futuro una tastiera o un'app per telefono (Bluetooth) per scrivere testi liberi.
+- **Stato:** scritto e provato sul PC (`make test`, prove della pagina); **da provare su scheda**.
+
 ## Cosa cambia per chi usa il profilo Messaggio
 
 - Il modo "registra e trasmetti" è **sempre acceso** (`CFG REC OFF` non lo spegne).
 - La **prova di collegamento** (tre clic sul PTT) non c'è: 12 secondi di frame a SF12 sarebbero circa 17 minuti in aria.
 - Il limite di durata è quello del profilo (30 secondi di voce, come lo Standard), ma il tempo in aria è molto maggiore (vedi sopra).
 - **Percentuale di avanzamento (10/11/2026):** un messaggio lungo resta in aria minuti e sembrerebbe bloccato, quindi il display mostra da **1% a 100%**, in invio ("Invio messaggio 45%", con una barra) e in ricezione ("Ricevo messaggio 45%"). Chi trasmette conosce già la lunghezza (il messaggio è registrato) e la dichiara nel pacchetto START (campo **TOTAL**, 1 byte, [protocollo.md](protocollo.md)); chi riceve calcola la percentuale dal pacchetto più avanzato ricevuto, che non torna indietro se un pacchetto si perde, e a 100% alla fine anche se l'ultimo pacchetto è andato perso. La voce Standard non ha la percentuale. **Da provare su scheda.**
+- **Riproduzione:** dall'11/11/2026 la voce non parte da sola: va in casella e si apre con il PTT (sezione sopra).
 - **Segnale di messaggio in arrivo (10/11/2026):** appena comincia la ricezione di un messaggio la scheda suona **"MSG" in Morse** (M S G, 1000 Hz, circa 1,6 s), come lo squillo degli SMS dei vecchi telefoni, per **attirare l'attenzione** su una ricezione che dura minuti (prima del 10/11, nella versione `cf17027`, suonava alla fine, subito prima della voce, e non serviva). Lo schermo di ricezione compare prima del suono. Col volume a 0 non suona. **Da provare su scheda.**
 
 ## Cosa manca (prossimi passi, in ordine)

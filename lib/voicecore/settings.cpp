@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+#include <strings.h>
 
 #include "packet.h"
 
@@ -16,6 +17,15 @@ bool operator==(const Settings& a, const Settings& b) {
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
 }
 
+// Ogni posto dei testi e' vuoto oppure un testo valido, terminato.
+static bool validTexts(const Settings& s) {
+  for (size_t i = 0; i < kTextSlots; i++) {
+    const size_t n = strnlen(s.texts[i], kMaxTextChars + 1);
+    if (n > kMaxTextChars || (n > 0 && !isValidText(s.texts[i], n))) return false;
+  }
+  return true;
+}
+
 bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
          s.freqMsgKhz <= kMaxFreqKhz && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
@@ -23,7 +33,7 @@ bool isValidSettings(const Settings& s) {
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
          s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount &&
-         (!s.qthSet || isValidCoordinate(s.qthLatE7, s.qthLonE7));
+         (!s.qthSet || isValidCoordinate(s.qthLatE7, s.qthLonE7)) && validTexts(s);
 }
 
 Settings loadSettings(ISettingsStorage& storage, const Settings& defaults) {
@@ -155,7 +165,7 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
   if (!line) return ConsoleResult::NotCommand;
 
   // Spezza in parole (massimo 4) su una copia: la riga originale non si tocca.
-  char buf[96];
+  char buf[96];  // solo per spezzare in parole: i testi (CFG SET TEXTn) si leggono dalla riga originale
   strncpy(buf, line, sizeof(buf) - 1);
   buf[sizeof(buf) - 1] = 0;
   char* tok[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
@@ -174,6 +184,18 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
   }
   if (n == 0 || !equalsIgnoreCase(tok[0], "CFG")) return ConsoleResult::NotCommand;
 
+  // CFG SET TEXTn <testo>: il testo e' il resto della riga (puo' avere spazi).
+  if (n >= 4 && equalsIgnoreCase(tok[1], "SET") && strlen(tok[2]) == 5 && strncasecmp(tok[2], "TEXT", 4) == 0 &&
+      tok[2][4] >= '1' && tok[2][4] < '1' + static_cast<int>(kTextSlots)) {
+    const char* rest = line + (tok[3] - buf);
+    size_t len = strlen(rest);
+    while (len > 0 && (rest[len - 1] == ' ' || rest[len - 1] == '\t' || rest[len - 1] == '\r' || rest[len - 1] == '\n')) len--;
+    return setText(tok[2][4] - '1', rest, len, reply, cap);
+  }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && strlen(tok[2]) == 5 && strncasecmp(tok[2], "TEXT", 4) == 0 &&
+      tok[2][4] >= '1' && tok[2][4] < '1' + static_cast<int>(kTextSlots)) {
+    return getText(tok[2][4] - '1', reply, cap);
+  }
   if (n == 1 || tooMany) {
     say(reply, cap, "CFG ERR comando sconosciuto");
     return ConsoleResult::Error;
@@ -376,6 +398,36 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
   return ConsoleResult::Ok;
 }
 
+ConsoleResult SettingsConsole::setText(int slot, const char* text, size_t len, char* reply, size_t cap) {
+  Settings next = stored_;
+  char shown[kMaxTextChars + 16];
+  if (len == 4 && strncasecmp(text, "NONE", 4) == 0) {
+    next.texts[slot][0] = 0;
+    snprintf(shown, sizeof(shown), "text%d=", slot + 1);
+  } else {
+    if (!isValidText(text, len)) {
+      if (reply && cap > 0) snprintf(reply, cap, "CFG ERR text%d testo ASCII da 1 a %d caratteri (NONE per svuotare)", slot + 1, static_cast<int>(kMaxTextChars));
+      return ConsoleResult::Error;
+    }
+    memset(next.texts[slot], 0, sizeof(next.texts[slot]));
+    memcpy(next.texts[slot], text, len);
+    snprintf(shown, sizeof(shown), "text%d=%s", slot + 1, next.texts[slot]);
+  }
+  if (!storage_.save(next)) {
+    if (reply && cap > 0) snprintf(reply, cap, "CFG ERR text%d salvataggio non riuscito", slot + 1);
+    return ConsoleResult::Error;
+  }
+  stored_ = next;
+  memcpy(active_.texts, next.texts, sizeof(active_.texts));  // valgono subito
+  if (reply && cap > 0) snprintf(reply, cap, "CFG OK %s", shown);
+  return ConsoleResult::Ok;
+}
+
+ConsoleResult SettingsConsole::getText(int slot, char* reply, size_t cap) {
+  if (reply && cap > 0) snprintf(reply, cap, "CFG TEXT%d=%s", slot + 1, stored_.texts[slot]);
+  return ConsoleResult::Ok;
+}
+
 ConsoleResult SettingsConsole::test(const char* value, char* reply, size_t cap) {
   if (equalsIgnoreCase(value, "ON")) {
     testMode_ = true;
@@ -423,6 +475,7 @@ ConsoleResult SettingsConsole::reset(char* reply, size_t cap) {
     return ConsoleResult::Error;
   }
   stored_ = defaults_;
+  memcpy(active_.texts, defaults_.texts, sizeof(active_.texts));
   say(reply, cap, "CFG OK reset");
   return ConsoleResult::Ok;
 }

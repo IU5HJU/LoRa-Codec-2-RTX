@@ -19,6 +19,8 @@ struct MorseElement {
 constexpr const char* kMessageTone = "MSG";
 constexpr float kMessageToneHz = 1000.0f;
 constexpr uint16_t kMessageToneUnitMs = 60;
+// Segnalazione di messaggio di testo arrivato: lettere "SMS", stesso tono e stessa unita' di "MSG".
+constexpr const char* kTextTone = "SMS";
 
 // Riempie 'out' con gli elementi di 'text' (lettere A-Z e cifre; le minuscole valgono come maiuscole, gli spazi sono pause
 // tra parole, i caratteri sconosciuti sono saltati). Nessuna pausa finale. Ritorna il numero di elementi scritti; si ferma

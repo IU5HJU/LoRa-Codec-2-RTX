@@ -84,7 +84,7 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
     const String line = request->hasParam("c") ? request->getParam("c")->value() : String();
     Serial.printf("[wifi] comando dalla pagina: %s\n", line.c_str());
     // Solo comandi CFG; quelli che usano audio o radio non ci sono (la scheda e' ferma).
-    if (line.length() == 0 || line.length() > 90 || !line.startsWith("CFG ")) {
+    if (line.length() == 0 || line.length() > 200 || !line.startsWith("CFG ")) {
       request->send(400, "text/plain; charset=utf-8", "CFG ERR comando non valido");
       return;
     }

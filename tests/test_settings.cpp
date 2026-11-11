@@ -1,4 +1,5 @@
 #include <cstring>
+#include <string>
 
 #include "settings.h"
 #include "testing.h"
@@ -55,9 +56,53 @@ struct Fixture {
   FakeStorage st;
   Settings active = kDefaults;
   SettingsConsole con{active, kDefaults, st, "T3", "v0.1.0-3-gabc1234"};
-  char reply[200];
+  char reply[300];
   ConsoleResult run(const char* line) { return con.handleLine(line, reply, sizeof(reply)); }
 };
+
+static void testTexts() {
+  Fixture f;
+  // di partenza: i cinque testi di esempio, tutti validi
+  CHECK(strcmp(kDefaults.texts[0], "QRV, sono in ascolto") == 0 && isValidSettings(make("IU5HJU", 433900, 10)));
+  CHECK(f.run("CFG GET TEXT2") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT2=Arrivo tra 10 minuti") == 0);
+  // il testo e' il resto della riga, con spazi; vale subito (nessun riavvio)
+  CHECK(f.run("CFG SET TEXT1 Sono QRV su 433.775, chiamami") == ConsoleResult::Ok &&
+        strcmp(f.reply, "CFG OK text1=Sono QRV su 433.775, chiamami") == 0);
+  CHECK(strcmp(f.st.data.texts[0], "Sono QRV su 433.775, chiamami") == 0);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=0"));
+  CHECK(f.run("cfg set text5   ciao   a tutti  \r\n") == ConsoleResult::Ok && strcmp(f.st.data.texts[4], "ciao   a tutti") == 0);
+  CHECK(f.run("CFG GET TEXT5") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT5=ciao   a tutti") == 0);
+  // una sola parola
+  CHECK(f.run("CFG SET TEXT3 OK") == ConsoleResult::Ok && strcmp(f.st.data.texts[2], "OK") == 0);
+  // 160 caratteri vanno, 161 no
+  std::string big(160, 'x');
+  CHECK(f.run(("CFG SET TEXT4 " + big).c_str()) == ConsoleResult::Ok && strlen(f.st.data.texts[3]) == 160);
+  CHECK(f.run(("CFG SET TEXT4 " + big + "y").c_str()) == ConsoleResult::Error && strlen(f.st.data.texts[3]) == 160);
+  // posto inesistente, vuoto, caratteri non ASCII
+  CHECK(f.run("CFG SET TEXT6 ciao") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET TEXT0 ciao") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET TEXT1") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET TEXT1 caff\xc3\xa8") == ConsoleResult::Error && strcmp(f.st.data.texts[0], "Sono QRV su 433.775, chiamami") == 0);
+  CHECK(f.run("CFG GET TEXT9") == ConsoleResult::Error);
+  // NONE svuota il posto
+  CHECK(f.run("CFG SET TEXT2 NONE") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK text2=") == 0 && f.st.data.texts[1][0] == 0);
+  CHECK(f.run("CFG GET TEXT2") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT2=") == 0);
+  // salvataggio non riuscito: errore e nulla cambia
+  f.st.failSave = true;
+  CHECK(f.run("CFG SET TEXT3 altro") == ConsoleResult::Error);
+  f.st.failSave = false;
+  CHECK(f.run("CFG GET TEXT3") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT3=OK") == 0);
+  // reset: tornano i testi di esempio
+  CHECK(f.run("CFG RESET") == ConsoleResult::Ok);
+  CHECK(f.run("CFG GET TEXT1") == ConsoleResult::Ok && strcmp(f.reply, "CFG TEXT1=QRV, sono in ascolto") == 0);
+  // impostazioni con un testo non valido non sono valide
+  Settings bad = make("IU5HJU", 433900, 10);
+  bad.texts[0][0] = '\n';
+  CHECK(!isValidSettings(bad));
+  Settings empty = make("IU5HJU", 433900, 10);
+  empty.texts[0][0] = 0;
+  CHECK(isValidSettings(empty));
+}
 
 static void testRepeaterRole() {
   Fixture f;
@@ -414,6 +459,7 @@ void testSmallBuffer() {
 int main() {
   testVolumeMigration();
   testRepeaterRole();
+  testTexts();
   testValidate();
   testLoad();
   testNotCommand();

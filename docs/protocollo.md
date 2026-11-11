@@ -81,6 +81,14 @@ Dettagli in [prova-collegamento.md](prova-collegamento.md).
 
 Stessa struttura del modo 1, ma ogni frame di 40 ms occupa **16 byte** (due blocchi Codec2 da 20 ms e 8 byte, uno dopo l'altro: il flusso si decodifica con `c2dec 3200`). Un pacchetto dati porta 12 frame = 192 byte (totale 197 byte con intestazione; la parità XOR è lunga come il pacchetto più lungo del gruppo). Un payload che non sia multiplo di 16 byte è scartato. 30 s di voce occupano circa 12,5 s in aria su SF7/BW250 (42 %). Il numero di sequenza resta a 7 bit (massimo 128 pacchetti, cioè 30 s a 3200): per durate maggiori servirà la sequenza a 16 bit.
 
+## Messaggio di testo (modo 7)
+
+Un breve testo stile SMS (**1-160 caratteri**, ASCII stampabile `0x20-0x7E`, senza accenti). È **un solo pacchetto** con `START`+`END`+`CALLSIGN`: intestazione del modo 7, nominativo di chi scrive e, come payload, il testo (al massimo 160 byte: il pacchetto più lungo è 5 + 1 + 8 + 160 byte). Niente parità, niente posizione, niente totale (flag `POSITION`/`TOTAL`/`PARITY` rifiutati), `seq` 0. Un pacchetto di testo senza nominativo, con un carattere non stampabile, vuoto o più lungo di 160 byte è scartato (anche in trasmissione: `encodePacket` restituisce 0).
+
+Il mittente lo trasmette **due volte** (stessa sessione, a 1 s di distanza: `kTextRepeatGapMs`), perché non c'è altra protezione; il ricevitore scarta la seconda copia (stessa sessione e stesso nominativo dell'ultimo testo ricevuto). Il testo si può ricevere con qualunque profilo; una scheda con una versione precedente scarta il modo 7 come ogni modo sconosciuto. Non c'è conferma di ricezione.
+
+I testi da inviare sono cinque, predefiniti e impostabili dalla pagina web o dalla pagina Wi-Fi della scheda (`CFG SET TEXTn`, [firmware.md](firmware.md)).
+
 ## Controllo hardware (modo 15)
 
 Il modo 15 è usato solo da "Suona i toni" della pagina (`CFG TEST AUDIO`): la scheda trasmette pacchetti dati in continuo, con payload fisso e il nominativo, mentre suona i toni, per vedere se la radiofrequenza rientra nel microfono o nell'amplificatore. Non è audio e nessun ricevitore lo elabora: i modi sconosciuti vengono scartati.

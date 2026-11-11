@@ -22,6 +22,9 @@
 //   CFG SET PROFILE MSG          -> CFG OK profile=msg         (STD = Standard, MSG = Messaggio SF12/BW125, QUA = Qualita' 3200 SF7; vale dal riavvio)
 //   CFG SET POS ON               -> CFG OK pos=on             (trasmette la posizione nel pacchetto START; di default OFF; serve il QTH o un GPS)
 //   CFG SET QTH 43.7696,11.2558  -> CFG OK qth=43.76960,11.25580   (posizione fissa in gradi decimali, lat,lon; NONE la cancella)
+//   CFG SET TEXT1 Arrivo tra 10 minuti -> CFG OK text1=Arrivo tra 10 minuti   (testi predefiniti da inviare, TEXT1..TEXT5; ASCII, 1-160
+//                                   caratteri, anche con spazi fino a fine riga; NONE svuota il posto; valgono subito, senza riavvio)
+//   CFG GET TEXT1                -> CFG TEXT1=Arrivo tra 10 minuti   (vuoto: CFG TEXT1=)
 //   CFG SET GPS ON               -> CFG OK gps=on             (accende il GPS della T-Beam; di default OFF; vale dal riavvio; sulle altre schede errore)
 //   CFG TEST ON                  -> CFG OK test=on             (prova di collegamento, solo fino al riavvio; OFF la spegne)
 //   CFG TEST AUDIO               -> suona 500, 1000 e 2000 Hz e misura il microfono: CFG AUDIO f=500 base=-90.1 tone=-52.3 ... CFG AUDIO fine
@@ -33,6 +36,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 #include "position.h"
 #include "profile.h"
@@ -65,7 +69,20 @@ constexpr int kDefaultMicFloorDb = -60;
 constexpr int kMicGateMarginDb = 6;
 inline float micGateFromFloor(int floorDb) { return static_cast<float>(floorDb + kMicGateMarginDb); }
 
+// Testi predefiniti da inviare (messaggi di testo stile SMS, vedi protocol.h kModeText): cinque posti, ognuno vuoto oppure un
+// testo ASCII di 1-160 caratteri. All'inizio contengono i testi di esempio qui sotto.
+constexpr size_t kTextSlots = 5;
+constexpr const char* kDefaultTexts[kTextSlots] = {"QRV, sono in ascolto", "Arrivo tra 10 minuti", "Chiamami appena puoi",
+                                                   "Tutto OK", "73 e buona giornata"};
+
 struct Settings {
+  Settings() {
+    for (size_t i = 0; i < kTextSlots; i++) {
+      memset(texts[i], 0, sizeof(texts[i]));
+      strncpy(texts[i], kDefaultTexts[i], kMaxTextChars);
+    }
+  }
+  char texts[kTextSlots][kMaxTextChars + 1];  // testi predefiniti; NON contano per "reboot" (valgono subito)
   char callsign[kMaxCallsign + 1] = {0};
   uint32_t freqKhz = 0;     // frequenza del profilo Standard
   uint32_t freqMsgKhz = 0;  // frequenza del profilo Messaggio: puo' essere uguale a quella dello Standard (mai bloccante)
@@ -166,6 +183,8 @@ class SettingsConsole {
   ConsoleResult set(const char* key, const char* value, char* reply, size_t cap);
   ConsoleResult reset(char* reply, size_t cap);
   ConsoleResult mic(const char* value, char* reply, size_t cap);
+  ConsoleResult setText(int slot, const char* text, size_t len, char* reply, size_t cap);
+  ConsoleResult getText(int slot, char* reply, size_t cap);
 
   ConsoleResult test(const char* value, char* reply, size_t cap);
   ConsoleResult rec(const char* value, char* reply, size_t cap);

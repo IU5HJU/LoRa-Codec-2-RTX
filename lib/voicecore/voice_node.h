@@ -11,6 +11,7 @@
 
 #include <cstdint>
 
+#include "inbox.h"
 #include "interfaces.h"
 #include "link_test.h"
 #include "profile.h"
@@ -70,6 +71,13 @@ class VoiceNode {
   RecPhase recPhase() const { return recPhase_; }
   uint32_t recFrames() const { return recCount_; }
 
+  // Messaggi (casella con un solo messaggio): un clic breve sul PTT apre il messaggio in attesa, un clic mentre e' aperto lo chiude
+  // (e lo cancella). La voce non si riproduce da sola nel profilo Messaggio.
+  const Inbox& inbox() const { return inbox_; }
+  bool messageOpen() const { return playing_ || textOpen_; }
+  // Trasmette un breve testo (ASCII stampabile, 1-160 caratteri), in due copie. false (con pttDenied) se non si puo'.
+  bool sendText(const char* text, uint32_t nowMs);
+
   State state() const { return state_; }
   const RxStream& rx() const { return rx_; }
 
@@ -84,6 +92,11 @@ class VoiceNode {
   void setRecPhase(RecPhase p);
   void reportRxProgress();
   void rxTick(uint32_t nowMs);
+  void drainToInbox(uint32_t nowMs);
+  void handleText(const Packet& p);
+  void openMessage(uint32_t nowMs);
+  void closeMessage();
+  void playTick(uint32_t nowMs);
   void finishTestRx(uint32_t nowMs);
   void sendTestReply(uint32_t nowMs);
   uint16_t makeSessionId();
@@ -145,6 +158,19 @@ class VoiceNode {
   uint16_t replySession_ = 0;
   TestReport replyReport_;
   uint16_t notifiedSession_ = 0;
+  // Casella dei messaggi
+  Inbox inbox_;
+  bool storing_ = false;     // frame di un messaggio vocale in corso di salvataggio
+  bool playing_ = false;     // riproduzione del messaggio vocale aperto
+  bool textOpen_ = false;    // testo aperto e in mostra
+  size_t playIdx_ = 0;
+  bool lastTextValid_ = false;  // ultimo testo ricevuto (per scartare la seconda copia)
+  uint16_t lastTextSession_ = 0;
+  char lastTextCall_[kMaxCallsign + 1] = {0};
+  bool textTx_ = false;      // trasmissione di un testo in corso
+  uint8_t textWire_[kMaxWireBytes];
+  size_t textWireLen_ = 0;
+  uint8_t textCopies_ = 0;
   bool playbackNotified_ = false;  // rxPlaybackStarted() gia' segnalato in questa ricezione
 };
 

@@ -45,7 +45,7 @@ static void testGesture() {
 static void testMenu() {
   size_t n = 0;
   const MenuItem* items = defaultMenuItems(n);
-  CHECK(n == 4);
+  CHECK(n == 5);
   Menu m(items, n);
   CHECK(!m.isOpen());
 
@@ -56,7 +56,9 @@ static void testMenu() {
   m.next(100);
   CHECK(m.selectedIndex() == 2);
   m.next(120);
-  CHECK(m.selectedIndex() == 3 && m.item(3).id == kMenuWifiId);
+  CHECK(m.selectedIndex() == 3 && m.item(3).id == kMenuTextId);  // Invia testo
+  m.next(130);
+  CHECK(m.selectedIndex() == 4 && m.item(4).id == kMenuWifiId);
   m.next(150);
   CHECK(m.selectedIndex() == 0);
   m.next(200);
@@ -75,6 +77,11 @@ static void testMenu() {
   CHECK(m.open(2, 600));
   m.next(610);
   o = m.confirm(620);
+  CHECK(o.kind == K::Selected && o.id == kMenuTextId);  // Invia testo: id 101
+  CHECK(m.open(2, 700));
+  m.next(710);
+  m.next(720);
+  o = m.confirm(730);
   CHECK(o.kind == K::Selected && o.id == kMenuWifiId);
 
   // Tempo massimo: 10 s dall'ultimo tasto.

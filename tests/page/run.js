@@ -316,6 +316,47 @@ async function scenario(name, fn, opts = {}) {
     check('il resto si salva normalmente', c.includes('CFG SET CALLSIGN IU5HJU'));
   });
 
+  await scenario('testi predefiniti: lettura, modifica, svuotamento e rifiuto', async (p) => {
+    check('campi dei testi spenti prima di collegare', await p.isDisabled('#text1'));
+    await connect(p);
+    await until(p, () => document.getElementById('text5').value !== '');
+    check('testi letti dalla scheda', (await p.inputValue('#text1')) === 'QRV, sono in ascolto' && (await p.inputValue('#text5')) === '73 e buona giornata');
+    check('campi attivi', !(await p.isDisabled('#text1')) && !(await p.isDisabled('#text5')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.fill('#text2', 'Sono QRV su 433.775, chiamami');
+    await p.fill('#text3', '');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    const c = await cmds(p);
+    check('CFG SET TEXT2 con il testo intero (anche con spazi)', c.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami'), c.join(' | '));
+    check('posto vuoto: CFG SET TEXT3 NONE', c.includes('CFG SET TEXT3 NONE'));
+    const t = await p.evaluate(() => window.__st.texts);
+    check('testi salvati nella scheda', t[1] === 'Sono QRV su 433.775, chiamami' && t[2] === '' && t[0] === 'QRV, sono in ascolto', JSON.stringify(t));
+  });
+
+  await scenario('testi predefiniti: caratteri non ammessi o troppo lunghi, nessun comando inviato', async (p) => {
+    await connect(p);
+    await until(p, () => document.getElementById('text1').value !== '');
+    await p.fill('#callsign', 'IU5HJU');
+    await p.fill('#text1', 'Perché no');
+    await p.click('#save');
+    await until(p, () => document.getElementById('status').className === 'err');
+    check('messaggio sui caratteri non ammessi', (await status(p)).includes('Il testo 1'), await status(p));
+    check('nessun CFG SET inviato', !(await cmds(p)).some((x) => x.startsWith('CFG SET')));
+    check('il limite di 160 caratteri e\' sul campo', (await p.getAttribute('#text1', 'maxlength')) === '160');
+  });
+
+  await scenario('firmware senza testi predefiniti: campi spenti e nessun comando nuovo', async (p) => {
+    await p.evaluate(() => { window.__st.noTexts = true; });
+    await connect(p);
+    await sleep(500);
+    check('campi dei testi spenti', (await p.isDisabled('#text1')) && (await p.isDisabled('#text5')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('nessun comando TEXT', !(await cmds(p)).some((x) => /TEXT/.test(x) && x.startsWith('CFG SET')));
+  });
+
   await scenario('posizione: la scheda non salva e la pagina lo dice', async (p) => {
     await connect(p);
     await p.fill('#callsign', 'IU5HJU');

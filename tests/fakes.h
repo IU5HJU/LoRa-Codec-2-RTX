@@ -135,6 +135,18 @@ class Notifier : public lcr::INotifier {
     lostFrames = lost;
     recovered = rec;
   }
+  void messageReceived(bool isText, const char* cs) override {
+    received.push_back({isText, cs});
+  }
+  void messageOpened(bool isText) override { opened.push_back(isText); }
+  void messageClosed() override { closed++; }
+  struct Msg {
+    bool isText;
+    std::string callsign;
+  };
+  std::vector<Msg> received;
+  std::vector<bool> opened;
+  int closed = 0;
   void testModeChanged(bool on) override { testModeChanges.push_back(on); }
   void recPhaseChanged(int p) override { recPhases.push_back(p); }
   std::vector<int> recPhases;

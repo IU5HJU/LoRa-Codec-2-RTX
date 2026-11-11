@@ -211,7 +211,7 @@ s.append(P("Un simbolo dura 2<super>SF</super> / banda: 1,024 ms in Standard, 32
 s.append(P("2. Formato del pacchetto", h2))
 s.append(P("Quello che il chip trasmette come payload LoRa è composto così:", base))
 s.append(Preformatted(
-"byte 0      versione (4 bit alti, = 2) | modo (4 bit bassi: 1, 2, 3, 4)\n"
+"byte 0      versione (4 bit alti, = 2) | modo (4 bit bassi: 1, 2, 3, 4, 7)\n"
 "byte 1-2    ID di sessione, casuale per ogni PTT (big endian)\n"
 "byte 3      numero di sequenza (0..127)\n"
 "byte 4      flag\n"
@@ -222,7 +222,7 @@ s.append(Preformatted(
 "resto       payload", code))
 s.append(table([
     ["Campo", "Significato"],
-    ["Modo", "1 = voce Codec2 1200 bit/s (frame da 6 byte); 4 = voce Codec2 3200 bit/s (frame da 16 byte, 12 per pacchetto = 192 byte; profilo Qualità); 2 = prova di collegamento (frame noti); 3 = risposta alla prova (12 byte con il risultato)"],
+    ["Modo", "1 = voce Codec2 1200 bit/s (frame da 6 byte); 4 = voce Codec2 3200 bit/s (frame da 16 byte, 12 per pacchetto = 192 byte; profilo Qualità); 2 = prova di collegamento (frame noti); 3 = risposta alla prova (12 byte con il risultato); 7 = messaggio di testo (un solo pacchetto START+END con nominativo, da 1 a 160 caratteri ASCII, trasmesso due volte)"],
     ["Flag", "bit 0 START (primo pacchetto) - bit 1 END (ultimo dati, l'OVER) - bit 2 PARITY (pacchetto di parità) - bit 3 CALLSIGN (c'è il nominativo) - bit 4 NOFEC (trasmissione senza parità) - bit 5 POSITION (c'è la posizione, 7 byte: stato, latitudine e longitudine a 24 bit; solo in START, spenta di default) - bit 6 TOTAL (1 byte con i pacchetti totali del messaggio, solo in START) - bit 7 RELAYED (pacchetto ritrasmesso da un ripetitore, che non lo ripete di nuovo)"],
     ["Sessione", "numero casuale a 16 bit: identifica la trasmissione e permette di scartare i pacchetti di altre trasmissioni"],
     ["Sequenza", "0..127 (il turno più lungo, 30 s, ne usa circa 80); i pacchetti di parità occupano le posizioni 4, 9, 14... del flusso"],

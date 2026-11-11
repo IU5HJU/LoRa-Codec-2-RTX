@@ -15,6 +15,7 @@
 #include "codec2_adapter.h"
 #include "gps.h"
 #include "menu.h"
+#include "text_picker.h"
 #include "packet.h"
 #include "pmu.h"
 #include "ptt_button.h"
@@ -59,6 +60,7 @@ static lcr::PttButton ptt(LCR_PTT_DEBOUNCE_MS);
 static lcr::ButtonGesture volumeButton(30, 2000);  // volume: breve = alza, lunga = menu delle modalita'
 static lcr::Menu* menu = nullptr;
 static lcr::MenuFlow* menuFlow = nullptr;
+static lcr::TextPicker textPicker;  // voce "Invia testo" del menu
 static bool volumeArmed = false;  // come il PTT: un volume gia' premuto all'accensione non apre il menu
 
 static bool pttUsable = true;   // false se il pin PTT risulta instabile all'avvio
@@ -185,6 +187,8 @@ void setup() {
   cfg.sendPosition = settings.posTx;  // spenta di default; la posizione fissa e' il QTH (CFG SET QTH)
   cfg.position = settings.qth();
   node = new lcr::VoiceNode(cfg, radio, codec, audio.mic(), audio.speaker(), ui);
+  ui.setInbox(&node->inbox());  // il display legge da qui il testo ricevuto
+  ui.setPicker(&textPicker);
 
   Serial.printf("[avvio] stack libero minimo del task principale: %u byte\n",
                 static_cast<unsigned>(uxTaskGetStackHighWaterMark(nullptr)));
@@ -428,7 +432,7 @@ static void runCodecTest() {
 
 // Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
 static void serviceConsole() {
-  static char line[96];
+  static char line[224];  // "CFG SET TEXTn " + fino a 160 caratteri
   static size_t len = 0;
   static bool tooLong = false;
   while (Serial.available() > 0) {
@@ -544,12 +548,29 @@ void loop() {
   if (!volRaw) volumeArmed = true;
   const lcr::ButtonGesture::Event volEvent = volumeButton.update(volumeArmed && volRaw, now);
   const bool nodeIdle = node->state() == lcr::VoiceNode::State::Idle && node->recPhase() == lcr::VoiceNode::RecPhase::None;
-  const lcr::MenuFlow::Actions act = menuFlow->update(pttEvent, volEvent, nodeIdle, settings.profile, now);
+  lcr::MenuFlow::Actions act;  // niente di fatto finche' e' aperta la scelta del testo (i tasti vanno a lei)
+  if (textPicker.isOpen()) {
+    const lcr::TextPicker::Actions pa = textPicker.update(pttEvent, volEvent, nodeIdle, now);
+    act.redraw = pa.redraw;
+    act.beep = pa.beep;
+    if (pa.send) {
+      ui.setSendingText(true);
+      if (node->sendText(console->stored().texts[pa.slot], now)) {
+        Serial.printf("[testo] invio del testo %d: %s\n", pa.slot + 1, console->stored().texts[pa.slot]);
+      } else {
+        ui.setSendingText(false);  // rifiutato (canale occupato, ricezione in corso...): il motivo e' gia' sul display
+      }
+    }
+  } else {
+    act = menuFlow->update(pttEvent, volEvent, nodeIdle, settings.profile, now);
+  }
   if (act.pttToNode) {
     if (pttEvent == lcr::PttButton::Event::Pressed) node->pttPressed(now);
     if (pttEvent == lcr::PttButton::Event::Released) node->pttReleased(now);
   }
-  if (act.volumeUp) {
+  if (act.volumeUp && ui.textOpen()) {
+    ui.nextTextPage();  // si sta leggendo un testo: il volume breve passa alla pagina successiva
+  } else if (act.volumeUp) {
     const int next = audio.volumeStep() >= lcr::AudioBackEnd::kVolumeSteps ? 1 : audio.volumeStep() + 1;
     audio.setVolumeStep(next);
     audio.beep(600, 40);
@@ -563,8 +584,17 @@ void loop() {
     case lcr::MenuBeep::None: break;
   }
   if (act.outcome.kind == lcr::Menu::Outcome::Kind::Selected) {
-    if (act.outcome.id == lcr::kMenuWifiId) rebootIntoWifiConfig();
-    else applyProfileChoice(act.outcome.id);
+    if (act.outcome.id == lcr::kMenuWifiId) {
+      rebootIntoWifiConfig();
+    } else if (act.outcome.id == lcr::kMenuTextId) {
+      if (!textPicker.open(console->stored(), now)) {
+        ui.showMessage("NESSUN TESTO", "Impostalo dal Wi-Fi");
+        delay(1500);
+      }
+      ui.refresh();
+    } else {
+      applyProfileChoice(act.outcome.id);
+    }
   }
 
   // GPS: lettura della seriale e posizione da usare (il GPS se ha un fix recente, altrimenti il QTH fisso). Si aggiorna

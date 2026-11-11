@@ -73,6 +73,16 @@ class INotifier {
     (void)lostFrames;
     (void)recoveredPackets;
   }
+  // Messaggio in casella (un solo messaggio alla volta, vedi inbox.h): vocale (isText = false, dopo rxEnded) o di testo.
+  // Non si riproduce da solo: serve un clic breve sul PTT per aprirlo.
+  virtual void messageReceived(bool isText, const char* callsign) {
+    (void)isText;
+    (void)callsign;
+  }
+  // Il clic sul PTT ha aperto il messaggio: la voce parte (finisce con messageClosed), il testo resta in mostra.
+  virtual void messageOpened(bool isText) { (void)isText; }
+  // Messaggio ascoltato, letto o interrotto: cancellato dalla casella.
+  virtual void messageClosed() {}
   // Modo "registra e poi trasmetti": fase in corso (0 = nessuna, 1 = registra, 2 = attesa, 3 = trasmette).
   virtual void recPhaseChanged(int phase) { (void)phase; }
   // La prova di collegamento e' stata attivata o disattivata da tre clic sul PTT.

@@ -7,6 +7,7 @@ const MenuItem* defaultMenuItems(size_t& count) {
       {"Standard", 0, true},
       {"Messaggio", 1, true},
       {"Qualita'", 2, true},
+      {"Invia testo", kMenuTextId, true},
       {"Wi-Fi", kMenuWifiId, true},
   };
   count = sizeof(kItems) / sizeof(kItems[0]);

@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include "packet.h"
+
 namespace lcr {
 
 VoiceNode::VoiceNode(const NodeConfig& cfg, IRadio& radio, ICodec& codec, IAudioIn& in, IAudioOut& out,
@@ -35,6 +37,11 @@ void VoiceNode::pttPressed(uint32_t nowMs) {
   if (state_ == State::Receiving) {
     clickCount_ = 0;
     notify_.pttDenied(DenyReason::Receiving);
+    return;
+  }
+  // Un messaggio aperto (voce in riproduzione o testo in mostra) si chiude con la pressione, senza trasmettere.
+  if (playing_ || textOpen_) {
+    closeMessage();
     return;
   }
   // A riposo la pressione e' un clic oppure l'inizio di una trasmissione: lo si capisce da quanto dura.
@@ -181,6 +188,11 @@ void VoiceNode::pttReleased(uint32_t nowMs) {
     // Pressione breve: un clic. Non si e' trasmesso nulla; tre clic veloci cambiano il modo prova.
     pendingStart_ = false;
     stopMic();
+    if (inbox_.has()) {  // c'e' un messaggio in attesa: il clic lo apre
+      clickCount_ = 0;
+      openMessage(nowMs);
+      return;
+    }
     if (clickCount_ < 2) clickCount_++;
     lastClickMs_ = nowMs;
     return;
@@ -210,12 +222,33 @@ void VoiceNode::tick(uint32_t nowMs) {
   if (state_ == State::Transmitting) {
     txTick(nowMs);
   } else {
+    playTick(nowMs);
     rxTick(nowMs);
     if (replyPending_ && state_ == State::Idle && static_cast<int32_t>(nowMs - replyAtMs_) >= 0) sendTestReply(nowMs);
   }
 }
 
 void VoiceNode::txTick(uint32_t nowMs) {
+  if (textTx_) {  // testo: due copie con la stessa sessione, a distanza di kTextRepeatGapMs
+    if (justSent_) {
+      justSent_ = false;
+      nextSendMs_ = nowMs + kTextRepeatGapMs + cfg_.extraGapMs;
+    }
+    if (textCopies_ > 0) {
+      if (static_cast<int32_t>(nowMs - nextSendMs_) >= 0) {
+        radio_.send(textWire_, textWireLen_);
+        justSent_ = true;
+        textCopies_--;
+      }
+    } else {
+      justSent_ = false;
+      textTx_ = false;
+      radio_.startReceive();
+      state_ = State::Idle;
+      notify_.txEnded(false);
+    }
+    return;
+  }
   // radio_.send() e' bloccante: al tick successivo la trasmissione e' finita, da qui conta la pausa.
   if (justSent_) {
     justSent_ = false;
@@ -300,6 +333,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       }
       continue;
     }
+    if (p.mode == kModeText) {
+      handleText(p);
+      continue;
+    }
     if (p.mode != prof_.codecMode && p.mode != kModeTest) continue;  // modi sconosciuti
     if (state_ == State::Receiving && (p.mode == kModeTest) != rxIsTest_) continue;  // niente mescolanze
     if (!rx_.onPacket(p, nowMs)) continue;
@@ -314,6 +351,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       if (rxIsTest_) {
         linkRx_.begin(p.session);
         linkRx_.onPacket(rssi, radio_.lastSnr(), radio_.hasSnr());
+      }
+      if (!rxIsTest_) {  // una nuova ricezione interrompe la riproduzione o la lettura (il messaggio resta in casella)
+        playing_ = false;
+        textOpen_ = false;
       }
       state_ = State::Receiving;
       nextPlayMs_ = nowMs;
@@ -335,6 +376,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
     notify_.rxPosition(rx_.position());
   }
 
+  if (prof_.message && !rxIsTest_) {  // profilo Messaggio: la voce va in casella, non si riproduce
+    drainToInbox(nowMs);
+    return;
+  }
   if (nowMs < nextPlayMs_) return;
   const RxStream::Out o = rx_.nextFrame(nowMs);
   switch (o.kind) {
@@ -381,6 +426,125 @@ void VoiceNode::rxTick(uint32_t nowMs) {
   }
   nextPlayMs_ += kFrameMs;
   if (nowMs > nextPlayMs_ + 5 * kFrameMs) nextPlayMs_ = nowMs + kFrameMs;
+}
+
+// Profilo Messaggio: a ricezione conclusa i frame (anche quelli persi) vanno in casella, senza pause; il messaggio vecchio
+// viene sostituito. Poi la casella avvisa che c'e' un messaggio da ascoltare.
+void VoiceNode::drainToInbox(uint32_t nowMs) {
+  for (uint32_t guard = 0; guard < kMaxTurnFrames + 16; guard++) {
+    const RxStream::Out o = rx_.nextFrame(nowMs);
+    if (o.kind == RxStream::Kind::Wait) return;
+    if (o.kind == RxStream::Kind::End) {
+      state_ = State::Idle;
+      storing_ = false;
+      const bool got = inbox_.commitVoice(rx_.callsign());
+      notify_.rxEnded(rx_.callsign(), rx_.lostFrames(), rx_.recoveredPackets());
+      if (got) notify_.messageReceived(false, inbox_.callsign());
+      return;
+    }
+    if (!storing_) {
+      storing_ = true;
+      inbox_.beginVoice();
+      if (rx_.totalPackets() && rxPercent_ < 100) {
+        rxPercent_ = 100;
+        notify_.rxProgress(100);
+      }
+    }
+    if (o.kind == RxStream::Kind::Frame) inbox_.pushFrame(o.frame); else inbox_.pushLost();
+  }
+}
+
+// Testo ricevuto: un solo pacchetto, mandato due volte dal mittente (la seconda copia si scarta). Sostituisce il messaggio
+// in casella.
+void VoiceNode::handleText(const Packet& p) {
+  if (lastTextValid_ && p.session == lastTextSession_ && strncmp(p.callsign, lastTextCall_, kMaxCallsign) == 0) return;
+  if (!inbox_.setText(p.callsign, reinterpret_cast<const char*>(p.payload), p.payloadLen)) return;
+  lastTextValid_ = true;
+  lastTextSession_ = p.session;
+  strncpy(lastTextCall_, p.callsign, kMaxCallsign);
+  lastTextCall_[kMaxCallsign] = 0;
+  playing_ = false;
+  textOpen_ = false;
+  notify_.messageReceived(true, p.callsign);
+}
+
+void VoiceNode::openMessage(uint32_t nowMs) {
+  if (inbox_.kind() == Inbox::Kind::Voice) {
+    playing_ = true;
+    playIdx_ = 0;
+    nextPlayMs_ = nowMs;
+    notify_.messageOpened(false);
+  } else if (inbox_.kind() == Inbox::Kind::Text) {
+    textOpen_ = true;
+    notify_.messageOpened(true);
+  }
+}
+
+// Messaggio ascoltato, letto o interrotto: si cancella.
+void VoiceNode::closeMessage() {
+  playing_ = false;
+  textOpen_ = false;
+  inbox_.clear();
+  notify_.messageClosed();
+}
+
+void VoiceNode::playTick(uint32_t nowMs) {
+  if (!playing_ || static_cast<int32_t>(nowMs - nextPlayMs_) < 0) return;
+  if (playIdx_ >= inbox_.frames()) {
+    closeMessage();
+    return;
+  }
+  uint8_t frame[kFrameBytes];
+  int16_t pcm[kFrameSamples];
+  if (inbox_.frameAt(playIdx_, frame)) {
+    codec_.decode(frame, pcm);
+    out_.playFrame(pcm);
+  } else {
+    out_.playLost();
+  }
+  playIdx_++;
+  nextPlayMs_ += kFrameMs;
+  if (nowMs > nextPlayMs_ + 5 * kFrameMs) nextPlayMs_ = nowMs + kFrameMs;
+}
+
+bool VoiceNode::sendText(const char* text, uint32_t nowMs) {
+  const size_t len = text ? strlen(text) : 0;
+  if (!isValidText(text, len)) return false;
+  if (isPlaceholderCallsign(cfg_.callsign) || !isValidCallsign(cfg_.callsign)) {
+    notify_.pttDenied(DenyReason::NoCallsign);
+    return false;
+  }
+  if (state_ == State::Transmitting) {
+    notify_.pttDenied(DenyReason::Transmitting);
+    return false;
+  }
+  if (state_ == State::Receiving) {
+    notify_.pttDenied(DenyReason::Receiving);
+    return false;
+  }
+  if (radio_.channelBusy()) {
+    notify_.pttDenied(DenyReason::ChannelBusy);
+    return false;
+  }
+  Packet p;
+  p.mode = kModeText;
+  p.session = makeSessionId();
+  p.seq = 0;
+  p.flags = kFlagStart | kFlagEnd;
+  strncpy(p.callsign, cfg_.callsign, kMaxCallsign);
+  p.payloadLen = static_cast<uint8_t>(len);
+  memcpy(p.payload, text, len);
+  textWireLen_ = encodePacket(p, textWire_, sizeof(textWire_));
+  if (!textWireLen_) return false;
+  playing_ = false;
+  textOpen_ = false;
+  textTx_ = true;
+  textCopies_ = 2;
+  justSent_ = false;
+  nextSendMs_ = nowMs;
+  state_ = State::Transmitting;
+  notify_.txStarted();
+  return true;
 }
 
 // Avanzamento della ricezione di un messaggio con lunghezza dichiarata: in base al piu' alto numero di sequenza visto,

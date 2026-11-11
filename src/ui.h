@@ -7,10 +7,12 @@
 #include <Arduino.h>
 
 #include "audio_io.h"
+#include "inbox.h"
 #include "interfaces.h"
 #include "menu.h"
 #include "morse.h"
 #include "settings.h"
+#include "text_picker.h"
 #include "voice_node.h"
 
 class UiNotifier : public lcr::INotifier {
@@ -42,6 +44,15 @@ class UiNotifier : public lcr::INotifier {
     menu_ = menu;
     menuCurrentId_ = currentId;
   }
+
+  // Casella dei messaggi (testo da mostrare) e scelta del testo da inviare.
+  void setInbox(const lcr::Inbox* inbox) { inbox_ = inbox; }
+  void setPicker(const lcr::TextPicker* picker) { picker_ = picker; }
+  // Pagina successiva del testo aperto (volume breve mentre si legge un testo lungo). false se il testo ha una sola pagina.
+  bool nextTextPage();
+  bool textOpen() const { return openedText_; }
+  // Prima di node->sendText(): lo schermo di trasmissione dice "INVIO SMS" invece del tempo di parlato.
+  void setSendingText(bool on) { sendingText_ = on; }
 
   // false se il display non risponde (il resto del sistema funziona comunque).
   bool begin();
@@ -76,6 +87,9 @@ class UiNotifier : public lcr::INotifier {
   }
   void rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) override;
   void testModeChanged(bool on) override;
+  void messageReceived(bool isText, const char* callsign) override;
+  void messageOpened(bool isText) override;
+  void messageClosed() override;
   void recPhaseChanged(int phase) override { recPhase_ = phase; dirty_ = true; }
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
 
@@ -93,6 +107,13 @@ class UiNotifier : public lcr::INotifier {
   void drawTestReport();
   void drawMenu();
   void drawProfileBadge();
+  void drawIncoming();
+  void drawPlaying();
+  void drawText();
+  void drawPicker();
+  void drawEnvelope(int x, int y);
+  void drawSpeaker(int x, int y);
+  void wrapText(const char* text);
 
   AudioIo& audio_;
   lcr::Settings settings_;
@@ -136,5 +157,14 @@ class UiNotifier : public lcr::INotifier {
   char testCall_[lcr::kMaxCallsign + 1] = {0};
   lcr::TestReport testRep_;
   const char* notice_ = nullptr;
+  // Messaggi: un solo messaggio in casella (vedi inbox.h)
+  const lcr::Inbox* inbox_ = nullptr;
+  const lcr::TextPicker* picker_ = nullptr;
+  bool openedText_ = false;       // testo aperto e in mostra
+  bool sendingText_ = false;
+  bool openedVoice_ = false;      // messaggio vocale in riproduzione
+  int textPage_ = 0;
+  int textLineCount_ = 0;
+  char textLines_[16][22];        // testo a capo, 21 caratteri per riga
   uint32_t noticeUntilMs_ = 0;
 };

@@ -183,6 +183,14 @@
       </select>
       <p class="hint" id="gpshint">Il GPS assorbe decine di mA: accendilo solo se serve. Con un <strong>fix recente</strong> (cielo aperto; il primo può richiedere alcuni minuti) la posizione viene dal GPS, altrimenti dalla posizione fissa. Il display a riposo dice "GPS cerco satelliti" o "GPS fix, N satelliti".</p>
 
+      <h3>Testi predefiniti (SMS)</h3>
+      <p class="hint" id="texthint">Fino a <strong>5 testi brevi</strong> (massimo 160 caratteri ciascuno, solo lettere, cifre e simboli senza accenti) da inviare dalla scheda: menu a bordo (volume lungo) &rarr; <strong>Invia testo</strong>. Chi riceve sente &ldquo;SMS&rdquo; in Morse, vede una busta sul display e preme il PTT per leggere. Lascia vuoto un posto per non usarlo. Valgono subito, senza riavvio.</p>
+      <label for="text1">Testo 1</label><input id="text1" maxlength="160" autocomplete="off" disabled>
+      <label for="text2">Testo 2</label><input id="text2" maxlength="160" autocomplete="off" disabled>
+      <label for="text3">Testo 3</label><input id="text3" maxlength="160" autocomplete="off" disabled>
+      <label for="text4">Testo 4</label><input id="text4" maxlength="160" autocomplete="off" disabled>
+      <label for="text5">Testo 5</label><input id="text5" maxlength="160" autocomplete="off" disabled>
+
       <button id="save" type="submit" disabled>Salva e riavvia</button>
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
       <button id="reset" type="button" class="secondary" disabled>Valori di fabbrica</button>
@@ -353,6 +361,19 @@
   let freqQualSeen = false;
   let freqMsgSeen = false;   // l'ultimo CFG GET conteneva la frequenza del profilo Messaggio
   let posSeen = false, gpsSeen = false;   // l'ultimo CFG GET conteneva pos=/qth= e gps= (firmware piu' vecchi: no)
+  let textSeen = false;      // la scheda risponde a CFG GET TEXTn (firmware piu' vecchi: no)
+  function updateTextControls(on) { for (let i = 1; i <= 5; i++) $('text' + i).disabled = !on || !textSeen; }
+  async function readTexts() {   // un comando per ogni testo: le righe sono lunghe e CFG GET resterebbe troppo grande
+    try {
+      for (let i = 1; i <= 5; i++) {
+        const head = 'CFG TEXT' + i + '=';
+        const r = await send('CFG GET TEXT' + i, new RegExp('^CFG TEXT' + i + '='), 2500);
+        $('text' + i).value = r.slice(head.length);
+      }
+      textSeen = true;
+    } catch (e) { textSeen = false; }
+    updateTextControls(!!port);
+  }
   function updatePosControls(on) {
     $('pos').disabled = !on || !posSeen;
     $('qthlat').disabled = !on || !posSeen;
@@ -376,8 +397,9 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; }
+    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; }
     updatePosControls(on);
+    updateTextControls(on);
     $('freqmsg').disabled = !on || !freqMsgSeen;   // il firmware piu' vecchio ha una sola frequenza
     $('sameFreq').disabled = !on || !freqMsgSeen;
     $('freqqual').disabled = !on || !freqQualSeen;
@@ -388,7 +410,7 @@
   function onLine(line) {
     log(line);
     sinks.forEach(f => f(line));
-    if (line.startsWith('CFG ')) {
+    if (line.startsWith('CFG callsign=')) {   // solo la risposta di CFG GET (le altre righe CFG possono contenere testi liberi)
       const m = {};
       for (const kv of line.slice(4).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = kv.slice(i + 1); }
       if (m.callsign) {
@@ -497,6 +519,7 @@
           lastProto = pm ? pm[1] : '';
           refreshFwInfo();
         } catch (e) { $('fwinfo').textContent = 'Versione del firmware non disponibile (firmware più vecchio).'; }
+        await readTexts();
         return true;
       } catch (e) { if (!writer) return false; }
     }
@@ -549,7 +572,17 @@
       }
     }
     if (!$('gps').disabled) gps = $('gps').value === 'on' ? 'on' : 'off';
-    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps };
+    let texts = null;
+    if (!$('text1').disabled) {
+      texts = [];
+      for (let i = 1; i <= 5; i++) {
+        const t = $('text' + i).value.trim();
+        if (t.length > 160) return { err: 'Il testo ' + i + ' supera i 160 caratteri.' };
+        if (t !== '' && !/^[\x20-\x7E]+$/.test(t)) return { err: 'Il testo ' + i + ' ha caratteri non ammessi: solo ASCII, senza accenti (usa e\' invece di è).' };
+        texts.push(t);
+      }
+    }
+    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts };
   }
 
   // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
@@ -579,6 +612,7 @@
       if (v.pos !== null) replies.push(await send('CFG SET POS ' + v.pos, /^CFG (OK|ERR)/));
       if (v.qth !== null) replies.push(await send('CFG SET QTH ' + v.qth, /^CFG (OK|ERR)/));
       if (v.gps !== null) replies.push(await send('CFG SET GPS ' + v.gps, /^CFG (OK|ERR)/));
+      if (v.texts !== null) for (let i = 0; i < 5; i++) replies.push(await send('CFG SET TEXT' + (i + 1) + ' ' + (v.texts[i] || 'NONE'), /^CFG (OK|ERR)/));
       const bad = replies.find(r => r.startsWith('CFG ERR'));
       if (bad) throw new Error(bad);
       const state = await send('CFG GET', /^CFG callsign=/);

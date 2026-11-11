@@ -47,6 +47,13 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.qthSet = p.getBool("qset", false);
     out.qthLatE7 = p.getInt("qlat", 0);
     out.qthLonE7 = p.getInt("qlon", 0);
+    for (size_t i = 0; i < lcr::kTextSlots; i++) {  // assenti nelle versioni precedenti: restano i testi di esempio
+      char key[4] = {'t', static_cast<char>('1' + i), 0, 0};
+      if (p.isKey(key)) {
+        memset(out.texts[i], 0, sizeof(out.texts[i]));
+        p.getString(key, out.texts[i], sizeof(out.texts[i]));
+      }
+    }
   }
   p.end();
   return all;
@@ -60,6 +67,10 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
                     p.putInt("floor", s.micFloorDb) > 0 && p.putUChar("prof", s.profile) > 0 &&
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;
+  for (size_t i = 0; i < lcr::kTextSlots; i++) {  // un posto vuoto salva una stringa vuota (put restituisce 0: non e' un errore)
+    char key[4] = {'t', static_cast<char>('1' + i), 0, 0};
+    p.putString(key, s.texts[i]);
+  }
   p.end();
   return ok;
 }

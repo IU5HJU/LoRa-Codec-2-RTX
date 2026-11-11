@@ -22,6 +22,8 @@ constexpr uint8_t kModeTestReport = 3;
 // scartano.
 constexpr uint8_t kModeText = 7;
 constexpr size_t kMaxTextChars = 160;
+// Pausa tra le due copie del messaggio di testo.
+constexpr uint32_t kTextRepeatGapMs = 1000;
 
 // Pacchetto di controllo dell'hardware (CFG TEST AUDIO): la scheda trasmette per misurare se la radiofrequenza
 // rientra nel microfono. I ricevitori lo ignorano come ogni modo sconosciuto.

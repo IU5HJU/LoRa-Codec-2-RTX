@@ -355,6 +355,14 @@ static void testRecordModeOffByDefault() {
   s.run(3000);
 }
 
+// Ricevitore B: un clic breve sul PTT apre il messaggio in casella e lo riproduce (poi si cancella da solo).
+static void listenB(Sim& s, int frames) {
+  s.b.node.pttPressed(s.clock);
+  s.run(100);
+  s.b.node.pttReleased(s.clock);
+  s.run(static_cast<uint32_t>(frames) * kFrameMs + 1500);
+}
+
 // Profilo Messaggio: ogni pacchetto dura circa 3,4 s in aria (extraGapMs lo simula, la radio finta e' istantanea).
 static constexpr uint32_t kMsgAirMs = 3400;
 
@@ -381,8 +389,14 @@ static void testMessageProfile() {
   s.run(90000);
   const int n = static_cast<int>(s.a.mic.produced());
   CHECK(n >= 70 && n <= 90);
-  CHECK(s.b.spk.played == seq(n));  // tutto il messaggio, in ordine, dopo la fine della ricezione
-  CHECK(s.b.note.playbackStarts == 1 && s.b.note.rxStarts == 1 && s.b.note.rxEnds == 1);
+  // A ricezione conclusa il messaggio NON parte da solo: e' in casella e aspetta il clic sul PTT.
+  CHECK(s.b.spk.played.empty() && s.b.note.playbackStarts == 0);
+  CHECK(s.b.note.received.size() == 1 && !s.b.note.received[0].isText && s.b.note.received[0].callsign == "IU5HJU");
+  CHECK(s.b.node.inbox().kind() == Inbox::Kind::Voice && !s.b.node.messageOpen());
+  listenB(s, n);
+  CHECK(s.b.spk.played == seq(n));  // tutto il messaggio, in ordine
+  CHECK(s.b.note.opened.size() == 1 && s.b.note.closed == 1 && !s.b.node.inbox().has());  // ascoltato: cancellato
+  CHECK(s.b.note.rxStarts == 1 && s.b.note.rxEnds == 1);
   CHECK(s.b.note.callsign == "IU5HJU");
   CHECK(s.a.node.state() == VoiceNode::State::Idle && s.b.node.state() == VoiceNode::State::Idle);
   CHECK(s.a.note.txEnds == 1 && !s.a.note.limitHit);
@@ -435,7 +449,8 @@ static void testMessageEndLost() {
   s.a.node.pttReleased(s.clock);
   s.run(110000);
   CHECK(s.b.node.state() == VoiceNode::State::Idle);
-  CHECK(s.b.note.playbackStarts == 1);
+  CHECK(s.b.node.inbox().kind() == Inbox::Kind::Voice);
+  listenB(s, static_cast<int>(s.b.node.inbox().frames()));
   CHECK(!s.b.spk.played.empty());
   // Quello che era arrivato si sente in ordine, senza dover aspettare la parita' o l'END
   int last = 0;
@@ -470,6 +485,7 @@ static void testMessageProfileRules() {
   CHECK(s.air.sent[0] > 60 && s.air.sent[0] < static_cast<int>(kTxSeqLimit));  // circa 80 pacchetti: sotto il limite di sequenza
   CHECK(s.a.note.limitHit);  // e il limite e' stato segnalato
   CHECK(static_cast<uint32_t>(s.a.mic.produced()) == profileFor(kProfileMessage).maxTurnMs / kFrameMs);
+  listenB(s, static_cast<int>(profileFor(kProfileMessage).maxTurnMs / kFrameMs));
   CHECK(s.b.spk.played == seq(static_cast<int>(profileFor(kProfileMessage).maxTurnMs / kFrameMs)));
 }
 
@@ -575,7 +591,7 @@ static void testMessageProgress() {
   s.run(kPttClickMaxMs + 50 + 3000);
   s.a.node.pttReleased(s.clock);
   s.run(120000);
-  CHECK(s.b.note.playbackStarts == 1 && s.a.note.txEnds == 1);
+  CHECK(s.b.note.received.size() == 1 && s.a.note.txEnds == 1);
   // Il pacchetto START dichiara il totale, uguale ai pacchetti davvero trasmessi.
   Packet start;
   CHECK(decodePacket(s.air.log[0][0].data(), s.air.log[0][0].size(), start));
@@ -622,8 +638,105 @@ static void testNoProgressInStandard() {
   CHECK(decodePacket(s.air.log[0][0].data(), s.air.log[0][0].size(), start) && !start.hasTotal());
 }
 
+static void testTextMessage() {
+  Sim s;
+  s.air.clock = &s.clock;
+  s.run(100);
+  CHECK(s.a.node.sendText("Arrivo tra 10 minuti", s.clock));
+  CHECK(s.a.node.state() == VoiceNode::State::Transmitting);
+  s.run(3000);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle && s.a.note.txEnds == 1);
+  CHECK(s.air.sent[0] == 2);  // due copie
+  // B: un solo messaggio (la seconda copia si scarta), in casella, non aperto
+  CHECK(s.b.note.received.size() == 1 && s.b.note.received[0].isText && s.b.note.received[0].callsign == "IU5HJU");
+  CHECK(s.b.node.inbox().kind() == Inbox::Kind::Text && strcmp(s.b.node.inbox().text(), "Arrivo tra 10 minuti") == 0);
+  CHECK(!s.b.node.messageOpen() && s.b.spk.played.empty());
+  // clic: si apre e resta in mostra; un altro clic lo chiude e lo cancella
+  s.b.node.pttPressed(s.clock);
+  s.run(100);
+  s.b.node.pttReleased(s.clock);
+  CHECK(s.b.node.messageOpen() && s.b.note.opened.size() == 1 && s.b.note.opened[0]);
+  s.run(5000);
+  CHECK(s.b.node.messageOpen() && s.b.node.inbox().has());
+  s.b.node.pttPressed(s.clock);
+  s.b.node.pttReleased(s.clock);
+  CHECK(!s.b.node.messageOpen() && !s.b.node.inbox().has() && s.b.note.closed == 1);
+  CHECK(s.b.node.state() == VoiceNode::State::Idle && s.b.note.txStarts == 0);  // il clic non trasmette
+
+  // un testo nuovo (altra sessione) cancella il vecchio
+  CHECK(s.a.node.sendText("Uno", s.clock));
+  s.run(3000);
+  CHECK(s.a.node.sendText("Due", s.clock));
+  s.run(3000);
+  CHECK(s.b.note.received.size() == 3 && strcmp(s.b.node.inbox().text(), "Due") == 0);
+
+  // testo non valido o troppo lungo: rifiutato, niente in aria
+  const int sent = s.air.sent[0];
+  CHECK(!s.a.node.sendText("", s.clock) && !s.a.node.sendText("a\tb", s.clock));
+  std::string big(161, 'x');
+  CHECK(!s.a.node.sendText(big.c_str(), s.clock));
+  s.run(1000);
+  CHECK(s.air.sent[0] == sent);
+  // 160 caratteri vanno
+  big.resize(160);
+  CHECK(s.a.node.sendText(big.c_str(), s.clock));
+  s.run(3000);
+  CHECK(s.b.node.inbox().textLen() == 160);
+}
+
+static void testTextRules() {
+  Sim s;
+  s.run(100);
+  // il PTT lungo durante la lettura chiude soltanto il messaggio, non trasmette
+  CHECK(s.a.node.sendText("ciao", s.clock));
+  s.run(3000);
+  s.b.node.pttPressed(s.clock);
+  s.run(100);
+  s.b.node.pttReleased(s.clock);
+  CHECK(s.b.node.messageOpen());
+  s.b.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 100);
+  s.b.node.pttReleased(s.clock);
+  CHECK(!s.b.node.messageOpen() && s.b.note.txStarts == 0 && s.b.node.state() == VoiceNode::State::Idle);
+}
+
+static void testVoiceMessageStopAndReplace() {
+  Sim s(kProfileMessage, kMsgAirMs);
+  s.air.clock = &s.clock;
+  s.run(100);
+  auto sendVoice = [&]() {
+    s.a.node.pttPressed(s.clock);
+    s.run(kPttClickMaxMs + 50 + 2000);
+    s.a.node.pttReleased(s.clock);
+    s.run(100000);
+  };
+  sendVoice();
+  CHECK(s.b.note.received.size() == 1 && s.b.node.inbox().kind() == Inbox::Kind::Voice);
+  const size_t first = s.b.node.inbox().frames();
+  // un secondo messaggio non ascoltato cancella il primo (una sola casella)
+  sendVoice();
+  CHECK(s.b.note.received.size() == 2 && s.b.node.inbox().kind() == Inbox::Kind::Voice);
+  // si apre e a meta' si preme il PTT: la riproduzione si ferma e il messaggio si cancella
+  s.b.node.pttPressed(s.clock);
+  s.run(100);
+  s.b.node.pttReleased(s.clock);
+  s.run(1000);
+  CHECK(s.b.node.messageOpen() && !s.b.spk.played.empty());
+  const size_t partial = s.b.spk.played.size();
+  CHECK(partial < s.b.node.inbox().frames());
+  s.b.node.pttPressed(s.clock);
+  s.b.node.pttReleased(s.clock);
+  CHECK(!s.b.node.messageOpen() && !s.b.node.inbox().has() && s.b.note.closed == 1);
+  s.run(3000);
+  CHECK(s.b.spk.played.size() == partial);  // niente piu' audio
+  (void)first;
+}
+
 int main() {
   testExpectedPackets();
+  testTextMessage();
+  testTextRules();
+  testVoiceMessageStopAndReplace();
   testMessageProgress();
   testProgressLostTail();
   testNoProgressInStandard();

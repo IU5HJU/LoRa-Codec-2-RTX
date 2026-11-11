@@ -8,7 +8,10 @@
     active: { callsign: 'N0CALL', freq: '433.900', freqmsg: '433.900', power: 10, volume: 7, profile: 'std' },
     noFreqMsg: false,     // firmware con una sola frequenza (piu' vecchio)
     noPos: false,         // firmware senza posizione (piu' vecchio): CFG GET senza pos=/qth= e CFG SET POS/QTH sconosciuti
-    noGps: false,         // firmware senza GPS: CFG GET senza gps=
+    noGps: false,
+    noTexts: false,       // firmware senza testi predefiniti (piu' vecchio): CFG GET TEXTn e CFG SET TEXTn sconosciuti
+    texts: ['QRV, sono in ascolto', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
+    // (riga seguente: firmware senza GPS)
     noProfile: false,     // firmware senza profili (piu' vecchio): CFG GET senza profile= e CFG SET PROFILE sconosciuto
     test: false,
     fw: 'abc1234',
@@ -34,6 +37,16 @@
     const t = line.trim().split(/\s+/);
     if (t[0] !== 'CFG') return;
     const cmd = t[1];
+    // CFG SET TEXTn <testo> (il testo e' il resto della riga) e CFG GET TEXTn, come il firmware
+    const tm = /^CFG\s+SET\s+TEXT([1-5])\s+(.*?)\s*$/i.exec(line.trim());
+    if (tm && !st.noTexts) {
+      const n = +tm[1];
+      if (tm[2].toUpperCase() === 'NONE') { st.texts[n - 1] = ''; return out('CFG OK text' + n + '='); }
+      if (!/^[\x20-\x7E]{1,160}$/.test(tm[2])) return out('CFG ERR text' + n + ' testo ASCII da 1 a 160 caratteri (NONE per svuotare)');
+      st.texts[n - 1] = tm[2]; return out('CFG OK text' + n + '=' + tm[2]);
+    }
+    const tg = /^CFG\s+GET\s+TEXT([1-5])$/i.exec(line.trim());
+    if (tg && !st.noTexts) return out('CFG TEXT' + tg[1] + '=' + st.texts[+tg[1] - 1]);
     if (cmd === 'GET') out(get());
     else if (cmd === 'VERSION' && st.noVersion) out('CFG ERR comando sconosciuto');   // firmware vecchio
     else if (cmd === 'VERSION') out(`CFG VERSION fw=${st.fw} board=${st.board} proto=2`);

@@ -6,7 +6,7 @@ La voce è compressa con Codec2 e trasmessa con LoRa, con tre **profili** da sce
 | Profilo | Radio | Codec2 | Uso |
 |---|---|---|---|
 | **Standard** (S) | SF8, banda 250 kHz | 1200 bps | voce in tempo reale, come una conversazione |
-| **Messaggio** (M) | SF12, banda 125 kHz | 1200 bps | lungo raggio: si registra un messaggio (fino a 30 s) e chi riceve lo ascolta a ricezione conclusa, con la percentuale sul display |
+| **Messaggio** (M) | SF12, banda 125 kHz | 1200 bps | lungo raggio: si registra un messaggio (fino a 30 s); chi riceve lo trova in una casella e lo ascolta premendo il PTT, con la percentuale sul display |
 | **Qualità** (Q) | SF7, banda 250 kHz | 3200 bps | voce in tempo reale più naturale, meno portata |
 
 Funzionamento in breve:
@@ -66,6 +66,7 @@ Aggiornato il 10/11/2026.
 | Formato pacchetti (protocollo v2), parità XOR, sessioni TX/RX, pausa tra i pacchetti | fatto, testato sul PC |
 | Voce a turni in Standard (Codec2 1200, SF8/BW250) | **provata sulle schede** (T3 e T-Beam); cause dei crepitii trovate e corrette |
 | Profilo **Messaggio** (SF12/BW125): registra e invia, riproduzione a messaggio completo, percentuale e suono "MSG" in Morse | **provato sulle schede** |
+| **Casella dei messaggi** (11/11/2026): la voce non parte più da sola, si apre con il PTT breve e si cancella dopo l'ascolto; **messaggi di testo** da 160 caratteri ("SMS", busta sul display), cinque testi predefiniti impostabili da web e Wi-Fi, menu "Invia testo" | scritta e provata sul PC, **da provare su scheda** |
 | Profilo **Qualità** (Codec2 3200, SF7/BW250) | **provato sulle schede**: suona meglio del 1200; CPU misurata sulla scheda: codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms (25% e 33%) |
 | Menu a bordo (volume lungo, PTT, conferma; riavvio sul profilo scelto) e lettera S/M/Q sul display | **provato** |
 | Configurazione dal Wi-Fi della scheda (voce "Wi-Fi", pagina su 192.168.4.1, password salvata) | **provata** |

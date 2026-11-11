@@ -174,6 +174,10 @@ Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa du
 - **Coda e scadenza:** la TX tiene alcuni messaggi (per esempio 3, circa 3 kB ciascuno) e scarta quelli troppo vecchi (da decidere: per esempio 30 minuti) se il ripetitore resta impegnato con la voce.
 - **Un messaggio ripetuto non si ritrasmette due volte** (memoria degli ultimi pacchetti, come per la voce).
 
+### Messaggi di testo (11/11/2026)
+
+Il protocollo ha ora il **modo 7** (testo, un solo pacchetto START+END, [protocollo.md](protocollo.md)). La classe `Repeater` ripete solo i modi nella sua maschera (`setModeMask`, oggi solo il modo del profilo): per ripetere anche il testo basta aggiungere il bit del modo 7, ma la TX deve poi trasmetterlo senza passare dall'archivio dei messaggi vocali. **Non ancora fatto**: schede e ripetitore sono predisposti, la ripetizione del testo si aggiunge in seguito.
+
 ### Archivio dei messaggi scritto (11/11/2026)
 
 La logica della TX per i messaggi è scritta e **provata sul PC** (`lib/voicecore/message_store.*`, `tests/test_message_store.cpp`, 181 controlli): riceve un messaggio intero (un solo messaggio alla volta, le altre sessioni si ignorano), **ricostruisce i pacchetti persi con la parità** (anche lo START, con nominativo e totale presi dall'END), rifiuta subito i messaggi oltre i **15 s** (42 pacchetti), **rigenera la parità**, tiene fino a **3 messaggi** e scarta quelli più vecchi di **30 minuti**, e restituisce i pacchetti da ritrasmettere con una **sessione nuova** e il flag `RELAYED`; calcola il **tempo in aria esatto** (circa 139 s per 15 s di voce) per l'annuncio di occupato. **Non c'è ancora:** il collegamento alla radio (cambio dei parametri SF/banda/frequenza a runtime e ascolto SF12 quando la TX è libera), la priorità della voce con l'interruzione, l'annuncio di occupato (modo 6) e il suo riconoscimento nelle stazioni. L'oggetto occupa circa 45 kB: nel firmware va creato nella memoria dinamica.
