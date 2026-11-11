@@ -1,4 +1,6 @@
-# LoRa-Codec-2-RTX
+# VoLoRa
+
+*(già LoRa-Codec-2-RTX fino all'11/11/2026: se cerchi il vecchio nome, sei nel posto giusto.)*
 
 Messaggi vocali broadcast a turni (stile QSO) tra schede LilyGo a 433 MHz (LoRa32 T3 V1.6.1 e T-Beam V1.2), per radioamatori.
 La voce è compressa con Codec2 e trasmessa con LoRa, con tre **profili** da scegliere dal menu della scheda:
@@ -109,4 +111,4 @@ La pagina web di installazione e configurazione ha una prova a parte (`make test
 
 ## Sostieni il progetto
 
-LoRa-Codec-2-RTX è software libero (GPL-3.0) e lo resterà: il sostegno è del tutto volontario e non dà diritto a nulla in cambio, né funzioni né assistenza. Se ti fa piacere aiutarlo a crescere (schede e componenti per le prove, tempo per lo sviluppo), puoi offrire un caffè con [PayPal.Me](https://www.paypal.me/maccalampo). Grazie, e buoni collegamenti. 73 de IU5HJU
+VoLoRa è software libero (GPL-3.0) e lo resterà: il sostegno è del tutto volontario e non dà diritto a nulla in cambio, né funzioni né assistenza. Se ti fa piacere aiutarlo a crescere (schede e componenti per le prove, tempo per lo sviluppo), puoi offrire un caffè con [PayPal.Me](https://www.paypal.me/maccalampo). Grazie, e buoni collegamenti. 73 de IU5HJU

@@ -49,7 +49,7 @@ class FrameAssembler:
 
 
 def describe_packet(data):
-    """Riga leggibile di un pacchetto LoRa-Codec-2-RTX (formato in docs/protocollo.md)."""
+    """Riga leggibile di un pacchetto VoLoRa (formato in docs/protocollo.md)."""
     if len(data) < 5:
         return "pacchetto troppo corto (%d byte)" % len(data)
     version, mode = data[0] >> 4, data[0] & 0x0F

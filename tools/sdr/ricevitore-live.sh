@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ricevitore SDR in tempo reale per LoRa-Codec-2-RTX: la chiavetta riceve, i pacchetti vengono ricostruiti come fa la scheda
+# Ricevitore SDR in tempo reale per VoLoRa: la chiavetta riceve, i pacchetti vengono ricostruiti come fa la scheda
 # ricevente e la voce esce dall'altoparlante mentre la scheda trasmette (ritardo di circa 1-2 s).
 #
 #   chiavetta -> lora_rx.py -> file -> tail -F -> lcr_live -> c2dec -> aplay

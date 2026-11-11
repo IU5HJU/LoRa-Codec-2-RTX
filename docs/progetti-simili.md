@@ -19,7 +19,7 @@ occupazione del canale sono stime con la formula Semtech, da verificare sul camp
 
 ## Confronto con esp32_loradv
 
-| Aspetto | esp32_loradv | LoRa-Codec-2-RTX |
+| Aspetto | esp32_loradv | VoLoRa |
 |---|---|---|
 | Uso | Streaming continuo "come una radio FM" | Turni stile QSO |
 | Protocollo | Nessuno, frame Codec2 nudi | Header con versione, sessione, sequenza, flag |

@@ -1,4 +1,4 @@
-// lcr_decode: dai pacchetti LoRa catturati con un SDR (esadecimale, uno per riga) alle trasmissioni di LoRa-Codec-2-RTX.
+// lcr_decode: dai pacchetti LoRa catturati con un SDR (esadecimale, uno per riga) alle trasmissioni di VoLoRa.
 //
 //   make lcr_decode
 //   build/lcr_decode cattura.txt [--out CARTELLA] [--accept-bad-crc]

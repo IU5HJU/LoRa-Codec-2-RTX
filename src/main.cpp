@@ -1,4 +1,4 @@
-// LoRa-Codec-2-RTX: messaggi vocali broadcast a turni su LoRa, con Codec2.
+// VoLoRa: messaggi vocali broadcast a turni su LoRa, con Codec2.
 // Schede: LILYGO LoRa32 T3 V1.6.1 (predefinita) e T-Beam V1.2 (-DBOARD_TBEAM_V12).
 // Vedi README.md e docs/.
 //

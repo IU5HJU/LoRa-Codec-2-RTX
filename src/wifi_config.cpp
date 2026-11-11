@@ -62,7 +62,7 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
   WiFi.mode(WIFI_AP);
   uint8_t mac[6] = {0};
   WiFi.macAddress(mac);
-  snprintf(ssid, ssidCap, "LoRaCodec2-%02X%02X", mac[4], mac[5]);
+  snprintf(ssid, ssidCap, "VoLoRa-%02X%02X", mac[4], mac[5]);
   WiFi.onEvent([](WiFiEvent_t ev, WiFiEventInfo_t info) {
     if (ev == ARDUINO_EVENT_WIFI_AP_STACONNECTED) Serial.println("[wifi] un client si e' collegato alla rete");
     if (ev == ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED) Serial.printf("[wifi] indirizzo assegnato al client: %s\n", IPAddress(info.wifi_ap_staipassigned.ip.addr).toString().c_str());

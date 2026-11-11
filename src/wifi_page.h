@@ -4,7 +4,7 @@
 
 static const char kWifiPage[] = R"HTML(<!doctype html>
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LoRa-Codec-2-RTX: configurazione</title>
+<title>VoLoRa: configurazione</title>
 <style>
 body{font-family:system-ui,sans-serif;max-width:34rem;margin:0 auto;padding:1rem;background:#fff;color:#14181f}
 label{display:block;margin-top:.8rem;font-weight:600}

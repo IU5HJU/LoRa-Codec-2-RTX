@@ -1,6 +1,6 @@
 # Ricevere e decodificare con un SDR
 
-Con una chiavetta SDR (NESDR, RTL-SDR) e GNU Radio si può **ascoltare e decodificare le trasmissioni** di LoRa-Codec-2-RTX senza una scheda ricevente: il segnale è un normale LoRa e i pacchetti non sono cifrati
+Con una chiavetta SDR (NESDR, RTL-SDR) e GNU Radio si può **ascoltare e decodificare le trasmissioni** di VoLoRa senza una scheda ricevente: il segnale è un normale LoRa e i pacchetti non sono cifrati
 ([protocollo.md](protocollo.md)). Serve a controllare in modo indipendente cosa trasmette una scheda (frequenza, struttura dei pacchetti, prova di collegamento) e a **riascoltare la voce**.
 
 ```

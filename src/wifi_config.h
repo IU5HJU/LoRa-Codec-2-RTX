@@ -1,4 +1,4 @@
-// Configurazione dalla pagina interna, avviata all'accensione prima di Codec2, audio e radio (come il Tracker di Guzman): la scheda crea un proprio Wi-Fi (LoRaCodec2-XXXX, password casuale mostrata sul
+// Configurazione dalla pagina interna, avviata all'accensione prima di Codec2, audio e radio (come il Tracker di Guzman): la scheda crea un proprio Wi-Fi (VoLoRa-XXXX, password casuale mostrata sul
 // display) e serve su 192.168.4.1 la stessa configurazione che si fa dalla seriale. Con il Wi-Fi attivo la scheda non
 // trasmette ne' riceve: il resto del firmware non gira (vedi main.cpp). Si esce riavviando.
 // Server: ESPAsyncWebServer, come il Tracker LoRa APRS di Guzman.

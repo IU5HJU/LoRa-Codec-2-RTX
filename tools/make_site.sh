@@ -32,7 +32,7 @@ manifest() {
   local dir=$1 path=$2 ver=$3 board=$4
   cat > "$dir/manifest.json" <<EOF
 {
-  "name": "LoRa-Codec-2-RTX ($board)",
+  "name": "VoLoRa ($board)",
   "version": "$ver",
   "new_install_prompt_erase": false,
   "builds": [

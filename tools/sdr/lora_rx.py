@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ricevitore SDR per LoRa-Codec-2-RTX: NESDR / RTL-SDR -> pacchetti LoRa -> righe di testo per lcr_decode.
+"""Ricevitore SDR per VoLoRa: NESDR / RTL-SDR -> pacchetti LoRa -> righe di testo per lcr_decode.
 
 Si esegue nell'ambiente conda con GNU Radio 3.10 e gr-lora_sdr (vedi docs/sdr.md):
 
@@ -65,7 +65,7 @@ class PacketSink(gr.sync_block):
 
 class LoraRx(gr.top_block):
     def __init__(self, a):
-        gr.top_block.__init__(self, "LoRa-Codec-2-RTX rx", catch_exceptions=True)
+        gr.top_block.__init__(self, "VoLoRa rx", catch_exceptions=True)
         import osmosdr  # dopo gr.top_block: puo' essere lento
 
         bw = int(a.bw)

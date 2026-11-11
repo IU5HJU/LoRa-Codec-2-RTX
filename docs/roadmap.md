@@ -29,7 +29,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 | # | Voce | Note |
 |---|---|---|
 | 1 | ~~Pagina web: campi `POS`, `QTH` e `GPS`~~ | **fatto il 10/11/2026** (da provare con una scheda vera) |
-| 2 | ~~Menu, **passo 3**: voce "Wi-Fi" e pagina interna alla scheda~~ | **fatto e provato il 10/11/2026** (rete `LoRaCodec2-XXXX`, password casuale salvata, pagina su 192.168.4.1, TX e RX spente) |
+| 2 | ~~Menu, **passo 3**: voce "Wi-Fi" e pagina interna alla scheda~~ | **fatto e provato il 10/11/2026** (rete `VoLoRa-XXXX`, password casuale salvata, pagina su 192.168.4.1, TX e RX spente) |
 | 3 | **Verifiche sul Codec2** 3200 (e 450, 700C: scartati per il Messaggio) | **fatta la parte sul PC il 10/11/2026** ([codec2.md](codec2.md): modi disponibili, CPU e RAM stimate, tempo in aria, strumento `codec_compare`); **fatta anche la misura sulla scheda il 10/11/2026**: 3200 in codifica 10,0 ms e in decodifica 13,3 ms per frame (25% e 33% di 40 ms), il 1200 17,4 e 13,3 ms; ascolto del 3200 fatto (suona meglio), il 2400 non serve più |
 | 4 | **Modo Qualità** (Codec2 3200, SF7/BW250) | **fatto e provato sulle schede il 10/11/2026** (suona meglio del 1200). L'**ascolto in Qualità con l'SDR** (`lcr_live` ricompilato) è **riuscito il 10/11/2026**. La **CPU è misurata** (vedi riga 3). Resta la sequenza a 16 bit per durate oltre i 30 s |
 | 5 | **Misure sul campo:** RSSI, SNR, deriva di frequenza, perdite, anche in movimento | decidono quanta protezione serve |
@@ -193,7 +193,7 @@ Si usano i due tasti che ci sono già. **Deciso:** pressione lunga sul volume ap
 - **Canali memorizzati:** non solo "tre modi", ma memorie, ognuna con **profilo e frequenze proprie** (per esempio: Standard diretto, Standard via ripetitore con ingresso e uscita separati, Messaggio, Qualità). Si configurano dalla pagina; il menu a bordo sceglie la memoria e il display ne mostra il nome. Servono quindi **frequenze per profilo** nelle impostazioni (oggi ce n'è una sola).
 - **Cambio di memoria:** nel primo passo si **salva la scelta e si riavvia** la scheda (due secondi, semplice e sicuro). Il cambio a caldo della radio viene dopo. La voce "Qualità" è attiva dal 10/11/2026.
 - **Pagina di configurazione interna** (stile LoRa APRS di Guzman, CA2RXU: all'avvio la scheda crea un proprio Wi-Fi e serve una pagina su `192.168.4.1`): una **voce "Configurazione Wi-Fi" nello stesso menu**, quindi un solo gesto. Con la pagina attiva **la trasmissione è disattivata**.
-  - La rete (`LoRaCodec2-XXXX`) ha una **password casuale mostrata sul display**: le password predefinite uguali per tutti (come in alcuni progetti analoghi) sono note a chiunque.
+  - La rete (`VoLoRa-XXXX`) ha una **password casuale mostrata sul display**: le password predefinite uguali per tutti (come in alcuni progetti analoghi) sono note a chiunque.
   - **Stessa pagina di oggi**, che passa i comandi `CFG` alla scheda al posto della porta seriale: l'interprete dei comandi esiste già e ha i test, quindi non c'è un secondo programma da mantenere.
   - Dopo il salvataggio la pagina **rilegge i valori dalla scheda** e li confronta (lo fa già oggi): in alcuni progetti analoghi capitavano impostazioni che non si salvavano senza che nessuno se ne accorgesse.
 
@@ -218,7 +218,7 @@ seriale, con test sul PC ([firmware.md](firmware.md#impostazioni-senza-ricompila
 Fatta anche la pagina (`site/index.html`, flasher e configurazione via Web Serial), pubblicata da Actions su GitHub Pages; provata con Chrome su Linux. 
 
 - Entrata con pressione lunga (3 s) sul pulsante volume (GPIO15) a scheda ferma; in quella modalità la **trasmissione è disattivata**.
-- La scheda crea un Wi-Fi proprio (`LoRaCodec2-XXXX`, password sull'OLED); pagina su `192.168.4.1`; salvataggio in memoria non volatile e riavvio.
+- La scheda crea un Wi-Fi proprio (`VoLoRa-XXXX`, password sull'OLED); pagina su `192.168.4.1`; salvataggio in memoria non volatile e riavvio.
 - Impostazioni: nominativo, frequenza (limitata ai 70 cm), SF/BW/CR/potenza/sync, parità, **TOT**, livello/profilo, guadagno microfono, AGC, volume.
 - Regole di validazione nel core (testabili sul PC); server web con le librerie già incluse nell'ESP32.
 

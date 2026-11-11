@@ -170,17 +170,17 @@ def footer(canvas, doc):
     canvas.saveState()
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(colors.HexColor("#4a5568"))
-    canvas.drawString(20 * mm, 12 * mm, "LoRa Codec 2 RTX - protocollo versione %d - IU5HJU - %s" % (PROTO, datetime.date.today().strftime("%d/%m/%Y")))
+    canvas.drawString(20 * mm, 12 * mm, "VoLoRa - protocollo versione %d - IU5HJU - %s" % (PROTO, datetime.date.today().strftime("%d/%m/%Y")))
     canvas.drawRightString(A4[0] - 20 * mm, 12 * mm, "Pagina %d" % doc.page)
     canvas.restoreState()
 
 doc = SimpleDocTemplate(OUT, pagesize=A4, leftMargin=20*mm, rightMargin=20*mm, topMargin=18*mm, bottomMargin=20*mm,
-                        title="LoRa Codec 2 RTX: formato del pacchetto radio", author="IU5HJU",
+                        title="VoLoRa: formato del pacchetto radio", author="IU5HJU",
                         subject="Come viene trasmessa la voce Codec2 su LoRa a 433 MHz")
 W = A4[0] - 40 * mm
 s = []
 
-s.append(P("LoRa Codec 2 RTX", h1))
+s.append(P("VoLoRa", h1))
 s.append(P("Come viene trasmesso un pacchetto via radio: formato, sequenza e livello LoRa (protocollo versione %d)" % PROTO + "", sub))
 
 s.append(P("In breve", h2))

@@ -1,4 +1,4 @@
-// Costanti del protocollo LoRa-Codec-2-RTX (v2).
+// Costanti del protocollo VoLoRa (v2).
 // Vedi docs/protocollo.md per la descrizione completa.
 #pragma once
 
