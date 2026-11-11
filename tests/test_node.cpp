@@ -800,10 +800,14 @@ static void testMeshcomSignature() {
   s.run(2000);
   mc::Frame f;
   CHECK(mc::decode(s.air.log[0][0].data(), s.air.log[0][0].size(), f) && strcmp(f.payload, "IU5HJU QRV su VoLoRa modo S 433.900 (Inviato da dispositivo VoLoRa)") == 0);
+  // il primo testo predefinito (segnaposti gia' sostituiti) non ha la firma: la mette il sistema, una volta sola
+  CHECK(s.a.node.startMeshcom("IU5HJU QRV su VoLoRa modo S 433.900", "222", s.clock, kWin));
+  s.run(2000);
+  CHECK(mc::decode(s.air.log[0][1].data(), s.air.log[0][1].size(), f) && strcmp(f.payload, "IU5HJU QRV su VoLoRa modo S 433.900 (Inviato da dispositivo VoLoRa)") == 0);
   std::string longText(150, 'a');
   CHECK(s.a.node.startMeshcom(longText.c_str(), "22251", s.clock, kWin));
   s.run(3000);
-  CHECK(s.air.sent[0] == 2 && mc::decode(s.air.log[0][1].data(), s.air.log[0][1].size(), f));
+  CHECK(s.air.sent[0] == 3 && mc::decode(s.air.log[0][2].data(), s.air.log[0][2].size(), f));
   CHECK(strlen(f.payload) == kMaxTextChars && strcmp(f.payload + kMaxTextChars - 31, "(Inviato da dispositivo VoLoRa)") == 0);
 }
 

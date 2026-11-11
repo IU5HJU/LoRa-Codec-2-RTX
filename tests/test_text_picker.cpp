@@ -11,7 +11,7 @@ int main() {
   Settings s;  // cinque testi di esempio
   TextPicker t;
   CHECK(!t.isOpen());
-  CHECK(t.open(s, 0) && t.isOpen() && t.slot() == 0 && strcmp(t.text(), "%C QRV su VoLoRa modo %M %F (Inviato da dispositivo VoLoRa)") == 0);
+  CHECK(t.open(s, 0) && t.isOpen() && t.slot() == 0 && strcmp(t.text(), "%C QRV su VoLoRa modo %M %F") == 0);
   CHECK(t.usedCount() == 5 && t.ordinal() == 1);
 
   // PTT: avanti, con giro; il rilascio non va al nodo

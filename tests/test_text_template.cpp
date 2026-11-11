@@ -12,7 +12,7 @@ int main() {
   char out[200];
   CHECK(expandTextTemplate("%C QRV su VoLora modo %M %F", "IU5HJU", 'Q', 433900, out, sizeof(out)) == 35);
   CHECK(strcmp(out, "IU5HJU QRV su VoLora modo Q 433.900") == 0);
-  // il primo testo predefinito: dice anche che non viene da un nodo della rete (le parentesi sono ammesse)
+  // una firma scritta a mano nel testo: le parentesi sono ammesse
   CHECK(expandTextTemplate("%C QRV su VoLoRa modo %M %F (Inviato da dispositivo VoLoRa)", "IU5HJU", 'Q', 433900, out, sizeof(out)) == 67);
   CHECK(strcmp(out, "IU5HJU QRV su VoLoRa modo Q 433.900 (Inviato da dispositivo VoLoRa)") == 0);
   CHECK(expandTextTemplate("Frequenza %F, modo %M, 100%% sicuro", "IU5HJU", 'S', 433775, out, sizeof(out)) > 0);
