@@ -7,7 +7,11 @@
 # Si ferma con Ctrl+C. La cattura resta in ~/catture-sdr/ e alla fine se ne stampa il riepilogo.
 # Servono: l'ambiente conda "lora" (docs/sdr.md), "make lcr_live" (lo fa da solo), c2dec (sudo apt install codec2) e aplay
 # (sudo apt install alsa-utils).
-REPO=${REPO:-$HOME/LoRa-Codec-2-RTX}
+# Cartella del clone: ~/VoLoRa (nome attuale) oppure ~/LoRa-Codec-2-RTX (nome di prima, se lo hai clonato allora)
+if [ -z "$REPO" ]; then
+  for d in "$HOME/VoLoRa" "$HOME/LoRa-Codec-2-RTX"; do [ -d "$d" ] && REPO="$d" && break; done
+  REPO=${REPO:-$HOME/VoLoRa}
+fi
 OUT=${OUT:-$HOME/catture-sdr}
 mkdir -p "$OUT"
 fine() { read -rp "Premi Invio per chiudere"; exit "${1:-0}"; }

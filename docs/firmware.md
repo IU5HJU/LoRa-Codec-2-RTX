@@ -67,7 +67,7 @@ Il workflow di GitHub Actions compila a ogni modifica. Per averlo col **proprio 
    - `ota_update.bin`: solo l'applicazione, per gli aggiornamenti futuri;
    - `SHA256SUMS`: somme di controllo.
 
-Il firmware di `main` ha il nominativo `N0CALL` e non trasmette: il tuo lo imposti **dalla [pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/) o con `CFG SET CALLSIGN`, senza ricompilare**, e resta salvato nella scheda anche dopo un aggiornamento. Non serve più un ramo personale con il nominativo dentro.
+Il firmware di `main` ha il nominativo `N0CALL` e non trasmette: il tuo lo imposti **dalla [pagina web](https://iu5hju.github.io/VoLoRa/) o con `CFG SET CALLSIGN`, senza ricompilare**, e resta salvato nella scheda anche dopo un aggiornamento. Non serve più un ramo personale con il nominativo dentro.
 Se fai un fork con un nominativo compilato in `src/user_config.h`, non usare i binari di altri radioamatori che ne contengono uno diverso dal tuo.
 
 ## Caricare il firmware sulla scheda (Linux, provato su Ubuntu 24.04)
@@ -119,7 +119,7 @@ La pagina in `site/index.html` installa il firmware (esp-web-tools) e imposta no
 comandi `CFG` della sezione seguente, tutto dal browser (Chrome, Edge od Opera, cavo USB). Il workflow
 `.github/workflows/build.yml` la pubblica su **GitHub Pages** a ogni push su `main` e a ogni tag `v*`, insieme ai
 binari appena compilati (`tools/make_site.sh`). Una volta sola, nel repository: **Settings -> Pages -> Source: GitHub Actions**.
-L'indirizzo sarà `https://iu5hju.github.io/LoRa-Codec-2-RTX/`. Il firmware pubblico ha N0CALL: chi lo installa imposta
+L'indirizzo sarà `https://iu5hju.github.io/VoLoRa/`. Il firmware pubblico ha N0CALL: chi lo installa imposta
 il proprio nominativo dal passo 2 della pagina. In locale: `tools/make_site.sh <artefatti> <uscita> <versione> <commit>` e un server
 statico (Web Serial richiede https o `localhost`).
 
@@ -170,7 +170,7 @@ All'avvio la seriale stampa la riga `CFG GET` in fondo al log. Il resto dei para
 ## Prima di trasmettere
 
 1. **Frequenza:** `LCR_FREQUENCY_MHZ` in `src/user_config.h` è un segnaposto. Scegliere il canale col band plan IARU R1 / ARI per i modi digitali sui 70 cm.
-2. **Nominativo:** vale di default **`N0CALL`**, il segnaposto "nessun nominativo": con N0CALL (o NOCALL) la scheda **riceve ma non trasmette**, e l'OLED mostra "SOLO RX" all'avvio e "IMPOSTA NOMINATIVO" se premi il PTT. Per trasmettere imposta il tuo (A-Z, 0-9, `/`, massimo 8 caratteri) dalla [pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/) o con `CFG SET CALLSIGN` dalla seriale, senza ricompilare. Oppure cambia `LCR_CALLSIGN` in `src/user_config.h` e ricompila.
+2. **Nominativo:** vale di default **`N0CALL`**, il segnaposto "nessun nominativo": con N0CALL (o NOCALL) la scheda **riceve ma non trasmette**, e l'OLED mostra "SOLO RX" all'avvio e "IMPOSTA NOMINATIVO" se premi il PTT. Per trasmettere imposta il tuo (A-Z, 0-9, `/`, massimo 8 caratteri) dalla [pagina web](https://iu5hju.github.io/VoLoRa/) o con `CFG SET CALLSIGN` dalla seriale, senza ricompilare. Oppure cambia `LCR_CALLSIGN` in `src/user_config.h` e ricompila.
 3. **Antenna** collegata prima di alimentare la scheda.
 4. **Potenza:** parte da 10 dBm per i test (`CFG SET POWER`, o `LCR_TX_POWER_DBM`).
 

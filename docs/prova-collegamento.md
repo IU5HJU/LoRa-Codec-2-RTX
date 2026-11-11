@@ -20,7 +20,7 @@ Misurare frequenza e ampiezza dopo il decodificatore darebbe falsi allarmi sul c
 
 ## Come si usa
 
-1. Su **entrambe** le schede attiva la prova in uno di questi tre modi: **tre pressioni veloci del PTT** (due bip acuti e avviso "PROVA ATTIVA"; altre tre la spengono con un bip grave), `CFG TEST ON` dalla seriale, oppure il pulsante "Attiva la prova" nella [pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/). Sull'OLED a riposo compare "PROVA ON".
+1. Su **entrambe** le schede attiva la prova in uno di questi tre modi: **tre pressioni veloci del PTT** (due bip acuti e avviso "PROVA ATTIVA"; altre tre la spengono con un bip grave), `CFG TEST ON` dalla seriale, oppure il pulsante "Attiva la prova" nella [pagina web](https://iu5hju.github.io/VoLoRa/). Sull'OLED a riposo compare "PROVA ON".
    La prova **non è salvata**: all'accensione è sempre spenta, così nessuna scheda resta in prova per errore.
 2. Premi il PTT su una scheda (serve un nominativo vero: con N0CALL il PTT è bloccato). Dura 12 s, o meno se rilasci prima.
 3. Sul ricevitore compare la schermata "PROVA 99%" per 15 s, con la riga sulla seriale:

@@ -1,7 +1,7 @@
 # Verifica dell'hardware audio con una sola scheda
 
 Per chi ha montato microfono (INMP441), amplificatore (MAX98357A) e altoparlante e vuole sapere se il montaggio è a posto, **senza strumenti e con una sola scheda**.
-Si fa dalla [pagina di configurazione](https://iu5hju.github.io/LoRa-Codec-2-RTX/) (sezione "3. Verifica dell'hardware audio"), con Chrome o Edge e il cavo USB. Gli stessi comandi sono sulla seriale (`CFG TEST AUDIO`, `CFG MIC MEASURE`).
+Si fa dalla [pagina di configurazione](https://iu5hju.github.io/VoLoRa/) (sezione "3. Verifica dell'hardware audio"), con Chrome o Edge e il cavo USB. Gli stessi comandi sono sulla seriale (`CFG TEST AUDIO`, `CFG MIC MEASURE`).
 
 **Prima:** antenna collegata, microSD tolta, collegamenti secondo [pinout.md](pinout.md) e [audio.md](audio.md). Installa il firmware e collega la scheda (passo 2 della pagina).
 

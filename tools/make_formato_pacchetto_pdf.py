@@ -285,7 +285,7 @@ s.append(P("<b>Nessun indirizzamento</b> (broadcast puro), <b>nessun ACK</b> e n
            "e nessun controllo di flusso oltre alla pausa tra pacchetti. Un frame perso viene oggi riprodotto come silenzio.", base))
 
 s.append(P("6. Riferimenti", h2))
-s.append(P("Progetto: https://github.com/IU5HJU/LoRa-Codec-2-RTX - Pagina di installazione: https://iu5hju.github.io/LoRa-Codec-2-RTX/ - "
+s.append(P("Progetto: https://github.com/IU5HJU/VoLoRa - Pagina di installazione: https://iu5hju.github.io/VoLoRa/ - "
            "Descrizione completa: <font face='Courier'>docs/protocollo.md</font>. Il decodificatore di riferimento per catture con un SDR è <font face='Courier'>tools/lcr_decode.cpp</font>. "
            "Licenza GPL-3.0.", base))
 

@@ -95,10 +95,10 @@
         <li><strong>Beta</strong> (<em>v0.1.0-beta.1</em>) e <strong>candidata al rilascio</strong> (<em>rc</em>): funzionano, ma sono ancora in prova sul campo.</li>
         <li><strong>Sviluppo</strong> (<em>main-GG/MM/AAAA</em>): l'ultima modifica del progetto, più recente ma meno provata e diversa a ogni pubblicazione. Per chi vuole le novità.</li>
       </ul>
-      <p id="relnotes" hidden>Cosa c'è in questa versione: <a id="relnoteslink" href="https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases">note di rilascio</a>.</p>
+      <p id="relnotes" hidden>Cosa c'è in questa versione: <a id="relnoteslink" href="https://github.com/IU5HJU/VoLoRa/releases">note di rilascio</a>.</p>
       <details class="falsi">
         <summary>Per chi preferisce la riga di comando (esptool)</summary>
-        <p>Scarica il file <code>firmware-…-web_factory.bin</code> della tua scheda (T3 o T-Beam) dalla <a href="https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases">pagina delle versioni su GitHub</a> e scrivilo con <code>esptool.py --chip esp32 write_flash 0x0 file.bin</code>. Le impostazioni salvate nella scheda restano.</p>
+        <p>Scarica il file <code>firmware-…-web_factory.bin</code> della tua scheda (T3 o T-Beam) dalla <a href="https://github.com/IU5HJU/VoLoRa/releases">pagina delle versioni su GitHub</a> e scrivilo con <code>esptool.py --chip esp32 write_flash 0x0 file.bin</code>. Le impostazioni salvate nella scheda restano.</p>
       </details>
     </div>
     <esp-web-install-button id="installer" manifest="firmware/t3/manifest.json">
@@ -249,7 +249,7 @@
   </section>
 
   <footer>
-    Codice sorgente e licenza GPL-3.0: <a id="src" href="https://github.com/IU5HJU/LoRa-Codec-2-RTX">github.com/IU5HJU/LoRa-Codec-2-RTX</a>.
+    Codice sorgente e licenza GPL-3.0: <a id="src" href="https://github.com/IU5HJU/VoLoRa">github.com/IU5HJU/VoLoRa</a>.
     La pagina funziona solo in locale nel tuo browser: nessun dato viene inviato altrove.
     Il progetto è libero; se ti fa piacere puoi <a href="https://www.paypal.me/maccalampo" target="_blank" rel="noopener">sostenerlo con PayPal.Me</a> (volontario).
   </footer>
@@ -298,8 +298,8 @@
     $('ver').textContent = 'Versione: ' + e.version + (e.commit ? ' (' + String(e.commit).slice(0, 7) + ')' : '') + (e.date ? ', pubblicata il ' + e.date.split('-').reverse().join('/') : '') + versionKind(e.version);
     const rel = e.kind !== 'dev';
     $('relnotes').hidden = !rel;
-    if (rel) $('relnoteslink').href = 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases/tag/' + e.version;
-    if (e.commit && /^[0-9a-f]{7,40}$/.test(e.commit)) $('src').href = 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/tree/' + e.commit;
+    if (rel) $('relnoteslink').href = 'https://github.com/IU5HJU/VoLoRa/releases/tag/' + e.version;
+    if (e.commit && /^[0-9a-f]{7,40}$/.test(e.commit)) $('src').href = 'https://github.com/IU5HJU/VoLoRa/tree/' + e.commit;
     if (typeof refreshFwInfo === 'function') refreshFwInfo();   // il confronto con la scheda segue la versione scelta
   }
   fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(v => {
@@ -307,7 +307,7 @@
       published = v;
       $('ver').textContent = 'Versione: ' + v.version + ' (' + String(v.commit).slice(0, 7) + ')' + versionKind(v.version);
     }
-    if (/^[0-9a-f]{7,40}$/.test(v.commit)) $('src').href = 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/tree/' + v.commit;
+    if (/^[0-9a-f]{7,40}$/.test(v.commit)) $('src').href = 'https://github.com/IU5HJU/VoLoRa/tree/' + v.commit;
   }).catch(() => { if (!versions) $('ver').textContent = 'Versione: non disponibile'; });
   // Menu delle versioni: se versions.json manca (pagina pubblicata prima del menu) resta il comportamento di prima.
   fetch('versions.json', { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('assente'); return r.json(); }).then(v => {

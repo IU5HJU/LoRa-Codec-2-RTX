@@ -29,7 +29,7 @@ int16 @ 8 kHz, 320 campioni  ->  Codec2 1200 bps
 ```
 
 Con il PTT premuto la seriale stampa due volte al secondo (`pio device monitor`, 115200 baud, oppure la finestra nera della
-[pagina web](https://iu5hju.github.io/LoRa-Codec-2-RTX/)):
+[pagina web](https://iu5hju.github.io/VoLoRa/)):
 
 ```
 [mic] livello -30 dBFS, picco -25 dBFS, offset 3.6%, AGC in -61 dBFS, guadagno 12 dB, errori 0
@@ -93,7 +93,7 @@ Servono la scheda, il cavo USB e un monitor seriale; la radio non trasmette (nom
 2. **Silenzio.** Scheda ferma su un piano, senza toccare i cavi, PTT premuto 10 secondi. Annotare il valore tipico di **AGC in** (non il livello grezzo).
 3. **Voce.** Frasi normali alla distanza d'uso reale (per esempio 5, 15, 30 cm). Annotare **AGC in** e il **picco** grezzo: non deve avvicinarsi a 0 dBFS.
 4. **Scelta.**
-   - **Fondo:** si misura dalla [pagina di configurazione](https://iu5hju.github.io/LoRa-Codec-2-RTX/) con "Misura il fondo" (un conto alla rovescia di 3 secondi per lasciare il mouse e la tastiera, poi 3 secondi di silenzio) e si corregge a mano con − e +. La soglia dell'AGC è il fondo più 6 dB e deve stare sotto la voce più debole che deve passare: con meno di 15 dB tra fondo e voce, il microfono o il cablaggio sono troppo rumorosi.
+   - **Fondo:** si misura dalla [pagina di configurazione](https://iu5hju.github.io/VoLoRa/) con "Misura il fondo" (un conto alla rovescia di 3 secondi per lasciare il mouse e la tastiera, poi 3 secondi di silenzio) e si corregge a mano con − e +. La soglia dell'AGC è il fondo più 6 dB e deve stare sotto la voce più debole che deve passare: con meno di 15 dB tra fondo e voce, il microfono o il cablaggio sono troppo rumorosi.
    - `LCR_MIC_AGC_MAX_GAIN_DB`: quanto serve a portare la voce più debole a -24 dBFS, quindi `-24 - (AGC in della voce debole)`, con un po' di margine.
 5. **Verifica.** Ripetere 2 e 3: in silenzio il guadagno deve scendere verso 12 dB e `AGC in` restare sotto la soglia; parlando deve salire sopra e il guadagno stabilizzarsi.
 6. **Ascolto.** Con amplificatore e altoparlante: fruscio nelle pause, sillabe tagliate all'inizio dopo una pausa lunga (il guadagno risale in circa mezzo secondo), pompaggio.

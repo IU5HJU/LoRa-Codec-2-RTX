@@ -6,7 +6,11 @@
 #   3. si confronta con tutti i modi e si sceglie cosa ascoltare, quante volte si vuole
 #
 # Servono arecord (sudo apt install alsa-utils) e ffplay (sudo apt install ffmpeg). Le registrazioni restano in ~/confronto-codec/.
-REPO=${REPO:-$HOME/LoRa-Codec-2-RTX}
+# Cartella del clone: ~/VoLoRa (nome attuale) oppure ~/LoRa-Codec-2-RTX (nome di prima, se lo hai clonato allora)
+if [ -z "$REPO" ]; then
+  for d in "$HOME/VoLoRa" "$HOME/LoRa-Codec-2-RTX"; do [ -d "$d" ] && REPO="$d" && break; done
+  REPO=${REPO:-$HOME/VoLoRa}
+fi
 OUT=${OUT:-$HOME/confronto-codec}
 fine() { echo; read -rp "Premi Invio per chiudere"; exit "${1:-0}"; }
 

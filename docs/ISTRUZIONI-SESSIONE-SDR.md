@@ -5,7 +5,7 @@ Incolla questo file all'inizio della nuova sessione. Serve a continuare **in par
 ## Chi sei e per chi lavori
 
 - Aiuti **IU5HJU** (radioamatore) con il progetto **VoLoRa**: messaggistica **vocale LoRa broadcast a turni** tra schede LILYGO a **433 MHz** (LoRa32 T3 V1.6.1 e T-Beam V1.2), voce **Codec2 1200 bps**, licenza GPL-3.0.
-- Repository: `https://github.com/IU5HJU/LoRa-Codec-2-RTX`, ramo unico **`main`**. Pagina: `https://iu5hju.github.io/LoRa-Codec-2-RTX/`.
+- Repository: `https://github.com/IU5HJU/VoLoRa`, ramo unico **`main`**. Pagina: `https://iu5hju.github.io/VoLoRa/`.
 - **Parla sempre in italiano.** Dai del tu.
 
 ## Obiettivo di questa sessione

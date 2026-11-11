@@ -183,7 +183,7 @@ async function scenario(name, fn, opts = {}) {
     const ver = await p.textContent('#ver');
     check('riga della versione con la data in formato europeo', ver.includes('v0.1.0-beta.1') && ver.includes('08/11/2026') && ver.includes('BETA'), ver);
     check('spiegazione della fase', (await p.textContent('#fwverhint')).includes('Beta'), await p.textContent('#fwverhint'));
-    check('collegamento alle note di rilascio', !(await p.isHidden('#relnotes')) && (await p.getAttribute('#relnoteslink', 'href')) === 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases/tag/v0.1.0-beta.1');
+    check('collegamento alle note di rilascio', !(await p.isHidden('#relnotes')) && (await p.getAttribute('#relnoteslink', 'href')) === 'https://github.com/IU5HJU/VoLoRa/releases/tag/v0.1.0-beta.1');
     check('dice di lasciare quella proposta', (await p.textContent('#verhelp')).includes('lascia quella proposta'));
   });
   await scenario('menu delle versioni: cambiare versione o scheda aggiorna il manifest', async (p) => {
@@ -531,7 +531,7 @@ async function scenario(name, fn, opts = {}) {
     check('spiega stabile, beta e sviluppo', t.includes('Quale versione scelgo?') && t.includes('Stabile') && t.includes('Beta') && t.includes('Sviluppo') && t.includes('main-GG/MM/AAAA'), t);
     check('dice di lasciare quella proposta', t.includes('lascia quella proposta'), t);
     check('per chi usa la riga di comando: esptool', t.includes('web_factory.bin') && t.includes('write_flash 0x0'), t);
-    check('rimanda alla pagina delle versioni', (await p.getAttribute('#verhelp a', 'href')) === 'https://github.com/IU5HJU/LoRa-Codec-2-RTX/releases');
+    check('rimanda alla pagina delle versioni', (await p.getAttribute('#verhelp a', 'href')) === 'https://github.com/IU5HJU/VoLoRa/releases');
   });
 
   await scenario('prova di collegamento: attiva e disattiva', async (p) => {
