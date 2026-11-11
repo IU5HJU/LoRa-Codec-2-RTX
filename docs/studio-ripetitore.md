@@ -162,7 +162,7 @@ Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa du
 
 1. **Durata massima: 15 s di voce** per messaggio ripetuto (**dall'11/11/2026 è anche il TOT del profilo Messaggio**: quello che si registra è sempre ripetibile) (circa 139 s in aria a SF12/125 kHz). Il pacchetto `START` dichiara già il numero totale di pacchetti (`TOTAL`): la TX sa subito se un messaggio supera il limite e, in quel caso, **non lo memorizza né lo ripete** (nessuna ripetizione parziale).
 2. **Priorità alla voce.** La TX **memorizza** i messaggi ricevuti e li **ritrasmette appena il ripetitore è libero**. La voce in arrivo dalla scheda RX ha sempre la precedenza.
-3. **Frequenza:** i messaggi usano la **frequenza di trasmissione del ripetitore** (la frequenza di uscita), con il profilo radio del Messaggio (SF12, banda 125 kHz). Interpretazione da confermare: le stazioni in Messaggio trasmettono e ascoltano sull'uscita del ripetitore (in simplex), e la TX, quando è libera, ascolta lì; la voce in tempo reale ha invece ingresso e uscita separati.
+3. **Frequenza:** i messaggi usano la **frequenza di trasmissione del ripetitore** (la frequenza di uscita), con il profilo radio del Messaggio (SF12, banda 125 kHz). **Confermato il 11/11/2026**: le stazioni in Messaggio trasmettono e ascoltano sull'uscita del ripetitore (in simplex), e la TX, quando è libera, ascolta lì; la voce in tempo reale ha invece ingresso e uscita separati.
 4. **Annuncio di "occupato" non bloccante** (modo nuovo, per esempio il 6): prima di ritrasmettere un messaggio la TX manda, con i parametri dello Standard, un pacchetto con il **tempo di blocco** (ricavato dal messaggio stesso: ha tutti i pacchetti memorizzati, quindi il tempo in aria è esatto). Le radio **lo mostrano sul display ma non rifiutano il PTT**: una stazione può **forzare la voce** e la TX interrompe il messaggio e **ritenta appena possibile**.
 
 **Cosa regge:** la TX non ritrasmette mai insieme voce e messaggio, il blocco è solo informativo, e la voce non aspetta mai un messaggio. La memorizzazione e la ripetizione usano la logica della parità già provata.
@@ -180,4 +180,26 @@ Il protocollo ha ora il **modo 7** (testo, un solo pacchetto START+END, [protoco
 
 ### Archivio dei messaggi scritto (11/11/2026)
 
-La logica della TX per i messaggi è scritta e **provata sul PC** (`lib/voicecore/message_store.*`, `tests/test_message_store.cpp`, 181 controlli): riceve un messaggio intero (un solo messaggio alla volta, le altre sessioni si ignorano), **ricostruisce i pacchetti persi con la parità** (anche lo START, con nominativo e totale presi dall'END), rifiuta subito i messaggi oltre i **15 s** (42 pacchetti), **rigenera la parità**, tiene fino a **3 messaggi** e scarta quelli più vecchi di **30 minuti**, e restituisce i pacchetti da ritrasmettere con una **sessione nuova** e il flag `RELAYED`; calcola il **tempo in aria esatto** (circa 139 s per 15 s di voce) per l'annuncio di occupato. **Non c'è ancora:** il collegamento alla radio (cambio dei parametri SF/banda/frequenza a runtime e ascolto SF12 quando la TX è libera), la priorità della voce con l'interruzione, l'annuncio di occupato (modo 6) e il suo riconoscimento nelle stazioni. L'oggetto occupa circa 45 kB: nel firmware va creato nella memoria dinamica.
+La logica della TX per i messaggi è scritta e **provata sul PC** (`lib/voicecore/message_store.*`, `tests/test_message_store.cpp`, 181 controlli): riceve un messaggio intero (un solo messaggio alla volta, le altre sessioni si ignorano), **ricostruisce i pacchetti persi con la parità** (anche lo START, con nominativo e totale presi dall'END), rifiuta subito i messaggi oltre i **15 s** (42 pacchetti), **rigenera la parità**, tiene fino a **3 messaggi** e scarta quelli più vecchi di **30 minuti**, e restituisce i pacchetti da ritrasmettere con una **sessione nuova** e il flag `RELAYED`; calcola il **tempo in aria esatto** (circa 139 s per 15 s di voce) per l'annuncio di occupato. L'oggetto occupa circa 45 kB: nel firmware va creato nella memoria dinamica.
+
+### Il regista della TX (11/11/2026)
+
+La parte radio della TX per i messaggi è scritta e **provata sul PC** (`lib/voicecore/tx_scheduler.*`, `tests/test_tx_scheduler.cpp`, 49 controlli) e collegata nel ruolo TX di `src/repeater_node.cpp`; **non è mai stata provata sulla scheda**. La radio ha tre stati sulla frequenza di uscita:
+
+| Stato | Parametri radio | Cosa fa |
+|---|---|---|
+| Voce | quelli del profilo del ripetitore | ritrasmette i pacchetti che arrivano dalla RX |
+| Ascolto | Messaggio (SF12, 125 kHz) | riceve i messaggi nell'archivio |
+| Ritrasmissione | Messaggio | trasmette il messaggio più vecchio (sessione nuova, flag `RELAYED`) |
+
+Valori scelti il 11/11/2026 (costanti in `tx_scheduler.h`, da tarare con le prove):
+- **Mantenimento 3 s**: dopo l'ultimo pacchetto di voce la radio resta sui parametri della voce, poi passa all'ascolto messaggi (per non cambiare parametri a ogni pausa tra pacchetti).
+- **Coda 20 s**: un messaggio si ritrasmette solo dopo 20 s di silenzio vocale sull'uscita (non si entra nelle pause di un QSO).
+- **Attesa 5 s** dopo l'ultimo pacchetto ricevuto in ascolto (il mittente può avere ancora la parità finale) e tra un messaggio e il successivo.
+- **CAD prima di ogni pacchetto** del messaggio; canale occupato per più di 5 s: la ritrasmissione si interrompe e ripartirà dall'inizio con un'altra sessione.
+- **Voce prioritaria**: il messaggio si ferma tra un pacchetto e l'altro. Un pacchetto in corso non si interrompe (a SF12 circa 3,4 s): **la voce può partire con questo ritardo** (accettato). Il messaggio resta nell'archivio e riparte da capo.
+- Se la radio non accetta il cambio di parametri si riprova dopo 1 s (la voce non parte finché la radio non è ai suoi parametri).
+- Con il profilo del ripetitore già **Messaggio** il regista resta sulla voce e non usa l'archivio.
+- La seriale della TX ha un buffer di **2 kB** (a SF12 un pacchetto blocca la TX 3,4 s e dalla RX arrivano circa 700 byte di voce).
+
+**Non c'è ancora:** la prova sul banco (cambio dei parametri e CAD sulla radio vera), l'annuncio di occupato (modo 6) e il suo riconoscimento nelle stazioni.

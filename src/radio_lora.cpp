@@ -67,6 +67,12 @@ bool RadioLora::setMeshcom(bool on) {
   return ok;
 }
 
+bool RadioLora::setParams(const lcr::Profile& prof, uint32_t freqKhz) {
+  const bool ok = applyParams(prof, static_cast<float>(freqKhz) / 1000.0f);
+  startReceive();
+  return ok;
+}
+
 void RadioLora::startReceive() {
   rxFlag_ = false;
   const int state = radio_->startReceive();

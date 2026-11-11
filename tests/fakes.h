@@ -42,6 +42,19 @@ class Radio : public lcr::IRadio {
     meshcomSwitches++;
     return !failMeshcom;
   }
+  bool setParams(const lcr::Profile& prof, uint32_t freqKhz) override {
+    if (failParams) return false;
+    params.push_back({prof.id, freqKhz});
+    curId = prof.id;
+    return true;
+  }
+  struct ParamChange {
+    uint8_t id;
+    uint32_t khz;
+  };
+  std::vector<ParamChange> params;
+  int curId = -1;  // profilo con cui la radio e' configurata (-1 = mai cambiato)
+  bool failParams = false;
   bool meshcom = false;
   int meshcomSwitches = 0;
   bool failMeshcom = false;

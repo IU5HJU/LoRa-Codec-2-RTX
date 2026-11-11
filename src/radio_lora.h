@@ -21,6 +21,8 @@ class RadioLora : public lcr::IRadio {
   // Escursione sulla rete di testo: parametri MeshCom (profile.h, meshcomProfile) e frequenza delle impostazioni (freqMcKhz), oppure
   // di nuovo quelli del profilo in uso. Se non riesce riporta la radio al profilo in uso e ritorna false.
   bool setMeshcom(bool on) override;
+  // Parametri di un profilo qualsiasi alla frequenza data (il ripetitore alterna voce e messaggi), poi di nuovo in ascolto.
+  bool setParams(const lcr::Profile& prof, uint32_t freqKhz) override;
 
   float lastRssi() const { return lastRssi_; }
   bool hasSnr() const override { return true; }

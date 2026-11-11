@@ -239,4 +239,6 @@ Sulla T3 i pin 14 e 13 sono sullo slot microSD: **toglierla**. Il display di cia
 
 Sulla RX **non va montato il microfono** (GPIO34/36 sono i pin dei suoi dati) e sulla T3 la microSD va tolta (GPIO2 è il MISO dello slot); sulla T-Beam il GPS deve restare spento. **Da verificare sul banco**: la scelta dei pin è teorica, i pin sono nei file `board_pins_*.h` (`kLinkRxMon`, `kLinkTxMon`) se vanno cambiati.
 
-**Cosa non c'è ancora:** comandi del sysop (modo 5), identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).
+**Messaggi (11/11/2026):** la scheda TX ascolta il profilo Messaggio sulla frequenza di uscita quando è libera, tiene fino a 3 messaggi (massimo 15 s di voce) e li ritrasmette dopo 20 s di silenzio vocale, con la voce sempre prioritaria; vedi [studio-ripetitore.md](studio-ripetitore.md) ("Il regista della TX"). Logica provata sul PC, **non ancora sulla scheda**.
+
+**Cosa non c'è ancora:** annuncio di "occupato" (modo 6), comandi del sysop (modo 5), identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).

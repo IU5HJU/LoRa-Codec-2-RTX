@@ -1,6 +1,7 @@
 #include "repeater_node.h"
 
 #include <Arduino.h>
+#include <esp_system.h>
 
 #include "board_pins.h"
 #include "packet.h"
@@ -9,6 +10,8 @@
 #include "repeater.h"
 #include "repeater_link.h"
 #include "rx_monitor.h"
+#include "message_store.h"
+#include "tx_scheduler.h"
 #include "button_gesture.h"
 
 namespace {
@@ -183,14 +186,20 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
   const lcr::Settings out = settings.withProfileFreqKhz(settings.outFreqKhz());
   RadioLora radio;
   if (!radio.begin(out)) stopWithError(ui, "radio", radio.lastError());
+  // Un pacchetto del Messaggio a SF12 dura circa 3,4 s e la trasmissione e' bloccante: intanto la voce dalla RX si accumula
+  // (circa 700 byte), piu' dei 256 di base. Il buffer va impostato prima di begin().
+  Serial2.setRxBufferSize(2048);
   Serial2.begin(kLinkBaud, SERIAL_8N1, pins::kLinkRx, pins::kLinkTx);
   const lcr::Profile& prof = lcr::profileFor(settings.profile);
   lcr::LinkParser parser;
-  lcr::TxQueue queue;
+  lcr::MessageStore* store = new lcr::MessageStore;
+  lcr::TxScheduler sched(radio, *store, prof, lcr::profileFor(lcr::kProfileMessage), out.profileFreqKhz(), static_cast<uint16_t>(esp_random()));
+  sched.setMessagesEnabled(!prof.message);  // se la voce e' gia' il profilo Messaggio non c'e' nulla da alternare
+  const lcr::TxQueue& queue = sched.queue();
   UsbConsole usb(handler);
   const bool mayTransmit = !lcr::isPlaceholderCallsign(settings.callsign);  // come le altre schede: con N0CALL non si trasmette
 
-  uint32_t transmitted = 0, rxCount = 0;
+  uint32_t rxCount = 0;
   uint32_t lastHbMs = 0, lastStatusMs = 0, lastDispMs = 0;
   Serial.printf("[ripetitore] TX: uscita %.3f MHz, profilo %s, nominativo %s%s\n", static_cast<double>(out.freqMhz()), prof.name, settings.callsign,
                 mayTransmit ? "" : " (N0CALL: non trasmette)");
@@ -203,23 +212,15 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       if (!parser.feed(static_cast<uint8_t>(Serial2.read()))) continue;
       const lcr::LinkParser::Frame& f = parser.frame();
       if (f.type == lcr::kLinkPacket) {
-        queue.push(f.data, f.len);  // se la coda e' piena il pacchetto si perde e si conta
+        sched.onLinkPacket(f.data, f.len);  // se la coda e' piena il pacchetto si perde e si conta
       } else if (f.type == lcr::kLinkHeartbeat && f.len >= 4) {
         rxCount = (static_cast<uint32_t>(f.data[0]) << 24) | (static_cast<uint32_t>(f.data[1]) << 16) | (static_cast<uint32_t>(f.data[2]) << 8) | f.data[3];
         lastHbMs = now;
       }
     }
 
-    // 2. trasmissione di un pacchetto, se la pausa minima e' trascorsa
-    uint8_t pkt[lcr::kMaxWireBytes];
-    size_t len = 0;
-    if (mayTransmit && queue.next(now, pkt, sizeof(pkt), len)) {
-      radio.send(pkt, len);  // bloccante: dura il tempo in aria del pacchetto
-      queue.sent(millis());
-      transmitted++;
-    } else if (!mayTransmit && queue.next(now, pkt, sizeof(pkt), len)) {
-      queue.sent(now);  // senza nominativo si scarta tutto
-    }
+    // 2. il regista: voce, ascolto dei messaggi, ritrasmissione (al piu' un pacchetto, bloccante: dura il tempo in aria)
+    sched.tick(now, mayTransmit);
 
     // 3. stato verso la RX, una volta al secondo
     if (now - lastStatusMs >= kHeartbeatMs) {
@@ -235,10 +236,12 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       char l1[24], l2[24], l3[24], l4[24], l5[24];
       snprintf(l1, sizeof(l1), "RIPETITORE  TX");
       snprintf(l2, sizeof(l2), "Out %.3f MHz %s", static_cast<double>(out.freqMhz()), prof.code);
-      snprintf(l3, sizeof(l3), "Trasm %lu  Coda %u", static_cast<unsigned long>(transmitted), static_cast<unsigned>(queue.size()));
+      snprintf(l3, sizeof(l3), "Voce %lu  Coda %u", static_cast<unsigned long>(sched.stats().voiceSent), static_cast<unsigned>(queue.size()));
       snprintf(l4, sizeof(l4), "Persi %lu  da RX %lu", static_cast<unsigned long>(queue.dropped()), static_cast<unsigned long>(rxCount));
       const bool linkOk = lastHbMs != 0 && now - lastHbMs < kLinkDeadMs;
-      snprintf(l5, sizeof(l5), mayTransmit ? "RX %s" : "N0CALL: non trasmette", linkOk ? "ok" : "NON RISPONDE");
+      if (!mayTransmit) snprintf(l5, sizeof(l5), "N0CALL: non trasmette");
+      else snprintf(l5, sizeof(l5), "RX %s %s M%u/%lu", linkOk ? "ok" : "NO", sched.state() == lcr::TxScheduler::State::Voice ? "voce" : sched.state() == lcr::TxScheduler::State::Listen ? "ascolto" : "rilancio",
+                    static_cast<unsigned>(store->readyCount()), static_cast<unsigned long>(sched.stats().relayed));
       ui.showLines(l1, l2, l3, l4, l5);
     }
 

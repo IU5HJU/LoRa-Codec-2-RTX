@@ -7,6 +7,7 @@
 
 #include "link_test.h"
 #include "position.h"
+#include "profile.h"
 
 namespace lcr {
 
@@ -23,6 +24,13 @@ class IRadio {
   // sync word, preambolo), false la riporta a quelli del profilo in uso. Ritorna false se non riesce (la radio resta com'era).
   virtual bool setMeshcom(bool on) {
     (void)on;
+    return true;
+  }
+  // Porta la radio ai parametri di un profilo (frequenza in kHz, SF, banda, CR, sync word, preambolo) e la rimette in ascolto.
+  // Serve al ripetitore, che alterna voce e messaggi sulla stessa frequenza. Ritorna false se non riesce.
+  virtual bool setParams(const Profile& prof, uint32_t freqKhz) {
+    (void)prof;
+    (void)freqKhz;
     return true;
   }
   // Non bloccante. Ritorna i byte copiati in buf, 0 se non c'e' nulla.
