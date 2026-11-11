@@ -76,12 +76,12 @@ AudioIo::AudioIo() : speaker_(*this), front_(frontConfig()), back_(backConfig())
   memset(spkPcm_, 0, sizeof(spkPcm_));
 }
 
-bool AudioIo::begin() {
+bool AudioIo::begin(bool speakerOnly) {
   pinMode(pins::kAmpShutdown, OUTPUT);
   digitalWrite(pins::kAmpShutdown, LOW);  // amplificatore spento finche' non serve
 
   i2s_config_t cfg = {};
-  cfg.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_RX);
+  cfg.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_TX | (speakerOnly ? 0 : I2S_MODE_RX));
   cfg.sample_rate = kSampleRate;
   cfg.bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT;
   cfg.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
@@ -99,11 +99,12 @@ bool AudioIo::begin() {
   pin.bck_io_num = pins::kI2sBclk;
   pin.ws_io_num = pins::kI2sWs;
   pin.data_out_num = pins::kAmpData;
-  pin.data_in_num = pins::kMicData;
+  pin.data_in_num = speakerOnly ? I2S_PIN_NO_CHANGE : pins::kMicData;
   if (i2s_set_pin(kPort, &pin) != ESP_OK) return false;
   i2s_zero_dma_buffer(kPort);
 
   setVolumeStep(volStep_);
+  if (speakerOnly) return true;  // nessun microfono: niente task di cattura
   return xTaskCreatePinnedToCore(captureTask, "mic", 8192, this, 3, nullptr, 0) == pdPASS;
 }
 

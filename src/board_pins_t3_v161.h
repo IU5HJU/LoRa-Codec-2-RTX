@@ -40,6 +40,11 @@ constexpr int kAmpShutdown = 25; // MAX98357A SD (alto = acceso). Condiviso col 
 // Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
 constexpr int kLinkTx = kI2sBclk;
 constexpr int kLinkRx = kI2sWs;
+// Scheda RX con altoparlante di monitor (CFG SET MONITOR ON): l'I2S occupa i pin 14 e 13, quindi la seriale verso la TX passa
+// da altri due: RX su GPIO34 (il pin dati del microfono, solo ingresso: qui senza microfono) e TX su GPIO2 (MISO dello slot
+// microSD: senza scheda inserita). Collegare TX scheda TX (14) -> 34 della RX e 2 della RX -> 13 della TX. DA VERIFICARE sul banco.
+constexpr int kLinkRxMon = kMicData;
+constexpr int kLinkTxMon = kSdMiso;
 
 // --- PTT: pulsante esterno tra GPIO0 e massa (la scheda ha solo RST) ---
 constexpr int kPtt = 0;

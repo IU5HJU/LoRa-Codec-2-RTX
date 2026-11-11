@@ -136,11 +136,47 @@ static void testChain() {
   CHECK(lost == 0);
 }
 
+static void testText() {
+  Repeater r;
+  Packet t;
+  t.mode = kModeText;
+  t.session = 0x0777;
+  t.flags = kFlagStart | kFlagEnd | kFlagCallsign;
+  strcpy(t.callsign, "IU5HJU");
+  memcpy(t.payload, "Arrivo tra 10 minuti", 20);
+  t.payloadLen = 20;
+  Packet out;
+  // di base il testo non si ripete (maschera: solo il Codec2 1200)
+  CHECK(r.onPacket(t, 1000, out) == Repeater::Verdict::ModeNotRepeated);
+  r.setModeMask(static_cast<uint16_t>((1u << kModeCodec2_1200) | (1u << kModeText)));
+  CHECK(r.onPacket(t, 1100, out) == Repeater::Verdict::Forward);
+  CHECK(out.flags == (t.flags | kFlagRelayed) && out.payloadLen == 20 && strcmp(out.callsign, "IU5HJU") == 0);
+  // il pacchetto ripetuto e' un testo valido sul cavo e si legge uguale
+  uint8_t wire[kMaxWireBytes];
+  const size_t n = encodePacket(out, wire, sizeof(wire));
+  Packet back;
+  CHECK(n > 0 && decodePacket(wire, n, back) && back.mode == kModeText && memcmp(back.payload, "Arrivo tra 10 minuti", 20) == 0);
+  // la seconda copia (stessa sessione) non si ripete, un testo gia' ripetuto nemmeno
+  CHECK(r.onPacket(t, 2100, out) == Repeater::Verdict::Duplicate);
+  CHECK(r.onPacket(back, 2200, out) == Repeater::Verdict::AlreadyRelayed);
+
+  // un testo in mezzo a un turno vocale non ne cambia la durata
+  Repeater v;
+  v.setModeMask(static_cast<uint16_t>((1u << kModeCodec2_1200) | (1u << kModeText)));
+  const auto turn = makeTurn(0x2222, 60);
+  CHECK(v.onPacket(turn[0], 0, out) == Repeater::Verdict::Forward);
+  Packet t2 = t;
+  t2.session = 0x0888;
+  CHECK(v.onPacket(t2, 20000, out) == Repeater::Verdict::Forward);
+  CHECK(v.onPacket(turn[1], 40000, out) == Repeater::Verdict::SessionTooLong);  // sempre 40 s dall'inizio della voce
+}
+
 int main() {
   testBasic();
   testLoopAndDuplicates();
   testModeFilter();
   testSessionLimit();
+  testText();
   testChain();
   TEST_MAIN_END();
 }

@@ -176,7 +176,7 @@ Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa du
 
 ### Messaggi di testo (11/11/2026)
 
-Il protocollo ha ora il **modo 7** (testo, un solo pacchetto START+END, [protocollo.md](protocollo.md)). La classe `Repeater` ripete solo i modi nella sua maschera (`setModeMask`, oggi solo il modo del profilo): per ripetere anche il testo basta aggiungere il bit del modo 7, ma la TX deve poi trasmetterlo senza passare dall'archivio dei messaggi vocali. **Non ancora fatto**: schede e ripetitore sono predisposti, la ripetizione del testo si aggiunge in seguito.
+Il protocollo ha ora il **modo 7** (testo, un solo pacchetto START+END, [protocollo.md](protocollo.md)). La scheda RX ripete ora **anche il testo** (maschera dei modi: quello del profilo più il 7; provato sul PC in `tests/test_repeater.cpp`): il pacchetto esce con il flag `RELAYED`, la seconda copia del mittente non si ripete e il testo non entra nella durata del turno vocale. La TX lo trasmette come ogni altro pacchetto della coda. Quando la TX farà anche l'archivio dei messaggi vocali, il testo dovrà restare fuori da quell'archivio.
 
 ### Archivio dei messaggi scritto (11/11/2026)
 

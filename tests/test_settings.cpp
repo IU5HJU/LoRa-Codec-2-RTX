@@ -60,6 +60,16 @@ struct Fixture {
   ConsoleResult run(const char* line) { return con.handleLine(line, reply, sizeof(reply)); }
 };
 
+static void testMonitor() {
+  Fixture f;
+  CHECK(f.run("CFG GET MONITOR") == ConsoleResult::Ok && strcmp(f.reply, "CFG MONITOR=off") == 0);
+  CHECK(f.run("CFG SET MONITOR ON") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK monitor=on") == 0 && f.st.data.rxMonitor);
+  CHECK(f.run("CFG GET MONITOR") == ConsoleResult::Ok && strcmp(f.reply, "CFG MONITOR=on") == 0);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=1"));  // cambia i fili: vale dal riavvio
+  CHECK(f.run("cfg set monitor off") == ConsoleResult::Ok && !f.st.data.rxMonitor);
+  CHECK(f.run("CFG SET MONITOR MAYBE") == ConsoleResult::Error && !f.st.data.rxMonitor);
+}
+
 static void testTexts() {
   Fixture f;
   // di partenza: i cinque testi di esempio, tutti validi
@@ -461,6 +471,7 @@ int main() {
   testVolumeMigration();
   testRepeaterRole();
   testTexts();
+  testMonitor();
   testValidate();
   testLoad();
   testNotCommand();

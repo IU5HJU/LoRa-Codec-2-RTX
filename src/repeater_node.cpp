@@ -8,6 +8,8 @@
 #include "radio_lora.h"
 #include "repeater.h"
 #include "repeater_link.h"
+#include "rx_monitor.h"
+#include "button_gesture.h"
 
 namespace {
 
@@ -47,7 +49,7 @@ class UsbConsole {
 
  private:
   CfgHandler handler_;
-  char line_[96];
+  char line_[224];  // anche CFG SET TEXTn con un testo lungo
   size_t len_ = 0;
   bool tooLong_ = false;
 };
@@ -73,21 +75,27 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
 }
 
 // ---- Scheda RX: ascolta l'ingresso, decide, manda alla TX ----
-[[noreturn]] void runRx(const lcr::Settings& settings, UiNotifier& ui, CfgHandler handler) {
+[[noreturn]] void runRx(const lcr::Settings& settings, UiNotifier& ui, CfgHandler handler, AudioIo* audio, lcr::ICodec* codec) {
   RadioLora radio;
   if (!radio.begin(settings)) stopWithError(ui, "radio", radio.lastError());
-  Serial2.begin(kLinkBaud, SERIAL_8N1, pins::kLinkRx, pins::kLinkTx);
+  // Con il monitor l'I2S occupa i pin della seriale di sempre: la RX usa altri due (board_pins_*.h, kLinkRxMon/kLinkTxMon).
+  const bool monitor = audio != nullptr && codec != nullptr;
+  Serial2.begin(kLinkBaud, SERIAL_8N1, monitor ? pins::kLinkRxMon : pins::kLinkRx, monitor ? pins::kLinkTxMon : pins::kLinkTx);
   const lcr::Profile& prof = lcr::profileFor(settings.profile);
   lcr::Repeater rep;
-  rep.setModeMask(static_cast<uint16_t>(1u << prof.codecMode));  // solo il modo del profilo (di base il 1200)
+  // Il modo del profilo (di base il 1200) e il testo (modo 7: un solo pacchetto START+END, ripetuto come ogni altro)
+  rep.setModeMask(static_cast<uint16_t>((1u << prof.codecMode) | (1u << lcr::kModeText)));
+  lcr::RxMonitor* mon = monitor ? new lcr::RxMonitor(settings.profile, *codec, audio->speaker()) : nullptr;
+  lcr::ButtonGesture volButton(30, 2000);
+  bool volArmed = false;  // un volume gia' premuto all'accensione non conta
   lcr::LinkParser parser;
   UsbConsole usb(handler);
 
   uint32_t received = 0, badPackets = 0, sent = 0, discarded = 0;
   uint8_t txQueue = 0, txDropped = 0;
   uint32_t lastHbMs = 0, lastStatusMs = 0, lastDispMs = 0;
-  Serial.printf("[ripetitore] RX: ingresso %.3f MHz, profilo %s, modo ripetuto %u\n", static_cast<double>(settings.freqMhz()), prof.name,
-                static_cast<unsigned>(prof.codecMode));
+  Serial.printf("[ripetitore] RX: ingresso %.3f MHz, profilo %s, modo ripetuto %u e testo%s\n", static_cast<double>(settings.freqMhz()), prof.name,
+                static_cast<unsigned>(prof.codecMode), monitor ? ", monitor audio acceso" : "");
 
   for (;;) {
     const uint32_t now = millis();
@@ -102,6 +110,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       if (!lcr::decodePacket(buf, n, p)) {
         badPackets++;  // non e' un pacchetto del progetto
       } else {
+        if (mon) mon->onPacket(p, now);  // monitor: la voce arrivata si ascolta (indipendente dalla decisione di ripetere)
         lcr::Packet out;
         const lcr::Repeater::Verdict v = rep.onPacket(p, now, out);
         if (v == lcr::Repeater::Verdict::Forward) {
@@ -114,6 +123,19 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
         } else {
           discarded++;
         }
+      }
+    }
+
+    // 1b. monitor audio (se c'e' l'altoparlante): riproduzione e volume
+    if (mon) {
+      mon->tick(now);
+      audio->loop(now);
+      const bool volRaw = digitalRead(pins::kVolume) == LOW;
+      if (!volRaw) volArmed = true;
+      if (volButton.update(volArmed && volRaw, now) == lcr::ButtonGesture::Event::Short) {
+        const int next = audio->volumeStep() >= lcr::AudioBackEnd::kVolumeSteps ? 1 : audio->volumeStep() + 1;
+        audio->setVolumeStep(next);
+        audio->beep(600, 40);
       }
     }
 
@@ -138,10 +160,12 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
     if (now - lastDispMs >= kDisplayMs) {
       lastDispMs = now;
       char l1[24], l2[24], l3[24], l4[24], l5[24];
-      snprintf(l1, sizeof(l1), "RIPETITORE  RX");
+      if (mon && mon->active()) snprintf(l1, sizeof(l1), "RX %s", mon->callsign());  // si sente: chi sta parlando
+      else snprintf(l1, sizeof(l1), "RIPETITORE  RX");
       snprintf(l2, sizeof(l2), "In %.3f MHz %s", static_cast<double>(settings.freqMhz()), prof.code);
       snprintf(l3, sizeof(l3), "Ric %lu  Rip %lu", static_cast<unsigned long>(received), static_cast<unsigned long>(sent));
-      snprintf(l4, sizeof(l4), "Scarti %lu  Altri %lu", static_cast<unsigned long>(discarded), static_cast<unsigned long>(badPackets));
+      if (mon) snprintf(l4, sizeof(l4), "Scarti %lu  Vol %d/10", static_cast<unsigned long>(discarded), audio->volumeStep());
+      else snprintf(l4, sizeof(l4), "Scarti %lu  Altri %lu", static_cast<unsigned long>(discarded), static_cast<unsigned long>(badPackets));
       const bool linkOk = lastStatusMs != 0 && now - lastStatusMs < kLinkDeadMs;
       snprintf(l5, sizeof(l5), "TX %s coda %u", linkOk ? "ok" : "NON RISPONDE", static_cast<unsigned>(txQueue));
       ui.showLines(l1, l2, l3, l4, l5);
@@ -225,10 +249,11 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
 
 }  // namespace
 
-[[noreturn]] void runRepeaterRole(const lcr::Settings& settings, UiNotifier& ui, std::function<bool(const char*, char*, size_t)> handler) {
+[[noreturn]] void runRepeaterRole(const lcr::Settings& settings, UiNotifier& ui, std::function<bool(const char*, char*, size_t)> handler,
+                                  AudioIo* audio, lcr::ICodec* codec) {
   ui.showMessage("RIPETITORE", settings.role == lcr::kRoleRepeaterRx ? "scheda RX" : "scheda TX");
   Serial.printf("[ripetitore] ruolo %s (antenna collegata?)\n", lcr::roleCode(settings.role));
   delay(1500);
-  if (settings.role == lcr::kRoleRepeaterRx) runRx(settings, ui, handler);
+  if (settings.role == lcr::kRoleRepeaterRx) runRx(settings, ui, handler, audio, codec);
   runTx(settings, ui, handler);
 }

@@ -142,10 +142,23 @@ void setup() {
     WifiConfig::setBootRequest(false);
     runWifiConfigMode();
   }
-  if (settings.role != lcr::kRoleNormal) {  // scheda RX o TX del ripetitore: nessun audio, non ritorna
+  if (settings.role != lcr::kRoleNormal) {  // scheda RX o TX del ripetitore: non ritorna
+    // Scheda RX con l'altoparlante di monitor (CFG SET MONITOR ON): solo uscita audio, per ascoltare la voce che riceve.
+    AudioIo* monAudio = nullptr;
+    lcr::ICodec* monCodec = nullptr;
+    if (settings.role == lcr::kRoleRepeaterRx && settings.rxMonitor) {
+      ui.showMessage("MONITOR", "altoparlante");
+      if (codec.begin(lcr::profileFor(settings.profile).codecMode) && audio.begin(true)) {
+        audio.setVolumeStep(settings.volume);
+        monAudio = &audio;
+        monCodec = &codec;
+      } else {
+        Serial.println("[ripetitore] ERRORE: audio o Codec2 del monitor non partiti: si prosegue senza altoparlante");
+      }
+    }
     runRepeaterRole(settings, ui, [](const char* line, char* reply, size_t cap) {
       return console->handleLine(line, reply, cap) == lcr::ConsoleResult::Reboot;
-    });
+    }, monAudio, monCodec);
   }
   if (!pttUsable) {
     Serial.printf("ATTENZIONE: il pin PTT (GPIO%d) e' instabile (manca il pull-up?): PTT disattivato\n", pins::kPtt);

@@ -203,7 +203,7 @@ Se il telefono dice "nessun Internet" e la pagina non si apre: scegli di **resta
 
 Studio e decisioni: [studio-ripetitore.md](studio-ripetitore.md). **Scritto, non ancora provato sulle schede** (compila solo se Actions è verde; la logica è provata sul PC).
 
-**Il ripetitore** è fatto da **due schede uguali** (T3 o T-Beam, **senza audio**): la scheda **RX** ascolta la frequenza di ingresso e manda i pacchetti da ripetere alla scheda **TX**, che li trasmette sulla frequenza di uscita. Ripete solo il **modo del profilo scelto** (di base lo Standard, Codec2 1200) e aggiunge ai pacchetti il flag `RELAYED`. Ogni scheda ha la **sua antenna**: la separazione fra le due antenne (distanza, filtri, cavità) è a cura dell'operatore.
+**Il ripetitore** è fatto da **due schede uguali** (T3 o T-Beam, **senza audio**; la RX può avere un altoparlante di monitor, vedi sotto): la scheda **RX** ascolta la frequenza di ingresso e manda i pacchetti da ripetere alla scheda **TX**, che li trasmette sulla frequenza di uscita. Ripete il **modo del profilo scelto** (di base lo Standard, Codec2 1200) e i **messaggi di testo** (modo 7, dall'11/11/2026: un pacchetto solo, la seconda copia del mittente non si ripete) e aggiunge ai pacchetti il flag `RELAYED`. Un testo non fa parte del turno vocale in corso e non ne cambia la durata. Ogni scheda ha la **sua antenna**: la separazione fra le due antenne (distanza, filtri, cavità) è a cura dell'operatore.
 
 **Impostazioni** (stesse per le due schede salvo il ruolo, dalla seriale USB; valgono dal riavvio):
 
@@ -225,5 +225,16 @@ CFG REBOOT
 | GND | GND |
 
 Sulla T3 i pin 14 e 13 sono sullo slot microSD: **toglierla**. Il display di ciascuna scheda mostra lo stato (pacchetti ricevuti, ripetuti, scartati, coda della TX, collegamento). La scheda TX trasmette ogni pacchetto della coda con la pausa minima di 80 ms. Per uscire dal ruolo: `CFG SET ROLE OFF` e `CFG REBOOT`.
+
+**Monitor audio sulla scheda RX (11/11/2026):** con un **altoparlante** (amplificatore MAX98357A come sulle schede normali) la scheda RX fa ascoltare la voce che riceve sulla frequenza di ingresso, per sorvegliare il traffico. Si accende con `CFG SET MONITOR ON` (e `CFG REBOOT`; `CFG GET MONITOR` lo legge; di base è spento). Si ascolta solo la voce del modo del profilo (non il testo né le prove), al ritmo normale e con la parità che recupera i pacchetti persi, come una scheda normale; nel profilo Messaggio la voce parte a messaggio concluso. Il monitor non cambia cosa viene ripetuto e non trasmette mai. Volume iniziale: `CFG SET VOLUME`; il pulsante volume (GPIO15) lo alza a scheda accesa. Sul display, a voce in corso, compare "RX" con il nominativo di chi parla.
+
+**Attenzione ai fili:** l'altoparlante usa l'I2S, cioè i pin 14 e 13 che la seriale del ripetitore usa di solito. Con il monitor acceso la scheda RX usa **altri due pin** per la seriale (la TX resta sui pin 14 e 13):
+
+| | T3 V1.6.1 (RX) | T-Beam V1.2 (RX) | Scheda TX |
+|---|---|---|---|
+| ricezione della RX | GPIO34 | GPIO36 | pin 14 (TX) → qui |
+| trasmissione della RX | GPIO2 | GPIO12 | qui → pin 13 (RX) |
+
+Sulla RX **non va montato il microfono** (GPIO34/36 sono i pin dei suoi dati) e sulla T3 la microSD va tolta (GPIO2 è il MISO dello slot); sulla T-Beam il GPS deve restare spento. **Da verificare sul banco**: la scelta dei pin è teorica, i pin sono nei file `board_pins_*.h` (`kLinkRxMon`, `kLinkTxMon`) se vanno cambiati.
 
 **Cosa non c'è ancora:** comandi del sysop (modo 5), identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).

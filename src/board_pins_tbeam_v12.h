@@ -42,6 +42,12 @@ constexpr int kAmpShutdown = 25;  // MAX98357A SD (alto = acceso)
 // Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
 constexpr int kLinkTx = kI2sBclk;
 constexpr int kLinkRx = kI2sWs;
+// Scheda RX con altoparlante di monitor (CFG SET MONITOR ON): l'I2S occupa i pin 14 e 13, quindi la seriale verso la TX passa
+// da altri due: RX su GPIO36 (il pin dati del microfono, solo ingresso: qui senza microfono) e TX su GPIO12 (il TX verso il
+// GPS, che nei ruoli del ripetitore e' spento). Collegare TX scheda TX (14) -> 36 della RX e 12 della RX -> 13 della TX.
+// DA VERIFICARE sul banco (GPIO12 e' un pin di avvio: la TX non deve tenerlo alto durante l'accensione).
+constexpr int kLinkRxMon = kMicData;
+constexpr int kLinkTxMon = kGpsTx;
 
 // --- PTT: tasto utente di bordo IO38 ---
 // GPIO38 e' solo ingresso e non ha pull-up interno: si conta su quello esterno della

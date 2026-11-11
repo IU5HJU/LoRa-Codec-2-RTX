@@ -45,6 +45,14 @@ Repeater::Verdict Repeater::onPacket(const Packet& in, uint32_t nowMs, Packet& o
     stats_.duplicate++;
     return Verdict::Duplicate;
   }
+  // Un testo e' un solo pacchetto: non fa parte della sessione vocale in corso (non ne cambia la durata).
+  if (in.mode == kModeText) {
+    remember(in.session, in.seq, nowMs);
+    out = in;
+    out.flags = static_cast<uint8_t>(in.flags | kFlagRelayed);
+    stats_.forwarded++;
+    return Verdict::Forward;
+  }
   // Durata della sessione: parte al primo pacchetto di una sessione nuova.
   if (!haveSession_ || in.session != curSession_) {
     haveSession_ = true;

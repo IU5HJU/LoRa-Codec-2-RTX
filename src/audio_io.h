@@ -23,7 +23,9 @@
 class AudioIo {
  public:
   AudioIo();
-  bool begin();
+  // speakerOnly: solo l'altoparlante (monitor della scheda RX del ripetitore): niente microfono ne' task di cattura, il pin
+  // dei dati del microfono resta libero (la seriale del ripetitore lo usa).
+  bool begin(bool speakerOnly = false);
 
   lcr::IAudioIn& mic() { return mic_; }
   lcr::IAudioOut& speaker() { return speaker_; }

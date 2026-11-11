@@ -25,6 +25,8 @@
 //   CFG SET TEXT1 Arrivo tra 10 minuti -> CFG OK text1=Arrivo tra 10 minuti   (testi predefiniti da inviare, TEXT1..TEXT5; ASCII senza '{' e '}', 1-150
 //                                   caratteri, anche con spazi fino a fine riga; NONE svuota il posto; valgono subito, senza riavvio)
 //   CFG GET TEXT1                -> CFG TEXT1=Arrivo tra 10 minuti   (vuoto: CFG TEXT1=)
+//   CFG SET MONITOR ON           -> CFG OK monitor=on          (solo scheda RX del ripetitore: altoparlante per ascoltare il traffico voce; cambia i fili della seriale RX-TX, vedi docs/firmware.md; vale dal riavvio)
+//   CFG GET MONITOR              -> CFG MONITOR=on
 //   CFG SET GPS ON               -> CFG OK gps=on             (accende il GPS della T-Beam; di default OFF; vale dal riavvio; sulle altre schede errore)
 //   CFG TEST ON                  -> CFG OK test=on             (prova di collegamento, solo fino al riavvio; OFF la spegne)
 //   CFG TEST AUDIO               -> suona 500, 1000 e 2000 Hz e misura il microfono: CFG AUDIO f=500 base=-90.1 tone=-52.3 ... CFG AUDIO fine
@@ -88,6 +90,7 @@ struct Settings {
   uint32_t freqMsgKhz = 0;  // frequenza del profilo Messaggio: puo' essere uguale a quella dello Standard (mai bloccante)
   uint32_t freqQualKhz = 0;  // frequenza del profilo Qualita' (0 = come lo Standard)
   uint8_t role = kRoleNormal;  // ruolo: normale o scheda RX/TX del ripetitore (vale dal riavvio)
+  bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
   uint32_t freqOutKhz = 0;   // frequenza di uscita del ripetitore, usata dalla scheda TX (0 = come la frequenza del profilo)
   int powerDbm = 0;
   int volume = kDefaultVolume;  // volume iniziale dell'altoparlante

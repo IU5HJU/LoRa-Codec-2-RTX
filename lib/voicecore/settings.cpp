@@ -13,7 +13,7 @@ bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         a.profile == b.profile && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
+         a.profile == b.profile && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
 }
 
@@ -196,6 +196,10 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
       tok[2][4] >= '1' && tok[2][4] < '1' + static_cast<int>(kTextSlots)) {
     return getText(tok[2][4] - '1', reply, cap);
   }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "MONITOR")) {
+    say(reply, cap, stored_.rxMonitor ? "CFG MONITOR=on" : "CFG MONITOR=off");
+    return ConsoleResult::Ok;
+  }
   if (n == 1 || tooMany) {
     say(reply, cap, "CFG ERR comando sconosciuto");
     return ConsoleResult::Error;
@@ -299,6 +303,16 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "role=%s", roleCode(next.role));
+  } else if (equalsIgnoreCase(key, "MONITOR")) {
+    if (equalsIgnoreCase(value, "ON")) {
+      next.rxMonitor = true;
+    } else if (equalsIgnoreCase(value, "OFF")) {
+      next.rxMonitor = false;
+    } else {
+      say(reply, cap, "CFG ERR monitor %s", "usa ON oppure OFF");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "monitor=%s", next.rxMonitor ? "on" : "off");
   } else if (equalsIgnoreCase(key, "POWER")) {
     int dbm = 0;
     if (!parseInt(value, dbm) || dbm < kMinPowerDbm || dbm > kMaxPowerDbm) {
