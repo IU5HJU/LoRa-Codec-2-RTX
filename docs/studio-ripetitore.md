@@ -114,3 +114,46 @@ La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitor
 **Sicurezze del ripetitore stesso** (indipendenti dai comandi): **limite di durata di una trasmissione** continua (come il TOT delle stazioni) e spegnimento automatico se la scheda TX resta in trasmissione oltre un tempo massimo, così un guasto o un disturbo continuo non lo blocca in aria.
 
 **Compatibilità:** con i comandi nel modo 5, nessun cambio di versione del protocollo. Con il bit 7 delle bandiere come "ripetuto", le schede già in uso non sentono le copie ripetute (come già scritto sopra): è lo stesso costo dell'unico cambio di formato richiesto dal ripetitore.
+
+## Estensione: la scheda TX come ricetrasmettitore per ripetere i messaggi (idea dell'11/11/2026)
+
+**Idea:** la scheda TX ha una radio che sa anche ricevere. Oltre a ritrasmettere i pacchetti della RX (voce in tempo reale), può **farsi carico del profilo Messaggio**: ricevere un messaggio intero (SF12, banda 125 kHz), memorizzarlo e **ritrasmetterlo** (store-and-forward, come già deciso per il Messaggio: stessi bit del Codec2, nessun degrado). **Mentre ripete un messaggio il ripetitore è in trasmissione e gli utenti trovano il canale occupato**, come nel progetto (una stazione che sta ricevendo non può trasmettere).
+
+**Cosa funziona subito e cosa no:**
+
+| Aspetto | Valutazione |
+|---|---|
+| Hardware | **nessuna scheda in più**: la TX cambia parametri radio (SF, banda, frequenza) a seconda di cosa fa; RadioLib lo permette in pochi ms |
+| Memoria | un messaggio di 30 s sono circa 80 pacchetti da 80 byte = circa 7 kB: sta nella RAM della scheda |
+| Recupero dei pacchetti persi | la logica della parità (già provata) ricostruisce i pacchetti persi **prima** della ritrasmissione, quindi ogni tratta è protetta |
+| Ritrasmissione | pacchetti identici all'originale con il flag `RELAYED` (bit 7), come per la voce |
+
+**Il punto delicato: una sola radio per tutto.** La TX, mentre ritrasmette un messaggio o ne riceve uno, **non può ritrasmettere la voce in tempo reale**. Il tempo in aria di un messaggio a SF12/BW125 (calcolato, non misurato):
+
+| Voce del messaggio | Tempo in aria per ogni ritrasmissione |
+|---|---|
+| 5 s | circa 48 s |
+| 10 s | circa 94 s (1,6 minuti) |
+| 15 s | circa 139 s (2,3 minuti) |
+| 30 s | circa **271 s (4,5 minuti)** |
+
+Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa durata se ne serve un altro in ricezione. Conviene un **limite di durata per i messaggi ripetuti** (per esempio 10-15 s di voce, circa 1,5-2,3 minuti), da decidere.
+
+**Occupazione e segnale di "canale occupato" (cosa serve davvero):**
+- **Gli utenti in Standard o in Qualità (SF8 e SF7) non vedono con il CAD una trasmissione SF12**: il rilevamento del preambolo funziona solo con lo stesso SF. Perciò, **prima** di una ritrasmissione lunga, la TX manda un **breve pacchetto di annuncio** con i parametri dello Standard (nuovo modo, per esempio il **6**: "ripetitore occupato per N secondi") e un altro a fine servizio. Le stazioni lo mostrano sul display e rifiutano il PTT per il tempo indicato. **I modi 5-14 sono ancora liberi** (il 5 è già previsto per i comandi del sysop).
+- Gli utenti **in Messaggio** (SF12) sull'uscita ricevono la ritrasmissione stessa e quindi hanno già il PTT rifiutato come per ogni ricezione.
+- **La ricezione dei messaggi** (SF12 sulla frequenza di ingresso) la fa la TX **nei tempi in cui è libera**. Mentre la TX riceve un messaggio, **la voce in tempo reale non si può ritrasmettere**. Due regole possibili: (a) **vince il messaggio**: la voce in arrivo mentre si ascolta un messaggio non si ritrasmette (utenti Standard senza segnale di occupato: meno bello); (b) **vince la voce**: se arriva voce, la ricezione del messaggio si interrompe e i pacchetti persi si recuperano con la parità finché possibile. Da scegliere.
+- **Un utente che trasmette un messaggio mentre il ripetitore è occupato lo perde**: la TX non ascolta. Gli utenti nel raggio dell'uscita lo sanno perché sentono la ritrasmissione; gli altri no.
+
+**Alternativa senza conflitti: una terza scheda** dedicata alla ricezione dei messaggi (SF12 in ingresso) che li passa alla TX come la RX fa per la voce. Costa una scheda in più ma la voce non perde mai pacchetti per colpa dei messaggi; la TX resta occupata solo mentre ritrasmette. Un ripetitore con **due schede sole** funziona con la regola (a) o (b).
+
+**Modifiche al firmware (da fare solo se si decide):**
+- **Radio:** cambiare SF, banda e frequenza a runtime (oggi `RadioLora::begin` imposta tutto una volta).
+- **Logica (provabile sul PC):** un archivio di messaggi che accumula i pacchetti, ricostruisce quelli persi con la parità, riconosce la fine (pacchetto `END`, totale nel pacchetto `START`, silenzio) e li restituisce in ordine con il flag `RELAYED`; la regola di priorità fra voce e messaggio; il limite di durata; l'annuncio di occupato.
+- **Stazioni:** riconoscere il modo 6 (annuncio di occupato), mostrarlo sul display e rifiutare il PTT per il tempo indicato.
+
+**Da decidere:**
+1. **Durata massima** di un messaggio ripetuto (suggerimento: 10-15 s di voce).
+2. **Priorità**: vince il messaggio (a) o vince la voce (b), oppure **terza scheda**.
+3. **Frequenze**: i messaggi entrano e escono sulle stesse frequenze della voce (cambia solo il profilo radio) o su altre.
+4. L'**annuncio di occupato** nel modo 6, come proposto.
