@@ -83,6 +83,10 @@ constexpr uint32_t kRecSendDelayMs = 1000;
 // Durata massima di un turno di trasmissione.
 constexpr uint32_t kMaxTurnMs = 30000;
 constexpr uint32_t kMaxTurnFrames = kMaxTurnMs / kFrameMs;
+// Limite di durata (TOT) di un messaggio nel profilo Messaggio: 15 s di voce (11/11/2026), come il massimo che il ripetitore
+// ripete (lib/voicecore/message_store.h). A 1200 bps sono circa 139 s in aria a SF12/BW125. Il tetto di kMaxTurnMs (30 s)
+// resta per lo Standard e la Qualita'.
+constexpr uint32_t kMessageMaxTurnMs = 15000;
 
 // Il nominativo e' ripetuto ogni N pacchetti (circa 5 s) per chi si
 // sintonizza a trasmissione gia' iniziata.

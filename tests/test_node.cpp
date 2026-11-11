@@ -482,13 +482,13 @@ static void testMessageProfileRules() {
     s.run(150);
   }
   CHECK(!s.a.node.testMode() && s.a.note.testModeChanges.empty());
-  // Un messaggio molto lungo si ferma al limite del profilo (30 s di voce)
+  // Un messaggio molto lungo si ferma al limite del profilo (15 s di voce)
   s.a.node.pttPressed(s.clock);
-  s.run(40000);
-  CHECK(s.a.node.recPhase() != VoiceNode::RecPhase::Recording);  // la registrazione si e' fermata da sola a 30 s
+  s.run(25000);
+  CHECK(s.a.node.recPhase() != VoiceNode::RecPhase::Recording);  // la registrazione si e' fermata da sola a 15 s
   s.a.node.pttReleased(s.clock);
   s.run(450000);
-  CHECK(s.air.sent[0] > 60 && s.air.sent[0] < static_cast<int>(kTxSeqLimit));  // circa 80 pacchetti: sotto il limite di sequenza
+  CHECK(s.air.sent[0] > 35 && s.air.sent[0] < 50);  // circa 42 pacchetti (come il massimo del ripetitore), sotto il limite di sequenza
   CHECK(s.a.note.limitHit);  // e il limite e' stato segnalato
   CHECK(static_cast<uint32_t>(s.a.mic.produced()) == profileFor(kProfileMessage).maxTurnMs / kFrameMs);
   listenB(s, static_cast<int>(profileFor(kProfileMessage).maxTurnMs / kFrameMs));

@@ -24,7 +24,7 @@ namespace lcr {
 
 class MessageStore {
  public:
-  static constexpr uint32_t kMaxVoiceMs = 15000;
+  static constexpr uint32_t kMaxVoiceMs = kMessageMaxTurnMs;  // il TOT del profilo Messaggio: 15 s
   static constexpr size_t kMaxPacketsPerMessage = 48;       // 15 s sono 42 pacchetti (dati e parita'), con margine
   static constexpr size_t kQueue = 3;                       // messaggi pronti
   static constexpr uint32_t kSilenceMs = 12000;             // silenzio dopo cui un messaggio incompleto si abbandona

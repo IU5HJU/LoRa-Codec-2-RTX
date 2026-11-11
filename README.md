@@ -8,7 +8,7 @@ La voce è compressa con Codec2 e trasmessa con LoRa, con tre **profili** da sce
 | Profilo | Radio | Codec2 | Uso |
 |---|---|---|---|
 | **Standard** (S) | SF8, banda 250 kHz | 1200 bps | voce in tempo reale, come una conversazione |
-| **Messaggio** (M) | SF12, banda 125 kHz | 1200 bps | lungo raggio: si registra un messaggio (fino a 30 s); chi riceve lo trova in una casella e lo ascolta premendo il PTT, con la percentuale sul display |
+| **Messaggio** (M) | SF12, banda 125 kHz | 1200 bps | lungo raggio: si registra un messaggio (fino a 15 s); chi riceve lo trova in una casella e lo ascolta premendo il PTT, con la percentuale sul display |
 | **Qualità** (Q) | SF7, banda 250 kHz | 3200 bps | voce in tempo reale più naturale, meno portata |
 
 Funzionamento in breve:

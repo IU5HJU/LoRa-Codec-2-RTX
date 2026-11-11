@@ -10,7 +10,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 |---|---|
 | Voce a turni in Standard (SF8/BW250, Codec2 1200); causa dei crepitii trovata e corretta | 8 novembre |
 | Prima beta `v0.1.0-beta.1`, pagina di installazione con menu delle versioni, copia di sicurezza di `esp32_codec2` in `third_party/` | 8-9 novembre |
-| Profilo **Messaggio** (SF12/BW125): registra e invia, riproduce a messaggio completo; provato fino a 30 s, senza riavvii | 9 novembre |
+| Profilo **Messaggio** (SF12/BW125): registra e invia, riproduce a messaggio completo; provato fino a 30 s, senza riavvii (dall'11/11/2026 il limite è **15 s**, quanto ripete il ripetitore) | 9 novembre |
 | Frequenza propria del profilo Messaggio (`FREQMSG`), anche uguale a quella dello Standard | 9 novembre |
 | **Menu a bordo** (volume lungo, PTT, conferma, riavvio sul profilo scelto) | 9 novembre |
 | **Protocollo v2:** posizione nello START (spenta di default), `QTH` fisso, distanza in km sul display in Standard e in Messaggio | 9 novembre |

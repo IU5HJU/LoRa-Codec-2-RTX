@@ -53,10 +53,11 @@ static void testAirtime() {
 
 static void testMessageBudget() {
   const Profile& m = profileFor(kProfileMessage);
-  CHECK(m.maxTurnMs == 30000);  // deciso il 9 novembre: come lo Standard, al momento
+  CHECK(m.maxTurnMs == 15000 && m.maxTurnMs == kMessageMaxTurnMs);  // 11 novembre: 15 s, quanto ripete il ripetitore (prima 30 s)
+  CHECK(profileFor(kProfileStandard).maxTurnMs == 30000 && profileFor(kProfileQuality).maxTurnMs == 30000);  // gli altri restano a 30 s
   const double air = messageAirtimeMs(m.maxTurnMs, 6, m);
-  // Il messaggio piu' lungo (30 s di voce a 1200 bps) occupa circa 4,5 minuti in aria: e' il tetto, non il budget
-  CHECK(air > 250000 && air < 300000);
+  // Il messaggio piu' lungo (15 s di voce a 1200 bps) occupa circa 139 s in aria: e' il tetto, non il budget
+  CHECK(air > 125000 && air < 155000);
   CHECK(messageAirtimeMs(10000, 6, m) > 85000 && messageAirtimeMs(10000, 6, m) < 100000);
   // Un messaggio corto costa poco
   CHECK(messageAirtimeMs(3000, 6, m) < 40000);
