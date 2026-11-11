@@ -20,6 +20,7 @@ Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le deci
 | Profilo **Qualità** (Codec2 3200, SF7/BW250, `FREQQUAL`, modo 4 del protocollo): suona meglio del 1200 | 10 novembre |
 | **Configurazione dal Wi-Fi della scheda** (voce "Wi-Fi" del menu, modo dedicato all'avvio come nel Tracker di Guzman, password salvata, server asincrono) | 10 novembre |
 | **Casella dei messaggi** (11/11/2026): la voce non parte più da sola, serve il PTT breve; **messaggi di testo** (modo 7, max 150 caratteri, "SMS" in Morse, busta sul display), cinque **testi predefiniti** impostabili da pagina web e Wi-Fi, menu "Invia testo". Scritto e provato sul PC; **da provare su scheda**. Restano da decidere i gesti con più messaggi, il menu dei messaggi, tastiera o app Bluetooth, e l'estensione del ripetitore al modo 7 (`Repeater::setModeMask`) | 11 novembre |
+| **Profilo MeshCom** (11/11/2026): solo testi compatibili con le reti radioamatoriali a pacchetto sui 433,175 MHz (frame verificato su frame veri), destinatario e SSID, conferme di ricezione; scritto e provato sul PC, **da provare in aria** ([meshcom-testo.md](meshcom-testo.md)) | 11 novembre |
 | **Lettera del profilo** (S, M, Q) sul display, **volume con guadagno** (passo 5 = 0 dB, fino a +15 dB), pagina web con messaggio di stato fisso | 10 novembre |
 | Prove su scheda per la **beta.2** (versione, display, Wi-Fi, trasmissione nei tre profili): superate; tag **`v0.1.0-beta.2`** pubblicato | 10 novembre |
 

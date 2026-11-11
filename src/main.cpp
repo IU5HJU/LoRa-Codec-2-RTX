@@ -67,6 +67,7 @@ static bool pttUsable = true;   // false se il pin PTT risulta instabile all'avv
 static bool pttArmed = false;   // il PTT vale solo dopo essere stato rilasciato almeno una volta
 
 static uint16_t newSessionId() { return static_cast<uint16_t>(esp_random()); }
+static uint32_t newMsgId() { return esp_random(); }  // ID a 32 bit di un testo nel profilo MeshCom
 
 static void fatal(const char* what, int code = 0) {
   Serial.printf("ERRORE: %s (%d)\n", what, code);
@@ -196,6 +197,12 @@ void setup() {
   strncpy(cfg.callsign, settings.callsign, lcr::kMaxCallsign);
   cfg.fec = LCR_FEC != 0;
   cfg.newSessionId = newSessionId;
+  // Profilo MeshCom (solo testo): nominativo-SSID, destinatario, identificatore hardware del frame (T-Beam con AXP2101 = 12,
+  // LoRa32 T3 = 3: tabella delle schede della rete) e ID casuale a 32 bit per ogni testo
+  settings.mcCallsign(cfg.mcCall, sizeof(cfg.mcCall));
+  snprintf(cfg.mcDest, sizeof(cfg.mcDest), "%s", settings.mcDest);
+  cfg.mcHw = strcmp(kBoardShort, "tbeam") == 0 ? 12 : 3;
+  cfg.newMsgId = newMsgId;
   cfg.profile = settings.profile;
   cfg.sendPosition = settings.posTx;  // spenta di default; la posizione fissa e' il QTH (CFG SET QTH)
   cfg.position = settings.qth();

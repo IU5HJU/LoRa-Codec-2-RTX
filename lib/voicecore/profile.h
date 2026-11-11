@@ -2,6 +2,8 @@
 //
 //   Standard   voce in tempo reale, SF8/BW250, Codec2 1200 (la modalita' di sempre)
 //   Qualita'   voce in tempo reale a Codec2 3200, SF7/BW250: piu' fedele, meno portata.
+//   MeshCom    solo testo (SMS), compatibile con le reti radioamatoriali a pacchetto sui 433,175 MHz: SF11/BW250/CR4/6,
+//              sync word 0x2B, preambolo 8. Niente voce: il PTT non trasmette, i testi si scrivono dal menu.
 //   Messaggio  lungo raggio: SF12/BW125. Si registra un messaggio, lo si trasmette piu' lentamente del parlato e chi
 //              riceve lo memorizza e lo riproduce a ricezione conclusa.
 //
@@ -16,11 +18,11 @@
 
 namespace lcr {
 
-enum ProfileId : uint8_t { kProfileStandard = 0, kProfileMessage = 1, kProfileQuality = 2, kProfileCount = 3 };
+enum ProfileId : uint8_t { kProfileStandard = 0, kProfileMessage = 1, kProfileQuality = 2, kProfileMeshcom = 3, kProfileCount = 4 };
 
 struct Profile {
   uint8_t id;
-  const char* code;  // nome usato da CFG: "std", "msg", "qua"
+  const char* code;  // nome usato da CFG: "std", "msg", "qua", "mc"
   const char* name;  // nome per esteso
   // Radio
   uint8_t sf;
@@ -35,11 +37,14 @@ struct Profile {
   size_t rxPrebufferFrames;
   uint32_t rxPrebufferTimeoutMs;
   uint32_t rxSessionTimeoutMs;
+  // Sync word LoRa (0 = quella di user_config.h) e profilo di solo testo (nessuna voce)
+  uint8_t syncWord;
+  bool textOnly;
 };
 
 // id sconosciuto: profilo Standard.
 const Profile& profileFor(uint8_t id);
-// "std" / "msg" / "qua" (maiuscole o minuscole). false se il nome non esiste.
+// "std" / "msg" / "qua" / "mc" (maiuscole o minuscole). false se il nome non esiste.
 bool profileFromCode(const char* code, uint8_t& id);
 
 // Durata in aria di un pacchetto di 'bytes' byte (formula di Semtech per SX127x: intestazione LoRa esplicita, CRC attivo,

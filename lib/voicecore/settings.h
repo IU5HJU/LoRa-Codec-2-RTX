@@ -27,6 +27,10 @@
 //   CFG GET TEXT1                -> CFG TEXT1=Arrivo tra 10 minuti   (vuoto: CFG TEXT1=)
 //   CFG SET MONITOR ON           -> CFG OK monitor=on          (solo scheda RX del ripetitore: altoparlante per ascoltare il traffico voce; cambia i fili della seriale RX-TX, vedi docs/firmware.md; vale dal riavvio)
 //   CFG GET MONITOR              -> CFG MONITOR=on
+//   CFG SET FREQMC 433.175       -> CFG OK freqmc=433.175      (frequenza del profilo MeshCom, solo testo; come FREQ)
+//   CFG SET MCDEST IU5ABC-9      -> CFG OK mcdest=IU5ABC-9     (destinatario dei testi nel profilo MeshCom: nominativo-SSID, un gruppo o * per tutti; NONE = nessuno)
+//   CFG SET MCSSID 99            -> CFG OK mcssid=99           (SSID del tuo nominativo nel profilo MeshCom, 0-99; 0 = nessuno)
+//   CFG GET MC                   -> CFG MC freqmc=433.175 dest=IU5ABC-9 ssid=99
 //   CFG SET GPS ON               -> CFG OK gps=on             (accende il GPS della T-Beam; di default OFF; vale dal riavvio; sulle altre schede errore)
 //   CFG TEST ON                  -> CFG OK test=on             (prova di collegamento, solo fino al riavvio; OFF la spegne)
 //   CFG TEST AUDIO               -> suona 500, 1000 e 2000 Hz e misura il microfono: CFG AUDIO f=500 base=-90.1 tone=-52.3 ... CFG AUDIO fine
@@ -38,6 +42,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 
 #include "position.h"
@@ -88,6 +93,9 @@ struct Settings {
   char callsign[kMaxCallsign + 1] = {0};
   uint32_t freqKhz = 0;     // frequenza del profilo Standard
   uint32_t freqMsgKhz = 0;  // frequenza del profilo Messaggio: puo' essere uguale a quella dello Standard (mai bloccante)
+  uint32_t freqMcKhz = 433175;  // frequenza del profilo MeshCom (testo): 433,175 MHz
+  char mcDest[16] = {0};        // destinatario dei testi nel profilo MeshCom: nominativo-SSID, un gruppo o "*" (tutti); vuoto = non si invia
+  uint8_t mcSsid = 99;          // SSID del nominativo nel profilo MeshCom (0 = nessuno), per esempio IU5HJU-99
   uint32_t freqQualKhz = 0;  // frequenza del profilo Qualita' (0 = come lo Standard)
   uint8_t role = kRoleNormal;  // ruolo: normale o scheda RX/TX del ripetitore (vale dal riavvio)
   bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
@@ -120,19 +128,29 @@ struct Settings {
   // Copia con la frequenza del profilo in uso sostituita da khz (la scheda TX del ripetitore la usa per la radio).
   Settings withProfileFreqKhz(uint32_t khz) const {
     Settings s = *this;
-    if (profile == kProfileMessage) s.freqMsgKhz = khz;
+    if (profile == kProfileMeshcom) s.freqMcKhz = khz;
+    else if (profile == kProfileMessage) s.freqMsgKhz = khz;
     else if (profile == kProfileQuality) s.freqQualKhz = khz;
     else s.freqKhz = khz;
     return s;
   }
   uint32_t profileFreqKhz() const {
-    return profile == kProfileMessage ? freqMsgKhz : profile == kProfileQuality ? qualFreqKhz() : freqKhz;
+    return profile == kProfileMeshcom ? freqMcKhz : profile == kProfileMessage ? freqMsgKhz : profile == kProfileQuality ? qualFreqKhz() : freqKhz;
+  }
+  // Nominativo-SSID usato nel profilo MeshCom ("IU5HJU-99"); senza SSID se mcSsid e' 0. cap almeno 16.
+  void mcCallsign(char* out, size_t cap) const {
+    if (cap == 0) return;
+    if (mcSsid == 0) snprintf(out, cap, "%s", callsign);
+    else snprintf(out, cap, "%s-%u", callsign, static_cast<unsigned>(mcSsid));
   }
   float freqMhz() const { return static_cast<float>(profileFreqKhz()) / 1000.0f; }
 };
 
 bool operator==(const Settings& a, const Settings& b);
 inline bool operator!=(const Settings& a, const Settings& b) { return !(a == b); }
+
+// Destinatario valido nel profilo MeshCom: "*" oppure 1-15 caratteri A-Z, 0-9, '/' e '-' (nominativo-SSID o gruppo). Vuoto: false.
+bool isValidMcDest(const char* d);
 
 // true se nominativo, frequenza, potenza e volume sono nei limiti.
 bool isValidSettings(const Settings& s);

@@ -36,6 +36,10 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.freqQualKhz = p.getUInt("fqua", out.freqKhz);
     out.role = static_cast<uint8_t>(p.getUChar("role", lcr::kRoleNormal));  // assenti nelle versioni precedenti
     out.freqOutKhz = p.getUInt("fout", 0);
+    out.freqMcKhz = p.getUInt("fmc", 433175);  // assenti nelle versioni precedenti
+    memset(out.mcDest, 0, sizeof(out.mcDest));
+    p.getString("mcd", out.mcDest, sizeof(out.mcDest));
+    out.mcSsid = static_cast<uint8_t>(p.getUChar("mcs", 99));
     out.rxMonitor = p.getBool("mon", false);  // assente nelle versioni precedenti
     out.powerDbm = p.getInt("pwr", 0);
     // "vol2" = scala nuova (5 = 0 dB, fino a +15 dB). Se manca c'e' al massimo il vecchio "vol" (10 = 0 dB): si converte.
@@ -63,11 +67,12 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
 bool NvsSettingsStorage::save(const lcr::Settings& s) {
   Preferences p;
   if (!p.begin(kNamespace, false)) return false;
-  const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putUInt("fqua", s.qualFreqKhz()) > 0 && p.putUChar("role", s.role) > 0 && p.putUInt("fout", s.freqOutKhz) > 0 && p.putBool("mon", s.rxMonitor) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
+  const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putUInt("fqua", s.qualFreqKhz()) > 0 && p.putUChar("role", s.role) > 0 && p.putUInt("fout", s.freqOutKhz) > 0 && p.putBool("mon", s.rxMonitor) > 0 && p.putUInt("fmc", s.freqMcKhz) > 0 && p.putUChar("mcs", s.mcSsid) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
                     p.putInt("vol2", s.volume) > 0 &&
                     p.putInt("floor", s.micFloorDb) > 0 && p.putUChar("prof", s.profile) > 0 &&
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;
+  p.putString("mcd", s.mcDest);  // vuoto = nessun destinatario (put restituisce 0: non e' un errore)
   for (size_t i = 0; i < lcr::kTextSlots; i++) {  // un posto vuoto salva una stringa vuota (put restituisce 0: non e' un errore)
     char key[4] = {'t', static_cast<char>('1' + i), 0, 0};
     p.putString(key, s.texts[i]);

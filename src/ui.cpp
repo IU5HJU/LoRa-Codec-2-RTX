@@ -48,7 +48,9 @@ void UiNotifier::drawProfileBadge() {
                                     "XX......XX", "XX......XX", "XX......XX", "XX......XX"};
   static const char* const kQ[9] = {".XXXXXXXX.", "XXXXXXXXXX", "XX......XX", "XX......XX", "XX......XX",
                                     "XX..XX..XX", "XX...XXXXX", "XXXXXXXXX.", ".XXXXXX.XX"};
-  const char* const* g = badge_ == 'M' ? kM : (badge_ == 'Q' ? kQ : kS);
+  static const char* const kT[9] = {"XXXXXXXXXX", "XXXXXXXXXX", "....XX....", "....XX....", "....XX....",
+                                    "....XX....", "....XX....", "....XX....", "....XX...."};
+  const char* const* g = badge_ == 'M' ? kM : (badge_ == 'Q' ? kQ : (badge_ == 'T' ? kT : kS));
   for (int y = 0; y < 9; y++)
     for (int x = 0; x < 10; x++)
       if (g[y][x] == 'X') display_.drawPixel(118 + x, y, SSD1306_WHITE);
@@ -133,6 +135,8 @@ void UiNotifier::pttDenied(lcr::DenyReason r) {
     case lcr::DenyReason::ChannelBusy: notice_ = "CANALE OCCUPATO"; break;
     case lcr::DenyReason::Transmitting: notice_ = "TX IN CORSO"; break;
     case lcr::DenyReason::NoCallsign: notice_ = "IMPOSTA NOMINATIVO"; break;
+    case lcr::DenyReason::TextOnly: notice_ = "SOLO TESTO"; break;
+    case lcr::DenyReason::NoDestination: notice_ = "IMPOSTA DESTINAT."; break;
   }
   noticeUntilMs_ = millis() + 1500;
   dirty_ = true;
@@ -391,10 +395,13 @@ void UiNotifier::drawTestReport() {
 // disponibili con "presto"), istruzioni in basso. Al massimo 21 caratteri per riga a testo piccolo.
 void UiNotifier::drawMenu() {
   display_.setTextSize(1);
-  // Cinque voci da 9 punti: niente titolo, per lasciare posto alle istruzioni in basso (y 57).
-  for (size_t i = 0; i < menu_->count(); i++) {
+  // Cinque righe da 9 punti: niente titolo, per lasciare posto alle istruzioni in basso (y 57). Con piu' voci la finestra
+  // scorre e la voce scelta resta sempre visibile.
+  constexpr size_t kRows = 5;
+  const size_t first = menu_->selectedIndex() >= kRows ? menu_->selectedIndex() - (kRows - 1) : 0;
+  for (size_t i = first; i < menu_->count() && i < first + kRows; i++) {
     const lcr::MenuItem& it = menu_->item(i);
-    const int y = 12 + static_cast<int>(i) * 9;
+    const int y = 12 + static_cast<int>(i - first) * 9;
     const bool sel = i == menu_->selectedIndex();
     if (sel) {
       display_.fillRect(0, y - 1, 128, 9, SSD1306_WHITE);
@@ -477,7 +484,7 @@ void UiNotifier::draw(uint32_t nowMs) {
 
   char big[24];
   switch (state_) {
-    case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", message_ ? "MESSAGGIO" : (testMode_ ? "PROVA ON" : "ASCOLTO")); break;
+    case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", textOnly_ ? "MESHCOM" : (message_ ? "MESSAGGIO" : (testMode_ ? "PROVA ON" : "ASCOLTO"))); break;
     case lcr::VoiceNode::State::Receiving: snprintf(big, sizeof(big), "RX %s", rxCall_); break;
     default:
       if (sendingText_) snprintf(big, sizeof(big), "INVIO SMS");
@@ -542,7 +549,7 @@ void UiNotifier::draw(uint32_t nowMs) {
     display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
                     static_cast<unsigned long>(lastRecovered_));
   } else {
-    display_.print(message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare"));
+    display_.print(textOnly_ ? "Testi: VOL lungo, menu" : (message_ ? "PTT = registra" : (testMode_ ? "PTT = invia la prova" : "Premi PTT per parlare")));
     if (gpsEnabled_) {  // riga libera a riposo: stato del GPS
       display_.setCursor(0, 47);
       if (gpsFix_) {

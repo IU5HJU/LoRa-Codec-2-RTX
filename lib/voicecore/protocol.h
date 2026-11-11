@@ -109,6 +109,9 @@ constexpr uint8_t kFlagsKnown = 255;  // tutti gli 8 bit sono in uso
 constexpr uint8_t kFlagsParityMask = kFlagStart | kFlagEnd;
 
 // Dimensione massima di un pacchetto sul canale.
+// Buffer di ricezione: anche i frame di testo di altre reti (fino a 255 byte).
+constexpr size_t kMaxRxBytes = 256;
+
 constexpr size_t kMaxWireBytes = 5 + 1 + kMaxCallsign + 7 /* blocco posizione, position.h */ + 1 /* totale pacchetti */ + kMaxPayload;
 
 }  // namespace lcr

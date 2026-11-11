@@ -13,7 +13,7 @@ bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         a.profile == b.profile && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
+         a.profile == b.profile && a.freqMcKhz == b.freqMcKhz && strncmp(a.mcDest, b.mcDest, sizeof(a.mcDest)) == 0 && a.mcSsid == b.mcSsid && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
 }
 
@@ -26,9 +26,22 @@ static bool validTexts(const Settings& s) {
   return true;
 }
 
+bool isValidMcDest(const char* d) {
+  if (!d || !d[0]) return false;
+  const size_t n = strnlen(d, 16);
+  if (n > 15) return false;
+  if (n == 1 && d[0] == '*') return true;
+  for (size_t i = 0; i < n; i++) {
+    const char c = d[i];
+    if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '/' || c == '-')) return false;
+  }
+  return true;
+}
+
 bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
-         s.freqMsgKhz <= kMaxFreqKhz && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
+         s.freqMsgKhz <= kMaxFreqKhz && s.freqMcKhz >= kMinFreqKhz && s.freqMcKhz <= kMaxFreqKhz && s.mcSsid <= 99 &&
+         (s.mcDest[0] == 0 || isValidMcDest(s.mcDest)) && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
          (s.freqOutKhz == 0 || (s.freqOutKhz >= kMinFreqKhz && s.freqOutKhz <= kMaxFreqKhz)) && s.role <= kRoleRepeaterTx &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
@@ -196,6 +209,13 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
       tok[2][4] >= '1' && tok[2][4] < '1' + static_cast<int>(kTextSlots)) {
     return getText(tok[2][4] - '1', reply, cap);
   }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "MC")) {
+    if (reply && cap > 0) {
+      snprintf(reply, cap, "CFG MC freqmc=%u.%03u dest=%s ssid=%u", static_cast<unsigned>(stored_.freqMcKhz / 1000),
+               static_cast<unsigned>(stored_.freqMcKhz % 1000), stored_.mcDest, static_cast<unsigned>(stored_.mcSsid));
+    }
+    return ConsoleResult::Ok;
+  }
   if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "MONITOR")) {
     say(reply, cap, stored_.rxMonitor ? "CFG MONITOR=on" : "CFG MONITOR=off");
     return ConsoleResult::Ok;
@@ -283,6 +303,38 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     next.freqQualKhz = khz;
     snprintf(shown, sizeof(shown), "freqqual=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
+  } else if (equalsIgnoreCase(key, "FREQMC")) {
+    uint32_t khz = 0;
+    if (!parseFreqKhz(value, khz) || khz < kMinFreqKhz || khz > kMaxFreqKhz) {
+      say(reply, cap, "CFG ERR freqmc %s", "in MHz, da 430.000 a 440.000");
+      return ConsoleResult::Error;
+    }
+    next.freqMcKhz = khz;
+    snprintf(shown, sizeof(shown), "freqmc=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
+  } else if (equalsIgnoreCase(key, "MCDEST")) {
+    if (equalsIgnoreCase(value, "NONE")) {
+      next.mcDest[0] = 0;
+    } else {
+      char up[sizeof(next.mcDest) + 1];
+      size_t i = 0;
+      for (; value[i] && i < sizeof(up) - 1; i++) up[i] = static_cast<char>(toupper(static_cast<unsigned char>(value[i])));
+      up[i] = 0;
+      if (!isValidMcDest(up)) {
+        say(reply, cap, "CFG ERR mcdest %s", "nominativo-SSID (A-Z, 0-9, / e -, massimo 15), * per tutti, NONE per nessuno");
+        return ConsoleResult::Error;
+      }
+      memset(next.mcDest, 0, sizeof(next.mcDest));
+      memcpy(next.mcDest, up, strlen(up));
+    }
+    snprintf(shown, sizeof(shown), "mcdest=%s", next.mcDest);
+  } else if (equalsIgnoreCase(key, "MCSSID")) {
+    int ssid = 0;
+    if (!parseInt(value, ssid) || ssid < 0 || ssid > 99) {
+      say(reply, cap, "CFG ERR mcssid %s", "da 0 (nessuno) a 99");
+      return ConsoleResult::Error;
+    }
+    next.mcSsid = static_cast<uint8_t>(ssid);
+    snprintf(shown, sizeof(shown), "mcssid=%d", ssid);
   } else if (equalsIgnoreCase(key, "FREQOUT")) {
     uint32_t khz = 0;
     if (!parseFreqKhz(value, khz) || khz < kMinFreqKhz || khz > kMaxFreqKhz) {
@@ -340,7 +392,7 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
   } else if (equalsIgnoreCase(key, "PROFILE")) {
     uint8_t id = 0;
     if (!profileFromCode(value, id)) {
-      say(reply, cap, "CFG ERR profile %s", "usa STD (Standard), MSG (Messaggio) oppure QUA (Qualita')");
+      say(reply, cap, "CFG ERR profile %s", "usa STD (Standard), MSG (Messaggio), QUA (Qualita') oppure MC (MeshCom, solo testo)");
       return ConsoleResult::Error;
     }
     next.profile = id;

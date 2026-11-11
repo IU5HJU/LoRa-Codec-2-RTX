@@ -316,6 +316,52 @@ async function scenario(name, fn, opts = {}) {
     check('il resto si salva normalmente', c.includes('CFG SET CALLSIGN IU5HJU'));
   });
 
+  await scenario('profilo MeshCom: lettura, destinatario, SSID e frequenza', async (p) => {
+    check('campi MeshCom spenti prima di collegare', (await p.isDisabled('#mcdest')) && (await p.isDisabled('#mcssid')) && (await p.isDisabled('#mcfreq')));
+    await connect(p);
+    await until(p, () => document.getElementById('mcfreq').value !== '');
+    check('valori letti dalla scheda', (await p.inputValue('#mcfreq')) === '433.175' && (await p.inputValue('#mcdest')) === '' && (await p.inputValue('#mcssid')) === '99');
+    check('campi attivi', !(await p.isDisabled('#mcdest')) && !(await p.isDisabled('#mcssid')));
+    check('il profilo MeshCom e\' nell\'elenco', (await p.locator('#profile option[value=mc]').count()) === 1);
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#profile', 'mc');
+    await p.fill('#mcdest', 'iu5abc-9');
+    await p.fill('#mcssid', '12');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    const c = await cmds(p);
+    check('CFG SET PROFILE mc', c.includes('CFG SET PROFILE mc'), c.join(' | '));
+    check('CFG SET FREQMC, MCDEST (maiuscolo) e MCSSID', c.includes('CFG SET FREQMC 433.175') && c.includes('CFG SET MCDEST IU5ABC-9') && c.includes('CFG SET MCSSID 12'), c.join(' | '));
+    const m = await p.evaluate(() => window.__st.mc);
+    check('valori salvati nella scheda', m.dest === 'IU5ABC-9' && m.ssid === '12' && (await p.evaluate(() => window.__st.cfg.profile)) === 'mc', JSON.stringify(m));
+  });
+
+  await scenario('profilo MeshCom: destinatario non valido o vuoto', async (p) => {
+    await connect(p);
+    await until(p, () => document.getElementById('mcfreq').value !== '');
+    await p.fill('#callsign', 'IU5HJU');
+    await p.fill('#mcdest', 'IU5 ABC');
+    await p.click('#save');
+    await until(p, () => document.getElementById('status').className === 'err');
+    check('messaggio sul destinatario', (await status(p)).includes('Destinatario'), await status(p));
+    check('nessun CFG SET inviato', !(await cmds(p)).some((x) => x.startsWith('CFG SET')));
+    await p.fill('#mcdest', '');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
+    check('vuoto = CFG SET MCDEST NONE', (await cmds(p)).includes('CFG SET MCDEST NONE'));
+  });
+
+  await scenario('firmware senza profilo MeshCom: campi spenti e nessun comando nuovo', async (p) => {
+    await p.evaluate(() => { window.__st.noMc = true; });
+    await connect(p);
+    await sleep(500);
+    check('campi MeshCom spenti', (await p.isDisabled('#mcdest')) && (await p.isDisabled('#mcfreq')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('nessun comando MeshCom', !(await cmds(p)).some((x) => /FREQMC|MCDEST|MCSSID/.test(x)));
+  });
+
   await scenario('testi predefiniti: lettura, modifica, svuotamento e rifiuto', async (p) => {
     check('campi dei testi spenti prima di collegare', await p.isDisabled('#text1'));
     await connect(p);

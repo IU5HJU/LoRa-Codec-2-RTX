@@ -30,7 +30,7 @@ struct MenuItem {
   bool enabled;       // false: si vede ma non si puo' scegliere (per esempio il profilo Qualita' prima che esista)
 };
 
-// Le voci del menu: Standard, Messaggio, Qualita', Invia testo e Wi-Fi (configurazione).
+// Le voci del menu: Standard, Messaggio, Qualita', MeshCom (solo testo), Invia testo e Wi-Fi (configurazione).
 const MenuItem* defaultMenuItems(size_t& count);
 
 // Segnali acustici suggeriti per ogni azione (la scheda senza display si guida con quelli).

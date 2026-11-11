@@ -1,5 +1,6 @@
 #include "voice_node.h"
 
+#include <cstdio>
 #include <cstring>
 
 #include "packet.h"
@@ -46,7 +47,7 @@ void VoiceNode::pttPressed(uint32_t nowMs) {
   }
   // A riposo la pressione e' un clic oppure l'inizio di una trasmissione: lo si capisce da quanto dura.
   if (clickCount_ > 0 && nowMs - lastClickMs_ > kPttClickGapMs) clickCount_ = 0;
-  if (clickCount_ >= 2 && !prof_.message) {
+  if (clickCount_ >= 2 && !prof_.message && !prof_.textOnly) {
     // Terzo clic veloce: attiva o disattiva la prova di collegamento, senza trasmettere.
     clickCount_ = 0;
     testMode_ = !testMode_;
@@ -56,13 +57,19 @@ void VoiceNode::pttPressed(uint32_t nowMs) {
   pendingStart_ = true;
   pressMs_ = nowMs;
   // Il microfono si bufferizza subito, cosi' l'inizio della frase non si perde.
-  if (!testMode_ && !micStarted_) {
+  if (!testMode_ && !micStarted_ && !prof_.textOnly) {
     in_.start();
     micStarted_ = true;
   }
 }
 
 void VoiceNode::beginPtt(uint32_t nowMs) {
+  // Profilo di solo testo: il PTT non trasmette voce (i testi si scrivono dal menu).
+  if (prof_.textOnly) {
+    stopMic();
+    notify_.pttDenied(DenyReason::TextOnly);
+    return;
+  }
   // Senza un nominativo reale (N0CALL) non si trasmette: la ricezione funziona.
   if (isPlaceholderCallsign(cfg_.callsign)) {
     stopMic();
@@ -223,6 +230,7 @@ void VoiceNode::tick(uint32_t nowMs) {
     txTick(nowMs);
   } else {
     playTick(nowMs);
+    if (prof_.textOnly) meshAckTick(nowMs);
     rxTick(nowMs);
     if (replyPending_ && state_ == State::Idle && static_cast<int32_t>(nowMs - replyAtMs_) >= 0) sendTestReply(nowMs);
   }
@@ -316,11 +324,15 @@ void VoiceNode::txTick(uint32_t nowMs) {
 }
 
 void VoiceNode::rxTick(uint32_t nowMs) {
-  uint8_t buf[kMaxWireBytes];
+  uint8_t buf[kMaxRxBytes];
   for (int i = 0; i < 4; i++) {
     int rssi = 0;
     const size_t n = radio_.receive(buf, sizeof(buf), &rssi);
     if (n == 0) break;
+    if (prof_.textOnly) {  // profilo MeshCom: frame di un'altra rete, non pacchetti del progetto
+      handleMeshFrame(buf, n, nowMs);
+      continue;
+    }
     Packet p;
     if (!decodePacket(buf, n, p)) continue;
     if (p.mode == kModeTestReport) {
@@ -510,6 +522,7 @@ void VoiceNode::playTick(uint32_t nowMs) {
 bool VoiceNode::sendText(const char* text, uint32_t nowMs) {
   const size_t len = text ? strlen(text) : 0;
   if (!isValidText(text, len)) return false;
+  if (prof_.textOnly) return sendMeshText(text, nowMs);
   if (isPlaceholderCallsign(cfg_.callsign) || !isValidCallsign(cfg_.callsign)) {
     notify_.pttDenied(DenyReason::NoCallsign);
     return false;
@@ -540,6 +553,189 @@ bool VoiceNode::sendText(const char* text, uint32_t nowMs) {
   textOpen_ = false;
   textTx_ = true;
   textCopies_ = 2;
+  justSent_ = false;
+  nextSendMs_ = nowMs;
+  state_ = State::Transmitting;
+  notify_.txStarted();
+  return true;
+}
+
+// ---- Profilo MeshCom: testi compatibili con la rete a pacchetto (meshcom_frame.h) ----
+
+namespace {
+bool equalsNoCase(const char* a, const char* b) {
+  for (; *a && *b; a++, b++) {
+    char x = *a, y = *b;
+    if (x >= 'a' && x <= 'z') x = static_cast<char>(x - 32);
+    if (y >= 'a' && y <= 'z') y = static_cast<char>(y - 32);
+    if (x != y) return false;
+  }
+  return *a == *b;
+}
+}  // namespace
+
+uint32_t VoiceNode::makeMsgId() {
+  uint32_t id = cfg_.newMsgId ? cfg_.newMsgId() : ++meshIdCounter_;
+  return id ? id : 1;
+}
+
+bool VoiceNode::meshSeen(uint32_t id, size_t* slot) {
+  for (size_t i = 0; i < kMeshSeenSlots; i++) {
+    if (meshSeen_[i].used && meshSeen_[i].id == id) {
+      if (slot) *slot = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+void VoiceNode::meshRemember(uint32_t id, uint32_t nowMs) {
+  (void)nowMs;
+  MeshSeen& s = meshSeen_[meshNext_];
+  s.used = true;
+  s.id = id;
+  s.acked = false;
+  s.ackedAtMs = 0;
+  meshNext_ = (meshNext_ + 1) % kMeshSeenSlots;
+}
+
+// Un frame arrivato dalla radio nel profilo MeshCom. Si leggono solo i testi (':') con la FCS giusta, mai visti prima (le
+// copie ripetute dai nodi hanno lo stesso ID), diretti al nostro nominativo-SSID. I messaggi di servizio ("{CET}..." e simili)
+// e le conferme di ricezione dei nostri testi non si mostrano. Un "{NNN" in fondo chiede la conferma: si risponde con
+// "MITTENTE:ackNNN".
+void VoiceNode::handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs) {
+  mc::Frame f;
+  if (!mc::decode(b, n, f) || !f.fcsOk || f.type != mc::kTypeText) return;
+  const bool forUs = cfg_.mcCall[0] && equalsNoCase(f.dest, cfg_.mcCall);
+  size_t slot = 0;
+  if (meshSeen(f.msgId, &slot)) {
+    // Copia gia' vista: se il mittente richiede ancora la conferma (la prima si e' persa) la si ripete, ma non prima di 30 s
+    if (forUs && meshSeen_[slot].acked && !ackPending_ && static_cast<int32_t>(nowMs - meshSeen_[slot].ackedAtMs) > 30000) {
+      // si ripete solo se la copia e' una ritrasmissione: la ricezione di una copia qualsiasi dopo 30 s lo e'
+      const char* open = strrchr(f.payload, '{');
+      if (open && open[1]) {
+        snprintf(ackNum_, sizeof(ackNum_), "%s", open + 1);
+        const char* comma = strchr(f.path, ',');
+        const size_t sl = comma ? static_cast<size_t>(comma - f.path) : strlen(f.path);
+        snprintf(ackDest_, sizeof(ackDest_), "%.*s", static_cast<int>(sl < 15 ? sl : 15), f.path);
+        ackPending_ = true;
+        ackTries_ = 0;
+        ackAtMs_ = nowMs + 1500;
+        meshSeen_[slot].ackedAtMs = nowMs;
+      }
+    }
+    return;
+  }
+  meshRemember(f.msgId, nowMs);
+  slot = (meshNext_ + kMeshSeenSlots - 1) % kMeshSeenSlots;
+  if (!forUs || f.payload[0] == '{') return;  // altri destinatari, messaggi di servizio
+
+  const size_t cl = strlen(cfg_.mcCall);
+  if (strncmp(f.payload, cfg_.mcCall, cl) == 0 && f.payload[cl] == ':' && strncmp(f.payload + cl + 1, "ack", 3) == 0) return;  // conferma di un nostro testo
+
+  // mittente: il primo del percorso
+  char src[Inbox::kMaxFrom + 1];
+  const char* comma = strchr(f.path, ',');
+  const size_t sl = comma ? static_cast<size_t>(comma - f.path) : strlen(f.path);
+  snprintf(src, sizeof(src), "%.*s", static_cast<int>(sl < Inbox::kMaxFrom ? sl : Inbox::kMaxFrom), f.path);
+
+  // testo: senza "{NNN" finale, solo ASCII stampabile senza graffe (il resto diventa '?'), al massimo kMaxTextChars
+  char text[kMaxTextChars + 1];
+  size_t tl = strlen(f.payload);
+  char num[8] = {0};
+  const char* open = strrchr(f.payload, '{');
+  if (open && open[1]) {
+    size_t d = 0;
+    while (open[1 + d] >= '0' && open[1 + d] <= '9' && d < 5) d++;
+    if (d > 0 && open[1 + d] == 0) {
+      memcpy(num, open + 1, d);
+      tl = static_cast<size_t>(open - f.payload);
+    }
+  }
+  size_t k = 0;
+  for (size_t i = 0; i < tl && k < kMaxTextChars; i++) {
+    const unsigned char c = static_cast<unsigned char>(f.payload[i]);
+    text[k++] = (c < 0x20 || c > 0x7E || c == '{' || c == '}') ? '?' : static_cast<char>(c);
+  }
+  while (k > 0 && text[k - 1] == ' ') k--;
+  text[k] = 0;
+  if (k == 0 || !inbox_.setText(src, text, k)) return;
+  playing_ = false;
+  textOpen_ = false;
+  notify_.messageReceived(true, src);
+
+  if (num[0] && !ackPending_) {  // richiesta di conferma
+    snprintf(ackNum_, sizeof(ackNum_), "%s", num);
+    snprintf(ackDest_, sizeof(ackDest_), "%s", src);
+    ackPending_ = true;
+    ackTries_ = 0;
+    ackAtMs_ = nowMs + 1500;  // un attimo dopo, come i nodi: la copia del mittente e' ancora in giro
+    meshSeen_[slot].acked = true;
+    meshSeen_[slot].ackedAtMs = nowMs;
+  }
+}
+
+// Conferma di ricezione in attesa: si trasmette appena il canale e' libero (al massimo 6 tentativi).
+void VoiceNode::meshAckTick(uint32_t nowMs) {
+  if (!ackPending_ || state_ != State::Idle || static_cast<int32_t>(nowMs - ackAtMs_) < 0) return;
+  if (radio_.channelBusy()) {
+    if (++ackTries_ >= 6) ackPending_ = false;
+    ackAtMs_ = nowMs + 700;
+    return;
+  }
+  ackPending_ = false;
+  mc::Frame f;
+  f.type = mc::kTypeText;
+  f.msgId = makeMsgId();
+  f.flags = mc::kFlagMesh;
+  f.maxHop = 4;
+  snprintf(f.path, sizeof(f.path), "%s", cfg_.mcCall);
+  snprintf(f.dest, sizeof(f.dest), "%s", ackDest_);
+  snprintf(f.payload, sizeof(f.payload), "%s:ack%s", ackDest_, ackNum_);
+  f.hw = cfg_.mcHw;
+  uint8_t wire[kMaxRxBytes];
+  const size_t len = mc::encode(f, wire, sizeof(wire));
+  if (!len) return;
+  meshRemember(f.msgId, nowMs);  // la copia ripetuta di una nostra conferma non e' un messaggio nuovo
+  radio_.send(wire, len);
+  radio_.startReceive();
+}
+
+// Testo verso il destinatario scelto nelle impostazioni (CFG SET MCDEST): un solo invio, senza richiesta di conferma. Le
+// copie ripetute dai nodi tornano con lo stesso ID e si scartano.
+bool VoiceNode::sendMeshText(const char* text, uint32_t nowMs) {
+  if (isPlaceholderCallsign(cfg_.callsign) || !cfg_.mcCall[0]) {
+    notify_.pttDenied(DenyReason::NoCallsign);
+    return false;
+  }
+  if (!cfg_.mcDest[0]) {
+    notify_.pttDenied(DenyReason::NoDestination);
+    return false;
+  }
+  if (state_ == State::Transmitting) {
+    notify_.pttDenied(DenyReason::Transmitting);
+    return false;
+  }
+  if (radio_.channelBusy()) {
+    notify_.pttDenied(DenyReason::ChannelBusy);
+    return false;
+  }
+  mc::Frame f;
+  f.type = mc::kTypeText;
+  f.msgId = makeMsgId();
+  f.flags = mc::kFlagMesh;
+  f.maxHop = 4;
+  snprintf(f.path, sizeof(f.path), "%s", cfg_.mcCall);
+  snprintf(f.dest, sizeof(f.dest), "%s", cfg_.mcDest);
+  snprintf(f.payload, sizeof(f.payload), "%s", text);
+  f.hw = cfg_.mcHw;
+  textWireLen_ = mc::encode(f, textWire_, sizeof(textWire_));
+  if (!textWireLen_) return false;
+  meshRemember(f.msgId, nowMs);
+  playing_ = false;
+  textOpen_ = false;
+  textTx_ = true;
+  textCopies_ = 1;
   justSent_ = false;
   nextSendMs_ = nowMs;
   state_ = State::Transmitting;

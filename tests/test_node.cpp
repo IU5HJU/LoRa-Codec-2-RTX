@@ -23,6 +23,9 @@ struct Station {
     c.newSessionId = nextSession;
     c.profile = profile;
     c.extraGapMs = extraGapMs;
+    snprintf(c.mcCall, sizeof(c.mcCall), "%s-99", cs ? cs : "");  // profilo MeshCom: nominativo-SSID e destinatario (l'altra scheda)
+    snprintf(c.mcDest, sizeof(c.mcDest), "%s", strcmp(cs, "IU5HJU") == 0 ? "IZ5ABC-99" : "IU5HJU-99");
+    c.mcHw = 12;
     return c;
   }
   fake::Radio radio;
@@ -732,8 +735,179 @@ static void testVoiceMessageStopAndReplace() {
   (void)first;
 }
 
+// ---- Profilo MeshCom: testi compatibili con la rete a pacchetto ----
+
+static std::vector<uint8_t> meshFrame(const char* path, const char* dest, const char* payload, uint32_t id, uint8_t type = mc::kTypeText,
+                                      uint8_t flags = mc::kFlagMesh, uint8_t hop = 3) {
+  mc::Frame f;
+  f.type = type;
+  f.msgId = id;
+  f.flags = flags;
+  f.maxHop = hop;
+  strcpy(f.path, path);
+  strcpy(f.dest, dest);
+  strcpy(f.payload, payload);
+  f.hw = 3;
+  uint8_t out[256];
+  const size_t n = mc::encode(f, out, sizeof(out));
+  CHECK(n > 0);
+  return std::vector<uint8_t>(out, out + n);
+}
+
+static void testMeshcomSendReceive() {
+  Sim s(kProfileMeshcom);
+  s.air.clock = &s.clock;
+  s.run(100);
+  CHECK(s.a.node.sendText("Ciao dal progetto", s.clock));
+  CHECK(s.a.node.state() == VoiceNode::State::Transmitting);
+  s.run(2000);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle && s.a.note.txEnds == 1);
+  CHECK(s.air.sent[0] == 1);  // un solo invio, niente seconda copia
+  mc::Frame f;
+  CHECK(mc::decode(s.air.log[0][0].data(), s.air.log[0][0].size(), f) && f.fcsOk);
+  CHECK(f.type == mc::kTypeText && strcmp(f.path, "IU5HJU-99") == 0 && strcmp(f.dest, "IZ5ABC-99") == 0 && strcmp(f.payload, "Ciao dal progetto") == 0);
+  CHECK(f.maxHop == 4 && f.flags == mc::kFlagMesh && f.hw == 12 && f.msgId != 0 && !f.hasFwTrailer);
+  // B lo riceve nella casella, con mittente nominativo-SSID
+  CHECK(s.b.note.received.size() == 1 && s.b.note.received[0].isText && s.b.note.received[0].callsign == "IU5HJU-99");
+  CHECK(s.b.node.inbox().kind() == Inbox::Kind::Text && strcmp(s.b.node.inbox().text(), "Ciao dal progetto") == 0);
+  CHECK(strcmp(s.b.node.inbox().callsign(), "IU5HJU-99") == 0);
+  CHECK(s.b.node.state() == VoiceNode::State::Idle);
+  // una copia ripetuta da un nodo (stesso ID, percorso piu' lungo) non e' un messaggio nuovo; nemmeno la nostra eco
+  s.air.inbox[1].push_back(meshFrame("IU5HJU-99,IU5CCC-12", "IZ5ABC-99", "Ciao dal progetto", f.msgId, mc::kTypeText, 0x90, 2));
+  s.air.inbox[0].push_back(meshFrame("IU5HJU-99,IU5CCC-12", "IZ5ABC-99", "Ciao dal progetto", f.msgId));
+  s.run(500);
+  CHECK(s.b.note.received.size() == 1 && s.a.note.received.empty());
+  // clic sul PTT: si apre e si legge; niente trasmissione
+  s.b.node.pttPressed(s.clock);
+  s.run(100);
+  s.b.node.pttReleased(s.clock);
+  CHECK(s.b.node.messageOpen() && s.b.note.txStarts == 0);
+}
+
+static void testMeshcomFilters() {
+  Sim s(kProfileMeshcom);
+  s.run(100);
+  uint32_t id = 0x100;
+  auto push = [&](const std::vector<uint8_t>& v) {
+    s.air.inbox[1].push_back(v);
+    s.run(300);
+  };
+  // altri destinatari, tutti (*), messaggi di servizio (ora di rete), posizioni, rapporti: niente in casella
+  push(meshFrame("IU5XXX-12", "IU5YYY-9", "non per noi", id++));
+  push(meshFrame("IU5XXX-12", "*", "ciao a tutti", id++));
+  push(meshFrame("OE1XAR-22", "IZ5ABC-99", "{CET}2026-11-11 15:32:42", id++));
+  push(meshFrame("IU5XXX-12", "*", "4340.68N/01103.20E#/B=100", id++, mc::kTypePos));
+  push(meshFrame("IU5XXX-12", "H", "R5;11,111,3;", id++, mc::kTypeHey));
+  // la conferma di un nostro testo (payload "NOSTRO:ackNNN") non si mostra
+  push(meshFrame("IU5XXX-12", "IZ5ABC-99", "IZ5ABC-99:ack204", id++));
+  CHECK(s.b.note.received.empty() && !s.b.node.inbox().has());
+  // FCS sbagliata: scartato
+  auto bad = meshFrame("IU5XXX-12", "IZ5ABC-99", "FCS rotta", id++);
+  bad[10] ^= 0x01;
+  push(bad);
+  CHECK(s.b.note.received.empty());
+  // un testo per noi: si accetta; maiuscole e minuscole nel destinatario indifferenti
+  push(meshFrame("IU5XXX-12", "iz5abc-99", "Questo si", id++));
+  CHECK(s.b.note.received.size() == 1 && strcmp(s.b.node.inbox().text(), "Questo si") == 0);
+  CHECK(strcmp(s.b.node.inbox().callsign(), "IU5XXX-12") == 0);
+  // il mittente e' il primo del percorso, anche con piu' nodi
+  push(meshFrame("IU5XXX-12,IU5AAA-12,IU5BBB-9", "IZ5ABC-99", "Via nodi", id++));
+  CHECK(strcmp(s.b.node.inbox().callsign(), "IU5XXX-12") == 0 && strcmp(s.b.node.inbox().text(), "Via nodi") == 0);
+  // caratteri non ASCII e graffe nel testo: sostituiti con '?'; testo lungo: tagliato a 150
+  push(meshFrame("IU5XXX-12", "IZ5ABC-99", "caff\xc3\xa8 {x} ok", id++));
+  CHECK(strcmp(s.b.node.inbox().text(), "caff?? ?x? ok") == 0);
+  std::string longText(190, 'a');
+  push(meshFrame("IU5XXX-12", "IZ5ABC-99", longText.c_str(), id++));
+  CHECK(s.b.node.inbox().textLen() == kMaxTextChars);
+}
+
+static void testMeshcomAck() {
+  Sim s(kProfileMeshcom);
+  s.air.clock = &s.clock;
+  s.run(100);
+  // testo con richiesta di conferma "{123": il testo si mostra senza, e dopo un attimo parte "MITTENTE:ack123"
+  s.air.inbox[1].push_back(meshFrame("IU5XXX-12", "IZ5ABC-99", "Prova{123", 0x777));
+  s.run(300);
+  CHECK(s.b.note.received.size() == 1 && strcmp(s.b.node.inbox().text(), "Prova") == 0);
+  CHECK(s.air.sent[1] == 0);  // non subito
+  s.run(3000);
+  CHECK(s.air.sent[1] == 1);
+  mc::Frame ack;
+  CHECK(mc::decode(s.air.log[1][0].data(), s.air.log[1][0].size(), ack) && ack.fcsOk);
+  CHECK(strcmp(ack.path, "IZ5ABC-99") == 0 && strcmp(ack.dest, "IU5XXX-12") == 0 && strcmp(ack.payload, "IU5XXX-12:ack123") == 0);
+  CHECK(ack.msgId != 0x777 && ack.maxHop == 4);
+  // le copie ripetute dello stesso messaggio non fanno ripetere la conferma
+  s.air.inbox[1].push_back(meshFrame("IU5XXX-12,IU5CCC-12", "IZ5ABC-99", "Prova{123", 0x777, mc::kTypeText, 0x91, 2));
+  s.run(3000);
+  CHECK(s.air.sent[1] == 1 && s.b.note.received.size() == 1);
+  // il mittente ritrasmette dopo 40 s (la conferma si e' persa): si conferma di nuovo
+  s.run(40000);
+  s.air.inbox[1].push_back(meshFrame("IU5XXX-12", "IZ5ABC-99", "Prova{123", 0x777));
+  s.run(3000);
+  CHECK(s.air.sent[1] == 2 && s.b.note.received.size() == 1);
+  // senza "{NNN" nessuna conferma
+  s.air.inbox[1].push_back(meshFrame("IU5XXX-12", "IZ5ABC-99", "Senza conferma", 0x778));
+  s.run(4000);
+  CHECK(s.air.sent[1] == 2 && s.b.note.received.size() == 2);
+  // canale occupato: la conferma aspetta e parte quando si libera
+  s.air.busy = true;
+  s.air.inbox[1].push_back(meshFrame("IU5XXX-12", "IZ5ABC-99", "Altro{9}", 0x779));  // "{9}" non e' un numero in coda: nessuna conferma
+  s.air.inbox[1].push_back(meshFrame("IU5XXX-12", "IZ5ABC-99", "Altro{9", 0x77A));
+  s.run(3000);
+  CHECK(s.air.sent[1] == 2);
+  s.air.busy = false;
+  s.run(1500);
+  CHECK(s.air.sent[1] == 3);
+}
+
+static void testMeshcomRules() {
+  Sim s(kProfileMeshcom);
+  s.run(100);
+  // senza destinatario non si invia
+  NodeConfig c = Station::makeCfg("IU5HJU", kProfileMeshcom);
+  c.mcDest[0] = 0;
+  fake::Air air;
+  uint32_t clock = 0;
+  fake::Radio radio(air, 0);
+  fake::Codec codec(kFrameBytes);
+  fake::Mic mic(clock);
+  fake::Speaker spk;
+  fake::Notifier note;
+  VoiceNode node(c, radio, codec, mic, spk, note);
+  CHECK(!node.sendText("ciao", 0) && note.denied == 1 && note.lastDeny == DenyReason::NoDestination && air.sent[0] == 0);
+  // canale occupato e N0CALL
+  CHECK(!s.a.node.sendText("", s.clock) && !s.a.node.sendText("{x}", s.clock) && s.air.sent[0] == 0);
+  s.air.busy = true;
+  CHECK(!s.a.node.sendText("ciao", s.clock) && s.a.note.lastDeny == DenyReason::ChannelBusy);
+  s.air.busy = false;
+  // PTT lungo: niente voce, avviso "solo testo"; nessuna prova di collegamento con tre clic; nessun microfono
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 100);
+  s.a.node.pttReleased(s.clock);
+  CHECK(s.a.node.state() == VoiceNode::State::Idle && s.a.note.denied > 0 && s.a.note.lastDeny == DenyReason::TextOnly);
+  CHECK(s.a.note.txStarts == 0 && s.air.sent[0] == 0);
+  s.a.node.setTestMode(true);
+  s.a.node.setRecordMode(true);
+  CHECK(!s.a.node.testMode() && !s.a.node.recordMode());
+  // un messaggio vocale del progetto non entra in questo profilo (altro formato): ignorato
+  Packet p;
+  p.mode = kModeCodec2_1200;
+  p.session = 5;
+  p.flags = kFlagStart | kFlagEnd | kFlagCallsign;
+  strcpy(p.callsign, "IU5HJU");
+  uint8_t wire[kMaxWireBytes];
+  const size_t n = encodePacket(p, wire, sizeof(wire));
+  s.air.inbox[1].push_back(std::vector<uint8_t>(wire, wire + n));
+  s.run(500);
+  CHECK(s.b.note.rxStarts == 0 && s.b.node.state() == VoiceNode::State::Idle);
+}
+
 int main() {
   testExpectedPackets();
+  testMeshcomSendReceive();
+  testMeshcomFilters();
+  testMeshcomAck();
+  testMeshcomRules();
   testTextMessage();
   testTextRules();
   testVoiceMessageStopAndReplace();

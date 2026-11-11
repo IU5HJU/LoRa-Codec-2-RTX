@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "profile.h"
 #include "testing.h"
 
 using namespace lcr;
@@ -45,7 +46,7 @@ static void testGesture() {
 static void testMenu() {
   size_t n = 0;
   const MenuItem* items = defaultMenuItems(n);
-  CHECK(n == 5);
+  CHECK(n == 6);
   Menu m(items, n);
   CHECK(!m.isOpen());
 
@@ -56,9 +57,11 @@ static void testMenu() {
   m.next(100);
   CHECK(m.selectedIndex() == 2);
   m.next(120);
-  CHECK(m.selectedIndex() == 3 && m.item(3).id == kMenuTextId);  // Invia testo
+  CHECK(m.selectedIndex() == 3 && m.item(3).id == kProfileMeshcom);  // MeshCom (solo testo)
+  m.next(125);
+  CHECK(m.selectedIndex() == 4 && m.item(4).id == kMenuTextId);  // Invia testo
   m.next(130);
-  CHECK(m.selectedIndex() == 4 && m.item(4).id == kMenuWifiId);
+  CHECK(m.selectedIndex() == 5 && m.item(5).id == kMenuWifiId);
   m.next(150);
   CHECK(m.selectedIndex() == 0);
   m.next(200);
@@ -74,13 +77,19 @@ static void testMenu() {
   CHECK(o.kind == K::Selected && o.id == 1);
 
   // Wi-Fi: la conferma e' una scelta (id 100), da qualunque profilo
+  CHECK(m.open(2, 500));
+  m.next(510);
+  o = m.confirm(520);
+  CHECK(o.kind == K::Selected && o.id == kProfileMeshcom);  // MeshCom e' un profilo (id 3): salva e riavvia
   CHECK(m.open(2, 600));
   m.next(610);
+  m.next(615);
   o = m.confirm(620);
   CHECK(o.kind == K::Selected && o.id == kMenuTextId);  // Invia testo: id 101
   CHECK(m.open(2, 700));
   m.next(710);
   m.next(720);
+  m.next(725);
   o = m.confirm(730);
   CHECK(o.kind == K::Selected && o.id == kMenuWifiId);
 

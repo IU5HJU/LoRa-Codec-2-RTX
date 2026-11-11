@@ -8,7 +8,7 @@ namespace lcr {
 
 void Inbox::setCallsign(const char* cs) {
   memset(callsign_, 0, sizeof(callsign_));
-  if (cs) strncpy(callsign_, cs, kMaxCallsign);
+  if (cs) strncpy(callsign_, cs, kMaxFrom);
 }
 
 void Inbox::clear() {

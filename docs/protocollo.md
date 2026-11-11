@@ -89,6 +89,8 @@ Un breve testo stile SMS (**1-150 caratteri**, ASCII stampabile `0x20-0x7E`, sen
 
 Il mittente lo trasmette **due volte** (stessa sessione, a 1 s di distanza: `kTextRepeatGapMs`), perché non c'è altra protezione; il ricevitore scarta la seconda copia (stessa sessione e stesso nominativo dell'ultimo testo ricevuto). Il testo si può ricevere con qualunque profilo; una scheda con una versione precedente scarta il modo 7 come ogni modo sconosciuto. Non c'è conferma di ricezione.
 
+Nel profilo **MeshCom** i testi non usano questo modo: viaggiano nel formato delle reti radioamatoriali a pacchetto ([meshcom-testo.md](meshcom-testo.md)), con altri parametri radio.
+
 I testi da inviare sono cinque, predefiniti e impostabili dalla pagina web o dalla pagina Wi-Fi della scheda (`CFG SET TEXTn`, [firmware.md](firmware.md)).
 
 ## Controllo hardware (modo 15)

@@ -15,6 +15,7 @@ const st = {
   cmds: [],
   board: 't3',
   texts: ['QRV, sono in ascolto', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
+  mc: { freq: '433.175', dest: '', ssid: '99' },
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
 const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps'];
@@ -24,6 +25,13 @@ function handle(line) {
   if (tm) { st.texts[+tm[1] - 1] = tm[2] === 'NONE' ? '' : tm[2]; return 'CFG OK text' + tm[1] + '=' + (tm[2] === 'NONE' ? '' : tm[2]); }
   const tg = /^CFG GET TEXT([1-5])$/.exec(line);
   if (tg) return 'CFG TEXT' + tg[1] + '=' + st.texts[+tg[1] - 1];
+  if (line === 'CFG GET MC') return 'CFG MC freqmc=' + st.mc.freq + ' dest=' + st.mc.dest + ' ssid=' + st.mc.ssid;
+  const mm = /^CFG SET (FREQMC|MCDEST|MCSSID) (.+)$/.exec(line);
+  if (mm) {
+    const k = mm[1].toLowerCase();
+    if (k === 'freqmc') st.mc.freq = mm[2]; else if (k === 'mcdest') st.mc.dest = mm[2] === 'NONE' ? '' : mm[2]; else st.mc.ssid = mm[2];
+    return 'CFG OK ' + k + '=' + mm[2];
+  }
   const t = line.split(' ');
   if (t[1] === 'GET') return 'CFG ' + KEYS.map((k) => k + '=' + st.cfg[k]).join(' ') + ' board=' + st.board + ' reboot=0 test=0';
   if (t[1] === 'SET') {
@@ -58,6 +66,8 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
 
   check('testi letti', (await p.inputValue('#text1')) === 'QRV, sono in ascolto' && (await p.inputValue('#text5')) === '73 e buona giornata');
   await p.fill('#text2', 'Sono QRV su 433.775, chiamami'); await p.fill('#text4', '');
+  check('valori MeshCom letti', (await p.inputValue('#mcfreq')) === '433.175' && (await p.inputValue('#mcssid')) === '99' && (await p.inputValue('#mcdest')) === '');
+  await p.fill('#mcdest', 'iu5abc-9'); await p.fill('#mcssid', '12');
   await p.fill('#callsign', 'iu5hju/p'); await p.selectOption('#profile', 'qua'); await p.fill('#freqqual', '434.250');
   await p.fill('#qth', '43.7696,11.2558'); await p.selectOption('#pos', 'on');
   await p.click('#save');
@@ -65,6 +75,7 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('salvato e riletto', /tutto coincide/.test(await p.textContent('#st')), await p.textContent('#st'));
   check('comandi inviati', st.cmds.includes('CFG SET PROFILE qua') && st.cmds.includes('CFG SET FREQQUAL 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
   check('testi salvati (con spazi) e posto vuoto con NONE', st.cmds.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami') && st.cmds.includes('CFG SET TEXT4 NONE') && st.texts[1] === 'Sono QRV su 433.775, chiamami' && st.texts[3] === '', JSON.stringify(st.texts));
+  check('MeshCom salvato (destinatario in maiuscolo)', st.mc.dest === 'IU5ABC-9' && st.mc.ssid === '12' && st.cmds.includes('CFG SET MCDEST IU5ABC-9'), JSON.stringify(st.mc));
   check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 1] === 'CFG GET');
   check('nominativo maiuscolo', st.cfg.callsign === 'IU5HJU/P');
 

@@ -14,6 +14,7 @@ namespace lcr {
 class Inbox {
  public:
   enum class Kind : uint8_t { None, Voice, Text };
+  static constexpr size_t kMaxFrom = 15;  // nominativo-SSID del mittente di un testo di altre reti (IU5ABC-12)
 
   void clear();
   Kind kind() const { return kind_; }
@@ -39,7 +40,7 @@ class Inbox {
   void setCallsign(const char* cs);
 
   Kind kind_ = Kind::None;
-  char callsign_[kMaxCallsign + 1] = {0};
+  char callsign_[kMaxFrom + 1] = {0};
   uint8_t frameBuf_[kMaxTurnFrames * kFrameBytes];
   uint8_t lost_[(kMaxTurnFrames + 7) / 8];
   size_t frames_ = 0;

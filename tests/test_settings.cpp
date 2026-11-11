@@ -60,6 +60,49 @@ struct Fixture {
   ConsoleResult run(const char* line) { return con.handleLine(line, reply, sizeof(reply)); }
 };
 
+static void testMeshcomSettings() {
+  Fixture f;
+  // valori di partenza: frequenza della rete, SSID 99, nessun destinatario
+  CHECK(f.run("CFG GET MC") == ConsoleResult::Ok && strcmp(f.reply, "CFG MC freqmc=433.175 dest= ssid=99") == 0);
+  CHECK(f.run("CFG SET PROFILE MC") == ConsoleResult::Ok && f.st.data.profile == kProfileMeshcom);
+  CHECK(f.run("CFG SET MCDEST iu5abc-9") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK mcdest=IU5ABC-9") == 0 && strcmp(f.st.data.mcDest, "IU5ABC-9") == 0);
+  CHECK(f.run("CFG SET MCDEST *") == ConsoleResult::Ok && strcmp(f.st.data.mcDest, "*") == 0);
+  CHECK(f.run("CFG SET MCDEST NONE") == ConsoleResult::Ok && f.st.data.mcDest[0] == 0);
+  CHECK(f.run("CFG SET MCDEST IU5ABC:9") == ConsoleResult::Error && f.st.data.mcDest[0] == 0);
+  CHECK(f.run("CFG SET MCDEST AAAAAAAAAAAAAAAAA") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET MCDEST IU5 ABC") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET MCSSID 12") == ConsoleResult::Ok && f.st.data.mcSsid == 12);
+  CHECK(f.run("CFG SET MCSSID 100") == ConsoleResult::Error && f.st.data.mcSsid == 12);
+  CHECK(f.run("CFG SET MCSSID 0") == ConsoleResult::Ok && f.st.data.mcSsid == 0);
+  CHECK(f.run("CFG SET FREQMC 433.175") == ConsoleResult::Ok && f.st.data.freqMcKhz == 433175);
+  CHECK(f.run("CFG SET FREQMC 500.000") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET MCDEST IU5ABC-9") == ConsoleResult::Ok && f.run("CFG SET MCSSID 99") == ConsoleResult::Ok);
+  CHECK(f.run("CFG GET MC") == ConsoleResult::Ok && strcmp(f.reply, "CFG MC freqmc=433.175 dest=IU5ABC-9 ssid=99") == 0);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "profile=mc") && strstr(f.reply, "reboot=1"));
+  // la frequenza del profilo in uso e' quella del MeshCom
+  Settings s = f.st.data;
+  CHECK(s.profileFreqKhz() == 433175);
+  s.freqKhz = 433900;
+  CHECK(s.profileFreqKhz() == 433175);
+  CHECK(s.withProfileFreqKhz(434000).freqMcKhz == 434000);
+  // nominativo con SSID
+  strcpy(s.callsign, "IU5HJU");
+  char c[20];
+  s.mcCallsign(c, sizeof(c));
+  CHECK(strcmp(c, "IU5HJU-99") == 0);
+  s.mcSsid = 0;
+  s.mcCallsign(c, sizeof(c));
+  CHECK(strcmp(c, "IU5HJU") == 0);
+  // validazione
+  CHECK(isValidMcDest("IU5ABC-9") && isValidMcDest("*") && isValidMcDest("IU5ABC/P") && !isValidMcDest("") && !isValidMcDest("a b") && !isValidMcDest(nullptr));
+  Settings bad = make("IU5HJU", 433900, 10);
+  strcpy(bad.mcDest, "no no");
+  CHECK(!isValidSettings(bad));
+  bad = make("IU5HJU", 433900, 10);
+  bad.mcSsid = 100;
+  CHECK(!isValidSettings(bad));
+}
+
 static void testMonitor() {
   Fixture f;
   CHECK(f.run("CFG GET MONITOR") == ConsoleResult::Ok && strcmp(f.reply, "CFG MONITOR=off") == 0);
@@ -472,6 +515,7 @@ int main() {
   testRepeaterRole();
   testTexts();
   testMonitor();
+  testMeshcomSettings();
   testValidate();
   testLoad();
   testNotCommand();

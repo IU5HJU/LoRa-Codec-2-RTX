@@ -14,6 +14,7 @@
 #include "inbox.h"
 #include "interfaces.h"
 #include "link_test.h"
+#include "meshcom_frame.h"
 #include "profile.h"
 #include "protocol.h"
 #include "rx_stream.h"
@@ -32,6 +33,12 @@ struct NodeConfig {
   // personale, si trasmette solo se l'operatore lo sceglie). Vedi position.h.
   bool sendPosition = false;
   Position position;
+  // Profilo MeshCom (solo testo, profile.h): nominativo-SSID, destinatario dei testi, identificatore hardware del frame e
+  // generatore di ID a 32 bit (uno per messaggio).
+  char mcCall[16] = {0};
+  char mcDest[16] = {0};
+  uint8_t mcHw = 0;
+  uint32_t (*newMsgId)() = nullptr;
   // Solo per i test: tempo aggiunto alla pausa tra i pacchetti per simulare il tempo in aria (la radio finta e' istantanea).
   uint32_t extraGapMs = 0;
 };
@@ -58,7 +65,7 @@ class VoiceNode {
   // Prova di collegamento (non persistente): con la prova attiva il PTT trasmette frame di prova
   // invece della voce, e dopo aver ricevuto una prova la scheda risponde con il risultato.
   // Nel profilo Messaggio la prova di collegamento non c'e' (12 s di frame a SF12 sarebbero circa 17 minuti in aria).
-  void setTestMode(bool on) { testMode_ = on && !prof_.message; }
+  void setTestMode(bool on) { testMode_ = on && !prof_.message && !prof_.textOnly; }
   bool testMode() const { return testMode_; }
 
   // Modo "registra e poi trasmetti" (prova, non persistente): il PTT registra il messaggio senza trasmettere; dopo il
@@ -66,7 +73,7 @@ class VoiceNode {
   // radio (nessuna elaborazione audio mentre la radio trasmette). Ignorato con la prova di collegamento attiva.
   enum class RecPhase { None, Recording, Waiting, Sending };
   // Nel profilo Messaggio il modo e' sempre acceso (non si puo' spegnere).
-  void setRecordMode(bool on) { recMode_ = on || prof_.message; }
+  void setRecordMode(bool on) { recMode_ = (on && !prof_.textOnly) || prof_.message; }
   bool recordMode() const { return recMode_; }
   RecPhase recPhase() const { return recPhase_; }
   uint32_t recFrames() const { return recCount_; }
@@ -92,6 +99,13 @@ class VoiceNode {
   void setRecPhase(RecPhase p);
   void reportRxProgress();
   void rxTick(uint32_t nowMs);
+  void handleMeshFrame(const uint8_t* b, size_t n, uint32_t nowMs);
+  bool sendMeshText(const char* text, uint32_t nowMs);
+  void meshAckTick(uint32_t nowMs);
+  uint32_t makeMsgId();
+  // ID gia' visti (anello di 70 come i nodi della rete): true se e' una copia; l'indice nell'anello in *slot
+  bool meshSeen(uint32_t id, size_t* slot);
+  void meshRemember(uint32_t id, uint32_t nowMs);
   void drainToInbox(uint32_t nowMs);
   void handleText(const Packet& p);
   void openMessage(uint32_t nowMs);
@@ -168,9 +182,25 @@ class VoiceNode {
   uint16_t lastTextSession_ = 0;
   char lastTextCall_[kMaxCallsign + 1] = {0};
   bool textTx_ = false;      // trasmissione di un testo in corso
-  uint8_t textWire_[kMaxWireBytes];
+  uint8_t textWire_[kMaxRxBytes];
   size_t textWireLen_ = 0;
   uint8_t textCopies_ = 0;
+  // Profilo MeshCom: ID visti (con l'ultima conferma mandata) e conferma di ricezione da trasmettere
+  struct MeshSeen {
+    uint32_t id = 0;
+    uint32_t ackedAtMs = 0;
+    bool used = false;
+    bool acked = false;
+  };
+  static constexpr size_t kMeshSeenSlots = 70;
+  MeshSeen meshSeen_[kMeshSeenSlots];
+  size_t meshNext_ = 0;
+  uint32_t meshIdCounter_ = 0x1000;
+  bool ackPending_ = false;
+  uint32_t ackAtMs_ = 0;
+  uint8_t ackTries_ = 0;
+  char ackDest_[16] = {0};
+  char ackNum_[8] = {0};
   bool playbackNotified_ = false;  // rxPlaybackStarted() gia' segnalato in questa ricezione
 };
 

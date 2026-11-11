@@ -22,7 +22,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <form id="f" autocomplete="off">
 <label for="callsign">Nominativo</label><input id="callsign" maxlength="8" required>
 <label for="profile">Profilo</label>
-<select id="profile"><option value="std">Standard</option><option value="msg">Messaggio</option><option value="qua">Qualità</option></select>
+<select id="profile"><option value="std">Standard</option><option value="msg">Messaggio</option><option value="qua">Qualità</option><option value="mc">MeshCom (solo testi)</option></select>
 <label for="freq">Frequenza Standard (MHz)</label><input id="freq" inputmode="decimal" required>
 <label for="freqmsg">Frequenza Messaggio (MHz)</label><input id="freqmsg" inputmode="decimal" required>
 <label for="freqqual">Frequenza Qualità (MHz)</label><input id="freqqual" inputmode="decimal" required>
@@ -33,6 +33,11 @@ button.sec{background:#e5e7eb;color:#14181f}
 <label for="pos">Trasmetti la posizione</label><select id="pos"><option value="off">No</option><option value="on">Sì</option></select>
 <label for="qth">Posizione fissa (latitudine,longitudine, oppure none)</label><input id="qth" placeholder="43.7696,11.2558">
 <div id="gpsbox" hidden><label for="gps">GPS (solo T-Beam)</label><select id="gps"><option value="off">Spento</option><option value="on">Acceso</option></select></div>
+<h2>Profilo MeshCom (solo testi)</h2>
+<p class="hint">Con il profilo MeshCom la scheda scambia solo testi con le reti radioamatoriali a pacchetto sui 433,175 MHz (niente voce). Destinatario: nominativo-SSID (per esempio IU5ABC-9) o * per tutti (con parsimonia); vuoto = nessuno. Vale dal riavvio.</p>
+<label for="mcfreq">Frequenza MeshCom (MHz)</label><input id="mcfreq" inputmode="decimal">
+<label for="mcdest">Destinatario dei testi</label><input id="mcdest" maxlength="15">
+<label for="mcssid">SSID del tuo nominativo (0-99)</label><input id="mcssid" type="number" min="0" max="99">
 <h2>Testi predefiniti (SMS)</h2>
 <p class="hint">Fino a 5 testi da 150 caratteri al massimo (solo ASCII, senza accenti e senza le parentesi graffe), da inviare dal menu della scheda: <strong>Invia testo</strong>. Lascia vuoto un posto per non usarlo. Valgono subito.</p>
 <label for="text1">Testo 1</label><input id="text1" maxlength="150">
@@ -51,7 +56,7 @@ async function cmd(l){const r=await fetch('/cfg?c='+encodeURIComponent(l));retur
 function parse(t){const m={};for(const kv of t.replace(/^CFG /,'').split(' ')){const i=kv.indexOf('=');if(i>0)m[kv.slice(0,i)]=kv.slice(i+1);}return m;}
 let board='';
 function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqqual','power','volume','micfloor','pos','qth','gps'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
-async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))throw new Error(t);fill(parse(t));for(let i=1;i<=5;i++){const r=await cmd('CFG GET TEXT'+i);$('text'+i).value=r.startsWith('CFG TEXT'+i+'=')?r.slice(('CFG TEXT'+i+'=').length):'';}st('Valori letti dalla scheda.','ok');}catch(e){st('Lettura non riuscita: '+e.message,'err');}}
+async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))throw new Error(t);fill(parse(t));for(let i=1;i<=5;i++){const r=await cmd('CFG GET TEXT'+i);$('text'+i).value=r.startsWith('CFG TEXT'+i+'=')?r.slice(('CFG TEXT'+i+'=').length):'';}try{const r=await cmd('CFG GET MC');if(r.startsWith('CFG MC ')){const m=parse(r.slice(7));$('mcfreq').value=m.freqmc||'';$('mcdest').value=m.dest||'';$('mcssid').value=m.ssid||'';}}catch(e){}st('Valori letti dalla scheda.','ok');}catch(e){st('Lettura non riuscita: '+e.message,'err');}}
 $('f').addEventListener('submit',async ev=>{
   ev.preventDefault();st('Salvataggio…','');
   const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqqual:$('freqqual').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none'};
@@ -60,6 +65,8 @@ $('f').addEventListener('submit',async ev=>{
   const texts=[];for(let i=1;i<=5;i++){const v=$('text'+i).value.trim();if(v!==''&&!/^[\x20-\x7A\x7C\x7E]+$/.test(v)){st('Il testo '+i+' ha caratteri non ammessi: solo ASCII, senza accenti.','err');return;}texts.push(v);}
   try{
     for(const k of Object.keys(keys)){if(want[k]===undefined)continue;const r=await cmd('CFG SET '+keys[k]+' '+want[k]);if(!r.startsWith('CFG OK')){st('Rifiutato ('+keys[k]+'): '+r,'err');return;}}
+    const mcd=$('mcdest').value.trim().toUpperCase();if(mcd!==''&&!/^(\*|[A-Z0-9\/-]{1,15})$/.test(mcd)){st('Destinatario non valido: nominativo-SSID, * oppure vuoto.','err');return;}
+    for(const c of ['CFG SET FREQMC '+$('mcfreq').value.trim(),'CFG SET MCDEST '+(mcd||'NONE'),'CFG SET MCSSID '+$('mcssid').value.trim()]){const r=await cmd(c);if(!r.startsWith('CFG OK')){st('Rifiutato ('+c+'): '+r,'err');return;}}
     for(let i=0;i<5;i++){const r=await cmd('CFG SET TEXT'+(i+1)+' '+(texts[i]||'NONE'));if(!r.startsWith('CFG OK')){st('Rifiutato (testo '+(i+1)+'): '+r,'err');return;}}
     const back=parse(await cmd('CFG GET'));const bad=[];
     for(const k of Object.keys(want)){let a=String(back[k]),b=String(want[k]);if(k.startsWith('freq')){a=parseFloat(a);b=parseFloat(b);}else if(k==='qth'&&b!=='none'){const x=b.split(',').map(parseFloat),y=a.split(',').map(parseFloat);if(Math.abs(x[0]-y[0])<2e-5&&Math.abs(x[1]-y[1])<2e-5)continue;}else if(k==='callsign'||k==='profile'){a=a.toLowerCase();b=b.toLowerCase();}else if(!isNaN(a)&&!isNaN(b)){a=Number(a);b=Number(b);}

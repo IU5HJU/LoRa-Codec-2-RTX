@@ -13,15 +13,19 @@ constexpr size_t kNever = static_cast<size_t>(kMaxPackets) * kFramesPerPacket;  
 const Profile kProfiles[kProfileCount] = {
     // Standard: i valori storici di protocol.h e user_config.h
     {kProfileStandard, "std", "Standard", 8, 250.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, false, kPrebufferFrames, kPrebufferTimeoutMs,
-     kSessionTimeoutMs},
+     kSessionTimeoutMs, 0, false},
     // Messaggio: SF12/BW125 (+13 dB). Un pacchetto da 77 byte dura circa 3,4 s in aria: la ricezione aspetta la fine del
     // messaggio (o 12 s di silenzio) prima di riprodurlo. Limite di durata: 30 s di voce, come lo Standard (deciso il
     // 9 novembre, "al momento"); a 1200 bps sono circa 271 s (4,5 minuti) in aria, con il Codec2 450 circa 160 s.
-    {kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, true, kNever, 0x7FFFFFFFu, 12000},
+    {kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, true, kNever, 0x7FFFFFFFu, 12000, 0, false},
     // Qualita': SF7/BW250 (circa -5 dB rispetto allo Standard) e Codec2 3200 (frame da 16 byte per 40 ms). 30 s di voce
     // occupano circa 12,5 s in aria (42%). Pre-buffer come lo Standard.
     {kProfileQuality, "qua", "Qualita'", 7, 250.0f, 5, 12, kModeCodec2_3200, kMaxTurnMs, false, kPrebufferFrames,
-     kPrebufferTimeoutMs, kSessionTimeoutMs},
+     kPrebufferTimeoutMs, kSessionTimeoutMs, 0, false},
+    // MeshCom: solo testo. Parametri della rete (profilo EU8): 433,175 MHz, SF11/BW250/CR4/6, sync word 0x2B, preambolo 8.
+    // Nessuna voce (maxTurnMs 0): il codec non serve.
+    {kProfileMeshcom, "mc", "MeshCom", 11, 250.0f, 6, 8, kModeCodec2_1200, 0, false, kPrebufferFrames, kPrebufferTimeoutMs,
+     kSessionTimeoutMs, 0x2B, true},
 };
 
 }  // namespace
