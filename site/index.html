@@ -10,6 +10,8 @@
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
   main { max-width:760px; margin:0 auto; padding:16px; }
+  .eyebrow { font-size:.8rem; font-weight:700; letter-spacing:.18em; color:var(--accent); margin:.6em 0 0; }   /* IU5HJU sopra il titolo, come nel sito personale */
+  .eyebrow + h1 { margin-top:.15em; }
   h1 { font-size:1.5rem; margin:.4em 0 .2em; }
   h2 { font-size:1.15rem; margin:0 0 .6em; }
   h3 { font-size:1rem; margin:1.2em 0 .3em; }
@@ -59,6 +61,7 @@
 </head>
 <body>
 <main>
+  <div class="eyebrow">IU5HJU</div>
   <h1>VoLoRa</h1>
   <p class="muted">Installa il firmware e imposta nominativo, frequenza e potenza dalla scheda collegata via USB. Progetto sperimentale per radioamatori.</p>
 
