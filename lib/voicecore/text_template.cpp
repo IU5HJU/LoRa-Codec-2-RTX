@@ -46,4 +46,37 @@ size_t expandTextTemplate(const char* tmpl, const char* callsign, char modeLette
   return n;
 }
 
+size_t signText(const char* text, char* out, size_t cap) {
+  if (!text || !out || cap < 2) return 0;
+  const size_t sigLen = strlen(kVoLoRaSignature);
+  size_t len = strlen(text);
+  while (len > 0 && text[len - 1] == ' ') len--;
+  if (len == 0) return 0;
+  // gia' firmato?
+  if (len >= sigLen) {
+    bool same = true;
+    for (size_t i = 0; i < sigLen && same; i++) {
+      char a = text[len - sigLen + i], b = kVoLoRaSignature[i];
+      if (a >= 'a' && a <= 'z') a = static_cast<char>(a - 32);
+      if (b >= 'a' && b <= 'z') b = static_cast<char>(b - 32);
+      same = a == b;
+    }
+    if (same) {
+      if (len + 1 > cap || len > kMaxTextChars) return 0;
+      memcpy(out, text, len);
+      out[len] = 0;
+      return len;
+    }
+  }
+  const size_t room = kMaxTextChars - (sigLen + 1);  // spazio per il testo
+  if (len > room) len = room;
+  while (len > 0 && text[len - 1] == ' ') len--;
+  if (len == 0 || len + 1 + sigLen + 1 > cap) return 0;
+  memcpy(out, text, len);
+  out[len] = ' ';
+  memcpy(out + len + 1, kVoLoRaSignature, sigLen);
+  out[len + 1 + sigLen] = 0;
+  return len + 1 + sigLen;
+}
+
 }  // namespace lcr

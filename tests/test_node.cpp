@@ -774,11 +774,11 @@ static void testMeshcomSendReceive() {
   CHECK(s.air.sent[0] == 1);  // un solo invio, niente seconda copia
   mc::Frame f;
   CHECK(mc::decode(s.air.log[0][0].data(), s.air.log[0][0].size(), f) && f.fcsOk);
-  CHECK(f.type == mc::kTypeText && strcmp(f.path, "IU5HJU-99") == 0 && strcmp(f.dest, "IZ5ABC-99") == 0 && strcmp(f.payload, "Ciao dal progetto") == 0);
+  CHECK(f.type == mc::kTypeText && strcmp(f.path, "IU5HJU-99") == 0 && strcmp(f.dest, "IZ5ABC-99") == 0 && strcmp(f.payload, "Ciao dal progetto (Inviato da dispositivo VoLoRa)") == 0);
   CHECK(f.maxHop == 4 && f.flags == mc::kFlagMesh && f.hw == 12 && f.msgId != 0 && !f.hasFwTrailer);
   // B lo riceve nella casella, con mittente nominativo-SSID
   CHECK(s.b.note.received.size() == 1 && s.b.note.received[0].isText && s.b.note.received[0].callsign == "IU5HJU-99");
-  CHECK(s.b.node.inbox().kind() == Inbox::Kind::Text && strcmp(s.b.node.inbox().text(), "Ciao dal progetto") == 0);
+  CHECK(s.b.node.inbox().kind() == Inbox::Kind::Text && strcmp(s.b.node.inbox().text(), "Ciao dal progetto (Inviato da dispositivo VoLoRa)") == 0);
   CHECK(strcmp(s.b.node.inbox().callsign(), "IU5HJU-99") == 0);
   // una copia ripetuta da un nodo (stesso ID, percorso piu' lungo) non e' un messaggio nuovo; nemmeno la nostra eco
   s.air.inbox[1].push_back(meshFrame("IU5HJU-99,IU5CCC-12", "IZ5ABC-99", "Ciao dal progetto", f.msgId, mc::kTypeText, 0x90, 2));
@@ -790,6 +790,21 @@ static void testMeshcomSendReceive() {
   s.run(100);
   s.b.node.pttReleased(s.clock);
   CHECK(s.b.node.messageOpen() && s.b.note.txStarts == 0);
+}
+
+static void testMeshcomSignature() {
+  Sim s;
+  s.run(100);
+  // il testo gia' firmato (il primo predefinito) non si firma due volte; uno lungo si accorcia e la firma resta intera
+  CHECK(s.a.node.startMeshcom("IU5HJU QRV su VoLoRa modo S 433.900 (Inviato da dispositivo VoLoRa)", "22251", s.clock, kWin));
+  s.run(2000);
+  mc::Frame f;
+  CHECK(mc::decode(s.air.log[0][0].data(), s.air.log[0][0].size(), f) && strcmp(f.payload, "IU5HJU QRV su VoLoRa modo S 433.900 (Inviato da dispositivo VoLoRa)") == 0);
+  std::string longText(150, 'a');
+  CHECK(s.a.node.startMeshcom(longText.c_str(), "22251", s.clock, kWin));
+  s.run(3000);
+  CHECK(s.air.sent[0] == 2 && mc::decode(s.air.log[0][1].data(), s.air.log[0][1].size(), f));
+  CHECK(strlen(f.payload) == kMaxTextChars && strcmp(f.payload + kMaxTextChars - 31, "(Inviato da dispositivo VoLoRa)") == 0);
 }
 
 static void testMeshcomWindow() {
@@ -1040,6 +1055,7 @@ static void testMeshcomGroups() {
 int main() {
   testExpectedPackets();
   testMeshcomSendReceive();
+  testMeshcomSignature();
   testMeshcomWindow();
   testMeshcomRefused();
   testMeshcomFilters();

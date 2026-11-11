@@ -44,6 +44,14 @@ occupato, nessun destinatario, nominativo N0CALL) la radio torna subito com'era.
 Le stesse impostazioni sono nella pagina di configurazione sul sito e nella pagina Wi-Fi della scheda. **Altre stazioni possono usare lo
 stesso SSID** (per esempio `-99`): scegline uno tuo.
 
+## Firma automatica
+
+Ogni testo inviato sulla rete porta in coda **`(Inviato da dispositivo VoLoRa)`**: serve a far capire a chi legge che il messaggio non
+viene da un nodo MeshCom ma da un dispositivo del progetto (per correttezza, e perché sia chiaro dove cercare in caso di problemi). La
+firma si aggiunge da sola: se il testo la contiene già in fondo (come il primo testo predefinito) non si ripete, e se il testo è troppo
+lungo si accorcia il testo, non la firma (150 caratteri in tutto). Vale per i testi dell'escursione MeshCom, non per "Invia testo" nel
+nostro formato.
+
 ## Testi e segnaposti
 
 Sono i cinque testi predefiniti (gli stessi di "Invia testo": [firmware.md](firmware.md)). Prima dell'invio si sostituiscono i

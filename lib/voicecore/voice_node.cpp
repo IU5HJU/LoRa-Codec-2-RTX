@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "packet.h"
+#include "text_template.h"
 
 namespace lcr {
 
@@ -859,7 +860,8 @@ bool VoiceNode::sendMeshText(const char* text, const char* dest, uint32_t nowMs)
   f.maxHop = 4;
   snprintf(f.path, sizeof(f.path), "%s", cfg_.mcCall);
   snprintf(f.dest, sizeof(f.dest), "%s", dest);
-  snprintf(f.payload, sizeof(f.payload), "%s", text);
+  // Ogni testo sulla rete porta in coda la firma "(Inviato da dispositivo VoLoRa)": non viene da un nodo MeshCom
+  if (signText(text, f.payload, sizeof(f.payload)) == 0) return false;
   f.hw = cfg_.mcHw;
   textWireLen_ = mc::encode(f, textWire_, sizeof(textWire_));
   if (!textWireLen_) return false;
