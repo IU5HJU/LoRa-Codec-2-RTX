@@ -232,14 +232,17 @@ Sulla T3 i pin 14 e 13 sono sullo slot microSD: **toglierla**. Il display di cia
 
 **Monitor audio sulla scheda RX (11/11/2026):** con un **altoparlante** (amplificatore MAX98357A come sulle schede normali) la scheda RX fa ascoltare la voce che riceve sulla frequenza di ingresso, per sorvegliare il traffico. Si accende con `CFG SET MONITOR ON` (e `CFG REBOOT`; `CFG GET MONITOR` lo legge; di base è spento). Si ascolta solo la voce del modo del profilo (non il testo né le prove), al ritmo normale e con la parità che recupera i pacchetti persi, come una scheda normale; nel profilo Messaggio la voce parte a messaggio concluso. Il monitor non cambia cosa viene ripetuto e non trasmette mai. Volume iniziale: `CFG SET VOLUME`; il pulsante volume (GPIO15) lo alza a scheda accesa. Sul display, a voce in corso, compare "RX" con il nominativo di chi parla.
 
-**Attenzione ai fili:** l'altoparlante usa l'I2S, cioè i pin 14 e 13 che la seriale del ripetitore usa di solito. Con il monitor acceso la scheda RX usa **altri due pin** per la seriale (la TX resta sui pin 14 e 13):
+**Fili dell'altoparlante (12/11/2026):** la **seriale fra le due schede è sempre la stessa**, con o senza altoparlante (pin 14 e 13 di ciascuna, tabella sopra). L'altoparlante è per il sysop che va alla postazione: ascolta il traffico dalla scheda RX e guarda i display di RX e TX. Poiché sulla RX non c'è il microfono l'I2S è solo in uscita e il segnale I2S può uscire da qualunque pin con funzione di uscita dell'ESP32: la RX con il monitor usa **altri pin per BCLK e WS** (DIN, SD e alimentazione dell'amplificatore MAX98357A restano quelli di sempre):
 
-| | T3 V1.6.1 (RX) | T-Beam V1.2 (RX) | Scheda TX |
-|---|---|---|---|
-| ricezione della RX | GPIO34 | GPIO36 | pin 14 (TX) → qui |
-| trasmissione della RX | GPIO2 | GPIO12 | qui → pin 13 (RX) |
+| MAX98357A | T3 V1.6.1 (RX) | T-Beam V1.2 (RX) |
+|---|---|---|
+| BCLK | GPIO2 (MISO dello slot microSD) | GPIO15 |
+| LRC (WS) | GPIO15 (MOSI dello slot microSD) | GPIO4 (LED di bordo: si accende appena) |
+| DIN | GPIO4 | GPIO2 |
+| SD (acceso/spento) | GPIO25 | GPIO25 |
+| Pulsante del volume (verso massa) | GPIO0 (non premerlo all'accensione) | tasto di bordo IO38 |
 
-Sulla RX **non va montato il microfono** (GPIO34/36 sono i pin dei suoi dati) e sulla T3 la microSD va tolta (GPIO2 è il MISO dello slot); sulla T-Beam il GPS deve restare spento. **Da verificare sul banco**: la scelta dei pin è teorica, i pin sono nei file `board_pins_*.h` (`kLinkRxMon`, `kLinkTxMon`) se vanno cambiati.
+Sulla RX **non va montato il microfono**; sulla T3 la microSD va tolta; sulla T-Beam il GPS deve restare spento (e il GPIO12, pin di avvio, non si usa). **Da verificare sul banco**: la scelta dei pin è teorica (nei file `board_pins_*.h`: `kMonI2sBclk`, `kMonI2sWs`, `kMonVolume`; il test sul PC controlla solo che non ci siano conflitti), soprattutto che i pin siano raggiungibili sul connettore della T-Beam e che GPIO2 non disturbi l'avvio della T3.
 
 **Messaggi (11/11/2026):** la scheda TX ascolta il profilo Messaggio sulla frequenza di uscita quando è libera, tiene fino a 3 messaggi (massimo 15 s di voce) e li ritrasmette dopo 20 s di silenzio vocale, con la voce sempre prioritaria; vedi [studio-ripetitore.md](studio-ripetitore.md) ("Il regista della TX"). Logica provata sul PC, **non ancora sulla scheda**.
 

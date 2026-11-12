@@ -49,7 +49,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <select id="role"><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option></select>
 <div id="rxbox" hidden>
 <label for="monitor">Altoparlante di monitor sulla RX</label><select id="monitor"><option value="off">Spento</option><option value="on">Acceso</option></select>
-<p class="hint">Con un altoparlante collegato la RX fa ascoltare la voce che riceve. Cambia i fili della seriale fra le due schede (vedi la guida del firmware).</p>
+<p class="hint">Con un altoparlante collegato (per il sysop in postazione) la RX fa ascoltare la voce che riceve. La seriale fra le due schede non cambia; i pin dell'altoparlante sono nella guida del firmware.</p>
 </div>
 <div id="txbox" hidden>
 <label for="freqout">Frequenza di uscita (MHz)</label><input id="freqout" inputmode="decimal">

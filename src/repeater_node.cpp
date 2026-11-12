@@ -83,9 +83,10 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
 [[noreturn]] void runRx(const lcr::Settings& settings, UiNotifier& ui, CfgHandler handler, AudioIo* audio, lcr::ICodec* codec) {
   RadioLora radio;
   if (!radio.begin(settings)) stopWithError(ui, "radio", radio.lastError());
-  // Con il monitor l'I2S occupa i pin della seriale di sempre: la RX usa altri due (board_pins_*.h, kLinkRxMon/kLinkTxMon).
+  // La seriale verso la TX e' sempre sui pin 14 e 13; l'altoparlante usa altri pin (board_pins_*.h, kMonI2sBclk/kMonI2sWs).
   const bool monitor = audio != nullptr && codec != nullptr;
-  Serial2.begin(kLinkBaud, SERIAL_8N1, monitor ? pins::kLinkRxMon : pins::kLinkRx, monitor ? pins::kLinkTxMon : pins::kLinkTx);
+  Serial2.begin(kLinkBaud, SERIAL_8N1, pins::kLinkRx, pins::kLinkTx);
+  if (monitor) pinMode(pins::kMonVolume, pins::kPttHasInternalPullup ? INPUT_PULLUP : INPUT);  // pulsante del volume (pin del PTT)
   const lcr::Profile& prof = lcr::profileFor(settings.profile);
   lcr::Repeater rep;
   // Il modo del profilo (di base il 1200) e il testo (modo 7: un solo pacchetto START+END, ripetuto come ogni altro)
@@ -162,7 +163,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
     if (mon) {
       mon->tick(now);
       audio->loop(now);
-      const bool volRaw = digitalRead(pins::kVolume) == LOW;
+      const bool volRaw = digitalRead(pins::kMonVolume) == LOW;
       if (!volRaw) volArmed = true;
       if (volButton.update(volArmed && volRaw, now) == lcr::ButtonGesture::Event::Short) {
         const int next = audio->volumeStep() >= lcr::AudioBackEnd::kVolumeSteps ? 1 : audio->volumeStep() + 1;

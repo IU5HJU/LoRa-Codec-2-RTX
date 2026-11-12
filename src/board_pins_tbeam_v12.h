@@ -42,12 +42,6 @@ constexpr int kAmpShutdown = 25;  // MAX98357A SD (alto = acceso)
 // Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
 constexpr int kLinkTx = kI2sBclk;
 constexpr int kLinkRx = kI2sWs;
-// Scheda RX con altoparlante di monitor (CFG SET MONITOR ON): l'I2S occupa i pin 14 e 13, quindi la seriale verso la TX passa
-// da altri due: RX su GPIO36 (il pin dati del microfono, solo ingresso: qui senza microfono) e TX su GPIO12 (il TX verso il
-// GPS, che nei ruoli del ripetitore e' spento). Collegare TX scheda TX (14) -> 36 della RX e 12 della RX -> 13 della TX.
-// DA VERIFICARE sul banco (GPIO12 e' un pin di avvio: la TX non deve tenerlo alto durante l'accensione).
-constexpr int kLinkRxMon = kMicData;
-constexpr int kLinkTxMon = kGpsTx;
 
 // --- PTT: tasto utente di bordo IO38 ---
 // GPIO38 e' solo ingresso e non ha pull-up interno: si conta su quello esterno della
@@ -57,5 +51,14 @@ constexpr bool kPttHasInternalPullup = false;
 
 // --- Volume: pulsante esterno opzionale tra GPIO15 e massa (pull-up interno) ---
 constexpr int kVolume = 15;
+
+// --- Altoparlante di monitor sulla scheda RX del ripetitore (CFG SET MONITOR ON) ---
+// La seriale fra RX e TX resta sempre sui pin 14 e 13. L'I2S dell'altoparlante, solo uscita (niente microfono sulla RX), usa altri
+// pin: BCLK su GPIO15 (il pin del pulsante volume, che qui non serve) e WS su GPIO4 (il LED di bordo: si accende appena, e' normale);
+// DIN (kAmpData, GPIO2) e SD (kAmpShutdown, GPIO25) restano quelli di sempre. Il GPIO12 (avvio) non si usa. Il volume si regola con
+// il tasto di bordo IO38, lo stesso del PTT (inutile in questo ruolo). DA VERIFICARE sul banco.
+constexpr int kMonI2sBclk = kVolume;
+constexpr int kMonI2sWs = kLed;
+constexpr int kMonVolume = kPtt;
 
 }  // namespace pins_tbeam_v12

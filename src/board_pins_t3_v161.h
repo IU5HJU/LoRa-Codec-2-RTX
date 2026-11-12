@@ -40,15 +40,20 @@ constexpr int kAmpShutdown = 25; // MAX98357A SD (alto = acceso). Condiviso col 
 // Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
 constexpr int kLinkTx = kI2sBclk;
 constexpr int kLinkRx = kI2sWs;
-// Scheda RX con altoparlante di monitor (CFG SET MONITOR ON): l'I2S occupa i pin 14 e 13, quindi la seriale verso la TX passa
-// da altri due: RX su GPIO34 (il pin dati del microfono, solo ingresso: qui senza microfono) e TX su GPIO2 (MISO dello slot
-// microSD: senza scheda inserita). Collegare TX scheda TX (14) -> 34 della RX e 2 della RX -> 13 della TX. DA VERIFICARE sul banco.
-constexpr int kLinkRxMon = kMicData;
-constexpr int kLinkTxMon = kSdMiso;
 
 // --- PTT: pulsante esterno tra GPIO0 e massa (la scheda ha solo RST) ---
 constexpr int kPtt = 0;
 constexpr bool kPttHasInternalPullup = true;
+
+// --- Altoparlante di monitor sulla scheda RX del ripetitore (CFG SET MONITOR ON) ---
+// La seriale fra RX e TX resta sempre sui pin 14 e 13 (stesso cablaggio con o senza altoparlante). L'I2S dell'altoparlante, solo
+// uscita (niente microfono sulla RX), usa altri pin: il segnale I2S puo' uscire da qualunque GPIO con funzione di uscita.
+// BCLK su GPIO2 (MISO dello slot microSD) e WS su GPIO15 (MOSI dello slot): senza scheda inserita sono liberi; DIN (kAmpData, GPIO4) e
+// SD (kAmpShutdown, GPIO25) restano quelli di sempre. Il volume si regola con il pulsante sul pin del PTT (GPIO0, inutile in questo
+// ruolo; non tenerlo premuto all'accensione). DA VERIFICARE sul banco.
+constexpr int kMonI2sBclk = kSdMiso;
+constexpr int kMonI2sWs = kSdMosi;
+constexpr int kMonVolume = kPtt;
 
 // --- Volume: pulsante esterno opzionale tra GPIO15 e massa (pull-up interno).
 // Se non e' collegato resta alto e non fa nulla. GPIO15 e' un pin di strapping:
