@@ -294,7 +294,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       snprintf(l3, sizeof(l3), "Voce %lu  Coda %u", static_cast<unsigned long>(sched.stats().voiceSent), static_cast<unsigned>(queue.size()));
       snprintf(l4, sizeof(l4), "Persi %lu  da RX %lu", static_cast<unsigned long>(queue.dropped()), static_cast<unsigned long>(rxCount));
       const bool linkOk = lastHbMs != 0 && now - lastHbMs < kLinkDeadMs;
-      if (!mayTransmit) snprintf(l5, sizeof(l5), "N0CALL: non trasmette");
+      if (!mayTransmit) snprintf(l5, sizeof(l5), "N0CALL no TX, RX %s", linkOk ? "ok" : "NO");  // con N0CALL non trasmette: la riga mostra comunque la seriale
       else if (control.off()) snprintf(l5, sizeof(l5), "TX SPENTA (sysop)");
       else snprintf(l5, sizeof(l5), "RX %s %s M%u/%lu", linkOk ? "ok" : "NO", sched.state() == lcr::TxScheduler::State::Voice ? "voce" : sched.state() == lcr::TxScheduler::State::Listen ? "ascolto" : "rilancio",
                     static_cast<unsigned>(store->readyCount()), static_cast<unsigned long>(sched.stats().relayed));

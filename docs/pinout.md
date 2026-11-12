@@ -82,7 +82,9 @@ Il ripetitore unisce **due T3** già cablate come stazioni normali (microfono no
 | Seriale RX | 34 | TX (IO2) dell'altra scheda (GPIO34 è solo ingresso: va bene, è il pin del microfono che qui non c'è) |
 | Seriale TX | 2 | RX (IO34) dell'altra scheda (MISO dello slot microSD: lasciarlo vuoto) |
 
-Due T-Beam sarebbero uno spreco (GPS, PMU e batteria non servono a un ripetitore fisso): il ripetitore è solo T3. Dettagli in [firmware.md](firmware.md) e [studio-ripetitore.md](studio-ripetitore.md). **Da verificare sul banco.**
+Due T-Beam sarebbero uno spreco (GPS, PMU e batteria non servono a un ripetitore fisso): il ripetitore è solo T3. ![Collegamenti del ripetitore](images/collegamenti-ripetitore.png)
+
+Dettagli in [firmware.md](firmware.md) e [studio-ripetitore.md](studio-ripetitore.md); prova a banco in [banco-ripetitore.md](banco-ripetitore.md). **Da verificare sul banco.**
 
 ## Alimentazione
 
