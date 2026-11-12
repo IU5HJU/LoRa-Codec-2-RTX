@@ -310,4 +310,4 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 ### 12/11/2026, casa, IU5HJU (nodo Internet: riavvio di un nodo)
 
 - Riavviato il nodo T-Beam (tasto RST) lasciando acceso il nodo T3, firmware `808bc07`.
-- Esito: il collegamento torna `ok` da solo, senza interventi sull'altro nodo, in circa **10 secondi** (tempo riferito dall'operatore). Prova "riavvia un nodo" della tabella di [banco-nodo.md](banco-nodo.md): **superata**. Contatori non annotati.
+- Esito: il collegamento torna `ok` da solo, senza interventi sull'altro nodo, in circa **10 secondi** (tempo riferito dall'operatore). Il nodo rimasto acceso invece si accorge che l'altro è spento solo dopo circa **1 minuto**: è il tempo previsto dal progetto (keepalive ogni 20 s, collegamento dichiarato giù dopo 60 s senza datagrammi validi). Prova "riavvia un nodo" della tabella di [banco-nodo.md](banco-nodo.md): **superata**. Contatori non annotati.
