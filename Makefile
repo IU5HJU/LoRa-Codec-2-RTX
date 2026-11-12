@@ -5,9 +5,9 @@ CXXFLAGS ?= -std=c++17 -Wall -Wextra -O1 -g -fsanitize=address,undefined -Ilib/v
 
 CORE := $(wildcard lib/voicecore/*.cpp)
 HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
-TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live repeater repeater_link message_store inbox text_picker rx_monitor meshcom_frame text_template choice_picker tx_scheduler sha256 sysop radio_test
+TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live repeater repeater_link message_store inbox text_picker rx_monitor meshcom_frame text_template choice_picker tx_scheduler sha256 sysop radio_test node_link node_core
 
-.PHONY: test test-page test-py lcr_decode lcr_live codec_compare pdf clean
+.PHONY: test test-page test-py lcr_decode lcr_live codec_compare pdf clean vlnode
 test: $(addprefix build/test_,$(TESTS))
 	@for t in $^; do ./$$t || exit 1; done
 
@@ -17,6 +17,12 @@ build/test_%: tests/test_%.cpp $(CORE) $(HDRS)
 
 clean:
 	rm -rf build
+
+# Nodo VoLoRa-IP per il PC (tools/vlnode.cpp): prova il protocollo fra nodi su un vero socket UDP, o fa da secondo nodo per una T3.
+vlnode: build/vlnode
+build/vlnode: tools/vlnode.cpp $(CORE) $(HDRS)
+	@mkdir -p build
+	$(CXX) -std=c++17 -Wall -Wextra -O1 -Ilib/voicecore -o $@ $< $(CORE)
 
 # Rigenera docs/formato-pacchetto.pdf dal codice (serve reportlab: pip install reportlab).
 pdf:

@@ -158,6 +158,9 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('Morse spento salvato e riletto', st.idmorse === 'off' && (await p.inputValue('#idmorse')) === 'off');
   await p.selectOption('#idmorse', 'on'); await p.click('#save');
   await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  await p.selectOption('#role', 'node');
+  check('ruolo nodo: avviso visibile, riquadri RX/TX nascosti', (await p.isVisible('#nodebox')) && (await p.isHidden('#rxbox')) && (await p.isHidden('#txbox')));
+  await p.selectOption('#role', 'rpttx');
   check('rilettura: ruolo TX e riquadro visibile', (await p.inputValue('#role')) === 'rpttx' && (await p.isVisible('#txbox')) && (await p.inputValue('#idint')) === '3');
   await p.selectOption('#role', 'rptrx');
   check('scheda RX: compare il monitor, non la frequenza di uscita', (await p.isVisible('#rxbox')) && (await p.isHidden('#txbox')));

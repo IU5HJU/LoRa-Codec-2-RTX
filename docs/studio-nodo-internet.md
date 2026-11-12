@@ -88,3 +88,8 @@ Strumenti: **2 T3 nodo** sullo stesso router, **2 T3 stazione** normali con il m
 2. Nel banco, **due frequenze diverse** per i due nodi (proposto) o la stessa?
 3. Il primo passo **solo profilo Standard** (voce e testo; i messaggi memorizzati e gli annunci del ripetitore restano fuori) o anche gli altri?
 4. Un **ruolo `NODE`** a sé (proposto) o il nodo come funzione che si aggiunge a `RPTRX`/`RPTTX`?
+
+## Decisioni e stato (12/11/2026)
+Decise: **UDP con firma**, **due frequenze diverse** per il banco, **solo profilo Standard** (voce e testo), **ruolo `NODE` a sé**.
+**Scritto e provato sul PC:** il protocollo fra i nodi (`lib/voicecore/node_link.*`: datagramma firmato, sfida dopo un riavvio, anti-ripetizione, attivazione a due vie), la logica del nodo (`node_core.*`: regole del ripetitore, coda, controllo del canale, priorità alla voce locale), le impostazioni (`CFG SET ROLE NODE`, `WIFISSID`, `WIFIPASS`, `PEER`, `NODEPORT`, `NODEID`, `PEERID`, `NODEKEY`, `CFG GET NODE`), il ruolo sulla T3 (`src/repeater_node.cpp`: Wi-Fi client, task del socket, coda, display) e un nodo per il PC (`tools/vlnode.cpp`, `make vlnode`). Provati due processi `vlnode` su socket UDP veri (collegamento, testo, voce finta, chiave diversa rifiutata). **Non provato su una T3.** Prova a banco: [banco-nodo.md](banco-nodo.md).
+

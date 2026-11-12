@@ -46,8 +46,11 @@ button.sec{background:#e5e7eb;color:#14181f}
 <h2>Ripetitore</h2>
 <p class="hint">Due schede possono fare da ripetitore: una <strong>RX</strong> ascolta la frequenza di ingresso (quella del profilo, qui sopra) e una <strong>TX</strong> ritrasmette sulla frequenza di uscita. Con un ruolo da ripetitore la scheda non funziona più da stazione: dopo il riavvio mostra lo stato del ripetitore. <strong>Attenzione:</strong> una scheda in ruolo da ripetitore non ha il menu a bordo e questa pagina non si apre più; per tornare stazione serve il cavo USB (sito web delle impostazioni o terminale seriale, <code>CFG SET ROLE OFF</code>). Vale dal riavvio.</p>
 <label for="role">Ruolo della scheda</label>
-<select id="role"><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option></select>
+<select id="role"><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option><option value="node">Nodo Internet (T3 su Wi-Fi)</option></select>
 <p class="hint" id="rolenote" hidden><strong>Il ripetitore usa solo la T3:</strong> due T-Beam sarebbero uno spreco (GPS, PMU e batteria che non servono). Su questa scheda il ruolo non si può cambiare.</p>
+<div id="nodebox" hidden>
+<p class="hint"><strong>Nodo Internet:</strong> la T3 porta i pacchetti LoRa a un'altra T3 via Wi-Fi (UDP firmato). Solo profilo Standard. Rete, indirizzo dell'altro nodo, id e chiave si impostano da seriale (<code>CFG SET WIFISSID</code>, <code>WIFIPASS</code>, <code>PEER</code>, <code>NODEID</code>, <code>PEERID</code>, <code>NODEKEY</code>: vedi la guida del firmware). Come per il ripetitore, in questo ruolo la scheda non ha il menu e questa pagina non si apre più.</p>
+</div>
 <div id="rxbox" hidden>
 <label for="monitor">Altoparlante di monitor sulla RX</label><select id="monitor"><option value="off">Spento</option><option value="on">Acceso</option></select>
 <p class="hint">Con un altoparlante collegato (per il sysop in postazione) la RX fa ascoltare la voce che riceve. La seriale fra le due schede non cambia; i pin dell'altoparlante sono nella guida del firmware.</p>
@@ -88,7 +91,7 @@ async function cmd(l){const r=await fetch('/cfg?c='+encodeURIComponent(l));retur
 function parse(t){const m={};for(const kv of t.replace(/^CFG /,'').split(' ')){const i=kv.indexOf('=');if(i>0)m[kv.slice(0,i)]=kv.slice(i+1);}return m;}
 let board='';
 function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';$('role').disabled=board==='tbeam';$('rolenote').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqqual','power','volume','micfloor','pos','qth','gps','role','freqout'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
-function roleShow(){const r=$('role').value;$('rxbox').hidden=r!=='rptrx';$('txbox').hidden=r!=='rpttx';}
+function roleShow(){const r=$('role').value;$('rxbox').hidden=r!=='rptrx';$('txbox').hidden=r!=='rpttx';$('nodebox').hidden=r!=='node';}
 $('role').addEventListener('change',roleShow);
 async function loadRole(){try{const r=await cmd('CFG GET MONITOR');if(r.startsWith('CFG MONITOR='))$('monitor').value=r.slice(12)==='on'?'on':'off';}catch(e){}roleShow();}
 function sysopShow(){const on=$('sysopmode').value==='on';$('sysopbox').hidden=!on;$('textsbox').hidden=on;}

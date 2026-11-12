@@ -38,6 +38,11 @@
 //   CFG GET IDMORSE              -> CFG IDMORSE=on
 //   CFG GET IDINT                -> CFG IDINT=10
 //   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-fm.md)
+//   CFG SET ROLE NODE            -> CFG OK role=node           (nodo su Wi-Fi: solo T3; i parametri sotto; vale dal riavvio)
+//   CFG SET WIFISSID <nome della rete> / CFG SET WIFIPASS <password>   (il resto della riga: possono avere spazi; NONE toglie la password)
+//   CFG SET PEER 192.168.1.51:5400  -> CFG OK peer=192.168.1.51:5400  (indirizzo e porta dell'altro nodo; NONE lo toglie)
+//   CFG SET NODEPORT 5400 / NODEID 1 / PEERID 2 / NODEKEY <32 cifre esadecimali>   (porta di ascolto, id di questo nodo, id atteso dell'altro (0 = qualunque), chiave condivisa)
+//   CFG GET NODE                 -> CFG NODE ssid=casa pass=set ip=192.168.1.51 port=5400 listen=5400 id=1 peerid=2 key=set
 //   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set mode=off
 //   CFG GET MCDEST1              -> CFG MCDEST1=22251
 //   CFG SET MCWINDOW 300         -> CFG OK mcwindow=300        (secondi di ascolto dopo l'invio, 30-1800)
@@ -75,8 +80,8 @@ constexpr int kMaxVolume = 10;  // +15 dB (il passo 5 e' 0 dB; vedi AudioBackEnd
 constexpr int kDefaultVolume = 5;  // 0 dB
 
 // Ruolo della scheda: normale (voce) oppure una delle due schede del ripetitore (docs/studio-ripetitore.md).
-enum Role : uint8_t { kRoleNormal = 0, kRoleRepeaterRx = 1, kRoleRepeaterTx = 2 };
-inline const char* roleCode(uint8_t r) { return r == kRoleRepeaterRx ? "rptrx" : (r == kRoleRepeaterTx ? "rpttx" : "off"); }
+enum Role : uint8_t { kRoleNormal = 0, kRoleRepeaterRx = 1, kRoleRepeaterTx = 2, kRoleNode = 3 };
+inline const char* roleCode(uint8_t r) { return r == kRoleRepeaterRx ? "rptrx" : (r == kRoleRepeaterTx ? "rpttx" : (r == kRoleNode ? "node" : "off")); }
 
 // Fino al 10/11/2026 il passo 10 era 0 dB e i passi scendevano di 3 dB; ora il passo 5 e' 0 dB. Un volume salvato con la
 // scala vecchia (v) si porta al passo che dava lo stesso livello: v-5, almeno 1 (0 = muto resta muto).
@@ -134,6 +139,16 @@ struct Settings {
   bool sysopMode = false;
   bool idMorse = true;         // dopo l'identificativo in testo, il nominativo in Morse con tono in FM stretta (docs/studio-identificativo-fm.md); vale dal riavvio
   uint8_t idIntervalMin = 10;  // identificativo periodico del ripetitore (scheda TX), in minuti: 1..10, di base 10; vale dal riavvio
+  // Nodo su Wi-Fi (ruolo NODE, docs/studio-nodo-internet.md): rete, indirizzo dell'altro nodo, id e chiave condivisa; valgono dal riavvio.
+  char wifiSsid[33] = {0};
+  char wifiPass[65] = {0};
+  char peerIp[16] = {0};       // indirizzo IPv4 dell'altro nodo, "" = non impostato
+  uint16_t peerPort = 5400;
+  uint16_t nodePort = 5400;    // porta UDP su cui si ascolta
+  uint32_t nodeId = 0;         // 0 = non impostato
+  uint32_t peerId = 0;         // 0 = qualunque nodo con la chiave giusta
+  uint8_t nodeKey[16] = {0};
+  bool nodeKeySet = false;
   bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
   uint32_t freqOutKhz = 0;   // frequenza di uscita del ripetitore, usata dalla scheda TX (0 = come la frequenza del profilo)
   int powerDbm = 0;
@@ -186,6 +201,8 @@ inline bool operator!=(const Settings& a, const Settings& b) { return !(a == b);
 
 // Destinatario valido nell'escursione MeshCom: "*" oppure 1-15 caratteri A-Z, 0-9, '/' e '-' (nominativo-SSID o gruppo). Vuoto: false.
 bool isValidMcDest(const char* d);
+// "a.b.c.d" con quattro numeri da 0 a 255 (indirizzo dell'altro nodo).
+bool isValidIpv4(const char* s);
 
 // true se nominativo, frequenza, potenza e volume sono nei limiti.
 bool isValidSettings(const Settings& s);

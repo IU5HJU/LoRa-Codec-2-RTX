@@ -461,6 +461,18 @@ async function scenario(name, fn, opts = {}) {
     check('nessun comando ROLE sulla T-Beam', !(await cmds(p)).some((x) => /^CFG SET (ROLE|FREQOUT|MONITOR|IDINT)/.test(x)));
   });
 
+  await scenario('ruolo NODE: avviso e salvataggio', async (p) => {
+    await connect(p);
+    await until(p, () => !document.getElementById('role').disabled);
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#role', 'node');
+    check('avviso del nodo visibile, riquadri RX/TX nascosti', (await p.isVisible('#nodebox')) && (await p.isHidden('#rxbox')) && (await p.isHidden('#txbox')));
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c = await cmds(p);
+    check('ROLE node, nessun FREQOUT/IDINT/MONITOR', c.includes('CFG SET ROLE node') && !c.some((x) => /^CFG SET (FREQOUT|IDINT|IDMORSE|MONITOR)/.test(x)), c.join(' | '));
+  });
+
   await scenario('ruolo del ripetitore: scheda RX con il monitor', async (p) => {
     await connect(p);
     await until(p, () => !document.getElementById('role').disabled);

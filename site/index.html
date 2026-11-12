@@ -204,8 +204,11 @@
       <h3>Ripetitore</h3>
       <p class="hint">Due schede possono fare da ripetitore: una <strong>RX</strong> ascolta la frequenza di ingresso (quella del profilo, qui sopra) e una <strong>TX</strong> ritrasmette sulla frequenza di uscita. Con un ruolo da ripetitore la scheda non funziona pi&ugrave; da stazione: dopo il riavvio mostra lo stato del ripetitore. <strong>Attenzione:</strong> una scheda in ruolo da ripetitore non ha il menu a bordo, quindi non apre pi&ugrave; la pagina interna: per tornare stazione scegli <em>Stazione normale</em> qui, con il cavo USB.</p>
       <label for="role">Ruolo della scheda</label>
-      <select id="role" disabled><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option></select>
+      <select id="role" disabled><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option><option value="node">Nodo Internet (T3 su Wi-Fi)</option></select>
       <p class="hint" id="rolenote" hidden><strong>Il ripetitore usa solo la T3:</strong> due T-Beam sarebbero uno spreco (GPS, PMU e batteria che non servono). Su questa scheda il ruolo non si pu&ograve; cambiare.</p>
+      <div id="nodebox" hidden>
+        <p class="hint"><strong>Nodo Internet:</strong> la T3 porta i pacchetti LoRa a un'altra T3 via Wi-Fi (UDP firmato). Solo profilo Standard. Rete, indirizzo dell'altro nodo, id e chiave si impostano da seriale (<code>CFG SET WIFISSID</code>, <code>WIFIPASS</code>, <code>PEER</code>, <code>NODEID</code>, <code>PEERID</code>, <code>NODEKEY</code>: vedi la guida del firmware). Come per il ripetitore, in questo ruolo la scheda non ha il menu.</p>
+      </div>
       <div id="rxbox" hidden>
         <label for="monitor">Altoparlante di monitor sulla RX</label>
         <select id="monitor" disabled><option value="off">Spento</option><option value="on">Acceso</option></select>
@@ -439,7 +442,7 @@
     updateMcControls(!!port);
   }
   let roleSeen = false;      // l'ultimo CFG GET conteneva role= (firmware piu' vecchi: no)
-  function roleShow() { const r = $('role').value; $('rxbox').hidden = r !== 'rptrx'; $('txbox').hidden = r !== 'rpttx'; }
+  function roleShow() { const r = $('role').value; $('rxbox').hidden = r !== 'rptrx'; $('txbox').hidden = r !== 'rpttx'; $('nodebox').hidden = r !== 'node'; }
   function updateRoleControls(on) {
     for (const id of ['role', 'monitor', 'freqout']) $(id).disabled = !on || !roleSeen || lastBoard === 'tbeam';
     $('rolenote').hidden = !(on && roleSeen && lastBoard === 'tbeam');

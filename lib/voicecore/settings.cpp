@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <strings.h>
 
@@ -13,7 +14,9 @@ bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode && a.idIntervalMin == b.idIntervalMin && a.idMorse == b.idMorse &&
+         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode && a.idIntervalMin == b.idIntervalMin && strncmp(a.wifiSsid, b.wifiSsid, sizeof(a.wifiSsid)) == 0 && strncmp(a.wifiPass, b.wifiPass, sizeof(a.wifiPass)) == 0 &&
+         strncmp(a.peerIp, b.peerIp, sizeof(a.peerIp)) == 0 && a.peerPort == b.peerPort && a.nodePort == b.nodePort && a.nodeId == b.nodeId && a.peerId == b.peerId &&
+         a.nodeKeySet == b.nodeKeySet && (!a.nodeKeySet || memcmp(a.nodeKey, b.nodeKey, sizeof(a.nodeKey)) == 0) && a.idMorse == b.idMorse &&
          (!a.sysopKeySet || memcmp(a.sysopKey, b.sysopKey, sizeof(a.sysopKey)) == 0) &&
          a.profile == b.profile && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
@@ -40,6 +43,43 @@ bool isValidMcDest(const char* d) {
   return true;
 }
 
+static bool printableAscii(const char* t, size_t maxLen) {
+  const size_t n = strnlen(t, maxLen + 1);
+  if (n > maxLen) return false;
+  for (size_t i = 0; i < n; i++)
+    if (static_cast<unsigned char>(t[i]) < 0x20 || static_cast<unsigned char>(t[i]) > 0x7E) return false;
+  return true;
+}
+
+// "a.b.c.d" con quattro numeri da 0 a 255
+bool isValidIpv4(const char* s) {
+  if (!s || !s[0]) return false;
+  int parts = 0;
+  const char* p = s;
+  while (*p) {
+    if (!isdigit(static_cast<unsigned char>(*p))) return false;
+    int v = 0, digits = 0;
+    while (isdigit(static_cast<unsigned char>(*p))) {
+      v = v * 10 + (*p - '0');
+      if (++digits > 3 || v > 255) return false;
+      p++;
+    }
+    parts++;
+    if (*p == '.') {
+      p++;
+      if (!*p) return false;
+    } else if (*p) {
+      return false;
+    }
+  }
+  return parts == 4;
+}
+
+static bool validNode(const Settings& s) {
+  return printableAscii(s.wifiSsid, 32) && printableAscii(s.wifiPass, 64) && (s.peerIp[0] == 0 || isValidIpv4(s.peerIp)) &&
+         strnlen(s.peerIp, 16) < 16 && s.peerPort >= 1 && s.nodePort >= 1;
+}
+
 static bool validMcDests(const Settings& s) {
   for (size_t i = 0; i < kMcDestSlots; i++) {
     if (strnlen(s.mcDests[i], 16) > 15 || (s.mcDests[i][0] && !isValidMcDest(s.mcDests[i]))) return false;
@@ -51,7 +91,7 @@ bool isValidSettings(const Settings& s) {
   return isValidCallsign(s.callsign) && (s.sysopCall[0] == 0 || isValidCallsign(s.sysopCall)) && s.idIntervalMin >= kMinIdIntervalMin && s.idIntervalMin <= kMaxIdIntervalMin && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
          s.freqMsgKhz <= kMaxFreqKhz && s.freqMcKhz >= kMinFreqKhz && s.freqMcKhz <= kMaxFreqKhz && s.mcSsid <= 99 &&
          s.mcWindowS >= kMinMcWindowS && s.mcWindowS <= kMaxMcWindowS && validMcDests(s) && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
-         (s.freqOutKhz == 0 || (s.freqOutKhz >= kMinFreqKhz && s.freqOutKhz <= kMaxFreqKhz)) && s.role <= kRoleRepeaterTx &&
+         (s.freqOutKhz == 0 || (s.freqOutKhz >= kMinFreqKhz && s.freqOutKhz <= kMaxFreqKhz)) && s.role <= kRoleNode && validNode(s) &&
          s.powerDbm >= kMinPowerDbm && s.powerDbm <= kMaxPowerDbm && s.volume >= kMinVolume &&
          s.volume <= kMaxVolume &&
          s.micFloorDb >= kMinMicFloorDb && s.micFloorDb <= kMaxMicFloorDb && s.profile < kProfileCount &&
@@ -221,6 +261,39 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
   }
   if (n == 0 || !equalsIgnoreCase(tok[0], "CFG")) return ConsoleResult::NotCommand;
 
+  // CFG SET WIFISSID / WIFIPASS <resto della riga>: possono avere spazi.
+  if (n >= 4 && equalsIgnoreCase(tok[1], "SET") && (equalsIgnoreCase(tok[2], "WIFISSID") || equalsIgnoreCase(tok[2], "WIFIPASS"))) {
+    const bool isSsid = equalsIgnoreCase(tok[2], "WIFISSID");
+    const char* rest = line + (tok[3] - buf);
+    size_t len = strlen(rest);
+    while (len > 0 && (rest[len - 1] == ' ' || rest[len - 1] == '\t' || rest[len - 1] == '\r' || rest[len - 1] == '\n')) len--;
+    Settings next = stored_;
+    char* dst = isSsid ? next.wifiSsid : next.wifiPass;
+    const size_t maxLen = isSsid ? 32 : 64;
+    if (len == 4 && strncasecmp(rest, "NONE", 4) == 0) {
+      memset(dst, 0, maxLen + 1);
+    } else {
+      bool ok = len >= 1 && len <= maxLen && (isSsid || len >= 8);  // WPA2: password da 8 a 64 caratteri
+      for (size_t i = 0; ok && i < len; i++) ok = static_cast<unsigned char>(rest[i]) >= 0x20 && static_cast<unsigned char>(rest[i]) <= 0x7E;
+      if (!ok) {
+        say(reply, cap, isSsid ? "CFG ERR wifissid %s" : "CFG ERR wifipass %s", isSsid ? "da 1 a 32 caratteri ASCII (NONE lo toglie)" : "da 8 a 64 caratteri ASCII (NONE per una rete aperta)");
+        return ConsoleResult::Error;
+      }
+      memset(dst, 0, maxLen + 1);
+      memcpy(dst, rest, len);
+    }
+    if (!storage_.save(next)) {
+      say(reply, cap, isSsid ? "CFG ERR wifissid %s" : "CFG ERR wifipass %s", "salvataggio non riuscito");
+      return ConsoleResult::Error;
+    }
+    stored_ = next;
+    if (reply && cap > 0) {
+      if (isSsid) snprintf(reply, cap, "CFG OK wifissid=%s", next.wifiSsid[0] ? next.wifiSsid : "none");
+      else snprintf(reply, cap, "CFG OK wifipass=%s", next.wifiPass[0] ? "set" : "none");  // la password non si mostra
+    }
+    return ConsoleResult::Ok;
+  }
+
   // CFG SET TEXTn <testo>: il testo e' il resto della riga (puo' avere spazi).
   if (n >= 4 && equalsIgnoreCase(tok[1], "SET") && strlen(tok[2]) == 5 && strncasecmp(tok[2], "TEXT", 4) == 0 &&
       tok[2][4] >= '1' && tok[2][4] < '1' + static_cast<int>(kTextSlots)) {
@@ -242,6 +315,15 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
     if (reply && cap > 0) {
       snprintf(reply, cap, "CFG MC freqmc=%u.%03u ssid=%u window=%u", static_cast<unsigned>(stored_.freqMcKhz / 1000),
                static_cast<unsigned>(stored_.freqMcKhz % 1000), static_cast<unsigned>(stored_.mcSsid), static_cast<unsigned>(stored_.mcWindowS));
+    }
+    return ConsoleResult::Ok;
+  }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "NODE")) {
+    if (reply && cap > 0) {
+      snprintf(reply, cap, "CFG NODE ssid=%s pass=%s ip=%s port=%u listen=%u id=%lu peerid=%lu key=%s", stored_.wifiSsid[0] ? stored_.wifiSsid : "none",
+               stored_.wifiPass[0] ? "set" : "none", stored_.peerIp[0] ? stored_.peerIp : "none", static_cast<unsigned>(stored_.peerPort),
+               static_cast<unsigned>(stored_.nodePort), static_cast<unsigned long>(stored_.nodeId), static_cast<unsigned long>(stored_.peerId),
+               stored_.nodeKeySet ? "set" : "none");
     }
     return ConsoleResult::Ok;
   }
@@ -398,7 +480,7 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     snprintf(shown, sizeof(shown), "freqout=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "ROLE")) {
     if (!equalsIgnoreCase(value, "OFF") && equalsIgnoreCase(board_, "tbeam")) {
-      say(reply, cap, "CFG ERR role %s", "il ripetitore usa solo la T3 (due T-Beam sarebbero uno spreco)");
+      say(reply, cap, "CFG ERR role %s", "il ripetitore e il nodo usano solo la T3 (due T-Beam sarebbero uno spreco)");
       return ConsoleResult::Error;
     }
     if (equalsIgnoreCase(value, "OFF")) {
@@ -407,8 +489,10 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       next.role = kRoleRepeaterRx;
     } else if (equalsIgnoreCase(value, "RPTTX")) {
       next.role = kRoleRepeaterTx;
+    } else if (equalsIgnoreCase(value, "NODE")) {
+      next.role = kRoleNode;
     } else {
-      say(reply, cap, "CFG ERR role %s", "usa OFF, RPTRX oppure RPTTX");
+      say(reply, cap, "CFG ERR role %s", "usa OFF, RPTRX, RPTTX oppure NODE");
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "role=%s", roleCode(next.role));
@@ -423,6 +507,79 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "sysop=%s", next.sysopCall[0] ? next.sysopCall : "none");
+  } else if (equalsIgnoreCase(key, "PEER")) {
+    if (equalsIgnoreCase(value, "NONE")) {
+      next.peerIp[0] = 0;
+      next.peerPort = 5400;
+      snprintf(shown, sizeof(shown), "peer=none");
+    } else {
+      char ip[16] = {0};
+      const char* colon = strchr(value, ':');
+      const size_t il = colon ? static_cast<size_t>(colon - value) : strlen(value);
+      int port = 5400;
+      bool ok = il > 0 && il < sizeof(ip);
+      if (ok) {
+        memcpy(ip, value, il);
+        ok = isValidIpv4(ip);
+      }
+      if (ok && colon) {
+        const char* q = colon + 1;
+        port = 0;
+        ok = *q != 0;
+        for (; ok && *q; q++) {
+          if (!isdigit(static_cast<unsigned char>(*q)) || port > 6553) ok = false;
+          else port = port * 10 + (*q - '0');
+        }
+        ok = ok && port >= 1 && port <= 65535;
+      }
+      if (!ok) {
+        say(reply, cap, "CFG ERR peer %s", "usa indirizzo:porta, per esempio 192.168.1.51:5400 (oppure NONE)");
+        return ConsoleResult::Error;
+      }
+      strncpy(next.peerIp, ip, sizeof(next.peerIp) - 1);
+      next.peerPort = static_cast<uint16_t>(port);
+      snprintf(shown, sizeof(shown), "peer=%s:%d", next.peerIp, port);
+    }
+  } else if (equalsIgnoreCase(key, "NODEPORT")) {
+    int port = 0;
+    if (!parseInt(value, port) || port < 1 || port > 65535) {
+      say(reply, cap, "CFG ERR nodeport %s", "porta UDP da 1 a 65535");
+      return ConsoleResult::Error;
+    }
+    next.nodePort = static_cast<uint16_t>(port);
+    snprintf(shown, sizeof(shown), "nodeport=%d", port);
+  } else if (equalsIgnoreCase(key, "NODEID") || equalsIgnoreCase(key, "PEERID")) {
+    const bool isPeer = equalsIgnoreCase(key, "PEERID");
+    char* end = nullptr;
+    const unsigned long v = strtoul(value, &end, 10);
+    if (end == value || *end != 0 || strlen(value) > 10 || v > 4294967295UL || (!isPeer && v == 0)) {
+      say(reply, cap, isPeer ? "CFG ERR peerid %s" : "CFG ERR nodeid %s", isPeer ? "numero da 0 (qualunque nodo) a 4294967295" : "numero da 1 a 4294967295");
+      return ConsoleResult::Error;
+    }
+    (isPeer ? next.peerId : next.nodeId) = static_cast<uint32_t>(v);
+    snprintf(shown, sizeof(shown), "%s=%lu", isPeer ? "peerid" : "nodeid", v);
+  } else if (equalsIgnoreCase(key, "NODEKEY")) {
+    if (equalsIgnoreCase(value, "NONE")) {
+      next.nodeKeySet = false;
+      memset(next.nodeKey, 0, sizeof(next.nodeKey));
+    } else {
+      uint8_t k[16];
+      bool okHex = strlen(value) == 32;
+      for (size_t i = 0; okHex && i < 32; i++) {
+        const char c = value[i];
+        int v = (c >= '0' && c <= '9') ? c - '0' : (c >= 'a' && c <= 'f') ? c - 'a' + 10 : (c >= 'A' && c <= 'F') ? c - 'A' + 10 : -1;
+        if (v < 0) okHex = false;
+        else if (i % 2 == 0) k[i / 2] = static_cast<uint8_t>(v << 4);
+        else k[i / 2] = static_cast<uint8_t>(k[i / 2] | v);
+      }
+      if (!okHex) {
+        say(reply, cap, "CFG ERR nodekey %s", "servono 32 cifre esadecimali (oppure NONE)");
+        return ConsoleResult::Error;
+      }
+      memcpy(next.nodeKey, k, sizeof(k));
+      next.nodeKeySet = true;
+    }
+    snprintf(shown, sizeof(shown), "nodekey=%s", next.nodeKeySet ? "set" : "none");
   } else if (equalsIgnoreCase(key, "IDMORSE")) {
     if (equalsIgnoreCase(value, "ON")) {
       next.idMorse = true;

@@ -139,6 +139,39 @@ static void testRadioTestCommand() {
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=0"));  // non cambia nessuna impostazione
 }
 
+static void testNodeSettings() {
+  Fixture f;
+  CHECK(f.run("CFG GET NODE") == ConsoleResult::Ok && strcmp(f.reply, "CFG NODE ssid=none pass=none ip=none port=5400 listen=5400 id=0 peerid=0 key=none") == 0);
+  CHECK(f.run("CFG SET ROLE NODE") == ConsoleResult::Ok && f.st.data.role == kRoleNode && strcmp(f.reply, "CFG OK role=node") == 0);
+  CHECK(f.run("CFG SET WIFISSID Casa Mia 2.4G") == ConsoleResult::Ok && strcmp(f.st.data.wifiSsid, "Casa Mia 2.4G") == 0 && strcmp(f.reply, "CFG OK wifissid=Casa Mia 2.4G") == 0);
+  CHECK(f.run("CFG SET WIFIPASS la mia password") == ConsoleResult::Ok && strcmp(f.st.data.wifiPass, "la mia password") == 0 && strcmp(f.reply, "CFG OK wifipass=set") == 0);
+  CHECK(f.run("CFG SET WIFIPASS corta") == ConsoleResult::Error && strcmp(f.st.data.wifiPass, "la mia password") == 0);  // meno di 8
+  CHECK(f.run("CFG SET WIFISSID 12345678901234567890123456789012345") == ConsoleResult::Error);                      // oltre 32
+  CHECK(f.run("CFG SET PEER 192.168.1.51:5401") == ConsoleResult::Ok && strcmp(f.st.data.peerIp, "192.168.1.51") == 0 && f.st.data.peerPort == 5401 && strcmp(f.reply, "CFG OK peer=192.168.1.51:5401") == 0);
+  CHECK(f.run("CFG SET PEER 10.0.0.2") == ConsoleResult::Ok && f.st.data.peerPort == 5400);
+  CHECK(f.run("CFG SET PEER 300.1.1.1") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3.4:0") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET PEER 1.2.3.4:70000") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3.4:") == ConsoleResult::Error && f.run("CFG SET PEER ciao") == ConsoleResult::Error);
+  CHECK(strcmp(f.st.data.peerIp, "10.0.0.2") == 0);
+  CHECK(f.run("CFG SET NODEPORT 5555") == ConsoleResult::Ok && f.st.data.nodePort == 5555 && f.run("CFG SET NODEPORT 0") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET NODEID 1") == ConsoleResult::Ok && f.st.data.nodeId == 1 && f.run("CFG SET NODEID 0") == ConsoleResult::Error && f.run("CFG SET NODEID x") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET PEERID 2") == ConsoleResult::Ok && f.st.data.peerId == 2 && f.run("CFG SET PEERID 0") == ConsoleResult::Ok && f.st.data.peerId == 0);
+  CHECK(f.run("CFG SET NODEID 4294967296") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET NODEKEY 000102030405060708090a0b0c0d0e0f") == ConsoleResult::Ok && f.st.data.nodeKeySet && f.st.data.nodeKey[15] == 15);
+  CHECK(f.run("CFG SET NODEKEY 0001") == ConsoleResult::Error && f.st.data.nodeKeySet);
+  CHECK(f.run("CFG GET NODE") == ConsoleResult::Ok && strcmp(f.reply, "CFG NODE ssid=Casa Mia 2.4G pass=set ip=10.0.0.2 port=5400 listen=5555 id=1 peerid=0 key=set") == 0);
+  CHECK(!strstr(f.reply, "password") && !strstr(f.reply, "0102"));  // password e chiave non si mostrano
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "role=node") && strstr(f.reply, "reboot=1"));
+  CHECK(f.run("CFG SET WIFIPASS NONE") == ConsoleResult::Ok && f.st.data.wifiPass[0] == 0 && f.run("CFG SET PEER NONE") == ConsoleResult::Ok && f.st.data.peerIp[0] == 0);
+  CHECK(f.run("CFG SET NODEKEY NONE") == ConsoleResult::Ok && !f.st.data.nodeKeySet);
+  CHECK(isValidIpv4("1.2.3.4") && isValidIpv4("255.255.255.255") && !isValidIpv4("1.2.3") && !isValidIpv4("1.2.3.4.5") && !isValidIpv4("a.b.c.d") && !isValidIpv4("") && !isValidIpv4("1..2.3"));
+  // sulla T-Beam il nodo non c'e'
+  FakeStorage st2;
+  Settings active = kDefaults;
+  SettingsConsole con{active, kDefaults, st2, "tbeam", "v0"};
+  char reply[300];
+  CHECK(con.handleLine("CFG SET ROLE NODE", reply, sizeof(reply)) == ConsoleResult::Error && st2.data.role == kRoleNormal);
+}
+
 static void testIdMorse() {
   Fixture f;
   CHECK(f.run("CFG GET IDMORSE") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDMORSE=on") == 0);  // di base acceso
@@ -599,6 +632,7 @@ int main() {
   testTexts();
   testMonitor();
   testRadioTestCommand();
+  testNodeSettings();
   testIdMorse();
   testIdInterval();
   testSysop();

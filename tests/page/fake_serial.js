@@ -54,7 +54,7 @@
       if (rm) {
         const k = rm[1].toUpperCase(), v = rm[2];
         if (st.reject === k) return out('CFG ERR ' + k.toLowerCase() + ' rifiutato dal firmware');
-        if (k === 'ROLE') { if (!/^(off|rptrx|rpttx)$/i.test(v)) return out('CFG ERR role usa OFF, RPTRX o RPTTX'); st.cfg.role = v.toLowerCase(); return out('CFG OK role=' + st.cfg.role); }
+        if (k === 'ROLE') { if (!/^(off|rptrx|rpttx|node)$/i.test(v)) return out('CFG ERR role usa OFF, RPTRX, RPTTX o NODE'); st.cfg.role = v.toLowerCase(); return out('CFG OK role=' + st.cfg.role); }
         if (k === 'MONITOR') { st.monitor = v.toLowerCase(); return out('CFG OK monitor=' + st.monitor); }
         const khz = Math.round(parseFloat(v) * 1000);
         if (!(khz >= 430000 && khz <= 440000)) return out('CFG ERR freqout fuori dai limiti');

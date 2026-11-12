@@ -50,6 +50,18 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     memset(out.sysopCall, 0, sizeof(out.sysopCall));
     if (p.isKey("sop")) p.getString("sop", out.sysopCall, sizeof(out.sysopCall));
     out.sysopMode = p.getBool("som", false);
+    memset(out.wifiSsid, 0, sizeof(out.wifiSsid));
+    memset(out.wifiPass, 0, sizeof(out.wifiPass));
+    memset(out.peerIp, 0, sizeof(out.peerIp));
+    if (p.isKey("wss")) p.getString("wss", out.wifiSsid, sizeof(out.wifiSsid));
+    if (p.isKey("wsp")) p.getString("wsp", out.wifiPass, sizeof(out.wifiPass));
+    if (p.isKey("pip")) p.getString("pip", out.peerIp, sizeof(out.peerIp));
+    out.peerPort = p.getUShort("ppt", 5400);
+    out.nodePort = p.getUShort("npt", 5400);
+    out.nodeId = p.getUInt("nid", 0);
+    out.peerId = p.getUInt("pid", 0);
+    out.nodeKeySet = p.isKey("nky") && p.getBytesLength("nky") == sizeof(out.nodeKey);
+    if (out.nodeKeySet) p.getBytes("nky", out.nodeKey, sizeof(out.nodeKey));
     out.idMorse = p.getBool("idm", true);  // assente nelle versioni precedenti
     out.idIntervalMin = static_cast<uint8_t>(p.getUChar("idi", 10));  // assente nelle versioni precedenti
     out.sysopKeySet = p.isKey("sky") && p.getBytesLength("sky") == sizeof(out.sysopKey);
@@ -90,6 +102,15 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
   p.putBool("som", s.sysopMode);
   p.putUChar("idi", s.idIntervalMin);
   p.putBool("idm", s.idMorse);
+  p.putString("wss", s.wifiSsid);
+  p.putString("wsp", s.wifiPass);
+  p.putString("pip", s.peerIp);
+  p.putUShort("ppt", s.peerPort);
+  p.putUShort("npt", s.nodePort);
+  p.putUInt("nid", s.nodeId);
+  p.putUInt("pid", s.peerId);
+  if (s.nodeKeySet) p.putBytes("nky", s.nodeKey, sizeof(s.nodeKey));
+  else p.remove("nky");
   if (s.sysopKeySet) p.putBytes("sky", s.sysopKey, sizeof(s.sysopKey));
   else p.remove("sky");
   for (size_t i = 0; i < lcr::kMcDestSlots; i++) {  // un posto vuoto salva una stringa vuota
