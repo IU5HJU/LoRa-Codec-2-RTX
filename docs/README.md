@@ -24,7 +24,7 @@
 | [prove.md](prove.md) | Registro delle prove sulle schede e aiuto per la diagnosi |
 | [roadmap.md](roadmap.md) | Decisioni e prossimi lavori |
 | [banco-ripetitore.md](banco-ripetitore.md) | Prova a banco del ripetitore con due T3: cablaggio, seriale, display, altoparlante |
-| [studio-identificativo-cw.md](studio-identificativo-cw.md) | Studio di fattibilità: identificativo del ripetitore in Morse (CW o FM stretta) |
+| [studio-identificativo-fm.md](studio-identificativo-fm.md) | Identificativo del ripetitore in FM: Morse a tono con il nominativo; studio di fattibilità, decisione e firmware di prova |
 | [studio-ripetitore.md](studio-ripetitore.md) | Studio di fattibilità del ripetitore con due schede (RX e TX), opzioni per ripetere tutti i profili |
 | [progetti-simili.md](progetti-simili.md) | Altri progetti LoRa e Codec2 e scelte che ne derivano |
 

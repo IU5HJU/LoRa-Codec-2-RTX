@@ -1,6 +1,9 @@
-# Studio di fattibilità: identificativo del ripetitore in CW o in FM stretta
+# Identificativo del ripetitore in FM: Morse a tono (studio di fattibilità e decisione)
 
-12/11/2026. Domanda: le schede LoRa possono trasmettere un identificativo che **chi non ha una scheda LoRa** capisce con un normale ricevitore (CW puro a banda stretta, oppure FM a 12,5 kHz con un tono Morse), così da sapere che la frequenza è occupata da un dispositivo LoRa? **Solo studio: nessun codice scritto, nessuna prova sul banco.** Quello che segue distingue ciò che ho verificato da ciò che resta da misurare.
+**In sintesi (12/11/2026).** Il ripetitore trasmette il **proprio nominativo in Morse, con un tono modulato in FM stretta** (canale da 12,5 kHz: 15 parole al minuto, tono 700 Hz, deviazione ±2,5 kHz), dopo l'identificativo in testo per le schede LoRa (ogni 1-10 minuti, `CFG SET IDINT`; si spegne con `CFG SET IDMORSE OFF`). Chi **non ha schede LoRa** lo sente con un ricevitore FM qualsiasi e capisce che quella frequenza è occupata da un ripetitore LoRa. È già nel firmware del ripetitore; i valori sono da misurare con il firmware di prova `CFG RADIOTEST` (sezioni in fondo). Il CW puro (portante accesa e spenta) è descritto qui come alternativa e resta solo nella prova.
+
+
+Domanda di partenza: le schede LoRa possono trasmettere un identificativo che **chi non ha una scheda LoRa** capisce con un normale ricevitore (CW puro a banda stretta, oppure FM a 12,5 kHz con un tono Morse), così da sapere che la frequenza è occupata da un dispositivo LoRa? **Solo studio: nessun codice scritto, nessuna prova sul banco.** Quello che segue distingue ciò che ho verificato da ciò che resta da misurare.
 
 ## Cosa ho verificato (fonti)
 

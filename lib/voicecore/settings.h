@@ -37,7 +37,7 @@
 //   CFG SET IDMORSE ON           -> CFG OK idmorse=on          (ripetitore: dopo l'identificativo in testo anche il Morse in FM, per chi non ha le schede LoRa; di base ON; vale dal riavvio)
 //   CFG GET IDMORSE              -> CFG IDMORSE=on
 //   CFG GET IDINT                -> CFG IDINT=10
-//   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-cw.md)
+//   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-fm.md)
 //   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set mode=off
 //   CFG GET MCDEST1              -> CFG MCDEST1=22251
 //   CFG SET MCWINDOW 300         -> CFG OK mcwindow=300        (secondi di ascolto dopo l'invio, 30-1800)
@@ -132,7 +132,7 @@ struct Settings {
   // Modo Sysop (scheda del sysop): il menu "Invia testo" diventa "Comandi Sysop" (elenco dei comandi al posto dei testi). Resta attivo
   // finche' il sysop non lo spegne; vale dal riavvio.
   bool sysopMode = false;
-  bool idMorse = true;         // dopo l'identificativo in testo, il nominativo in Morse con tono in FM stretta (docs/studio-identificativo-cw.md); vale dal riavvio
+  bool idMorse = true;         // dopo l'identificativo in testo, il nominativo in Morse con tono in FM stretta (docs/studio-identificativo-fm.md); vale dal riavvio
   uint8_t idIntervalMin = 10;  // identificativo periodico del ripetitore (scheda TX), in minuti: 1..10, di base 10; vale dal riavvio
   bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
   uint32_t freqOutKhz = 0;   // frequenza di uscita del ripetitore, usata dalla scheda TX (0 = come la frequenza del profilo)
@@ -210,7 +210,7 @@ enum class ConsoleResult {
   Reboot,  // risposta pronta; il chiamante deve riavviare la scheda
   MicMeasure,  // risposta pronta; il chiamante deve misurare il fondo per 3 s e stampare il risultato
   CodecTest,   // risposta pronta; il chiamante deve registrare 3 s e riprodurli senza e con Codec2
-  RadioTest,   // risposta pronta; il chiamante deve fare la prova radio del Morse (radioTestRequest(), docs/studio-identificativo-cw.md)
+  RadioTest,   // risposta pronta; il chiamante deve fare la prova radio del Morse (radioTestRequest(), docs/studio-identificativo-fm.md)
   AudioTest,   // risposta pronta; il chiamante deve suonare i toni di prova e stampare i livelli del microfono
 };
 

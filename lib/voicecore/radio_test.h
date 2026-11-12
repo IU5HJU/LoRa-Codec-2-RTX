@@ -1,4 +1,4 @@
-// Prove radio dell'identificativo in Morse (docs/studio-identificativo-cw.md): CW puro (portante accesa e spenta) e Morse a tono in
+// Prove radio dell'identificativo in Morse (docs/studio-identificativo-fm.md): CW puro (portante accesa e spenta) e Morse a tono in
 // FM stretta, con i pacchetti FSK del SX1278. Qui c'e' solo la parte senza radio: lettura del comando CFG RADIOTEST e piano dei
 // pacchetti, provati sul PC (tests/test_radio_test.cpp). La radio e' pilotata da src/radio_lora.* (fskBegin, fskSend, fskEnd) e
 // da src/main.cpp (runRadioTest).

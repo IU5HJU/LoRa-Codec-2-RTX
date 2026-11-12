@@ -508,7 +508,7 @@ static void runSysopCommand(const char* args) {
   sendSysop(code, static_cast<uint16_t>(param));
 }
 
-// ---- Prove radio del Morse (CFG RADIOTEST, docs/studio-identificativo-cw.md): CW puro e tono Morse in FM stretta con i pacchetti FSK ----
+// ---- Prove radio del Morse (CFG RADIOTEST, docs/studio-identificativo-fm.md): CW puro e tono Morse in FM stretta con i pacchetti FSK ----
 
 static bool radioTestAbort() {  // un tasto qualsiasi dalla seriale ferma la prova
   if (Serial.available() <= 0) return false;

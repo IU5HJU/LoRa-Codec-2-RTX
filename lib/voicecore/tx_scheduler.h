@@ -73,7 +73,7 @@ class TxScheduler {
   // impostato da setCallsign. Parte a canale libero: mai sopra la voce in coda, una ritrasmissione di messaggio o la ricezione di un
   // messaggio (al massimo aspetta la fine del messaggio in corso); con la TX spenta dal sysop non parte.
   void setBeaconInterval(uint32_t intervalMs) { beaconIntervalMs_ = intervalMs; }
-  // Identificativo in Morse con tono in FM stretta (docs/studio-identificativo-cw.md), subito dopo il testo dell'identificativo: il
+  // Identificativo in Morse con tono in FM stretta (docs/studio-identificativo-fm.md), subito dopo il testo dell'identificativo: il
   // nominativo in Morse a 'wpm' parole al minuto, tono 'toneHz', deviazione 'devKhz'. Chi non ha le schede LoRa lo sente con un
   // ricevitore FM qualsiasi. La voce lo interrompe tra un elemento e l'altro (l'identificativo in testo e' gia' uscito).
   void setMorseId(bool on, int wpm = 15, float toneHz = 700.0f, float devKhz = 2.5f);
