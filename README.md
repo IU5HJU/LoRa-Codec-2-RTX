@@ -48,7 +48,7 @@ Funzionamento in breve:
 - **`main` è il punto comune di partenza**: è sempre compilabile (GitHub Actions deve essere verde) e ha come nominativo `N0CALL`, quindi non trasmette finché non imposti il tuo.
 - **Come contribuire:** fai un fork, lavora su un ramo tuo e proponi le modifiche con una pull request. Prima di proporle esegui `make test`.
 - **Prove:** annota ogni prova in [docs/prove.md](docs/prove.md) con il modello indicato. Per un problema da risolvere apri una segnalazione (Issues).
-- **Decisioni e ordine dei lavori:** [docs/roadmap.md](docs/roadmap.md). Prossimi passi: misure sul campo (RSSI, SNR, perdite, anche in movimento), intestazione del messaggio, memorie con profilo e frequenze per canale, locatore Maidenhead e ora dal GPS; la ripetizione dei messaggi solo dopo la verifica normativa.
+- **Decisioni e ordine dei lavori:** [docs/roadmap.md](docs/roadmap.md). Prossimi passi: misure sul campo (RSSI, SNR, perdite, anche in movimento), intestazione del messaggio, memorie con profilo e frequenze per canale, locatore Maidenhead e ora dal GPS; il ripetitore: prova a banco ([docs/banco-ripetitore.md](docs/banco-ripetitore.md)).
 
 ## Licenza
 
@@ -57,11 +57,11 @@ Copyright (C) 2026 IU5HJU. Questo programma è software libero, distribuito sott
 La scelta deriva dalla libreria Codec2 per ESP32 usata (GPL-3.0); dettagli sulle librerie in
 [docs/firmware.md](docs/firmware.md).
 
-Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Taratura del microfono, misure e come adattarla: [docs/taratura-microfono.md](docs/taratura-microfono.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Registro delle prove: [docs/prove.md](docs/prove.md). Prova di collegamento: [docs/prova-collegamento.md](docs/prova-collegamento.md). Verifica del montaggio audio con una sola scheda: [docs/verifica-hardware-audio.md](docs/verifica-hardware-audio.md). Ricezione e decodifica con un SDR: [docs/sdr.md](docs/sdr.md). Numerazione delle versioni (beta, rc, stabile): [docs/versioni.md](docs/versioni.md). Alimentazione e batteria della T-Beam: [docs/alimentazione.md](docs/alimentazione.md). Schermate dell'OLED: [docs/display.md](docs/display.md). Modi del Codec2 e confronto: [docs/codec2.md](docs/codec2.md). Profilo Messaggio: [docs/modo-messaggio.md](docs/modo-messaggio.md). Testi su reti a pacchetto (MeshCom): [docs/meshcom-testo.md](docs/meshcom-testo.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
+Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Taratura del microfono, misure e come adattarla: [docs/taratura-microfono.md](docs/taratura-microfono.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Registro delle prove: [docs/prove.md](docs/prove.md). Prova di collegamento: [docs/prova-collegamento.md](docs/prova-collegamento.md). Verifica del montaggio audio con una sola scheda: [docs/verifica-hardware-audio.md](docs/verifica-hardware-audio.md). Ricezione e decodifica con un SDR: [docs/sdr.md](docs/sdr.md). Numerazione delle versioni (beta, rc, stabile): [docs/versioni.md](docs/versioni.md). Alimentazione e batteria della T-Beam: [docs/alimentazione.md](docs/alimentazione.md). Schermate dell'OLED: [docs/display.md](docs/display.md). Modi del Codec2 e confronto: [docs/codec2.md](docs/codec2.md). Profilo Messaggio: [docs/modo-messaggio.md](docs/modo-messaggio.md). Testi su reti a pacchetto (MeshCom): [docs/meshcom-testo.md](docs/meshcom-testo.md). Il ripetitore: [docs/ripetitore.md](docs/ripetitore.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
 
 ## Stato
 
-Aggiornato il 10/11/2026.
+Aggiornato il 12/11/2026.
 
 | Parte | Stato |
 |---|---|
@@ -81,7 +81,8 @@ Aggiornato il 10/11/2026.
 | Prova di collegamento (frame noti, confronto bit per bit) | fatta e **provata sulle schede** |
 | Ricezione con SDR (NESDR, GNU Radio): decodifica e ascolto in tempo reale, anche in Qualità | fatta e **provata** in Standard, in Messaggio e in Qualità (10/11/2026) |
 | Misure sul campo, distanze lunghe, mezzi in movimento | **da fare** |
-| Ripetizione dei messaggi, memorie, locatore Maidenhead | da fare ([roadmap](docs/roadmap.md)) |
+| **Ripetitore con due T3** (RX e TX collegate con quattro fili): ripetizione della voce e del testo, messaggi vocali in coda, annuncio di occupato, identificativo periodico in testo e in Morse FM, comandi firmati del sysop ([docs/ripetitore.md](docs/ripetitore.md)) | scritto, **provato sul PC** e compilato da GitHub Actions; **mai provato sulle schede**: prima la prova a banco ([docs/banco-ripetitore.md](docs/banco-ripetitore.md)) |
+| Memorie, locatore Maidenhead | da fare ([roadmap](docs/roadmap.md)) |
 
 ## Struttura
 
