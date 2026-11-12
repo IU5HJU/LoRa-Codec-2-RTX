@@ -1,6 +1,6 @@
 # Prova a banco del nodo Internet (due T3 in Wi-Fi)
 
-12/11/2026. Primo passo del collegamento a Internet ([studio-nodo-internet.md](studio-nodo-internet.md)): due schede (T3 o T-Beam) in ruolo **NODE**, sullo stesso router, che si portano a vicenda i pacchetti LoRa con UDP firmato. **Scritto, provato sul PC** (test della logica e due processi `vlnode` su socket UDP veri); **mai eseguito su una scheda**. Decisioni prese: UDP con firma, due frequenze diverse, solo profilo Standard, ruolo `NODE` a sé.
+12/11/2026. Primo passo del collegamento a Internet ([studio-nodo-internet.md](studio-nodo-internet.md)): due schede (T3 o T-Beam) in ruolo **NODE**, sullo stesso router, che si portano a vicenda i pacchetti LoRa con UDP firmato. **Scritto e provato sul PC** (test della logica e due processi `vlnode` su socket UDP veri). **Eseguito su due schede il 12/11/2026** (T-Beam e T3, firmware `808bc07`): il collegamento sale e i pacchetti passano dalla rete alla radio; esiti in [prove.md](prove.md). Decisioni prese: UDP con firma, due frequenze diverse, solo profilo Standard, ruolo `NODE` a sé.
 
 ## Cosa serve
 - **Due schede** (due T3, due T-Beam o una di ciascuna) con l'ultimo firmware (artefatto `firmware-t3-v161` o `firmware-tbeam-v12` di GitHub Actions), antenne a 433 MHz **collegate**; sulla T3 microSD tolta.
@@ -13,8 +13,8 @@ Una **chiave** di 16 byte uguale sui due nodi (per esempio `openssl rand -hex 16
 
 | | Nodo 1 | Nodo 2 |
 |---|---|---|
-| Nominativo | un nominativo vero (altrimenti **non trasmette**: va bene per provare la sola rete) | idem |
-| Frequenza LoRa | `CFG SET FREQ 433.900` | `CFG SET FREQ 434.400` (**diversa**, vedi sotto) |
+| Nominativo | `CFG SET CALLSIGN <nominativo>` (vero: altrimenti **non trasmette**; va bene `N0CALL` per provare la sola rete). **Attenzione:** `CFG SET CALL` non esiste e dà `CFG ERR CALL parametro sconosciuto` | idem |
+| Frequenza LoRa | `CFG SET FREQ 433.900` | `CFG SET FREQ 434.400` (**diversa**, vedi sotto). Nella prova del 12/11/2026: 433.900 (T-Beam) e 430.000 (T3, il valore di base) |
 | Profilo | `CFG SET PROFILE STD` | `CFG SET PROFILE STD` |
 | Potenza | `CFG SET POWER 2` | `CFG SET POWER 2` |
 | Ruolo | `CFG SET ROLE NODE` | `CFG SET ROLE NODE` |
@@ -48,6 +48,9 @@ Una **chiave** di 16 byte uguale sui due nodi (per esempio `openssl rand -hex 16
 Con una sola T3 si può provare tutto il lato rete: sul PC `make vlnode`, poi
 `build/vlnode --id 2 --peer-id 1 --key <la chiave> --listen 5400 --peer <IP della T3>:5400 --send-text IU5HJU "Prova" --every 10`
 e la T3 (con `NODEID 1`, `PEERID 2`, `PEER <IP del PC>:5400`) deve **trasmettere in radio** il testo ogni 10 s, e il PC stampa i pacchetti che la T3 riceve in radio dalle stazioni. Con `--send-voice IZ0ABC --frames 100` manda una voce finta.
+
+## Esito della prova del 12/11/2026
+Dettagli in [prove.md](prove.md). In sintesi: con un `PEER` sbagliato il collegamento non sale; con la chiave diversa non sale e `firma errata` cresce di circa 15 ogni 30 secondi; con le impostazioni giuste compare `collegamento con l'altro nodo attivo`. Memoria libera all'avvio circa 146 KB, heap stabile intorno a 140,7 KB con il collegamento attivo.
 
 ## Cosa mandarmi
 Le righe `[nodo]` dell'avvio (con la memoria libera), le righe ogni 30 s dopo una prova con traffico, l'esito di ogni prova della tabella e, se qualcosa non va, il display e **dove** (rete, radio, firma).

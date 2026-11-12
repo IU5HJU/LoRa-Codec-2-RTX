@@ -279,3 +279,13 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - Per frame: **codifica 10,0 ms (25% dei 40 ms)**, **decodifica 13,3 ms (33%)**. Per confronto, l'1200 (8/11/2026): 17,4 ms e 13,3 ms.
 - Conclusione: il 3200 regge in tempo reale con ampio margine; la codifica è più veloce di quella dell'1200. Livelli in uscita dal codec coerenti con l'ingresso (-26,6 contro -25,3 dBFS).
 - Nota: un primo tentativo con `CFG TEST CODEC` scritto male è stato rifiutato (`CFG ERR test usa ON, OFF, AUDIO oppure CODEC`) e ha lasciato una trasmissione normale in Qualità nel registro (77 frame da 16 byte): nessun problema.
+
+### 12/11/2026, casa, IU5HJU (nodo Internet su due schede)
+
+- Schede: **T-Beam V1.2** (nodo 1) e **LoRa32 T3 V1.6.1** (nodo 2), entrambe con il firmware `808bc07`, ruolo `NODE`, profilo Standard (Codec2 3200, SF7), potenza 2, stessa rete Wi-Fi a 2,4 GHz (indirizzi `192.168.1.50` per la T-Beam e `192.168.1.171` per la T3). Frequenze: **433.900 MHz** (T-Beam) e **430.000 MHz** (T3, il valore di base). Procedura: [banco-nodo.md](banco-nodo.md).
+- **Prima volta, `PEER` sbagliato** (`192.168.1.252` sulla T3): nessun collegamento e nessun traffico, come previsto.
+- **`PEER` giusto ma chiave diversa:** il collegamento non sale e `firma errata` cresce di circa 15 ogni 30 secondi (13, 25, 40, 55, 70, 85). Sul display di entrambe le schede il collegamento risulta `NO`. Era la prova "chiave diversa sui due nodi" della tabella: **superata**.
+- **Stessa chiave:** su entrambe le schede il collegamento sale. Nella seriale della T3: `collegamento con l'altro nodo attivo`, poi `rete->radio 7 (trasmessi 7), persi coda 0, firma errata 0, ripetuti 0`. L'operatore riferisce che **i nodi funzionano**.
+- **Memoria della T3:** libera all'avvio circa **145,8 KB** (blocco più grande 77,8 KB); con il collegamento attivo e traffico l'heap resta stabile a circa **140,7 KB**.
+- Errore nelle istruzioni: nella procedura data a voce era scritto `CFG SET CALL`, che non esiste (`CFG ERR CALL parametro sconosciuto`); il comando è `CFG SET CALLSIGN`. Corretto in `banco-nodo.md` e `firmware.md`.
+- **Non annotato / ancora da fare:** direzione radio → rete (nel registro riportato `radio->rete` è 0), voce nei due sensi con una stazione vera e il flag "via RPT" sul display della stazione, riavvio di un nodo e router spento, conversazione lunga, trasmissione della stazione mentre il nodo trasmette. Nessun valore di RSSI, distanza o ritardo.
