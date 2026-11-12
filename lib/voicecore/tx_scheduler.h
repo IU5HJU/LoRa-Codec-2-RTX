@@ -38,6 +38,7 @@ class TxScheduler {
   static constexpr uint32_t kBetweenMsgMs = 5000;
   static constexpr uint32_t kParamRetryMs = 1000;
   static constexpr uint32_t kStaleReplyGapMs = 10000;
+  static constexpr uint32_t kBeaconFirstMs = 15000;  // primo identificativo dopo l'avvio
 
   // Announce e Release usano i parametri della voce: mandano l'annuncio di occupato prima e dopo un messaggio.
   enum class State : uint8_t { Voice, Listen, Relay, Announce, Release };
@@ -52,6 +53,7 @@ class TxScheduler {
     uint32_t messageRx = 0;      // pacchetti arrivati in ascolto
     uint32_t replies = 0;        // risposte ai comandi del sysop trasmesse
     uint32_t repliesDropped = 0; // risposte non trasmesse perche' la TX e' spenta
+    uint32_t beacons = 0;        // identificativi trasmessi
     uint32_t announces = 0;      // annunci di occupato mandati (copie comprese)
   };
 
@@ -64,6 +66,10 @@ class TxScheduler {
 
   // Nominativo del ripetitore: se c'e', prima di ritrasmettere un messaggio si manda l'annuncio di occupato (modo 6, protocol.h).
   void setCallsign(const char* callsign);
+  // Identificativo periodico del ripetitore (testo con seq = kTextSeqBeacon, packet.h): ogni 'intervalMs' (0 = spento), con il nominativo
+  // impostato da setCallsign. Parte a canale libero: mai sopra la voce in coda, una ritrasmissione di messaggio o la ricezione di un
+  // messaggio (al massimo aspetta la fine del messaggio in corso); con la TX spenta dal sysop non parte.
+  void setBeaconInterval(uint32_t intervalMs) { beaconIntervalMs_ = intervalMs; }
   // Comandi del sysop: lo stato di servizio (spento, limiti di trasmissione) e la chiave con cui si firmano le risposte.
   void setControl(RepeaterControl* control, const uint8_t key[kSysopKeyBytes]);
   // Un comando gia' verificato dalla RX: lo esegue e trasmette la risposta firmata (anche se questo comando ha appena spento la TX);
@@ -86,6 +92,7 @@ class TxScheduler {
   void endRelayState(uint32_t nowMs);
   void sendNow(const Packet& p, uint32_t nowMs, bool message);
   void sendAndNote(const uint8_t* wire, size_t len, uint32_t nowMs, bool message);
+  bool beaconDue(uint32_t nowMs) const;
   void announceStep(uint32_t nowMs);
   void releaseStep(uint32_t nowMs);
   bool sendBusy(uint16_t seconds, uint32_t nowMs);
@@ -115,6 +122,9 @@ class TxScheduler {
   char callsign_[kMaxCallsign + 1] = {0};
   RepeaterControl* control_ = nullptr;
   uint8_t key_[kSysopKeyBytes] = {0};
+  uint32_t beaconIntervalMs_ = 0;
+  bool haveBeacon_ = false;
+  uint32_t lastBeaconMs_ = 0;
   bool haveStaleReply_ = false;
   uint32_t lastStaleReplyMs_ = 0;
   uint8_t annSent_ = 0;  // copie dell'annuncio gia' mandate

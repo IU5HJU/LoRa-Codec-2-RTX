@@ -33,6 +33,9 @@ constexpr size_t kBusyPayloadBytes = 2;
 // scartano.
 constexpr uint8_t kModeText = 7;
 constexpr size_t kMaxTextChars = 150;
+// Identificativo periodico del ripetitore: un pacchetto di testo (modo 7) con seq = kTextSeqBeacon. Le stazioni lo mostrano come "ultimo
+// ricevuto" con il segnale, ma non lo mettono in casella e non suonano (docs/studio-ripetitore.md, "Identificativo del ponte").
+constexpr uint8_t kTextSeqBeacon = 1;
 // Pausa tra le due copie del messaggio di testo.
 constexpr uint32_t kTextRepeatGapMs = 1000;
 

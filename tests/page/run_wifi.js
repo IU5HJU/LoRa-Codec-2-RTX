@@ -16,12 +16,16 @@ const st = {
   board: 't3',
   texts: ['%C QRV su VoLoRa modo %M %F', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
   mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
+  idint: '10',
   sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
 const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps'];
 function handle(line) {
   st.cmds.push(line);
+  if (line === 'CFG GET IDINT') return 'CFG IDINT=' + st.idint;
+  const im = /^CFG SET IDINT (\d+)$/.exec(line);
+  if (im) { if (+im[1] < 1 || +im[1] > 10) return 'CFG ERR idint da 1 a 10'; st.idint = im[1]; return 'CFG OK idint=' + im[1]; }
   if (line === 'CFG GET SYSOP') return 'CFG SYSOP call=' + st.sysop.call + ' key=' + st.sysop.key + ' mode=' + st.sysop.mode;
   let sm = /^CFG SET SYSOP (.+)$/.exec(line);
   if (sm) { st.sysop.call = sm[1] === 'NONE' ? 'none' : sm[1]; return 'CFG OK sysop=' + st.sysop.call; }
@@ -90,7 +94,7 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('comandi inviati', st.cmds.includes('CFG SET PROFILE qua') && st.cmds.includes('CFG SET FREQQUAL 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
   check('testi salvati (con spazi) e posto vuoto con NONE', st.cmds.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami') && st.cmds.includes('CFG SET TEXT4 NONE') && st.texts[1] === 'Sono QRV su 433.775, chiamami' && st.texts[3] === '', JSON.stringify(st.texts));
   check('MeshCom salvato (destinatario in maiuscolo, vuoto = NONE)', st.mc.dests[3] === 'IU5ABC-9' && st.mc.dests[4] === '' && st.mc.ssid === '12' && st.mc.window === '90' && st.cmds.includes('CFG SET MCDEST4 IU5ABC-9') && st.cmds.includes('CFG SET MCDEST5 NONE'), JSON.stringify(st.mc));
-  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 2] === 'CFG GET' && st.cmds[st.cmds.length - 1] === 'CFG GET SYSOP');
+  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 3] === 'CFG GET' && st.cmds[st.cmds.length - 2] === 'CFG GET SYSOP' && st.cmds[st.cmds.length - 1] === 'CFG GET IDINT');
   check('nominativo maiuscolo', st.cfg.callsign === 'IU5HJU/P');
 
   // Modo Sysop: di partenza spento (testi visibili, elenco comandi nascosto), chiave non impostata
@@ -123,6 +127,15 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.click('#save');
   await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
   check('sysop spento e nominativo tolto', st.sysop.mode === 'off' && st.sysop.call === 'none' && (await p.isVisible('#textsbox')));
+
+  check('identificativo: letto e salvato', (await p.inputValue('#idint')) === '10' && st.cmds.includes('CFG SET IDINT 10'));
+  await p.fill('#idint', '3'); await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  check('identificativo 3 minuti salvato', st.idint === '3' && (await p.inputValue('#idint')) === '3');
+  await p.fill('#idint', '11'); await p.click('#save');
+  await p.waitForTimeout(400);
+  check('identificativo fuori limite bloccato', st.idint === '3');
+  await p.fill('#idint', '10');
 
   check('GPS nascosto sulla T3', await p.isHidden('#gps'));
   check('nessun comando GPS sulla T3', !st.cmds.some((c) => c.startsWith('CFG SET GPS')));

@@ -454,7 +454,97 @@ static void testStaleReply() {
   CHECK(r.air.sent[0] == sent);
 }
 
+static int countBeacons(const Rig& r) {
+  int n = 0;
+  for (const auto& w : r.air.log[0]) {
+    Packet p;
+    if (decodePacket(w.data(), w.size(), p) && p.mode == kModeText && p.seq == kTextSeqBeacon) {
+      n++;
+      CHECK(strcmp(p.callsign, "IZ0RPT") == 0 && (p.flags & kFlagStart) && (p.flags & kFlagEnd) && strncmp(reinterpret_cast<const char*>(p.payload), "Ripetitore VoLoRa", p.payloadLen) == 0);
+    }
+  }
+  return n;
+}
+
+static void testBeaconPeriodic() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.sch->setBeaconInterval(60000);
+  r.run(14000);
+  CHECK(countBeacons(r) == 0);          // il primo dopo 15 s dall'avvio
+  r.run(2000);
+  CHECK(countBeacons(r) == 1 && r.sch->stats().beacons == 1);
+  r.run(58000);
+  CHECK(countBeacons(r) == 1);
+  r.run(3000);
+  CHECK(countBeacons(r) == 2);
+  r.run(180000);
+  CHECK(countBeacons(r) == 5);          // uno al minuto
+  // sessioni diverse: le stazioni non scartano il secondo come copia
+  Packet a, b;
+  int found = 0;
+  for (const auto& w : r.air.log[0]) {
+    Packet p;
+    if (decodePacket(w.data(), w.size(), p) && p.seq == kTextSeqBeacon) (found++ == 0 ? a : b) = p;
+  }
+  CHECK(found >= 2 && a.session != b.session);
+  // la radio e' tornata in ascolto messaggi dopo l'identificativo (parametri della voce per 3 s)
+  CHECK(r.radio.curId == kProfileMessage);
+}
+
+static void testBeaconOff() {
+  Rig r;  // senza nominativo o senza intervallo non parte
+  r.sch->setBeaconInterval(60000);
+  r.run(120000);
+  CHECK(r.air.sent[0] == 0);
+  Rig q;
+  q.sch->setCallsign("IZ0RPT");
+  q.run(120000);
+  CHECK(q.air.sent[0] == 0);
+  Rig z;  // N0CALL (mayTransmit false) o TX spenta: niente
+  z.sch->setCallsign("IZ0RPT");
+  z.sch->setBeaconInterval(60000);
+  for (int i = 0; i < 1500; i++) {
+    z.sch->tick(z.t, false);
+    z.t += 100;
+  }
+  CHECK(z.air.sent[0] == 0);
+}
+
+static void testBeaconWaitsForVoiceAndMessages() {
+  CtlRig r;
+  r.sch->setBeaconInterval(60000);
+  r.run(14500);
+  // arriva voce proprio quando l'identificativo e' dovuto: prima la voce, l'identificativo dopo
+  r.voice(40, 100);
+  CHECK(countBeacons(r) == 0);
+  r.run(500);
+  CHECK(countBeacons(r) == 1);  // finita la voce, subito dopo parte l'identificativo (era dovuto)
+  r.run(4000);
+  CHECK(countBeacons(r) == 1);
+  // un messaggio in ritrasmissione non e' interrotto: l'identificativo aspetta la fine
+  r.run(30000);
+  r.deliver(makeMessage(0x1111, 100));
+  while (r.sch->stats().relayPackets < 3) r.run(100);
+  CHECK(countBeacons(r) == 1);
+  r.run(40000);  // la scadenza dei 60 s passa a meta' o a fine messaggio: comunque il messaggio finisce per intero
+  CHECK(r.sch->stats().relayed == 1 && r.sch->stats().interrupted == 0);
+  r.run(3000);
+  CHECK(countBeacons(r) == 2);
+  // TX spenta dal sysop: nessun identificativo
+  r.sch->onControl({kSysopOff, 0, 1}, r.t, r.fx);
+  const int n = countBeacons(r);
+  r.run(200000);
+  CHECK(countBeacons(r) == n);
+  r.sch->onControl({kSysopOn, 0, 2}, r.t, r.fx);
+  r.run(2000);
+  CHECK(countBeacons(r) == n + 1);
+}
+
 int main() {
+  testBeaconPeriodic();
+  testBeaconOff();
+  testBeaconWaitsForVoiceAndMessages();
   testStaleReply();
   testControlReplyAndOff();
   testControlOffMinutes();

@@ -148,6 +148,7 @@ void UiNotifier::pttDenied(lcr::DenyReason r) {
 }
 
 void UiNotifier::rxStarted() {
+  viaRpt_ = false;
   rxPct_ = 0;
   rxCall_[0] = 0;
   distText_[0] = 0;
@@ -172,6 +173,18 @@ void UiNotifier::rxCallsign(const char* callsign) {
   dirty_ = true;
 }
 
+// Identificativo del ripetitore: diventa l'ultimo ricevuto (con segnale e qualita'), senza bip e senza interrompere nulla.
+void UiNotifier::beaconReceived(const char* callsign) {
+  strncpy(rxCall_, callsign, lcr::kMaxCallsign);
+  rxCall_[lcr::kMaxCallsign] = 0;
+  distText_[0] = 0;
+  haveLast_ = true;
+  lastVia_ = false;
+  lastBeacon_ = true;
+  Serial.printf("RX identificativo: %s RSSI %d dBm SNR %.1f dB\n", rxCall_, rssi_, static_cast<double>(snr_));
+  dirty_ = true;
+}
+
 void UiNotifier::rxPosition(const lcr::Position& p) {
   if (!ownPos_.valid) return;  // senza la propria posizione non si calcola nessuna distanza
   lcr::formatDistance(distText_, sizeof(distText_), lcr::distanceKm(ownPos_, p));
@@ -179,6 +192,8 @@ void UiNotifier::rxPosition(const lcr::Position& p) {
 }
 
 void UiNotifier::rxEnded(const char* callsign, uint32_t lostFrames, uint32_t recoveredPackets) {
+  lastVia_ = viaRpt_;
+  lastBeacon_ = false;
   if (callsign && callsign[0]) {
     strncpy(rxCall_, callsign, lcr::kMaxCallsign);
     rxCall_[lcr::kMaxCallsign] = 0;
@@ -610,13 +625,14 @@ void UiNotifier::draw(uint32_t nowMs) {
   } else if (haveLast_) {
     {  // "Ultimo IU5HJU 12.3km": la distanza si aggiunge solo se la riga resta entro i 21 caratteri
       char line[32];
-      int n = snprintf(line, sizeof(line), "Ultimo %s", rxCall_[0] ? rxCall_ : "-");
+      // "Ultimo IZ5FSN via RPT" (arrivata da un ripetitore) o "Ultimo IR5XXX ID" (identificativo del ripetitore)
+      int n = snprintf(line, sizeof(line), "Ultimo %s%s", rxCall_[0] ? rxCall_ : "-", lastBeacon_ ? " ID" : (lastVia_ ? " via RPT" : ""));
       if (distText_[0] && n > 0 && n + 1 + static_cast<int>(strlen(distText_)) <= 21) snprintf(line + n, sizeof(line) - n, " %s", distText_);
       display_.print(line);
     }
     display_.setCursor(0, 47);  // 1 pixel di stacco dalla riga sopra e da "Vol"
-    display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_),
-                    static_cast<unsigned long>(lastRecovered_));
+    if (lastBeacon_) display_.printf("RSSI %d  SNR %.1f", rssi_, static_cast<double>(snr_));
+    else display_.printf("persi %lu  recup. %lu", static_cast<unsigned long>(lastLost_), static_cast<unsigned long>(lastRecovered_));
   } else {
     if (meshSec_ > 0) {
       display_.printf("Ascolto %d:%02d", meshSec_ / 60, meshSec_ % 60);

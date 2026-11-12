@@ -176,6 +176,10 @@ class Notifier : public lcr::INotifier {
     lcr::SysopReply r;
   };
   std::vector<SysRep> sysopReplies;
+  void beaconReceived(const char* cs) override { beacons.push_back(cs); }
+  std::vector<std::string> beacons;
+  void rxViaRepeater() override { viaRepeater++; }
+  int viaRepeater = 0;
   void messageOpened(bool isText) override { opened.push_back(isText); }
   void messageClosed() override { closed++; }
   void meshcomChanged(bool on) override { meshcomEvents.push_back(on); }

@@ -33,6 +33,8 @@
 //   CFG SET SYSOP IU5HJU         -> CFG OK sysop=IU5HJU        (nominativo del sysop: il solo che puo' comandare il ripetitore; NONE lo toglie; vale dal riavvio)
 //   CFG SET SYSOPKEY <32 cifre esadecimali> -> CFG OK sysopkey=set  (chiave condivisa di 16 byte per firmare i comandi; NONE la toglie; mai mostrata)
 //   CFG SET SYSOPMODE ON         -> CFG OK sysopmode=on        (modo Sysop: nel menu "Comandi Sysop" al posto di "Invia testo"; OFF lo spegne; vale dal riavvio)
+//   CFG SET IDINT 10             -> CFG OK idint=10            (ripetitore: ogni quanti minuti, da 1 a 10, la scheda TX manda l'identificativo; di base 10; vale dal riavvio)
+//   CFG GET IDINT                -> CFG IDINT=10
 //   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set mode=off
 //   CFG GET MCDEST1              -> CFG MCDEST1=22251
 //   CFG SET MCWINDOW 300         -> CFG OK mcwindow=300        (secondi di ascolto dopo l'invio, 30-1800)
@@ -60,6 +62,8 @@ namespace lcr {
 
 constexpr uint32_t kMinFreqKhz = 430000;  // banda dei 70 cm, IARU Regione 1: 430-440 MHz
 constexpr uint32_t kMaxFreqKhz = 440000;
+constexpr int kMinIdIntervalMin = 1;
+constexpr int kMaxIdIntervalMin = 10;
 constexpr int kMinPowerDbm = 2;   // limiti dell'SX1278 senza PA_BOOST
 constexpr int kMaxPowerDbm = 17;
 constexpr int kMinVolume = 0;  // muto
@@ -124,6 +128,7 @@ struct Settings {
   // Modo Sysop (scheda del sysop): il menu "Invia testo" diventa "Comandi Sysop" (elenco dei comandi al posto dei testi). Resta attivo
   // finche' il sysop non lo spegne; vale dal riavvio.
   bool sysopMode = false;
+  uint8_t idIntervalMin = 10;  // identificativo periodico del ripetitore (scheda TX), in minuti: 1..10, di base 10; vale dal riavvio
   bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
   uint32_t freqOutKhz = 0;   // frequenza di uscita del ripetitore, usata dalla scheda TX (0 = come la frequenza del profilo)
   int powerDbm = 0;

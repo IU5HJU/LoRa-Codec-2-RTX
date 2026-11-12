@@ -103,6 +103,11 @@ class INotifier {
   virtual void messageOpened(bool isText) { (void)isText; }
   // Messaggio ascoltato, letto o interrotto: cancellato dalla casella.
   virtual void messageClosed() {}
+  // La trasmissione che si sta ricevendo e' arrivata attraverso un ripetitore (flag RELAYED): una volta per ricezione.
+  virtual void rxViaRepeater() {}
+  // Identificativo periodico di un ripetitore (testo con seq = kTextSeqBeacon): non e' un messaggio, non va in casella e non deve
+  // suonare; il display lo mostra come ultimo ricevuto.
+  virtual void beaconReceived(const char* callsign) { (void)callsign; }
   // Un ripetitore annuncia che e' occupato per 'seconds' secondi (0 = di nuovo libero). Solo informativo: il PTT non si blocca.
   virtual void repeaterBusy(const char* callsign, uint16_t seconds) {
     (void)callsign;

@@ -43,6 +43,9 @@ button.sec{background:#e5e7eb;color:#14181f}
 <label for="mcdest3">Destinatario 3</label><input id="mcdest3" maxlength="15">
 <label for="mcdest4">Destinatario 4</label><input id="mcdest4" maxlength="15">
 <label for="mcdest5">Destinatario 5</label><input id="mcdest5" maxlength="15">
+<h2>Ripetitore</h2>
+<p class="hint">Solo per le schede del ripetitore (ruolo impostato da seriale). Ogni quanti minuti la scheda TX trasmette l'identificativo (nominativo del ripetitore, in modo testo: le stazioni lo vedono passare senza suoni). Da 1 a 10 minuti, di base 10. Vale dal riavvio.</p>
+<label for="idint">Identificativo ogni (minuti, 1-10)</label><input id="idint" type="number" min="1" max="10" required>
 <h2>Modo Sysop</h2>
 <p class="hint">Per chi gestisce un ripetitore. Con il <strong>modo Sysop</strong> acceso il menu della scheda (volume lungo) mostra <strong>Comandi Sysop</strong> al posto di Invia testo: scegli il comando (STATO, SPEGNI, RIACCENDI, RIAVVIA, IDENTIFICA, POTENZA) e la scheda lo trasmette firmato al ripetitore. Resta acceso finché non lo spegni. Il nominativo e la chiave vanno impostati uguali sul ripetitore (schede RX e TX) e sulla scheda del sysop; la chiave non si rilegge mai.</p>
 <label for="sysopmode">Modo Sysop</label><select id="sysopmode"><option value="off">Spento</option><option value="on">Acceso</option></select>
@@ -74,8 +77,9 @@ function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!
 function sysopShow(){const on=$('sysopmode').value==='on';$('sysopbox').hidden=!on;$('textsbox').hidden=on;}
 $('sysopmode').addEventListener('change',sysopShow);
 $('genkey').addEventListener('click',()=>{const b=new Uint8Array(16);crypto.getRandomValues(b);$('sysopkey').value=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');$('sysopkeyhint').textContent='Copia questa chiave adesso: dopo il salvataggio non si rilegge. Va impostata uguale sulle due schede del ripetitore e su questa.';});
+async function loadIdint(){try{const r=await cmd('CFG GET IDINT');if(r.startsWith('CFG IDINT='))$('idint').value=r.slice(10);}catch(e){}}
 async function loadSysop(){try{const r=await cmd('CFG GET SYSOP');if(r.startsWith('CFG SYSOP ')){const m=parse(r.slice(10));$('sysop').value=m.call&&m.call!=='none'?m.call:'';$('sysopmode').value=m.mode==='on'?'on':'off';$('sysopkey').value='';$('sysopkeyhint').textContent=m.key==='set'?'Chiave impostata (non si mostra). Lascia vuoto per non cambiarla.':'Chiave non impostata.';sysopShow();}}catch(e){}}
-async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))throw new Error(t);fill(parse(t));await loadSysop();for(let i=1;i<=5;i++){const r=await cmd('CFG GET TEXT'+i);$('text'+i).value=r.startsWith('CFG TEXT'+i+'=')?r.slice(('CFG TEXT'+i+'=').length):'';}try{const r=await cmd('CFG GET MC');if(r.startsWith('CFG MC ')){const m=parse(r.slice(7));$('mcfreq').value=m.freqmc||'';$('mcssid').value=m.ssid||'';$('mcwindow').value=m.window||'';for(let i=1;i<=5;i++){const d=await cmd('CFG GET MCDEST'+i);$('mcdest'+i).value=d.startsWith('CFG MCDEST'+i+'=')?d.slice(('CFG MCDEST'+i+'=').length):'';}}}catch(e){}st('Valori letti dalla scheda.','ok');}catch(e){st('Lettura non riuscita: '+e.message,'err');}}
+async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))throw new Error(t);fill(parse(t));await loadSysop();await loadIdint();for(let i=1;i<=5;i++){const r=await cmd('CFG GET TEXT'+i);$('text'+i).value=r.startsWith('CFG TEXT'+i+'=')?r.slice(('CFG TEXT'+i+'=').length):'';}try{const r=await cmd('CFG GET MC');if(r.startsWith('CFG MC ')){const m=parse(r.slice(7));$('mcfreq').value=m.freqmc||'';$('mcssid').value=m.ssid||'';$('mcwindow').value=m.window||'';for(let i=1;i<=5;i++){const d=await cmd('CFG GET MCDEST'+i);$('mcdest'+i).value=d.startsWith('CFG MCDEST'+i+'=')?d.slice(('CFG MCDEST'+i+'=').length):'';}}}catch(e){}st('Valori letti dalla scheda.','ok');}catch(e){st('Lettura non riuscita: '+e.message,'err');}}
 $('f').addEventListener('submit',async ev=>{
   ev.preventDefault();st('Salvataggio…','');
   const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqqual:$('freqqual').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none'};
@@ -87,6 +91,8 @@ $('f').addEventListener('submit',async ev=>{
     const mcds=[];for(let i=1;i<=5;i++){const d=$('mcdest'+i).value.trim().toUpperCase();if(d!==''&&!/^(\*|[A-Z0-9\/-]{1,15})$/.test(d)){st('Destinatario '+i+' non valido: gruppo, nominativo-SSID, * oppure vuoto.','err');return;}mcds.push(d);}
     const mcw=+$('mcwindow').value;if(!(mcw>=30&&mcw<=1800)){st("L'ascolto dopo l'invio deve durare da 30 a 1800 secondi.",'err');return;}
     for(const c of ['CFG SET FREQMC '+$('mcfreq').value.trim(),'CFG SET MCSSID '+$('mcssid').value.trim(),'CFG SET MCWINDOW '+mcw].concat(mcds.map((d,i)=>'CFG SET MCDEST'+(i+1)+' '+(d||'NONE')))){const r=await cmd(c);if(!r.startsWith('CFG OK')){st('Rifiutato ('+c+'): '+r,'err');return;}}
+    const idn=+$('idint').value;if(!(idn>=1&&idn<=10)){st('Il tempo dell\'identificativo deve essere da 1 a 10 minuti.','err');return;}
+    {const r=await cmd('CFG SET IDINT '+idn);if(!r.startsWith('CFG OK')){st('Rifiutato (IDINT): '+r,'err');return;}}
     const sy=$('sysop').value.trim().toUpperCase();if(sy!==''&&!/^[A-Z0-9\/]{1,8}$/.test(sy)){st('Il nominativo del sysop non è valido.','err');return;}
     const sk=$('sysopkey').value.trim();if(sk!==''&&!/^[0-9a-fA-F]{32}$/.test(sk)){st('La chiave deve avere 32 cifre esadecimali.','err');return;}
     for(const c of ['CFG SET SYSOP '+(sy||'NONE'),'CFG SET SYSOPMODE '+$('sysopmode').value].concat(sk!==''?['CFG SET SYSOPKEY '+sk]:[])){const r=await cmd(c);if(!r.startsWith('CFG OK')){st('Rifiutato ('+(c.startsWith('CFG SET SYSOPKEY')?'SYSOPKEY':c)+'): '+r,'err');return;}}
@@ -94,7 +100,7 @@ $('f').addEventListener('submit',async ev=>{
     const back=parse(await cmd('CFG GET'));const bad=[];
     for(const k of Object.keys(want)){let a=String(back[k]),b=String(want[k]);if(k.startsWith('freq')){a=parseFloat(a);b=parseFloat(b);}else if(k==='qth'&&b!=='none'){const x=b.split(',').map(parseFloat),y=a.split(',').map(parseFloat);if(Math.abs(x[0]-y[0])<2e-5&&Math.abs(x[1]-y[1])<2e-5)continue;}else if(k==='callsign'||k==='profile'){a=a.toLowerCase();b=b.toLowerCase();}else if(!isNaN(a)&&!isNaN(b)){a=Number(a);b=Number(b);}
       if(a!==b)bad.push(k);}
-    fill(back);await loadSysop();
+    fill(back);await loadSysop();await loadIdint();
     if(bad.length)st('Salvato, ma la scheda riporta valori diversi: '+bad.join(', '),'err');
     else st('Salvato e riletto dalla scheda: tutto coincide. I cambi di profilo, frequenza, potenza e nominativo valgono dal riavvio.','ok');
   }catch(e){st('Errore di comunicazione: '+e.message,'err');}

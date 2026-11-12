@@ -429,6 +429,33 @@ async function scenario(name, fn, opts = {}) {
     check('senza chiave nuova non si manda SYSOPKEY', !(await cmds(p)).some((x) => x.startsWith('CFG SET SYSOPKEY')));
   });
 
+  await scenario('identificativo del ripetitore: lettura, salvataggio e limiti', async (p) => {
+    check('campo spento prima di collegare', await p.isDisabled('#idint'));
+    await connect(p);
+    await until(p, () => !document.getElementById('idint').disabled);
+    check('letto dalla scheda (di base 10)', (await p.inputValue('#idint')) === '10');
+    await p.fill('#callsign', 'IU5HJU');
+    await p.fill('#idint', '11');
+    await p.click('#save');
+    await sleep(400);
+    check('11 minuti rifiutati dalla pagina', /1 a 10/.test(await p.textContent('#status')) && !(await cmds(p)).some((x) => x.startsWith('CFG SET IDINT')));
+    await p.fill('#idint', '4');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('CFG SET IDINT 4', (await cmds(p)).includes('CFG SET IDINT 4') && (await p.evaluate(() => window.__st.idint)) === '4');
+  });
+
+  await scenario('firmware senza identificativo: campo spento e nessun comando', async (p) => {
+    await p.evaluate(() => { window.__st.noIdint = true; });
+    await connect(p);
+    await sleep(600);
+    check('campo spento', await p.isDisabled('#idint'));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('nessun comando IDINT', !(await cmds(p)).some((x) => /IDINT/.test(x) && x.startsWith('CFG SET')));
+  });
+
   await scenario('firmware senza modo Sysop: campi spenti e nessun comando nuovo', async (p) => {
     await p.evaluate(() => { window.__st.noSysop = true; });
     await connect(p);

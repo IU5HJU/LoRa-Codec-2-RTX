@@ -128,6 +128,22 @@ static void testMonitor() {
   CHECK(f.run("CFG SET MONITOR MAYBE") == ConsoleResult::Error && !f.st.data.rxMonitor);
 }
 
+static void testIdInterval() {
+  Fixture f;
+  CHECK(f.run("CFG GET IDINT") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDINT=10") == 0);
+  CHECK(f.run("CFG SET IDINT 3") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK idint=3") == 0 && f.st.data.idIntervalMin == 3);
+  CHECK(f.run("CFG GET IDINT") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDINT=3") == 0);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=1"));
+  CHECK(f.run("CFG SET IDINT 1") == ConsoleResult::Ok && f.run("CFG SET IDINT 10") == ConsoleResult::Ok && f.st.data.idIntervalMin == 10);
+  CHECK(f.run("CFG SET IDINT 0") == ConsoleResult::Error && f.run("CFG SET IDINT 11") == ConsoleResult::Error && f.run("CFG SET IDINT x") == ConsoleResult::Error);
+  CHECK(f.st.data.idIntervalMin == 10);
+  Settings bad = make("IU5HJU", 433900, 10);
+  bad.idIntervalMin = 0;
+  CHECK(!isValidSettings(bad));
+  bad.idIntervalMin = 11;
+  CHECK(!isValidSettings(bad));
+}
+
 static void testSysop() {
   Fixture f;
   CHECK(f.run("CFG GET SYSOP") == ConsoleResult::Ok && strcmp(f.reply, "CFG SYSOP call=none key=none mode=off") == 0);
@@ -550,6 +566,7 @@ int main() {
   testRepeaterRole();
   testTexts();
   testMonitor();
+  testIdInterval();
   testSysop();
   testMeshcomSettings();
   testValidate();

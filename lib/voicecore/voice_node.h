@@ -136,6 +136,7 @@ class VoiceNode {
   void handleText(const Packet& p);
   void handleSysopReply(const Packet& p);
   void handleBusy(const Packet& p, uint32_t nowMs);
+  void handleBeacon(const Packet& p);
   void clearBusy();
   void openMessage(uint32_t nowMs);
   void closeMessage();
@@ -222,6 +223,10 @@ class VoiceNode {
   bool lastBusyValid_ = false;
   uint16_t lastBusySession_ = 0;
   char lastBusyCall_[kMaxCallsign + 1] = {0};
+  bool relayedNotified_ = false;  // rxViaRepeater gia' notificato per la ricezione in corso
+  bool lastBeaconValid_ = false;
+  uint16_t lastBeaconSession_ = 0;
+  char lastBeaconCall_[kMaxCallsign + 1] = {0};
   bool lastTextValid_ = false;  // ultimo testo ricevuto (per scartare la seconda copia)
   uint16_t lastTextSession_ = 0;
   char lastTextCall_[kMaxCallsign + 1] = {0};

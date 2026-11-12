@@ -367,6 +367,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
     if (rx_.session() != notifiedSession_) {
       notifiedSession_ = rx_.session();
       callsignNotified_ = false;
+      relayedNotified_ = false;
       positionNotified_ = false;
     }
     if (state_ == State::Idle) {
@@ -385,6 +386,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       playbackNotified_ = false;
       rxPercent_ = 0;
       notify_.rxStarted();
+    }
+    if (!relayedNotified_ && (p.flags & kFlagRelayed)) {  // la voce e' passata da un ripetitore (dopo rxStarted, che azzera l'indicazione)
+      relayedNotified_ = true;
+      notify_.rxViaRepeater();
     }
     reportRxProgress();
   }
@@ -480,7 +485,21 @@ void VoiceNode::drainToInbox(uint32_t nowMs) {
 
 // Testo ricevuto: un solo pacchetto, mandato due volte dal mittente (la seconda copia si scarta). Sostituisce il messaggio
 // in casella.
+// Identificativo di un ripetitore: si mostra senza metterlo in casella e senza suoni. Una sola copia per sessione.
+void VoiceNode::handleBeacon(const Packet& p) {
+  if (lastBeaconValid_ && p.session == lastBeaconSession_ && strncmp(p.callsign, lastBeaconCall_, kMaxCallsign) == 0) return;
+  lastBeaconValid_ = true;
+  lastBeaconSession_ = p.session;
+  strncpy(lastBeaconCall_, p.callsign, kMaxCallsign);
+  lastBeaconCall_[kMaxCallsign] = 0;
+  notify_.beaconReceived(p.callsign);
+}
+
 void VoiceNode::handleText(const Packet& p) {
+  if (p.seq == kTextSeqBeacon) {
+    handleBeacon(p);
+    return;
+  }
   if (lastTextValid_ && p.session == lastTextSession_ && strncmp(p.callsign, lastTextCall_, kMaxCallsign) == 0) return;
   if (!inbox_.setText(p.callsign, reinterpret_cast<const char*>(p.payload), p.payloadLen)) return;
   lastTextValid_ = true;

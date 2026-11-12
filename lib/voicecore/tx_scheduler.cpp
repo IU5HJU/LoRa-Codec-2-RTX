@@ -65,14 +65,7 @@ SysopResult TxScheduler::onControl(const SysopCommand& c, uint32_t nowMs, Repeat
     sendNow(makeSysopReply(nextSession_++, callsign_, key_, {c.code, r, c.counter, data}), nowMs, false);
     stats_.replies++;
     if (fx.identify && control_->txAllowed(nowMs)) {
-      Packet id;
-      id.mode = kModeText;
-      id.session = nextSession_++;
-      id.flags = kFlagStart | kFlagEnd;
-      strncpy(id.callsign, callsign_, kMaxCallsign);
-      static const char kText[] = "Ripetitore VoLoRa";
-      id.payloadLen = sizeof(kText) - 1;
-      memcpy(id.payload, kText, id.payloadLen);
+      Packet id = makeBeaconPacket(nextSession_++, callsign_);  // lo stesso identificativo di quello periodico
       sendNow(id, nowMs, false);
     }
   } else {
@@ -88,6 +81,12 @@ void TxScheduler::onStaleCommand(uint8_t code, uint32_t lastCounter, uint32_t no
   lastStaleReplyMs_ = nowMs;
   sendNow(makeSysopReply(nextSession_++, callsign_, key_, {code, kSysopCounterLow, lastCounter, control_->statusData(nowMs)}), nowMs, false);
   stats_.replies++;
+}
+
+bool TxScheduler::beaconDue(uint32_t nowMs) const {
+  if (beaconIntervalMs_ == 0 || callsign_[0] == 0) return false;
+  if (!haveBeacon_) return nowMs >= kBeaconFirstMs;
+  return nowMs - lastBeaconMs_ >= beaconIntervalMs_;
 }
 
 void TxScheduler::setCallsign(const char* callsign) {
@@ -207,6 +206,15 @@ void TxScheduler::tick(uint32_t nowMs, bool mayTransmit) {
       }
       queue_.sent(nowMs);
     }
+    return;
+  }
+
+  // 1b. identificativo periodico: a canale libero (voce in coda: prima la voce; messaggio in ritrasmissione o in ricezione: si aspetta)
+  if (mayTransmit && (state_ == State::Voice || state_ == State::Listen) && !store_.receiving() && beaconDue(nowMs)) {
+    sendNow(makeBeaconPacket(nextSession_++, callsign_), nowMs, false);
+    haveBeacon_ = true;
+    lastBeaconMs_ = nowMs;
+    stats_.beacons++;
     return;
   }
 

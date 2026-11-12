@@ -13,7 +13,7 @@ bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode &&
+         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode && a.idIntervalMin == b.idIntervalMin &&
          (!a.sysopKeySet || memcmp(a.sysopKey, b.sysopKey, sizeof(a.sysopKey)) == 0) &&
          a.profile == b.profile && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
@@ -48,7 +48,7 @@ static bool validMcDests(const Settings& s) {
 }
 
 bool isValidSettings(const Settings& s) {
-  return isValidCallsign(s.callsign) && (s.sysopCall[0] == 0 || isValidCallsign(s.sysopCall)) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
+  return isValidCallsign(s.callsign) && (s.sysopCall[0] == 0 || isValidCallsign(s.sysopCall)) && s.idIntervalMin >= kMinIdIntervalMin && s.idIntervalMin <= kMaxIdIntervalMin && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
          s.freqMsgKhz <= kMaxFreqKhz && s.freqMcKhz >= kMinFreqKhz && s.freqMcKhz <= kMaxFreqKhz && s.mcSsid <= 99 &&
          s.mcWindowS >= kMinMcWindowS && s.mcWindowS <= kMaxMcWindowS && validMcDests(s) && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
          (s.freqOutKhz == 0 || (s.freqOutKhz >= kMinFreqKhz && s.freqOutKhz <= kMaxFreqKhz)) && s.role <= kRoleRepeaterTx &&
@@ -230,6 +230,10 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
     }
     return ConsoleResult::Ok;
   }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "IDINT")) {
+    if (reply && cap > 0) snprintf(reply, cap, "CFG IDINT=%u", static_cast<unsigned>(stored_.idIntervalMin));
+    return ConsoleResult::Ok;
+  }
   if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "SYSOP")) {
     if (reply && cap > 0) {
       snprintf(reply, cap, "CFG SYSOP call=%s key=%s mode=%s", stored_.sysopCall[0] ? stored_.sysopCall : "none", stored_.sysopKeySet ? "set" : "none",
@@ -396,6 +400,14 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "sysop=%s", next.sysopCall[0] ? next.sysopCall : "none");
+  } else if (equalsIgnoreCase(key, "IDINT")) {
+    int mins = 0;
+    if (!parseInt(value, mins) || mins < kMinIdIntervalMin || mins > kMaxIdIntervalMin) {
+      say(reply, cap, "CFG ERR idint %s", "in minuti, da 1 a 10");
+      return ConsoleResult::Error;
+    }
+    next.idIntervalMin = static_cast<uint8_t>(mins);
+    snprintf(shown, sizeof(shown), "idint=%d", mins);
   } else if (equalsIgnoreCase(key, "SYSOPMODE")) {
     if (equalsIgnoreCase(value, "ON")) {
       next.sysopMode = true;

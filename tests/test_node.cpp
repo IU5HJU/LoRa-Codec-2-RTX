@@ -724,6 +724,58 @@ static void testSysopReplyShown() {
   CHECK(note.sysopReplies.size() == 1);
 }
 
+static void testBeaconSilent() {
+  Sim s;
+  s.run(100);
+  uint8_t buf[kMaxWireBytes];
+  const size_t n = encodePacket(makeBeaconPacket(0x6001, "IZ0RPT"), buf, sizeof(buf));
+  CHECK(n > 0);
+  Packet q;
+  CHECK(decodePacket(buf, n, q) && q.mode == kModeText && q.seq == kTextSeqBeacon);
+  s.air.inbox[1].push_back(std::vector<uint8_t>(buf, buf + n));
+  s.run(200);
+  s.air.inbox[1].push_back(std::vector<uint8_t>(buf, buf + n));  // la stessa sessione: una sola notifica
+  s.run(200);
+  CHECK(s.b.note.beacons.size() == 1 && s.b.note.beacons[0] == "IZ0RPT");
+  // non e' un messaggio: niente casella, niente notifica di messaggio, niente ricezione, niente suoni di fine trasmissione
+  CHECK(!s.b.node.inbox().has() && s.b.note.received.empty() && s.b.note.rxStarts == 0 && s.b.note.rxEnds == 0 && s.b.node.state() == VoiceNode::State::Idle);
+  // un messaggio vero in casella non e' toccato da un identificativo
+  CHECK(s.a.node.sendText("Ciao", s.clock));
+  s.run(3000);
+  CHECK(s.b.node.inbox().kind() == Inbox::Kind::Text && s.b.note.received.size() == 1);
+  uint8_t buf2[kMaxWireBytes];
+  const size_t n2 = encodePacket(makeBeaconPacket(0x6002, "IZ0RPT"), buf2, sizeof(buf2));
+  s.air.inbox[1].push_back(std::vector<uint8_t>(buf2, buf2 + n2));
+  s.run(200);
+  CHECK(s.b.note.beacons.size() == 2 && s.b.node.inbox().kind() == Inbox::Kind::Text && strcmp(s.b.node.inbox().text(), "Ciao") == 0);
+}
+
+static void testViaRepeater() {
+  Sim s;
+  s.air.clock = &s.clock;
+  s.run(100);
+  // voce diretta: nessuna indicazione
+  s.a.node.pttPressed(s.clock);
+  s.run(1500);
+  s.a.node.pttReleased(s.clock);
+  s.run(3000);
+  CHECK(s.b.note.rxEnds == 1 && s.b.note.viaRepeater == 0);
+  // gli stessi pacchetti con il flag RELAYED: una sola indicazione per ricezione
+  std::vector<std::vector<uint8_t>> pk = s.air.log[0];
+  const int before = s.b.note.rxEnds;
+  for (auto& w : pk) {
+    Packet p;
+    CHECK(decodePacket(w.data(), w.size(), p));
+    p.session = static_cast<uint16_t>(p.session + 1);
+    p.flags = static_cast<uint8_t>(p.flags | kFlagRelayed);
+    uint8_t b[kMaxWireBytes];
+    const size_t m = encodePacket(p, b, sizeof(b));
+    s.air.inbox[1].push_back(std::vector<uint8_t>(b, b + m));
+  }
+  s.run(8000);
+  CHECK(s.b.note.rxEnds == before + 1 && s.b.note.viaRepeater == 1);
+}
+
 static void testTextMessage() {
   Sim s;
   s.air.clock = &s.clock;
@@ -1185,6 +1237,8 @@ int main() {
   testMeshcomAck();
   testMeshcomGroups();
   testRepeaterBusy();
+  testBeaconSilent();
+  testViaRepeater();
   testSysopStation();
   testSysopReplyShown();
   testTextMessage();

@@ -110,6 +110,8 @@ class UiNotifier : public lcr::INotifier {
   void messageReceived(bool isText, const char* callsign) override;
   void messageOpened(bool isText) override;
   void messageClosed() override;
+  void rxViaRepeater() override { viaRpt_ = true; dirty_ = true; }
+  void beaconReceived(const char* callsign) override;
   void meshcomChanged(bool on) override;
   void sysopReply(const char* callsign, const lcr::SysopReply& r) override;
   void recPhaseChanged(int phase) override { recPhase_ = phase; dirty_ = true; }
@@ -177,6 +179,9 @@ class UiNotifier : public lcr::INotifier {
   uint32_t lastLost_ = 0;
   uint32_t lastRecovered_ = 0;
   bool haveLast_ = false;
+  bool viaRpt_ = false;      // la ricezione in corso e' passata da un ripetitore
+  bool lastVia_ = false;     // l'ultima ricevuta e' passata da un ripetitore
+  bool lastBeacon_ = false;  // l'ultima ricevuta e' l'identificativo di un ripetitore
   bool testMode_ = false;
   bool testShown_ = false;        // schermata con l'esito della prova
   uint32_t testUntilMs_ = 0;

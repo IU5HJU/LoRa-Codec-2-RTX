@@ -31,6 +31,9 @@ Packet makeBusyPacket(uint16_t session, const char* callsign, uint16_t seconds);
 // Secondi dichiarati da un pacchetto del modo 6 (0 se non lo e').
 uint16_t busySeconds(const Packet& p);
 
+// Identificativo del ripetitore (testo con seq = kTextSeqBeacon): nominativo del ripetitore e un breve testo fisso.
+Packet makeBeaconPacket(uint16_t session, const char* callsign);
+
 // Testo ammesso nei messaggi: ASCII stampabile (0x20-0x7E) senza '{' e '}'. Lunghezza 1..kMaxTextChars (150).
 bool isValidText(const char* t, size_t len);
 

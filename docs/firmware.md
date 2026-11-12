@@ -245,4 +245,6 @@ Prima della ritrasmissione la TX manda l'**annuncio di "occupato"** (modo 6); le
 
 **Comandi del sysop (12/11/2026):** il sysop può spegnere, riaccendere, riavviare, far identificare e cambiare la potenza del ripetitore con comandi firmati (modo 5); configurazione (`CFG SET SYSOP`, `CFG SET SYSOPKEY`, `CFG SET SYSOPMODE`, dalla pagina) e uso (menu **Comandi Sysop** a bordo, oppure `CFG SYSCMD ...` da seriale) in [studio-ripetitore.md](studio-ripetitore.md). Se una trasmissione continua supera 60 s di voce (180 s di messaggio) la TX si spegne da sola per 5 minuti. Logica provata sul PC, **non ancora sulle schede**.
 
-**Cosa non c'è ancora:** identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).
+**Identificativo periodico (12/11/2026):** ogni 1-10 minuti (`CFG SET IDINT`, di base 10) la TX manda un testo con il nominativo del ripetitore; le stazioni lo mostrano come "Ultimo IR5XXX ID" senza bip. Identificativo in Morse (CW o FM stretta): solo studio di fattibilità, [studio-identificativo-cw.md](studio-identificativo-cw.md).
+
+**Cosa non c'è ancora:** ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).

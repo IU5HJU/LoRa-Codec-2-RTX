@@ -11,6 +11,8 @@
     noGps: false,
     noMc: false,          // firmware senza profilo MeshCom (piu' vecchio): CFG GET MC e CFG SET FREQMC/MCDEST/MCSSID sconosciuti
     mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
+    noIdint: false,       // firmware senza identificativo periodico (piu' vecchio)
+    idint: '10',
     noSysop: false,       // firmware senza modo Sysop (piu' vecchio): CFG GET SYSOP e CFG SET SYSOP* sconosciuti
     sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
     noTexts: false,       // firmware senza testi predefiniti (piu' vecchio): CFG GET TEXTn e CFG SET TEXTn sconosciuti
@@ -42,6 +44,11 @@
     if (t[0] !== 'CFG') return;
     const cmd = t[1];
     // CFG SET TEXTn <testo> (il testo e' il resto della riga) e CFG GET TEXTn, come il firmware
+    if (!st.noIdint) {
+      if (/^CFG\s+GET\s+IDINT$/i.test(line.trim())) return out('CFG IDINT=' + st.idint);
+      const im = /^CFG\s+SET\s+IDINT\s+(\S+)$/i.exec(line.trim());
+      if (im) { if (!inRange(+im[1], 1, 10)) return out('CFG ERR idint in minuti, da 1 a 10'); st.idint = String(+im[1]); return out('CFG OK idint=' + st.idint); }
+    }
     if (!st.noSysop) {
       if (/^CFG\s+GET\s+SYSOP$/i.test(line.trim())) return out(`CFG SYSOP call=${st.sysop.call} key=${st.sysop.key} mode=${st.sysop.mode}`);
       const sm = /^CFG\s+SET\s+(SYSOPMODE|SYSOPKEY|SYSOP)\s+(\S+)$/i.exec(line.trim());
