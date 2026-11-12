@@ -355,6 +355,15 @@ void UiNotifier::drawPicker() {
   display_.display();
 }
 
+// Risposta firmata di un ripetitore a un comando del sysop (CFG SYSCMD): una riga sulla seriale e un bip.
+void UiNotifier::sysopReply(const char* callsign, const lcr::SysopReply& r) {
+  Serial.printf("CFG SYSCMD RISPOSTA da=%s codice=%u esito=%u contatore=%lu spento=%u potenza=%u minuti=%u\n", callsign, static_cast<unsigned>(r.code),
+                static_cast<unsigned>(r.result), static_cast<unsigned long>(r.counter), static_cast<unsigned>(r.data >> 24),
+                static_cast<unsigned>((r.data >> 16) & 0xFF), static_cast<unsigned>(r.data & 0xFFFF));
+  audio_.beep(r.result == lcr::kSysopOk ? 1000 : 400, 80);
+  dirty_ = true;
+}
+
 // Inizio e fine dell'escursione sulla rete di testo: un bip diverso e il ridisegno.
 void UiNotifier::meshcomChanged(bool on) {
   dirty_ = true;

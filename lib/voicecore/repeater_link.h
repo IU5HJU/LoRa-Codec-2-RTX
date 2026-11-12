@@ -20,6 +20,7 @@ constexpr uint8_t kLinkStart = 0x7E;
 enum LinkType : uint8_t {
   kLinkPacket = 1,     // dati: un pacchetto radio completo (come esce da encodePacket)
   kLinkHeartbeat = 2,  // dati: 4 byte, numero di pacchetti ricevuti dalla RX (big endian); la TX sa che il collegamento vive
+  kLinkControl = 4,    // dati: 7 byte [codice][parametro 2][contatore 4], un comando del sysop gia' verificato dalla RX (dalla RX alla TX)
   kLinkStatus = 3,     // dati: 2 byte, pacchetti in coda e pacchetti persi per coda piena (dalla TX alla RX)
 };
 constexpr size_t kLinkMaxData = kMaxWireBytes;                // un pacchetto radio

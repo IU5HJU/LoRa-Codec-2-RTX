@@ -93,6 +93,33 @@ Nell'escursione **MeshCom** i testi non usano questo modo: viaggiano nel formato
 
 I testi da inviare sono cinque, predefiniti e impostabili dalla pagina web o dalla pagina Wi-Fi della scheda (`CFG SET TEXTn`, [firmware.md](firmware.md)).
 
+## Comandi del sysop (modo 5)
+
+Un solo pacchetto `START`+`END`+`CALLSIGN` (nominativo di chi manda), `seq` 0, senza parità, posizione o totale. Payload di **15 byte** (comando) o **18 byte** (risposta), tutti i numeri big-endian:
+
+| | Byte |
+|---|---|
+| comando | `codice` (1), `parametro` (2), `contatore` (4), `firma` (8) |
+| risposta | `0x80 \| codice` (1), `esito` (1), `contatore` (4, quello del comando), `dati` (4), `firma` (8) |
+
+**Firma:** HMAC-SHA256 con una chiave condivisa di 16 byte, troncato a **8 byte**, calcolato sul pacchetto come esce da `encodePacket` **senza gli ultimi 8 byte** (intestazione, sessione e nominativo compresi: la sessione di un comando firmato non può essere 0). La firma **non cifra**: il comando resta leggibile.
+
+**Controlli del ripetitore** (la scheda RX): nominativo uguale a quello del sysop configurato, firma valida, **contatore maggiore dell'ultimo accettato** (salvato in memoria: una registrazione riascoltata non funziona, nemmeno la seconda copia dello stesso comando). Altrimenti il comando si ignora in silenzio (nemmeno STATO senza firma). Il comando non si ripete mai.
+
+| Codice | Comando | Parametro | Effetto |
+|---|---|---|---|
+| 1 | STATO | – | risposta con lo stato |
+| 2 | SPEGNI | – | la TX non trasmette più (la RX ascolta sempre) |
+| 3 | RIACCENDI | – | torna in servizio |
+| 4 | SPEGNI A TEMPO | minuti 1..1440 | spenta per N minuti |
+| 5 | RIAVVIA | – | riavvio delle due schede |
+| 6 | IDENTIFICA | – | trasmette il nominativo (testo "Ripetitore VoLoRa") |
+| 7 | POTENZA | dBm 2..17 | potenza di uscita (fino al riavvio) |
+
+**Risposta:** firmata con la stessa chiave, trasmessa con i parametri della voce, **una volta** (se il sysop non la vede, ripete il comando: l'esito è lo stesso). Esito: 0 ok, 1 parametro fuori limiti, 2 comando sconosciuto, 3 non consentito. Dati: byte 3 = 1 se la TX è spenta, byte 2 = potenza in dBm, byte 1-0 = minuti che restano allo spegnimento a tempo (0xFFFF = senza scadenza). A TX spenta la risposta **non si trasmette**, salvo quella al comando che l'ha appena spenta.
+
+**Sicurezza del ripetitore** (indipendente dai comandi): una trasmissione **continua** (pause fra pacchetti inferiori a 1,5 s) oltre **60 s di voce** o **180 s di messaggio** spegne la TX per 5 minuti; RIACCENDI la riaccende prima.
+
 ## Annuncio di ripetitore occupato (modo 6)
 
 Un solo pacchetto `START`+`END`+`CALLSIGN` con il nominativo del **ripetitore** e, come payload, **2 byte big-endian** con i secondi di blocco previsti (**0 = di nuovo libero**). Niente parità, posizione o totale; `seq` 0; payload di lunghezza diversa da 2 e pacchetto senza nominativo sono scartati. Lo manda un ripetitore con i parametri della voce prima di ritrasmettere un messaggio lungo (le stazioni in Standard e Qualità non vedono con il CAD una trasmissione SF12), **due volte a 1 s di distanza** (stessa sessione, la seconda copia si scarta), e una volta con 0 secondi a servizio concluso se la ritrasmissione non è stata interrotta dalla voce.

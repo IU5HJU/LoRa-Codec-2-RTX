@@ -23,6 +23,7 @@ class RadioLora : public lcr::IRadio {
   bool setMeshcom(bool on) override;
   // Parametri di un profilo qualsiasi alla frequenza data (il ripetitore alterna voce e messaggi), poi di nuovo in ascolto.
   bool setParams(const lcr::Profile& prof, uint32_t freqKhz) override;
+  bool setPower(int dbm) override { return radio_->setOutputPower(static_cast<int8_t>(dbm)) == RADIOLIB_ERR_NONE; }
 
   float lastRssi() const { return lastRssi_; }
   bool hasSnr() const override { return true; }

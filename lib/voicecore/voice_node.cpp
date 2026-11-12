@@ -356,6 +356,10 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       handleBusy(p, nowMs);
       continue;
     }
+    if (p.mode == kModeSysop) {  // i comandi sono per i ripetitori; qui interessano solo le risposte alla propria stazione
+      handleSysopReply(p);
+      continue;
+    }
     if (p.mode != prof_.codecMode && p.mode != kModeTest) continue;  // modi sconosciuti
     if (state_ == State::Receiving && (p.mode == kModeTest) != rxIsTest_) continue;  // niente mescolanze
     if (!rx_.onPacket(p, nowMs)) continue;
@@ -490,6 +494,13 @@ void VoiceNode::handleText(const Packet& p) {
 
 // Annuncio di un ripetitore occupato: si ricorda per quanto tempo e si avvisa il display. Due copie: la seconda si scarta.
 // Un annuncio con 0 secondi libera subito.
+// Risposta di un ripetitore a un nostro comando: si mostra solo se la firma torna con la chiave del sysop.
+void VoiceNode::handleSysopReply(const Packet& p) {
+  SysopReply r;
+  if (!cfg_.sysopKey || !parseSysopReply(p, cfg_.sysopKey, r)) return;
+  notify_.sysopReply(p.callsign, r);
+}
+
 void VoiceNode::handleBusy(const Packet& p, uint32_t nowMs) {
   if (lastBusyValid_ && p.session == lastBusySession_ && strncmp(p.callsign, lastBusyCall_, kMaxCallsign) == 0) return;
   lastBusyValid_ = true;
@@ -555,6 +566,18 @@ void VoiceNode::playTick(uint32_t nowMs) {
 bool VoiceNode::sendText(const char* text, uint32_t nowMs) {
   const size_t len = text ? strlen(text) : 0;
   if (!isValidText(text, len)) return false;
+  Packet p;
+  p.mode = kModeText;
+  p.session = 0;  // si assegna in sendSingle
+  p.seq = 0;
+  p.flags = kFlagStart | kFlagEnd;
+  strncpy(p.callsign, cfg_.callsign, kMaxCallsign);
+  p.payloadLen = static_cast<uint8_t>(len);
+  memcpy(p.payload, text, len);
+  return sendSingle(p, nowMs);
+}
+
+bool VoiceNode::sendSingle(const Packet& pk, uint32_t nowMs) {
   if (meshActive()) {  // durante l'escursione i testi partono dal menu MeshCom (startMeshcom)
     notify_.pttDenied(DenyReason::TextOnly);
     return false;
@@ -575,14 +598,8 @@ bool VoiceNode::sendText(const char* text, uint32_t nowMs) {
     notify_.pttDenied(DenyReason::ChannelBusy);
     return false;
   }
-  Packet p;
-  p.mode = kModeText;
-  p.session = makeSessionId();
-  p.seq = 0;
-  p.flags = kFlagStart | kFlagEnd;
-  strncpy(p.callsign, cfg_.callsign, kMaxCallsign);
-  p.payloadLen = static_cast<uint8_t>(len);
-  memcpy(p.payload, text, len);
+  Packet p = pk;
+  if (p.session == 0) p.session = makeSessionId();
   textWireLen_ = encodePacket(p, textWire_, sizeof(textWire_));
   if (!textWireLen_) return false;
   playing_ = false;

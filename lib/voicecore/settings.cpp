@@ -13,6 +13,8 @@ bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
+         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet &&
+         (!a.sysopKeySet || memcmp(a.sysopKey, b.sysopKey, sizeof(a.sysopKey)) == 0) &&
          a.profile == b.profile && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
 }
@@ -46,7 +48,7 @@ static bool validMcDests(const Settings& s) {
 }
 
 bool isValidSettings(const Settings& s) {
-  return isValidCallsign(s.callsign) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
+  return isValidCallsign(s.callsign) && (s.sysopCall[0] == 0 || isValidCallsign(s.sysopCall)) && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
          s.freqMsgKhz <= kMaxFreqKhz && s.freqMcKhz >= kMinFreqKhz && s.freqMcKhz <= kMaxFreqKhz && s.mcSsid <= 99 &&
          s.mcWindowS >= kMinMcWindowS && s.mcWindowS <= kMaxMcWindowS && validMcDests(s) && (s.freqQualKhz == 0 || (s.freqQualKhz >= kMinFreqKhz && s.freqQualKhz <= kMaxFreqKhz)) &&
          (s.freqOutKhz == 0 || (s.freqOutKhz >= kMinFreqKhz && s.freqOutKhz <= kMaxFreqKhz)) && s.role <= kRoleRepeaterTx &&
@@ -228,6 +230,10 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
     }
     return ConsoleResult::Ok;
   }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "SYSOP")) {
+    say(reply, cap, "CFG SYSOP call=%s key=%s", stored_.sysopCall[0] ? stored_.sysopCall : "none", stored_.sysopKeySet ? "set" : "none");
+    return ConsoleResult::Ok;
+  }
   if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "MONITOR")) {
     say(reply, cap, stored_.rxMonitor ? "CFG MONITOR=on" : "CFG MONITOR=off");
     return ConsoleResult::Ok;
@@ -376,6 +382,39 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "role=%s", roleCode(next.role));
+  } else if (equalsIgnoreCase(key, "SYSOP")) {
+    if (equalsIgnoreCase(value, "NONE")) {
+      next.sysopCall[0] = 0;
+    } else if (isValidCallsign(value)) {
+      memset(next.sysopCall, 0, sizeof(next.sysopCall));
+      strncpy(next.sysopCall, value, kMaxCallsign);
+    } else {
+      say(reply, cap, "CFG ERR sysop %s", "nominativo non valido (oppure NONE)");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "sysop=%s", next.sysopCall[0] ? next.sysopCall : "none");
+  } else if (equalsIgnoreCase(key, "SYSOPKEY")) {
+    if (equalsIgnoreCase(value, "NONE")) {
+      next.sysopKeySet = false;
+      memset(next.sysopKey, 0, sizeof(next.sysopKey));
+    } else {
+      uint8_t k[16];
+      bool okHex = strlen(value) == 32;
+      for (size_t i = 0; okHex && i < 32; i++) {
+        const char c = value[i];
+        int v = (c >= '0' && c <= '9') ? c - '0' : (c >= 'a' && c <= 'f') ? c - 'a' + 10 : (c >= 'A' && c <= 'F') ? c - 'A' + 10 : -1;
+        if (v < 0) okHex = false;
+        else if (i % 2 == 0) k[i / 2] = static_cast<uint8_t>(v << 4);
+        else k[i / 2] = static_cast<uint8_t>(k[i / 2] | v);
+      }
+      if (!okHex) {
+        say(reply, cap, "CFG ERR sysopkey %s", "servono 32 cifre esadecimali (oppure NONE)");
+        return ConsoleResult::Error;
+      }
+      memcpy(next.sysopKey, k, sizeof(k));
+      next.sysopKeySet = true;
+    }
+    snprintf(shown, sizeof(shown), "sysopkey=%s", next.sysopKeySet ? "set" : "none");
   } else if (equalsIgnoreCase(key, "MONITOR")) {
     if (equalsIgnoreCase(value, "ON")) {
       next.rxMonitor = true;

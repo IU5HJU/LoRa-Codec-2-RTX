@@ -25,6 +25,7 @@
 #include "message_store.h"
 #include "profile.h"
 #include "repeater_link.h"
+#include "sysop.h"
 
 namespace lcr {
 
@@ -48,6 +49,8 @@ class TxScheduler {
     uint32_t busyAborts = 0;     // ritrasmissioni fermate dal canale occupato
     uint32_t paramErrors = 0;
     uint32_t messageRx = 0;      // pacchetti arrivati in ascolto
+    uint32_t replies = 0;        // risposte ai comandi del sysop trasmesse
+    uint32_t repliesDropped = 0; // risposte non trasmesse perche' la TX e' spenta
     uint32_t announces = 0;      // annunci di occupato mandati (copie comprese)
   };
 
@@ -60,6 +63,11 @@ class TxScheduler {
 
   // Nominativo del ripetitore: se c'e', prima di ritrasmettere un messaggio si manda l'annuncio di occupato (modo 6, protocol.h).
   void setCallsign(const char* callsign);
+  // Comandi del sysop: lo stato di servizio (spento, limiti di trasmissione) e la chiave con cui si firmano le risposte.
+  void setControl(RepeaterControl* control, const uint8_t key[kSysopKeyBytes]);
+  // Un comando gia' verificato dalla RX: lo esegue e trasmette la risposta firmata (anche se questo comando ha appena spento la TX);
+  // 'fx' dice cosa resta da fare alla scheda (potenza, riavvio). L'identificazione la trasmette lo stesso regista.
+  SysopResult onControl(const SysopCommand& c, uint32_t nowMs, RepeaterControl::Effects& fx);
   // false (profilo Messaggio ripetuto come voce, o messaggi spenti): la radio non va mai in ascolto messaggi ne' ritrasmette.
   void setMessagesEnabled(bool on) { messages_ = on; }
   State state() const { return state_; }
@@ -72,9 +80,11 @@ class TxScheduler {
   void abortRelay(uint32_t nowMs, bool byVoice);
   void relayStep(uint32_t nowMs);
   void endRelayState(uint32_t nowMs);
+  void sendNow(const Packet& p, uint32_t nowMs, bool message);
+  void sendAndNote(const uint8_t* wire, size_t len, uint32_t nowMs, bool message);
   void announceStep(uint32_t nowMs);
   void releaseStep(uint32_t nowMs);
-  bool sendBusy(uint16_t seconds);
+  bool sendBusy(uint16_t seconds, uint32_t nowMs);
   uint16_t busySecondsForReady() const;
   static bool voiceParams(State s) { return s == State::Voice || s == State::Announce || s == State::Release; }
   bool tailElapsed(uint32_t nowMs) const { return !haveVoice_ || nowMs - lastVoiceMs_ >= kTailMs; }
@@ -99,6 +109,8 @@ class TxScheduler {
   bool busy_ = false;
   bool messages_ = true;
   char callsign_[kMaxCallsign + 1] = {0};
+  RepeaterControl* control_ = nullptr;
+  uint8_t key_[kSysopKeyBytes] = {0};
   uint8_t annSent_ = 0;  // copie dell'annuncio gia' mandate
   uint32_t lastAnnMs_ = 0;
   uint16_t annSession_ = 0;

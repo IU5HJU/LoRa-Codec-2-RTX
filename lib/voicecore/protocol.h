@@ -22,6 +22,11 @@ constexpr uint8_t kModeTestReport = 3;
 // mostrano sul display e non rifiutano il PTT. Il ripetitore lo manda con i parametri della voce prima di ritrasmettere un
 // messaggio lungo (che le stazioni in Standard e Qualita' non vedono con il CAD) e due volte, a distanza di kTextRepeatGapMs.
 constexpr uint8_t kModeBusy = 6;
+// Comando del sysop al ripetitore e risposta del ripetitore (sysop.h): un solo pacchetto START|END con il nominativo di chi manda,
+// payload di 15 byte (comando) o 18 byte (risposta), firmato con HMAC-SHA256 troncato a 8 byte.
+constexpr uint8_t kModeSysop = 5;
+constexpr size_t kSysopCommandBytes = 15;
+constexpr size_t kSysopReplyBytes = 18;
 constexpr size_t kBusyPayloadBytes = 2;
 // Messaggio di testo breve (stile SMS, fino a kMaxTextChars caratteri ASCII, senza '{' e '}'): un solo pacchetto START|END con il nominativo
 // di chi scrive; il payload e' il testo. Nessuna parita'. Il mittente lo trasmette due volte (stessa sessione): i duplicati si

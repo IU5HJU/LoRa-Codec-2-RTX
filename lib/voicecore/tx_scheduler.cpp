@@ -24,16 +24,73 @@ bool TxScheduler::switchTo(State s, uint32_t nowMs) {
   return true;
 }
 
+void TxScheduler::setControl(RepeaterControl* control, const uint8_t key[kSysopKeyBytes]) {
+  control_ = control;
+  memcpy(key_, key, kSysopKeyBytes);
+}
+
+// Ogni trasmissione passa di qui: la radio spedisce il pacchetto e la sicurezza del ripetitore (trasmissione continua troppo lunga)
+// ne tiene conto con il tempo in aria.
+void TxScheduler::sendAndNote(const uint8_t* wire, size_t len, uint32_t nowMs, bool message) {
+  radio_.send(wire, len);
+  if (control_) control_->noteTx(nowMs, static_cast<uint32_t>(airtimeMs(len, message ? message_ : voice_) + 0.5), message);
+}
+
+// Trasmette subito un pacchetto con i parametri della voce (risposte e identificazione): interrompe un messaggio in corso, che
+// ripartira' dall'inizio.
+void TxScheduler::sendNow(const Packet& p, uint32_t nowMs, bool message) {
+  uint8_t wire[kMaxWireBytes];
+  const size_t m = encodePacket(p, wire, sizeof(wire));
+  if (m == 0) return;
+  if (state_ == State::Relay) abortRelay(nowMs, true);
+  if (state_ == State::Listen || state_ == State::Relay) {  // Voice, Announce e Release hanno gia' i parametri della voce
+    if (!radio_.setParams(voice_, freqKhz_)) {
+      stats_.paramErrors++;
+      state_ = State::Listen;
+      return;
+    }
+  }
+  state_ = State::Voice;
+  annSent_ = 0;
+  sendAndNote(wire, m, nowMs, message);
+}
+
+SysopResult TxScheduler::onControl(const SysopCommand& c, uint32_t nowMs, RepeaterControl::Effects& fx) {
+  fx = RepeaterControl::Effects();
+  if (!control_) return kSysopNotAllowed;
+  uint32_t data = 0;
+  const SysopResult r = control_->apply(c, nowMs, fx, data);
+  if (fx.power >= 0) radio_.setPower(fx.power);
+  if (control_->txAllowed(nowMs) || fx.forceReply) {
+    sendNow(makeSysopReply(nextSession_++, callsign_, key_, {c.code, r, c.counter, data}), nowMs, false);
+    stats_.replies++;
+    if (fx.identify && control_->txAllowed(nowMs)) {
+      Packet id;
+      id.mode = kModeText;
+      id.session = nextSession_++;
+      id.flags = kFlagStart | kFlagEnd;
+      strncpy(id.callsign, callsign_, kMaxCallsign);
+      static const char kText[] = "Ripetitore VoLoRa";
+      id.payloadLen = sizeof(kText) - 1;
+      memcpy(id.payload, kText, id.payloadLen);
+      sendNow(id, nowMs, false);
+    }
+  } else {
+    stats_.repliesDropped++;
+  }
+  return r;
+}
+
 void TxScheduler::setCallsign(const char* callsign) {
   strncpy(callsign_, callsign ? callsign : "", kMaxCallsign);
   callsign_[kMaxCallsign] = 0;
 }
 
-bool TxScheduler::sendBusy(uint16_t seconds) {
+bool TxScheduler::sendBusy(uint16_t seconds, uint32_t nowMs) {
   uint8_t wire[kMaxWireBytes];
   const size_t m = encodePacket(makeBusyPacket(annSession_, callsign_, seconds), wire, sizeof(wire));
   if (m == 0) return false;
-  radio_.send(wire, m);
+  sendAndNote(wire, m, nowMs, false);
   stats_.announces++;
   return true;
 }
@@ -55,7 +112,7 @@ void TxScheduler::announceStep(uint32_t nowMs) {
     return;
   }
   if (annSent_ < 2) {
-    sendBusy(annSeconds_);
+    sendBusy(annSeconds_, nowMs);
     annSent_++;
     lastAnnMs_ = nowMs;
     return;
@@ -76,7 +133,7 @@ void TxScheduler::releaseStep(uint32_t nowMs) {
     return;
   }
   if (annSent_ < 2) {
-    sendBusy(0);
+    sendBusy(0, nowMs);
     annSent_++;
     lastAnnMs_ = nowMs;
     return;
@@ -108,6 +165,16 @@ void TxScheduler::listen(uint32_t nowMs) {
 }
 
 void TxScheduler::tick(uint32_t nowMs, bool mayTransmit) {
+  if (control_ && !control_->txAllowed(nowMs)) {  // spenta dal sysop, a tempo o dalla sicurezza: niente si trasmette
+    mayTransmit = false;
+    if (state_ == State::Relay || state_ == State::Announce || state_ == State::Release) {
+      const bool needSwitch = (state_ == State::Relay);
+      relayIdx_ = 0;
+      haveRelayTx_ = false;
+      annSent_ = 0;
+      if (!needSwitch || radio_.setParams(voice_, freqKhz_)) state_ = State::Voice;
+    }
+  }
   if (state_ != State::Voice && messages_) store_.tick(nowMs);
   if (state_ == State::Announce || state_ == State::Release) {
     if (queue_.size() > 0) {  // la voce interrompe anche gli annunci: restano gli stessi parametri
@@ -124,7 +191,7 @@ void TxScheduler::tick(uint32_t nowMs, bool mayTransmit) {
     size_t len = 0;
     if (queue_.next(nowMs, pkt, sizeof(pkt), len)) {
       if (mayTransmit) {
-        radio_.send(pkt, len);  // bloccante: dura il tempo in aria del pacchetto
+        sendAndNote(pkt, len, nowMs, false);  // bloccante: dura il tempo in aria del pacchetto
         stats_.voiceSent++;
         haveVoice_ = true;
         lastVoiceMs_ = nowMs;
@@ -198,7 +265,7 @@ void TxScheduler::relayStep(uint32_t nowMs) {
     m = encodePacket(p, wire, sizeof(wire));
   }
   if (m > 0) {
-    radio_.send(wire, m);
+    sendAndNote(wire, m, nowMs, true);
     stats_.relayPackets++;
     haveRelayTx_ = true;
     lastRelayTxMs_ = nowMs;

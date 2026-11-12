@@ -682,6 +682,48 @@ static void testRepeaterBusy() {
   CHECK(s.b.node.repeaterBusyRemainingSec(s.clock) == 0);
 }
 
+static const uint8_t SYSKEY[16] = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6};
+
+static void testSysopStation() {
+  Sim s;
+  s.run(100);
+  // la stazione A trasmette un comando firmato (due copie), senza voce
+  CHECK(s.a.node.sendSingle(makeSysopCommand(0x0007, "IU5HJU", SYSKEY, {kSysopStatus, 0, 7}), s.clock));
+  s.run(3000);
+  CHECK(s.air.sent[0] == 2 && s.a.note.txEnds == 1);
+  Packet p;
+  CHECK(decodePacket(s.air.log[0][0].data(), s.air.log[0][0].size(), p) && p.mode == kModeSysop && p.session == 7 && p.payloadLen == kSysopCommandBytes);
+  // B non e' un ripetitore: ignora il comando (nessun messaggio, nessuna risposta mostrata)
+  CHECK(!s.b.node.inbox().has() && s.b.note.sysopReplies.empty());
+  // una risposta firmata arriva ad A: A la mostra solo se ha la chiave giusta (qui la scheda finta non ha chiave: la prova e' sotto)
+}
+
+static void testSysopReplyShown() {
+  fake::Air air;
+  uint32_t clock = 0;
+  NodeConfig cfg = Station::makeCfg("IU5HJU");
+  cfg.sysopKey = SYSKEY;
+  fake::Radio radio(air, 1);
+  fake::Codec codec(kFrameBytes);
+  fake::Mic mic(clock);
+  fake::Speaker spk;
+  fake::Notifier note;
+  VoiceNode node(cfg, radio, codec, mic, spk, note);
+  uint8_t buf[kMaxWireBytes];
+  auto inject = [&](const Packet& pk) {
+    const size_t n = encodePacket(pk, buf, sizeof(buf));
+    air.inbox[1].push_back(std::vector<uint8_t>(buf, buf + n));
+    node.tick(clock);
+    clock += 50;
+  };
+  inject(makeSysopReply(5, "IZ0RPT", SYSKEY, {kSysopOff, kSysopOk, 12, 0x01000000}));
+  CHECK(note.sysopReplies.size() == 1 && note.sysopReplies[0].callsign == "IZ0RPT" && note.sysopReplies[0].r.code == kSysopOff && note.sysopReplies[0].r.counter == 12);
+  uint8_t other[16] = {0};
+  inject(makeSysopReply(6, "IZ0RPT", other, {kSysopOn, kSysopOk, 13, 0}));  // firma di un altro: scartata
+  inject(makeSysopCommand(7, "IZ0SOP", SYSKEY, {kSysopOff, 0, 14}));        // un comando non e' una risposta
+  CHECK(note.sysopReplies.size() == 1);
+}
+
 static void testTextMessage() {
   Sim s;
   s.air.clock = &s.clock;
@@ -1143,6 +1185,8 @@ int main() {
   testMeshcomAck();
   testMeshcomGroups();
   testRepeaterBusy();
+  testSysopStation();
+  testSysopReplyShown();
   testTextMessage();
   testTextRules();
   testVoiceMessageStopAndReplace();

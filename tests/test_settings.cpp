@@ -128,6 +128,22 @@ static void testMonitor() {
   CHECK(f.run("CFG SET MONITOR MAYBE") == ConsoleResult::Error && !f.st.data.rxMonitor);
 }
 
+static void testSysop() {
+  Fixture f;
+  CHECK(f.run("CFG GET SYSOP") == ConsoleResult::Ok && strcmp(f.reply, "CFG SYSOP call=none key=none") == 0);
+  CHECK(f.run("CFG SET SYSOP IZ0SOP") == ConsoleResult::Ok);
+  CHECK(strcmp(f.st.data.sysopCall, "IZ0SOP") == 0 && strcmp(f.reply, "CFG OK sysop=IZ0SOP") == 0);
+  CHECK(f.run("CFG SET SYSOP TROPPO-LUNGO-X") == ConsoleResult::Error && strcmp(f.st.data.sysopCall, "IZ0SOP") == 0);
+  CHECK(f.run("CFG SET SYSOPKEY 000102030405060708090a0b0c0d0e0f") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK sysopkey=set") == 0);
+  CHECK(f.st.data.sysopKeySet && f.st.data.sysopKey[0] == 0 && f.st.data.sysopKey[1] == 1 && f.st.data.sysopKey[15] == 15);
+  CHECK(f.run("CFG GET SYSOP") == ConsoleResult::Ok && strcmp(f.reply, "CFG SYSOP call=IZ0SOP key=set") == 0);  // la chiave non si mostra
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && !strstr(f.reply, "0102") && strstr(f.reply, "reboot=1"));
+  CHECK(f.run("CFG SET SYSOPKEY 0001") == ConsoleResult::Error && f.st.data.sysopKeySet);
+  CHECK(f.run("CFG SET SYSOPKEY zz0102030405060708090a0b0c0d0e0f") == ConsoleResult::Error && f.st.data.sysopKey[1] == 1);
+  CHECK(f.run("CFG SET SYSOPKEY NONE") == ConsoleResult::Ok && !f.st.data.sysopKeySet && f.st.data.sysopKey[1] == 0);
+  CHECK(f.run("CFG SET SYSOP NONE") == ConsoleResult::Ok && f.st.data.sysopCall[0] == 0);
+}
+
 static void testTexts() {
   Fixture f;
   // di partenza: i cinque testi di esempio, tutti validi
@@ -530,6 +546,7 @@ int main() {
   testRepeaterRole();
   testTexts();
   testMonitor();
+  testSysop();
   testMeshcomSettings();
   testValidate();
   testLoad();

@@ -54,6 +54,11 @@ class Radio : public lcr::IRadio {
   };
   std::vector<ParamChange> params;
   int curId = -1;  // profilo con cui la radio e' configurata (-1 = mai cambiato)
+  bool setPower(int dbm) override {
+    powers.push_back(dbm);
+    return true;
+  }
+  std::vector<int> powers;
   bool failParams = false;
   bool meshcom = false;
   int meshcomSwitches = 0;
@@ -165,6 +170,12 @@ class Notifier : public lcr::INotifier {
     uint16_t seconds;
   };
   std::vector<BusyEv> busyEvents;
+  void sysopReply(const char* cs, const lcr::SysopReply& r) override { sysopReplies.push_back({cs, r}); }
+  struct SysRep {
+    std::string callsign;
+    lcr::SysopReply r;
+  };
+  std::vector<SysRep> sysopReplies;
   void messageOpened(bool isText) override { opened.push_back(isText); }
   void messageClosed() override { closed++; }
   void meshcomChanged(bool on) override { meshcomEvents.push_back(on); }

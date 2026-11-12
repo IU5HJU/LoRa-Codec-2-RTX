@@ -47,6 +47,10 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     }
     out.mcSsid = static_cast<uint8_t>(p.getUChar("mcs", 99));
     out.rxMonitor = p.getBool("mon", false);  // assente nelle versioni precedenti
+    memset(out.sysopCall, 0, sizeof(out.sysopCall));
+    if (p.isKey("sop")) p.getString("sop", out.sysopCall, sizeof(out.sysopCall));
+    out.sysopKeySet = p.isKey("sky") && p.getBytesLength("sky") == sizeof(out.sysopKey);
+    if (out.sysopKeySet) p.getBytes("sky", out.sysopKey, sizeof(out.sysopKey));
     out.powerDbm = p.getInt("pwr", 0);
     // "vol2" = scala nuova (5 = 0 dB, fino a +15 dB). Se manca c'e' al massimo il vecchio "vol" (10 = 0 dB): si converte.
     out.volume = p.isKey("vol2") ? p.getInt("vol2", lcr::kDefaultVolume)
@@ -79,6 +83,9 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;
   p.putUShort("mcw", s.mcWindowS);
+  p.putString("sop", s.sysopCall);
+  if (s.sysopKeySet) p.putBytes("sky", s.sysopKey, sizeof(s.sysopKey));
+  else p.remove("sky");
   for (size_t i = 0; i < lcr::kMcDestSlots; i++) {  // un posto vuoto salva una stringa vuota
     char key[4] = {'m', 'd', static_cast<char>('1' + i), 0};
     p.putString(key, s.mcDests[i]);
@@ -95,6 +102,22 @@ bool NvsSettingsStorage::erase() {
   Preferences p;
   if (!p.begin(kNamespace, false)) return false;
   const bool ok = p.clear();
+  p.end();
+  return ok;
+}
+
+uint32_t loadSysopCounter() {
+  Preferences p;
+  if (!p.begin(kNamespace, true)) return 0;
+  const uint32_t c = p.getUInt("soc", 0);
+  p.end();
+  return c;
+}
+
+bool saveSysopCounter(uint32_t counter) {
+  Preferences p;
+  if (!p.begin(kNamespace, false)) return false;
+  const bool ok = p.putUInt("soc", counter) > 0;
   p.end();
   return ok;
 }

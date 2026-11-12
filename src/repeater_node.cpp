@@ -11,6 +11,8 @@
 #include "repeater_link.h"
 #include "rx_monitor.h"
 #include "message_store.h"
+#include "settings_nvs.h"
+#include "sysop.h"
 #include "tx_scheduler.h"
 #include "button_gesture.h"
 
@@ -93,6 +95,12 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
   bool volArmed = false;  // un volume gia' premuto all'accensione non conta
   lcr::LinkParser parser;
   UsbConsole usb(handler);
+  // Comandi del sysop: la RX li verifica (firma, nominativo, contatore) e manda quelli validi alla TX
+  lcr::SysopAuth auth;
+  if (settings.sysopKeySet) auth.setKey(settings.sysopKey);
+  auth.setSysop(settings.sysopCall);
+  auth.setLastCounter(loadSysopCounter());
+  uint32_t restartAtMs = 0;
 
   uint32_t received = 0, badPackets = 0, sent = 0, discarded = 0;
   uint8_t txQueue = 0, txDropped = 0;
@@ -113,6 +121,21 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       if (!lcr::decodePacket(buf, n, p)) {
         badPackets++;  // non e' un pacchetto del progetto
       } else {
+        if (p.mode == lcr::kModeSysop) {
+          lcr::SysopCommand cmd;
+          const lcr::SysopAuth::Verdict v = auth.check(p, cmd);
+          if (v == lcr::SysopAuth::Verdict::Ok) {
+            saveSysopCounter(auth.lastCounter());
+            uint8_t d[7] = {cmd.code, static_cast<uint8_t>(cmd.param >> 8), static_cast<uint8_t>(cmd.param), static_cast<uint8_t>(cmd.counter >> 24),
+                            static_cast<uint8_t>(cmd.counter >> 16), static_cast<uint8_t>(cmd.counter >> 8), static_cast<uint8_t>(cmd.counter)};
+            sendFrame(lcr::kLinkControl, d, sizeof(d));
+            Serial.printf("[ripetitore] comando del sysop %s: codice %u contatore %lu\n", p.callsign, static_cast<unsigned>(cmd.code), static_cast<unsigned long>(cmd.counter));
+            if (cmd.code == lcr::kSysopRestart) restartAtMs = now + 3000;  // la TX prima risponde
+          } else if (v != lcr::SysopAuth::Verdict::NotCommand) {
+            Serial.printf("[ripetitore] comando rifiutato da %s (motivo %d)\n", p.callsign, static_cast<int>(v));
+          }
+          continue;  // un comando non si ripete e non e' voce
+        }
         if (mon) mon->onPacket(p, now);  // monitor: la voce arrivata si ascolta (indipendente dalla decisione di ripetere)
         lcr::Packet out;
         const lcr::Repeater::Verdict v = rep.onPacket(p, now, out);
@@ -176,6 +199,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
     (void)txDropped;
 
     if (usb.poll()) restartNow(ui);
+    if (restartAtMs && static_cast<int32_t>(now - restartAtMs) >= 0) restartNow(ui);
     delay(1);
   }
 }
@@ -196,7 +220,10 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
   lcr::TxScheduler sched(radio, *store, prof, lcr::profileFor(lcr::kProfileMessage), out.profileFreqKhz(), static_cast<uint16_t>(esp_random()));
   sched.setCallsign(settings.callsign);  // annuncio di occupato (modo 6) prima e dopo i messaggi
   sched.setMessagesEnabled(!prof.message);  // se la voce e' gia' il profilo Messaggio non c'e' nulla da alternare
+  lcr::RepeaterControl control(lcr::kMinPowerDbm, lcr::kMaxPowerDbm, settings.powerDbm);
+  sched.setControl(&control, settings.sysopKey);
   const lcr::TxQueue& queue = sched.queue();
+  uint32_t restartAtMs = 0;
   UsbConsole usb(handler);
   const bool mayTransmit = !lcr::isPlaceholderCallsign(settings.callsign);  // come le altre schede: con N0CALL non si trasmette
 
@@ -214,6 +241,13 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       const lcr::LinkParser::Frame& f = parser.frame();
       if (f.type == lcr::kLinkPacket) {
         sched.onLinkPacket(f.data, f.len);  // se la coda e' piena il pacchetto si perde e si conta
+      } else if (f.type == lcr::kLinkControl && f.len >= 7) {
+        const lcr::SysopCommand cmd = {f.data[0], static_cast<uint16_t>((f.data[1] << 8) | f.data[2]),
+                                       (static_cast<uint32_t>(f.data[3]) << 24) | (static_cast<uint32_t>(f.data[4]) << 16) | (static_cast<uint32_t>(f.data[5]) << 8) | f.data[6]};
+        lcr::RepeaterControl::Effects fx;
+        const lcr::SysopResult res = sched.onControl(cmd, millis(), fx);  // esegue e trasmette la risposta firmata
+        Serial.printf("[ripetitore] comando %u contatore %lu: esito %u\n", static_cast<unsigned>(cmd.code), static_cast<unsigned long>(cmd.counter), static_cast<unsigned>(res));
+        if (fx.restart) restartAtMs = millis() + 500;
       } else if (f.type == lcr::kLinkHeartbeat && f.len >= 4) {
         rxCount = (static_cast<uint32_t>(f.data[0]) << 24) | (static_cast<uint32_t>(f.data[1]) << 16) | (static_cast<uint32_t>(f.data[2]) << 8) | f.data[3];
         lastHbMs = now;
@@ -241,12 +275,14 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       snprintf(l4, sizeof(l4), "Persi %lu  da RX %lu", static_cast<unsigned long>(queue.dropped()), static_cast<unsigned long>(rxCount));
       const bool linkOk = lastHbMs != 0 && now - lastHbMs < kLinkDeadMs;
       if (!mayTransmit) snprintf(l5, sizeof(l5), "N0CALL: non trasmette");
+      else if (control.off()) snprintf(l5, sizeof(l5), "TX SPENTA (sysop)");
       else snprintf(l5, sizeof(l5), "RX %s %s M%u/%lu", linkOk ? "ok" : "NO", sched.state() == lcr::TxScheduler::State::Voice ? "voce" : sched.state() == lcr::TxScheduler::State::Listen ? "ascolto" : "rilancio",
                     static_cast<unsigned>(store->readyCount()), static_cast<unsigned long>(sched.stats().relayed));
       ui.showLines(l1, l2, l3, l4, l5);
     }
 
     if (usb.poll()) restartNow(ui);
+    if (restartAtMs && static_cast<int32_t>(millis() - restartAtMs) >= 0) restartNow(ui);
     delay(1);
   }
 }

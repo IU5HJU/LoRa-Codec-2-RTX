@@ -243,4 +243,6 @@ Sulla RX **non va montato il microfono** (GPIO34/36 sono i pin dei suoi dati) e 
 
 Prima della ritrasmissione la TX manda l'**annuncio di "occupato"** (modo 6); le stazioni lo mostrano sul display e non bloccano il PTT.
 
-**Cosa non c'è ancora:** comandi del sysop (modo 5), identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).
+**Comandi del sysop (12/11/2026):** il sysop può spegnere, riaccendere, riavviare, far identificare e cambiare la potenza del ripetitore con comandi firmati (modo 5); configurazione (`CFG SET SYSOP`, `CFG SET SYSOPKEY`) e uso (`CFG SYSCMD ...`) in [studio-ripetitore.md](studio-ripetitore.md). Se una trasmissione continua supera 60 s di voce (180 s di messaggio) la TX si spegne da sola per 5 minuti. Logica provata sul PC, **non ancora sulle schede**.
+
+**Cosa non c'è ancora:** identificazione periodica del ripetitore, ripetizione di più profili (solo uno per ripetitore, opzione A dello studio).

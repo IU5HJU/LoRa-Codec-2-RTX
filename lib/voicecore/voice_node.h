@@ -42,6 +42,8 @@ struct NodeConfig {
   void (*meshLog)(const char* msg) = nullptr;
   // Solo per i test: tempo aggiunto alla pausa tra i pacchetti per simulare il tempo in aria (la radio finta e' istantanea).
   uint32_t extraGapMs = 0;
+  // Chiave del sysop (16 byte) se questa scheda e' la sua stazione: serve a verificare le risposte dei ripetitori. nullptr = non attiva.
+  const uint8_t* sysopKey = nullptr;
 };
 
 class VoiceNode {
@@ -90,6 +92,9 @@ class VoiceNode {
   bool messageOpen() const { return playing_ || textOpen_; }
   // Trasmette un breve testo (ASCII stampabile senza graffe, 1-150 caratteri), in due copie. false (con pttDenied) se non si puo'.
   bool sendText(const char* text, uint32_t nowMs);
+  // Trasmette un pacchetto singolo START|END gia' pronto, due volte come i testi (comandi del sysop, sysop.h). Stesse condizioni di
+  // sendText: nominativo valido, canale libero, non in trasmissione o ricezione.
+  bool sendSingle(const Packet& p, uint32_t nowMs);
 
   // Escursione sulla rete di testo (docs/meshcom-testo.md): porta la radio ai parametri MeshCom, invia 'text' a 'dest' (un gruppo, un
   // nominativo-SSID o "*") e ascolta per windowMs; poi la radio torna da sola al profilo in uso. text = nullptr: solo ascolto.
@@ -129,6 +134,7 @@ class VoiceNode {
   void meshRemember(uint32_t id, uint32_t nowMs);
   void drainToInbox(uint32_t nowMs);
   void handleText(const Packet& p);
+  void handleSysopReply(const Packet& p);
   void handleBusy(const Packet& p, uint32_t nowMs);
   void clearBusy();
   void openMessage(uint32_t nowMs);

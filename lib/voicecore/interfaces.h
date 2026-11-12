@@ -8,6 +8,7 @@
 #include "link_test.h"
 #include "position.h"
 #include "profile.h"
+#include "sysop.h"
 
 namespace lcr {
 
@@ -31,6 +32,11 @@ class IRadio {
   virtual bool setParams(const Profile& prof, uint32_t freqKhz) {
     (void)prof;
     (void)freqKhz;
+    return true;
+  }
+  // Potenza di uscita in dBm (comando POTENZA del sysop). false se non riesce.
+  virtual bool setPower(int dbm) {
+    (void)dbm;
     return true;
   }
   // Non bloccante. Ritorna i byte copiati in buf, 0 se non c'e' nulla.
@@ -101,6 +107,11 @@ class INotifier {
   virtual void repeaterBusy(const char* callsign, uint16_t seconds) {
     (void)callsign;
     (void)seconds;
+  }
+  // Risposta firmata di un ripetitore a un comando del sysop trasmesso da questa scheda (la firma e' gia' verificata).
+  virtual void sysopReply(const char* callsign, const SysopReply& r) {
+    (void)callsign;
+    (void)r;
   }
   // L'escursione sulla rete di testo e' iniziata (on = true) o finita (on = false, la scheda e' tornata al profilo in uso).
   virtual void meshcomChanged(bool on) { (void)on; }

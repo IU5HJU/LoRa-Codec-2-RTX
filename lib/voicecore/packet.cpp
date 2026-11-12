@@ -51,6 +51,7 @@ size_t encodePacket(const Packet& p, uint8_t* out, size_t cap) {
   const bool cs = p.callsign[0] != 0;
   if (cs && !isValidCallsign(p.callsign)) return 0;
   if (p.payloadLen > kMaxPayload) return 0;
+  if (p.mode == kModeSysop && (!cs || (p.payloadLen != kSysopCommandBytes && p.payloadLen != kSysopReplyBytes))) return 0;
   if (p.mode == kModeBusy && (!cs || p.payloadLen != kBusyPayloadBytes)) return 0;
   if (p.mode == kModeText && (!cs || !isValidText(reinterpret_cast<const char*>(p.payload), p.payloadLen))) return 0;
   const size_t csLen = cs ? strlen(p.callsign) : 0;
@@ -123,13 +124,16 @@ bool decodePacket(const uint8_t* in, size_t len, Packet& out) {
   if (pl > kMaxPayload) return false;
 
   if (q.flags & kFlagParity) {
-    if (q.mode == kModeText || q.mode == kModeBusy) return false;
+    if (q.mode == kModeText || q.mode == kModeBusy || q.mode == kModeSysop) return false;
     if (q.flags & (kFlagStart | kFlagEnd | kFlagCallsign | kFlagPosition | kFlagTotal)) return false;
     if (pl < kParityHeader) return false;
     const uint8_t count = in[pos];
     const uint8_t xorLen = in[pos + 1];
     if (count == 0 || count > kParityGroup) return false;
     if (xorLen >= 16) return false;  // XOR dei conteggi di frame (ognuno <= 12)
+  } else if (q.mode == kModeSysop) {
+    if ((q.flags & (kFlagStart | kFlagEnd)) != (kFlagStart | kFlagEnd) || !(q.flags & kFlagCallsign)) return false;
+    if (q.flags & (kFlagPosition | kFlagTotal) || (pl != kSysopCommandBytes && pl != kSysopReplyBytes)) return false;
   } else if (q.mode == kModeBusy) {
     // Annuncio di occupato: un solo pacchetto START|END con il nominativo e 2 byte di secondi.
     if ((q.flags & (kFlagStart | kFlagEnd)) != (kFlagStart | kFlagEnd) || !(q.flags & kFlagCallsign)) return false;

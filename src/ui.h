@@ -109,6 +109,7 @@ class UiNotifier : public lcr::INotifier {
   void messageOpened(bool isText) override;
   void messageClosed() override;
   void meshcomChanged(bool on) override;
+  void sysopReply(const char* callsign, const lcr::SysopReply& r) override;
   void recPhaseChanged(int phase) override { recPhase_ = phase; dirty_ = true; }
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
 

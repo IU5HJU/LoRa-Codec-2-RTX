@@ -30,6 +30,9 @@
 //   CFG SET FREQMC 433.175       -> CFG OK freqmc=433.175      (frequenza delle reti di testo, solo per l'escursione; come FREQ)
 //   CFG SET MCDEST1 22251        -> CFG OK mcdest1=22251       (MCDEST1..MCDEST5: destinatari tra cui scegliere nell'escursione MeshCom: un gruppo
 //                                   numerico (22251, 222...), un nominativo-SSID (IU5ABC-9) o * per tutti; NONE svuota il posto; valgono subito)
+//   CFG SET SYSOP IU5HJU         -> CFG OK sysop=IU5HJU        (nominativo del sysop: il solo che puo' comandare il ripetitore; NONE lo toglie; vale dal riavvio)
+//   CFG SET SYSOPKEY <32 cifre esadecimali> -> CFG OK sysopkey=set  (chiave condivisa di 16 byte per firmare i comandi; NONE la toglie; mai mostrata)
+//   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set
 //   CFG GET MCDEST1              -> CFG MCDEST1=22251
 //   CFG SET MCWINDOW 300         -> CFG OK mcwindow=300        (secondi di ascolto dopo l'invio, 30-1800)
 //   CFG SET MCSSID 99            -> CFG OK mcssid=99           (SSID del tuo nominativo in rete, 0-99; 0 = nessuno)
@@ -113,6 +116,10 @@ struct Settings {
   char mcDests[kMcDestSlots][16];
   uint32_t freqQualKhz = 0;  // frequenza del profilo Qualita' (0 = come lo Standard)
   uint8_t role = kRoleNormal;  // ruolo: normale o scheda RX/TX del ripetitore (vale dal riavvio)
+  // Comandi del sysop al ripetitore (sysop.h): nominativo del sysop e chiave condivisa di 16 byte (mai mostrata da CFG GET); vale dal riavvio.
+  char sysopCall[kMaxCallsign + 1] = {0};
+  uint8_t sysopKey[16] = {0};
+  bool sysopKeySet = false;
   bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
   uint32_t freqOutKhz = 0;   // frequenza di uscita del ripetitore, usata dalla scheda TX (0 = come la frequenza del profilo)
   int powerDbm = 0;

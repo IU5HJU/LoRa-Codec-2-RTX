@@ -7,6 +7,7 @@
 #include "packet.h"
 #include "tx_scheduler.h"
 #include "testing.h"
+#include "sysop.h"
 #include "tx_session.h"
 
 using namespace lcr;
@@ -331,7 +332,114 @@ static void testVoiceInterruptsRelayNoRelease() {
   CHECK(r.sch->stats().interrupted == 1 && static_cast<int>(r.sch->stats().announces) == before);  // niente annuncio di fine: basta la voce
 }
 
+static const uint8_t KEY[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+
+struct CtlRig : Rig {
+  RepeaterControl ctl{2, 17, 10};
+  CtlRig() {
+    sch->setCallsign("IZ0RPT");
+    sch->setControl(&ctl, KEY);
+  }
+  RepeaterControl::Effects fx;
+};
+
+static void testControlReplyAndOff() {
+  CtlRig r;
+  r.run(500);
+  CHECK(r.sch->onControl({kSysopStatus, 0, 1}, r.t, r.fx) == kSysopOk);
+  CHECK(r.air.sent[0] == 1 && r.radio.curId == kProfileStandard);  // la risposta esce con i parametri della voce
+  SysopReply rep;
+  Packet p = dec(r.air.log[0][0]);
+  CHECK(p.mode == kModeSysop && parseSysopReply(p, KEY, rep) && rep.code == kSysopStatus && rep.counter == 1 && rep.result == kSysopOk);
+  CHECK((rep.data >> 16 & 0xFF) == 10 && (rep.data >> 24) == 0);
+  // SPEGNI: la risposta esce (ultima trasmissione), poi niente passa piu', ne' la voce ne' i messaggi
+  CHECK(r.sch->onControl({kSysopOff, 0, 2}, r.t, r.fx) == kSysopOk && r.fx.forceReply);
+  CHECK(r.air.sent[0] == 2 && parseSysopReply(dec(r.air.log[0][1]), KEY, rep) && rep.code == kSysopOff && (rep.data >> 24) == 1);
+  r.voice(5);
+  CHECK(r.air.sent[0] == 2 && r.sch->stats().voiceSent == 0);
+  r.run(5000);
+  // STATO a TX spenta: la risposta non si trasmette (non si trasmette nulla)
+  CHECK(r.sch->onControl({kSysopStatus, 0, 3}, r.t, r.fx) == kSysopOk && r.air.sent[0] == 2 && r.sch->stats().repliesDropped == 1);
+  // RIACCENDI: risponde e la voce torna a passare
+  CHECK(r.sch->onControl({kSysopOn, 0, 4}, r.t, r.fx) == kSysopOk && r.air.sent[0] == 3);
+  CHECK(parseSysopReply(dec(r.air.log[0][2]), KEY, rep) && rep.code == kSysopOn && (rep.data >> 24) == 0);
+  r.voice(3);
+  CHECK(r.sch->stats().voiceSent == 3);
+}
+
+static void testControlOffMinutes() {
+  CtlRig r;
+  r.run(500);
+  r.sch->onControl({kSysopOffMinutes, 1, 1}, r.t, r.fx);
+  const int sent = r.air.sent[0];
+  r.voice(2);
+  CHECK(r.air.sent[0] == sent);
+  r.run(61000);
+  r.voice(2);
+  CHECK(r.air.sent[0] == sent + 2);  // scaduto: torna in servizio da solo
+}
+
+static void testControlStopsRelay() {
+  CtlRig r;
+  r.run(500);
+  r.deliver(makeMessage(0x1111, 100));
+  while (r.sch->stats().relayPackets < 3) r.run(100);
+  const uint32_t before = r.sch->stats().relayPackets;
+  r.sch->onControl({kSysopOff, 0, 1}, r.t, r.fx);  // spegne a meta' messaggio
+  r.run(30000);
+  CHECK(r.sch->stats().relayPackets == before && r.store->readyCount() == 1);
+  r.sch->onControl({kSysopOn, 0, 2}, r.t, r.fx);
+  r.run(TxScheduler::kBetweenMsgMs + 30000);
+  CHECK(r.sch->stats().relayed == 1);  // riparte e arriva in fondo
+}
+
+static void testControlIdentifyAndPower() {
+  CtlRig r;
+  r.run(500);
+  CHECK(r.sch->onControl({kSysopIdentify, 0, 1}, r.t, r.fx) == kSysopOk && r.fx.identify);
+  CHECK(r.air.sent[0] == 2);  // risposta e identificazione
+  Packet id = dec(r.air.log[0][1]);
+  CHECK(id.mode == kModeText && strcmp(id.callsign, "IZ0RPT") == 0 && (id.flags & kFlagStart));
+  CHECK(r.sch->onControl({kSysopPower, 12, 2}, r.t, r.fx) == kSysopOk && r.fx.power == 12);
+  CHECK(r.radio.powers.size() == 1 && r.radio.powers[0] == 12);
+  CHECK(r.sch->onControl({kSysopPower, 30, 3}, r.t, r.fx) == kSysopBadParam && r.radio.powers.size() == 1);
+  SysopReply rep;
+  CHECK(parseSysopReply(dec(r.air.log[0].back()), KEY, rep) && rep.result == kSysopBadParam);
+  CHECK(r.sch->onControl({77, 0, 4}, r.t, r.fx) == kSysopUnknown);
+  // senza regista di controllo i comandi non si eseguono
+  Rig plain;
+  CHECK(plain.sch->onControl({kSysopStatus, 0, 1}, 0, r.fx) == kSysopNotAllowed && plain.air.sent[0] == 0);
+}
+
+static void testSafetyTripsOnLongVoice() {
+  CtlRig r;
+  r.run(500);
+  // una voce che non finisce mai (pacchetti con pausa minima): dopo il limite la TX si spegne da sola
+  Packet p;
+  p.mode = kModeCodec2_1200;
+  p.session = 0x0AAA;
+  p.payloadLen = 6 * 12;
+  int n = 0;
+  while (r.ctl.txAllowed(r.t) && n < 5000) {
+    p.seq = static_cast<uint8_t>(n % 100);
+    r.sch->onLinkPacket(wireOf(p).data(), wireOf(p).size());
+    r.sch->tick(r.t, true);
+    r.t += 200;
+    n++;
+  }
+  CHECK(r.ctl.safetyTrips() == 1 && n < 5000);
+  const int sent = r.air.sent[0];
+  r.sch->onLinkPacket(wireOf(p).data(), wireOf(p).size());
+  r.run(2000);
+  CHECK(r.air.sent[0] == sent);
+}
+
 int main() {
+  testControlReplyAndOff();
+  testControlOffMinutes();
+  testControlStopsRelay();
+  testControlIdentifyAndPower();
+  testSafetyTripsOnLongVoice();
   testAnnounceBeforeAndAfter();
   testVoiceInterruptsAnnounce();
   testBusyAbortReleases();

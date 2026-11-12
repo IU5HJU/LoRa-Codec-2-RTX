@@ -16,3 +16,7 @@ class NvsSettingsStorage : public lcr::ISettingsStorage {
   bool save(const lcr::Settings& s) override;
   bool erase() override;
 };
+
+// Ultimo contatore dei comandi del sysop accettato dal ripetitore (anti-ripetizione): sopravvive ai riavvii.
+uint32_t loadSysopCounter();
+bool saveSysopCounter(uint32_t counter);

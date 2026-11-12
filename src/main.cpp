@@ -24,6 +24,7 @@
 #include "radio_lora.h"
 #include "repeater_node.h"
 #include "settings.h"
+#include "sysop.h"
 #include "settings_nvs.h"
 #include "ui.h"
 #include "user_config.h"
@@ -213,6 +214,7 @@ void setup() {
   cfg.mcHw = strcmp(kBoardShort, "tbeam") == 0 ? 12 : 3;
   cfg.newMsgId = newMsgId;
   cfg.meshLog = meshLog;
+  if (settings.sysopKeySet) cfg.sysopKey = settings.sysopKey;  // stazione del sysop: verifica le risposte dei ripetitori
   cfg.profile = settings.profile;
   cfg.sendPosition = settings.posTx;  // spenta di default; la posizione fissa e' il QTH (CFG SET QTH)
   cfg.position = settings.qth();
@@ -461,6 +463,40 @@ static void runCodecTest() {
   ui.refresh();
 }
 
+// CFG SYSCMD STATO | SPEGNI [minuti] | RIACCENDI | RIAVVIA | IDENTIFICA | POTENZA <dBm>: trasmette un comando firmato al ripetitore
+// (modo 5, docs/studio-ripetitore.md). Serve la chiave (CFG SET SYSOPKEY); il contatore cresce a ogni comando ed e' salvato.
+static void runSysopCommand(const char* args) {
+  char word[16] = {0};
+  int param = 0;
+  const int n = sscanf(args, " %15s %d", word, &param);
+  uint8_t code = 0;
+  if (n >= 1) {
+    if (strcasecmp(word, "STATO") == 0) code = lcr::kSysopStatus;
+    else if (strcasecmp(word, "SPEGNI") == 0) code = n >= 2 ? lcr::kSysopOffMinutes : lcr::kSysopOff;
+    else if (strcasecmp(word, "RIACCENDI") == 0) code = lcr::kSysopOn;
+    else if (strcasecmp(word, "RIAVVIA") == 0) code = lcr::kSysopRestart;
+    else if (strcasecmp(word, "IDENTIFICA") == 0) code = lcr::kSysopIdentify;
+    else if (strcasecmp(word, "POTENZA") == 0 && n >= 2) code = lcr::kSysopPower;
+  }
+  if (code == 0 || param < 0 || param > 65535) {
+    Serial.println("CFG SYSCMD ERR uso: STATO | SPEGNI [minuti] | RIACCENDI | RIAVVIA | IDENTIFICA | POTENZA <dBm>");
+    return;
+  }
+  if (!settings.sysopKeySet) {
+    Serial.println("CFG SYSCMD ERR manca la chiave (CFG SET SYSOPKEY, poi CFG REBOOT)");
+    return;
+  }
+  const uint32_t counter = loadSysopCounter() + 1;
+  uint16_t session = static_cast<uint16_t>(counter & 0xFFFF);
+  if (session == 0) session = 1;  // 0 = "assegna tu": con una firma sulla sessione non va bene
+  if (!node->sendSingle(lcr::makeSysopCommand(session, settings.callsign, settings.sysopKey, {code, static_cast<uint16_t>(param), counter}), millis())) {
+    Serial.println("CFG SYSCMD ERR non trasmesso (canale occupato, nominativo o trasmissione in corso)");
+    return;
+  }
+  saveSysopCounter(counter);
+  Serial.printf("CFG SYSCMD OK codice=%u contatore=%lu\n", static_cast<unsigned>(code), static_cast<unsigned long>(counter));
+}
+
 // Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
 static void serviceConsole() {
   static char line[224];  // "CFG SET TEXTn " + fino a 150 caratteri
@@ -474,6 +510,10 @@ static void serviceConsole() {
       len = 0;
       tooLong = false;
       if (skip) continue;  // riga troppo lunga: scartata
+      if (strncasecmp(line, "CFG SYSCMD", 10) == 0) {
+        runSysopCommand(line + 10);
+        continue;
+      }
       char reply[260];
       const lcr::ConsoleResult r = console->handleLine(line, reply, sizeof(reply));
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
