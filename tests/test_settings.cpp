@@ -164,12 +164,15 @@ static void testNodeSettings() {
   CHECK(f.run("CFG SET WIFIPASS NONE") == ConsoleResult::Ok && f.st.data.wifiPass[0] == 0 && f.run("CFG SET PEER NONE") == ConsoleResult::Ok && f.st.data.peerIp[0] == 0);
   CHECK(f.run("CFG SET NODEKEY NONE") == ConsoleResult::Ok && !f.st.data.nodeKeySet);
   CHECK(isValidIpv4("1.2.3.4") && isValidIpv4("255.255.255.255") && !isValidIpv4("1.2.3") && !isValidIpv4("1.2.3.4.5") && !isValidIpv4("a.b.c.d") && !isValidIpv4("") && !isValidIpv4("1..2.3"));
-  // sulla T-Beam il nodo non c'e'
+  // sulla T-Beam il nodo c'e', il ripetitore no
   FakeStorage st2;
   Settings active = kDefaults;
   SettingsConsole con{active, kDefaults, st2, "tbeam", "v0"};
   char reply[300];
-  CHECK(con.handleLine("CFG SET ROLE NODE", reply, sizeof(reply)) == ConsoleResult::Error && st2.data.role == kRoleNormal);
+  CHECK(con.handleLine("CFG SET ROLE NODE", reply, sizeof(reply)) == ConsoleResult::Ok && st2.data.role == kRoleNode);  // il nodo si': T3 e T-Beam
+  CHECK(con.handleLine("CFG SET ROLE RPTTX", reply, sizeof(reply)) == ConsoleResult::Error && st2.data.role == kRoleNode && strstr(reply, "anche sulla T-Beam"));
+  CHECK(con.handleLine("CFG SET ROLE RPTRX", reply, sizeof(reply)) == ConsoleResult::Error);
+  CHECK(con.handleLine("CFG SET ROLE OFF", reply, sizeof(reply)) == ConsoleResult::Ok && st2.data.role == kRoleNormal);
 }
 
 static void testIdMorse() {

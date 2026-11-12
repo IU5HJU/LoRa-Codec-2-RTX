@@ -47,7 +47,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <p class="hint">Due schede possono fare da ripetitore: una <strong>RX</strong> ascolta la frequenza di ingresso (quella del profilo, qui sopra) e una <strong>TX</strong> ritrasmette sulla frequenza di uscita. Con un ruolo da ripetitore la scheda non funziona più da stazione: dopo il riavvio mostra lo stato del ripetitore. <strong>Attenzione:</strong> una scheda in ruolo da ripetitore non ha il menu a bordo e questa pagina non si apre più; per tornare stazione serve il cavo USB (sito web delle impostazioni o terminale seriale, <code>CFG SET ROLE OFF</code>). Vale dal riavvio.</p>
 <label for="role">Ruolo della scheda</label>
 <select id="role"><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option><option value="node">Nodo Internet (T3 su Wi-Fi)</option></select>
-<p class="hint" id="rolenote" hidden><strong>Il ripetitore usa solo la T3:</strong> due T-Beam sarebbero uno spreco (GPS, PMU e batteria che non servono). Su questa scheda il ruolo non si può cambiare.</p>
+<p class="hint" id="rolenote" hidden><strong>Su questa scheda (T-Beam)</strong> il ripetitore non c'è: due T-Beam sarebbero uno spreco (GPS, PMU e batteria che non servono). Il <strong>nodo Internet</strong> va bene anche sulla T-Beam.</p>
 <div id="nodebox" hidden>
 <p class="hint"><strong>Nodo Internet:</strong> la T3 porta i pacchetti LoRa a un'altra T3 via Wi-Fi (UDP firmato). Solo profilo Standard. Rete, indirizzo dell'altro nodo, id e chiave si impostano da seriale (<code>CFG SET WIFISSID</code>, <code>WIFIPASS</code>, <code>PEER</code>, <code>NODEID</code>, <code>PEERID</code>, <code>NODEKEY</code>: vedi la guida del firmware). Come per il ripetitore, in questo ruolo la scheda non ha il menu e questa pagina non si apre più.</p>
 </div>
@@ -90,7 +90,7 @@ function st(t,c){const e=$('st');e.textContent=t;e.className=c||'';}
 async function cmd(l){const r=await fetch('/cfg?c='+encodeURIComponent(l));return (await r.text()).trim();}
 function parse(t){const m={};for(const kv of t.replace(/^CFG /,'').split(' ')){const i=kv.indexOf('=');if(i>0)m[kv.slice(0,i)]=kv.slice(i+1);}return m;}
 let board='';
-function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';$('role').disabled=board==='tbeam';$('rolenote').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqqual','power','volume','micfloor','pos','qth','gps','role','freqout'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
+function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';for(const o of $('role').options)if(o.value==='rptrx'||o.value==='rpttx')o.disabled=board==='tbeam';$('rolenote').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqqual','power','volume','micfloor','pos','qth','gps','role','freqout'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
 function roleShow(){const r=$('role').value;$('rxbox').hidden=r!=='rptrx';$('txbox').hidden=r!=='rpttx';$('nodebox').hidden=r!=='node';}
 $('role').addEventListener('change',roleShow);
 async function loadRole(){try{const r=await cmd('CFG GET MONITOR');if(r.startsWith('CFG MONITOR='))$('monitor').value=r.slice(12)==='on'?'on':'off';}catch(e){}roleShow();}
@@ -103,7 +103,6 @@ async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))
 $('f').addEventListener('submit',async ev=>{
   ev.preventDefault();st('Salvataggio…','');
   const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqqual:$('freqqual').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none',role:$('role').value};
-  if($('role').disabled)delete want.role;   // la T-Beam non fa il ripetitore
   if(board==='tbeam')want.gps=$('gps').value;
   if(want.role==='rpttx'){const fo=$('freqout').value.trim();const k=Math.round(parseFloat(fo)*1000);if(!/^\d{3}(\.\d{1,3})?$/.test(fo)||!(k>=430000&&k<=440000)){st('La frequenza di uscita deve essere tra 430.000 e 440.000 MHz.','err');return;}want.freqout=fo;}   // la T3 non ha il GPS: il comando non si manda
   const keys={callsign:'CALLSIGN',freq:'FREQ',freqmsg:'FREQMSG',freqqual:'FREQQUAL',power:'POWER',volume:'VOLUME',micfloor:'MICFLOOR',profile:'PROFILE',pos:'POS',qth:'QTH',gps:'GPS',role:'ROLE',freqout:'FREQOUT'};  // il GPS e' in want solo sulla T-Beam

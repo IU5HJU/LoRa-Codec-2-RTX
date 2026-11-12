@@ -479,8 +479,9 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     next.freqOutKhz = khz;
     snprintf(shown, sizeof(shown), "freqout=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "ROLE")) {
-    if (!equalsIgnoreCase(value, "OFF") && equalsIgnoreCase(board_, "tbeam")) {
-      say(reply, cap, "CFG ERR role %s", "il ripetitore e il nodo usano solo la T3 (due T-Beam sarebbero uno spreco)");
+    // Il ripetitore (RX e TX) usa solo la T3: due T-Beam sarebbero uno spreco. Il nodo Internet va bene su T3 e su T-Beam.
+    if ((equalsIgnoreCase(value, "RPTRX") || equalsIgnoreCase(value, "RPTTX")) && equalsIgnoreCase(board_, "tbeam")) {
+      say(reply, cap, "CFG ERR role %s", "il ripetitore usa solo la T3 (due T-Beam sarebbero uno spreco); il nodo va bene anche sulla T-Beam");
       return ConsoleResult::Error;
     }
     if (equalsIgnoreCase(value, "OFF")) {

@@ -192,7 +192,8 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.selectOption('#gps', 'on');
   await p.click('#save');
   await p.waitForFunction(() => /Salvato|diversi|Rifiutato/.test(document.getElementById('st').textContent));
-  check('T-Beam: ruolo del ripetitore non modificabile', (await p.isDisabled('#role')) && (await p.isVisible('#rolenote')));
+  check('T-Beam: il ripetitore non si sceglie, il nodo si', !(await p.isDisabled('#role')) && (await p.$eval('#role option[value=rptrx]', (o) => o.disabled)) &&
+        (await p.$eval('#role option[value=rpttx]', (o) => o.disabled)) && !(await p.$eval('#role option[value=node]', (o) => o.disabled)) && (await p.isVisible('#rolenote')));
   check('GPS sulla T-Beam', st.cmds.includes('CFG SET GPS on') && st.cfg.gps === 'on', st.cmds.slice(-3).join('|'));
 
   const n = st.cmds.length;

@@ -450,27 +450,18 @@ async function scenario(name, fn, opts = {}) {
     check('la scheda ha il ruolo', await p.evaluate(() => window.__st.cfg.role === 'rpttx' && window.__st.cfg.freqout === '434.400'));
   });
 
-  await scenario('ruolo del ripetitore: sulla T-Beam non si cambia (solo T3)', async (p) => {
+  await scenario('ruolo: sulla T-Beam il ripetitore non c\'e\', il nodo si', async (p) => {
     await p.evaluate(() => { window.__st.board = 'tbeam'; });
     await connect(p);
     await until(p, () => document.getElementById('rolenote') && !document.getElementById('rolenote').hidden);
-    check('ruolo spento e avviso visibile', (await p.isDisabled('#role')) && (await p.isVisible('#rolenote')) && (await p.isDisabled('#freqout')));
-    await p.fill('#callsign', 'IU5HJU');
-    await p.click('#save');
-    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
-    check('nessun comando ROLE sulla T-Beam', !(await cmds(p)).some((x) => /^CFG SET (ROLE|FREQOUT|MONITOR|IDINT)/.test(x)));
-  });
-
-  await scenario('ruolo NODE: avviso e salvataggio', async (p) => {
-    await connect(p);
-    await until(p, () => !document.getElementById('role').disabled);
+    check('ruolo selezionabile, ripetitore spento, nodo acceso, avviso visibile', !(await p.isDisabled('#role')) && (await p.$eval('#role option[value=rptrx]', (o) => o.disabled)) &&
+          (await p.$eval('#role option[value=rpttx]', (o) => o.disabled)) && !(await p.$eval('#role option[value=node]', (o) => o.disabled)) && (await p.isVisible('#rolenote')));
     await p.fill('#callsign', 'IU5HJU');
     await p.selectOption('#role', 'node');
-    check('avviso del nodo visibile, riquadri RX/TX nascosti', (await p.isVisible('#nodebox')) && (await p.isHidden('#rxbox')) && (await p.isHidden('#txbox')));
     await p.click('#save');
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
     const c = await cmds(p);
-    check('ROLE node, nessun FREQOUT/IDINT/MONITOR', c.includes('CFG SET ROLE node') && !c.some((x) => /^CFG SET (FREQOUT|IDINT|IDMORSE|MONITOR)/.test(x)), c.join(' | '));
+    check('ROLE node sulla T-Beam, nessun comando del ripetitore', c.includes('CFG SET ROLE node') && !c.some((x) => /^CFG SET (FREQOUT|MONITOR|IDINT|IDMORSE)/.test(x)), c.join(' | '));
   });
 
   await scenario('ruolo del ripetitore: scheda RX con il monitor', async (p) => {
