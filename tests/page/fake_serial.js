@@ -16,6 +16,8 @@
     idmorse: 'on',
     noIdmorse: false,
     legacyFw: false,      // firmware precedente al 12/11/2026: nel CFG GET c'e' freqqual= e non freqrange=
+    noShift: false,       // firmware senza shift (piu' vecchio): CFG GET SHIFT e CFG SET SHIFT sconosciuti
+    shift: 0,             // shift in trasmissione, kHz: 0, +10000 o -10000
     noIdint: false,       // firmware senza identificativo periodico (piu' vecchio)
     idint: '10',
     noSysop: false,       // firmware senza modo Sysop (piu' vecchio): CFG GET SYSOP e CFG SET SYSOP* sconosciuti
@@ -66,6 +68,17 @@
       if (/^CFG\s+GET\s+IDMORSE$/i.test(line.trim())) return out('CFG IDMORSE=' + st.idmorse);
       const dm = /^CFG\s+SET\s+IDMORSE\s+(\S+)$/i.exec(line.trim());
       if (dm) { if (!/^(on|off)$/i.test(dm[1])) return out('CFG ERR idmorse usa ON oppure OFF'); st.idmorse = dm[1].toLowerCase(); return out('CFG OK idmorse=' + st.idmorse); }
+    }
+    if (!st.noShift) {
+      if (/^CFG\s+GET\s+SHIFT$/i.test(line.trim())) return out('CFG SHIFT=' + (st.shift > 0 ? '+' : '') + st.shift);
+      const sm = /^CFG\s+SET\s+SHIFT\s+([+-]?\d+)$/i.exec(line.trim());
+      if (sm) {
+        const v = parseInt(sm[1], 10);
+        if (v !== 0 && v !== 10000 && v !== -10000) return out('CFG ERR shift in kHz: 0, +10000 oppure -10000');
+        const f = Math.round(parseFloat(st.cfg.freq) * 1000);
+        if (v !== 0 && (f + v < 430000 || f + v > 440000)) return out('CFG ERR shift la frequenza di trasmissione uscirebbe da 430-440 MHz');
+        st.shift = v; return out('CFG OK shift=' + (v > 0 ? '+' : '') + v);
+      }
     }
     if (!st.noIdint) {
       if (/^CFG\s+GET\s+IDINT$/i.test(line.trim())) return out('CFG IDINT=' + st.idint);

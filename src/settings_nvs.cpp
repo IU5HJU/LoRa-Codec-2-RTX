@@ -46,6 +46,7 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.freqMsgKhz = p.getUInt("fmsg", out.freqKhz);  // assente nelle versioni precedenti: stessa frequenza dello Standard
     out.role = static_cast<uint8_t>(p.getUChar("role", lcr::kRoleNormal));  // assenti nelle versioni precedenti
     out.freqOutKhz = p.getUInt("fout", 0);
+    out.shiftKhz = p.getInt("shf", 0);  // assente nelle versioni precedenti: simplex
     out.freqMcKhz = p.getUInt("fmc", 433175);  // assenti nelle versioni precedenti
     out.mcWindowS = p.getUShort("mcw", 300);
     for (size_t i = 0; i < lcr::kMcDestSlots; i++) {  // assenti nelle versioni precedenti: restano i destinatari di esempio
@@ -108,6 +109,7 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;
   p.putUShort("mcw", s.mcWindowS);
+  p.putInt("shf", s.shiftKhz);
   p.remove("fqua");  // vecchio formato (prima del 12/11/2026)
   p.putString("sop", s.sysopCall);
   p.putBool("som", s.sysopMode);

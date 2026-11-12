@@ -11,7 +11,7 @@
 namespace lcr {
 
 bool operator==(const Settings& a, const Settings& b) {
-  return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
+  return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz && a.shiftKhz == b.shiftKhz &&
          a.rangeFreqKhz() == b.rangeFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
          strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode && a.idIntervalMin == b.idIntervalMin && strncmp(a.wifiSsid, b.wifiSsid, sizeof(a.wifiSsid)) == 0 && strncmp(a.wifiPass, b.wifiPass, sizeof(a.wifiPass)) == 0 &&
@@ -87,8 +87,20 @@ static bool validMcDests(const Settings& s) {
   return true;
 }
 
+// Lo shift e' 0, +10000 o -10000 kHz e, se c'e', porta in banda (430-440 MHz) tutte le frequenze dei profili.
+static bool validShift(const Settings& s) {
+  if (s.shiftKhz == 0) return true;
+  if (s.shiftKhz != kShiftKhz && s.shiftKhz != -kShiftKhz) return false;
+  const int64_t f[3] = {s.freqKhz, s.freqMsgKhz, s.rangeFreqKhz()};
+  for (int64_t v : f) {
+    const int64_t t = v + s.shiftKhz;
+    if (t < static_cast<int64_t>(kMinFreqKhz) || t > static_cast<int64_t>(kMaxFreqKhz)) return false;
+  }
+  return true;
+}
+
 bool isValidSettings(const Settings& s) {
-  return isValidCallsign(s.callsign) && (s.sysopCall[0] == 0 || isValidCallsign(s.sysopCall)) && s.idIntervalMin >= kMinIdIntervalMin && s.idIntervalMin <= kMaxIdIntervalMin && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
+  return validShift(s) && isValidCallsign(s.callsign) && (s.sysopCall[0] == 0 || isValidCallsign(s.sysopCall)) && s.idIntervalMin >= kMinIdIntervalMin && s.idIntervalMin <= kMaxIdIntervalMin && s.freqKhz >= kMinFreqKhz && s.freqKhz <= kMaxFreqKhz && s.freqMsgKhz >= kMinFreqKhz &&
          s.freqMsgKhz <= kMaxFreqKhz && s.freqMcKhz >= kMinFreqKhz && s.freqMcKhz <= kMaxFreqKhz && s.mcSsid <= 99 &&
          s.mcWindowS >= kMinMcWindowS && s.mcWindowS <= kMaxMcWindowS && validMcDests(s) && (s.freqRangeKhz == 0 || (s.freqRangeKhz >= kMinFreqKhz && s.freqRangeKhz <= kMaxFreqKhz)) &&
          (s.freqOutKhz == 0 || (s.freqOutKhz >= kMinFreqKhz && s.freqOutKhz <= kMaxFreqKhz)) && s.role <= kRoleNode && validNode(s) &&
@@ -331,6 +343,10 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
     say(reply, cap, stored_.idMorse ? "CFG IDMORSE=on" : "CFG IDMORSE=off");
     return ConsoleResult::Ok;
   }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "SHIFT")) {
+    if (reply && cap > 0) snprintf(reply, cap, "CFG SHIFT=%s%d", stored_.shiftKhz > 0 ? "+" : "", static_cast<int>(stored_.shiftKhz));
+    return ConsoleResult::Ok;
+  }
   if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "IDINT")) {
     if (reply && cap > 0) snprintf(reply, cap, "CFG IDINT=%u", static_cast<unsigned>(stored_.idIntervalMin));
     return ConsoleResult::Ok;
@@ -411,6 +427,10 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     next.freqKhz = khz;
+    if (!validShift(next)) {
+      say(reply, cap, "CFG ERR freq %s", "con lo shift impostato la frequenza di trasmissione uscirebbe da 430-440 MHz (CFG SET SHIFT 0)");
+      return ConsoleResult::Error;
+    }
     snprintf(shown, sizeof(shown), "freq=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "FREQMSG")) {
     // Come FREQ, per il profilo Messaggio. Nessun controllo che sia diversa da FREQ: puo' essere uguale (prove su una frequenza nota).
@@ -420,6 +440,10 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     next.freqMsgKhz = khz;
+    if (!validShift(next)) {
+      say(reply, cap, "CFG ERR freqmsg %s", "con lo shift impostato la frequenza di trasmissione uscirebbe da 430-440 MHz (CFG SET SHIFT 0)");
+      return ConsoleResult::Error;
+    }
     snprintf(shown, sizeof(shown), "freqmsg=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "FREQRANGE")) {
     uint32_t khz = 0;
@@ -428,6 +452,10 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     next.freqRangeKhz = khz;
+    if (!validShift(next)) {
+      say(reply, cap, "CFG ERR freqrange %s", "con lo shift impostato la frequenza di trasmissione uscirebbe da 430-440 MHz (CFG SET SHIFT 0)");
+      return ConsoleResult::Error;
+    }
     snprintf(shown, sizeof(shown), "freqrange=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "FREQMC")) {
     uint32_t khz = 0;
@@ -591,6 +619,27 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "idmorse=%s", next.idMorse ? "on" : "off");
+  } else if (equalsIgnoreCase(key, "SHIFT")) {
+    // "0", "+10000", "-10000" (anche "10000"): parseInt() si ferma a 4 cifre e non vuole il segno +
+    int v = 0;
+    const char* d = value;
+    const bool neg = *d == '-';
+    if (*d == '+' || *d == '-') d++;
+    size_t nd = 0;
+    int acc = 0;
+    for (; isdigit(static_cast<unsigned char>(d[nd])) && nd < 6; nd++) acc = acc * 10 + (d[nd] - '0');
+    const bool okNum = nd > 0 && d[nd] == 0;
+    v = neg ? -acc : acc;
+    if (!okNum || (v != 0 && v != kShiftKhz && v != -kShiftKhz)) {
+      say(reply, cap, "CFG ERR shift %s", "in kHz: 0, +10000 oppure -10000");
+      return ConsoleResult::Error;
+    }
+    next.shiftKhz = v;
+    if (!validShift(next)) {
+      say(reply, cap, "CFG ERR shift %s", "la frequenza di trasmissione uscirebbe da 430-440 MHz");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "shift=%s%d", v > 0 ? "+" : "", v);
   } else if (equalsIgnoreCase(key, "IDINT")) {
     int mins = 0;
     if (!parseInt(value, mins) || mins < kMinIdIntervalMin || mins > kMaxIdIntervalMin) {

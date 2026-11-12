@@ -60,6 +60,9 @@ class RadioLora : public lcr::IRadio {
   bool initLora();  // begin() LoRa con i parametri del profilo in uso + CRC, intestazione esplicita, interrupt e ascolto
   SX1278* radio_ = nullptr;
   Module* module_ = nullptr;  // lo stesso modulo di radio_ (getMod() e' protetto): serve per scrivere il registro PaRamp
+  float rxMhz_ = 0;         // frequenza di ascolto attuale (quella con cui lavora la radio, per tornarci dopo una trasmissione spostata)
+  int32_t txShiftKhz_ = 0;  // shift in trasmissione (solo stazione normale e profilo voce: spento durante l'escursione MeshCom)
+  bool meshcomOn_ = false;
   lcr::Settings settings_;  // impostazioni con cui e' partita la radio (profilo in uso e frequenze)
   float lastRssi_ = 0;
   float lastSnr_ = 0;

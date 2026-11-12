@@ -166,6 +166,11 @@
       <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
       <p class="hint">Da 430.000 a 440.000. Il valore predefinito è un segnaposto: scegli il canale con il band plan IARU Regione 1 / ARI. Le stazioni che si ascoltano devono usare la stessa frequenza.</p>
 
+      <div id="shiftbox" data-modes="off">
+        <label for="shift">Shift per operare via ripetitore</label>
+        <select id="shift" disabled><option value="0">Nessuno (simplex, di base)</option><option value="10000">+10 MHz: trasmetto sulla frequenza + 10 MHz</option><option value="-10000">&minus;10 MHz: trasmetto sulla frequenza &minus; 10 MHz</option></select>
+        <p class="hint" id="shifthint">Per usare un ripetitore la scheda <strong>ascolta</strong> sulla frequenza qui sopra (l'uscita del ripetitore) e <strong>trasmette</strong> sulla frequenza + lo shift (l'ingresso). Di base 0: tutto come prima, ascolto e trasmissione sulla stessa frequenza. La frequenza di trasmissione deve restare tra 430.000 e 440.000 MHz (anche per le frequenze degli altri profili): altrimenti la scheda rifiuta lo shift. Vale dal riavvio; sul display e in seriale (<code>Via ripetitore: ...</code>) si vede la frequenza di trasmissione. Non vale per i ruoli ripetitore e nodo n&eacute; durante l'escursione MeshCom.</p>
+      </div>
       <details class="falsi" id="otherfreq" data-modes="off rptrx rpttx">
       <summary>Frequenze degli altri profili (Range e Messaggio)</summary>
       <label for="freqmsg">Frequenza del profilo Messaggio (MHz)</label>
@@ -492,6 +497,16 @@
     } catch (e) { idmorseSeen = false; }
     $('idmorse').disabled = !port || !idmorseSeen;
   }
+  let shiftSeen = false;     // la scheda risponde a CFG GET SHIFT (firmware piu' vecchi: no)
+  async function readShift() {
+    try {
+      const r = await send('CFG GET SHIFT', /^CFG SHIFT=/, 2500);
+      const v = parseInt(r.slice(10), 10);
+      $('shift').value = v > 0 ? '10000' : (v < 0 ? '-10000' : '0');
+      shiftSeen = true;
+    } catch (e) { shiftSeen = false; }
+    $('shift').disabled = !port || !shiftSeen;
+  }
   let sysopSeen = false;     // la scheda risponde a CFG GET SYSOP (firmware piu' vecchi: no)
   function sysopShow() { const on = $('sysopmode').value === 'on'; $('sysopbox').hidden = !on; $('textsbox').hidden = on; }
   function updateSysopControls(on) { for (const id of ['sysopmode', 'sysop', 'sysopkey', 'genkey']) $(id).disabled = !on || !sysopSeen; }
@@ -544,8 +559,9 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; roleSeen = false; roleShow(); }
+    if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; shiftSeen = false; roleSeen = false; roleShow(); }
     $('idint').disabled = !on || !idintSeen;
+    $('shift').disabled = !on || !shiftSeen;
     $('idmorse').disabled = !on || !idmorseSeen;
     updateRoleControls(on);
     updatePosControls(on);
@@ -681,6 +697,7 @@
         await readTexts();
         await readSysop();
         await readIdint();
+        await readShift();
         await readMonitor();
         return true;
       } catch (e) { if (!writer) return false; }
@@ -786,7 +803,8 @@
       if (sk !== '' && !/^[0-9a-fA-F]{32}$/.test(sk)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
       sysop = { call: sy, mode: $('sysopmode').value, key: sk };
     }
-    return { cs, freq: fm, fmsg, frng, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
+    const shift = $('shift').disabled ? null : $('shift').value;
+    return { shift, cs, freq: fm, fmsg, frng, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
   }
 
   // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
@@ -807,9 +825,11 @@
     try {
       const replies = [];
       replies.push(await send('CFG SET CALLSIGN ' + v.cs, /^CFG (OK|ERR)/));
+      if (v.shift !== null) replies.push(await send('CFG SET SHIFT 0', /^CFG (OK|ERR)/));  // prima a 0: la scheda controlla che FREQ + shift resti in banda
       replies.push(await send('CFG SET FREQ ' + v.freq, /^CFG (OK|ERR)/));
       if (v.fmsg !== null) replies.push(await send('CFG SET FREQMSG ' + v.fmsg, /^CFG (OK|ERR)/));
       if (v.frng !== null) replies.push(await send('CFG SET FREQRANGE ' + v.frng, /^CFG (OK|ERR)/));
+      if (v.shift !== null) replies.push(await send('CFG SET SHIFT ' + v.shift, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET POWER ' + v.pw, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET VOLUME ' + v.vol, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET MICFLOOR ' + v.fl, /^CFG (OK|ERR)/));

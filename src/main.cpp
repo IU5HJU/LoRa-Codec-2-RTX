@@ -229,6 +229,10 @@ void setup() {
   const lcr::Profile& prof = lcr::profileFor(settings.profile);
   Serial.printf("%s pronto, profilo %s, %.3f MHz, %d dBm, SF%d BW%.0f\n", settings.callsign, prof.name,
                 static_cast<double>(settings.freqMhz()), settings.powerDbm, prof.sf, static_cast<double>(prof.bwKhz));
+  if (settings.shiftKhz != 0) {
+    Serial.printf("Via ripetitore: ascolto su %.3f MHz, trasmetto su %.3f MHz (shift %+ld kHz)\n", static_cast<double>(settings.freqMhz()),
+                  static_cast<double>(settings.txFreqKhz()) / 1000.0, static_cast<long>(settings.shiftKhz));
+  }
   char reply[128];
   console->handleLine("CFG GET", reply, sizeof(reply));
   Serial.println(reply);  // la pagina di configurazione legge questa riga

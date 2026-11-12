@@ -21,6 +21,7 @@ void IRAM_ATTR RadioLora::onPacketIsr() {
 
 bool RadioLora::begin(const lcr::Settings& settings) {
   settings_ = settings;
+  txShiftKhz_ = settings.role == lcr::kRoleNormal ? settings.shiftKhz : 0;  // lo shift vale solo per la stazione normale
   SPI.begin(pins::kRadioSclk, pins::kRadioMiso, pins::kRadioMosi, pins::kRadioCs);
   module_ = new Module(pins::kRadioCs, pins::kRadioDio0, pins::kRadioRst, pins::kRadioDio1, SPI);
   radio_ = new SX1278(module_);
@@ -39,6 +40,7 @@ bool RadioLora::initLora() {
     lastError_ = state;
     return false;
   }
+  rxMhz_ = settings_.freqMhz();
   radio_->setCRC(true);
   radio_->explicitHeader();
   radio_->setPacketReceivedAction(onPacketIsr);
@@ -88,6 +90,7 @@ void RadioLora::fskEnd() {
 bool RadioLora::applyParams(const lcr::Profile& prof, float mhz) {
   radio_->standby();
   int state = radio_->setFrequency(mhz);
+  if (state == RADIOLIB_ERR_NONE) rxMhz_ = mhz;
   if (state == RADIOLIB_ERR_NONE) state = radio_->setBandwidth(prof.bwKhz);
   if (state == RADIOLIB_ERR_NONE) state = radio_->setSpreadingFactor(prof.sf);
   if (state == RADIOLIB_ERR_NONE) state = radio_->setCodingRate(prof.cr);
@@ -100,6 +103,7 @@ bool RadioLora::applyParams(const lcr::Profile& prof, float mhz) {
 bool RadioLora::setMeshcom(bool on) {
   const lcr::Profile& primary = lcr::profileFor(settings_.profile);
   bool ok;
+  meshcomOn_ = on;
   if (on) {
     ok = applyParams(lcr::meshcomProfile(), static_cast<float>(settings_.freqMcKhz) / 1000.0f);
     if (!ok) applyParams(primary, settings_.freqMhz());  // non e' riuscita: si torna com'era
@@ -131,10 +135,26 @@ bool RadioLora::channelBusy() {
 }
 
 bool RadioLora::send(const uint8_t* data, size_t len) {
+  // Shift (via ripetitore): si trasmette su FREQ + shift e subito dopo si torna ad ascoltare su FREQ. Non durante l'escursione MeshCom.
+  const bool shifted = txShiftKhz_ != 0 && !meshcomOn_;
+  if (shifted) {
+    radio_->standby();
+    const int fs = radio_->setFrequency(rxMhz_ + static_cast<float>(txShiftKhz_) / 1000.0f);
+    if (fs != RADIOLIB_ERR_NONE) {  // frequenza non accettata: non si trasmette sul canale sbagliato
+      lastError_ = fs;
+      radio_->setFrequency(rxMhz_);
+      startReceive();
+      return false;
+    }
+  }
   txActive_ = true;
   const int state = radio_->transmit(data, len);  // bloccante
   txActive_ = false;
   if (state != RADIOLIB_ERR_NONE) lastError_ = state;
+  if (shifted) {
+    const int fr = radio_->setFrequency(rxMhz_);
+    if (fr != RADIOLIB_ERR_NONE) lastError_ = fr;
+  }
   // Dopo la TX la radio e' in standby: si torna in ascolto.
   startReceive();
   return state == RADIOLIB_ERR_NONE;

@@ -22,6 +22,7 @@ Dalla **pagina di configurazione** (quella interna della scheda o il sito con il
 | Ruolo | `CFG SET ROLE OFF\|RPTRX\|RPTTX` | una scheda in ruolo da ripetitore non ha il menu a bordo: per tornare stazione serve il cavo USB |
 | Frequenza di ingresso | `CFG SET FREQ` | quella del profilo, sulla RX |
 | Frequenza di uscita | `CFG SET FREQOUT` | sulla TX; è anche la frequenza dei messaggi |
+| Shift delle **stazioni** che usano il ripetitore | `CFG SET SHIFT 0\|+10000\|-10000` | sulle stazioni, non sulle schede del ripetitore: ascoltano su `FREQ` (uscita) e trasmettono su `FREQ` + shift (ingresso); di base 0; la frequenza spostata deve restare in 430-440 MHz ([firmware.md](firmware.md)) |
 | Nominativo | `CFG SET CALLSIGN` | con N0CALL la TX non trasmette (ideale a banco) |
 | Altoparlante di monitor | `CFG SET MONITOR ON` | solo RX |
 | Identificativo ogni N minuti | `CFG SET IDINT 1..10` | di base 10 |

@@ -185,6 +185,42 @@ static void testIdMorse() {
   CHECK(f.run("CFG SET IDMORSE FORSE") == ConsoleResult::Error && f.st.data.idMorse);
 }
 
+static void testShift() {
+  Fixture f;
+  // di base 0: simplex, trasmissione sulla stessa frequenza dell'ascolto
+  CHECK(f.run("CFG GET SHIFT") == ConsoleResult::Ok && strcmp(f.reply, "CFG SHIFT=0") == 0 && f.con.stored().shiftKhz == 0);
+  CHECK(f.con.stored().txFreqKhz() == f.con.stored().profileFreqKhz());
+  // valori ammessi: 0, +10000, -10000; con la frequenza di base (433.900) +-10 MHz esce dalla banda 430-440 e si rifiuta
+  CHECK(f.run("CFG SET SHIFT +10000") == ConsoleResult::Error && f.con.stored().shiftKhz == 0);
+  CHECK(f.run("CFG SET SHIFT -10000") == ConsoleResult::Error && f.con.stored().shiftKhz == 0);
+  CHECK(f.run("CFG SET SHIFT 5000") == ConsoleResult::Error && f.run("CFG SET SHIFT abc") == ConsoleResult::Error && f.run("CFG SET SHIFT") == ConsoleResult::Error);
+  // ai bordi della banda lo shift e' possibile: tutte e tre le frequenze devono restare in banda
+  CHECK(f.run("CFG SET FREQ 430.000") == ConsoleResult::Ok && f.run("CFG SET FREQMSG 430.000") == ConsoleResult::Ok && f.run("CFG SET FREQRANGE 430.000") == ConsoleResult::Ok);
+  CHECK(f.run("CFG SET SHIFT +10000") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK shift=+10000") == 0 && f.con.stored().shiftKhz == 10000);
+  CHECK(f.run("CFG GET SHIFT") == ConsoleResult::Ok && strcmp(f.reply, "CFG SHIFT=+10000") == 0);
+  CHECK(f.con.stored().txFreqKhz() == 440000 && f.con.stored().profileFreqKhz() == 430000);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=1") != nullptr);  // vale dal riavvio
+  // con lo shift attivo una frequenza che porterebbe fuori banda la trasmissione si rifiuta, con un messaggio che dice come uscirne
+  CHECK(f.run("CFG SET FREQ 433.900") == ConsoleResult::Error && strstr(f.reply, "SHIFT 0") != nullptr && f.con.stored().freqKhz == 430000);
+  CHECK(f.run("CFG SET FREQMSG 435.000") == ConsoleResult::Error && f.run("CFG SET FREQRANGE 435.000") == ConsoleResult::Error);
+  // si toglie lo shift e poi si cambia frequenza
+  CHECK(f.run("CFG SET SHIFT 0") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK shift=0") == 0);
+  CHECK(f.run("CFG SET FREQ 433.900") == ConsoleResult::Ok);
+  // -10000 dal bordo alto; "10000" senza segno vale +10000
+  CHECK(f.run("CFG SET FREQ 440.000") == ConsoleResult::Ok && f.run("CFG SET FREQMSG 440.000") == ConsoleResult::Ok && f.run("CFG SET FREQRANGE 440.000") == ConsoleResult::Ok);
+  CHECK(f.run("CFG SET SHIFT -10000") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK shift=-10000") == 0 && f.con.stored().txFreqKhz() == 430000);
+  CHECK(f.run("CFG GET SHIFT") == ConsoleResult::Ok && strcmp(f.reply, "CFG SHIFT=-10000") == 0);
+  CHECK(f.run("CFG SET SHIFT 10000") == ConsoleResult::Error);  // 450 MHz: fuori banda
+  // salvato e riletto
+  CHECK(f.st.data.shiftKhz == -10000);
+  // un valore salvato non valido (shift 7000) non e' valido
+  Settings bad = kDefaults;
+  bad.shiftKhz = 7000;
+  CHECK(!isValidSettings(bad));
+  bad.shiftKhz = 10000;  // 433.900 + 10 MHz esce dalla banda
+  CHECK(!isValidSettings(bad));
+}
+
 static void testIdInterval() {
   Fixture f;
   CHECK(f.run("CFG GET IDINT") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDINT=10") == 0);
@@ -639,6 +675,7 @@ int main() {
   testRadioTestCommand();
   testNodeSettings();
   testIdMorse();
+  testShift();
   testIdInterval();
   testSysop();
   testMeshcomSettings();

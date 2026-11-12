@@ -848,6 +848,63 @@ async function scenario(name, fn, opts = {}) {
     check('un errore nelle frequenze apre il riquadro', await p.evaluate(() => document.getElementById('otherfreq').open));
   });
 
+  await scenario('shift: lettura, salvataggio con ordine corretto e rifiuto fuori banda', async (p) => {
+    check('campo shift spento prima di collegare', await p.isDisabled('#shift'));
+    await p.evaluate(() => { window.__st.cfg.freq = '440.000'; window.__st.shift = -10000; });
+    await p.click('#connect');
+    await until(p, () => document.getElementById('callsign').value !== '');
+    await p.evaluate(() => { for (const d of document.querySelectorAll('#config details')) d.open = true; });
+    await until(p, () => !document.getElementById('shift').disabled);
+    check('letto: -10 MHz, frequenza 440.000', (await p.inputValue('#shift')) === '-10000' && (await p.inputValue('#freq')) === '440.000');
+    check('visibile per la stazione normale', await p.isVisible('#shift'));
+    // si passa a shift 0 e a una frequenza qualunque: lo shift va a 0 PRIMA di FREQ, altrimenti la scheda rifiuterebbe FREQ
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#shift', '0');
+    await p.fill('#freq', '433.900'); await p.fill('#freqmsg', '433.900'); await p.fill('#freqrange', '433.900');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c = await cmds(p);
+    const iShift0 = c.indexOf('CFG SET SHIFT 0'), iFreq = c.indexOf('CFG SET FREQ 433.900');
+    check('SHIFT 0 prima di FREQ, e di nuovo SHIFT 0 dopo', iShift0 >= 0 && iFreq > iShift0 && c.lastIndexOf('CFG SET SHIFT 0') > iFreq, c.join(' | '));
+    check('la scheda ha shift 0', await p.evaluate(() => window.__st.shift === 0));
+  });
+
+  await scenario('shift: +10 MHz da una frequenza che resta in banda, e fuori banda rifiutato', async (p) => {
+    await p.evaluate(() => { window.__st.cfg.freq = '430.000'; window.__st.cfg.freqmsg = '430.000'; window.__st.cfg.freqrange = '430.000'; });
+    await connect(p);
+    await until(p, () => !document.getElementById('shift').disabled);
+    await p.fill('#callsign', 'IU5HJU');
+    await p.selectOption('#shift', '10000');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('la scheda ha +10000', await p.evaluate(() => window.__st.shift === 10000));
+    // frequenza 433.900 con +10 MHz: la scheda rifiuta e la pagina lo dice
+    await p.evaluate(() => { window.__st.cmds.length = 0; window.__st.cfg.freq = '433.900'; window.__st.cfg.freqmsg = '433.900'; window.__st.cfg.freqrange = '433.900'; window.__st.shift = 0; });
+    await p.click('#reload');
+    await until(p, () => document.getElementById('freq').value === '433.900');
+    await p.selectOption('#shift', '10000');
+    await p.click('#save');
+    await until(p, () => /uscirebbe|Rifiutat|rifiutat|Errore/.test(document.getElementById('status').textContent), null, 8000);
+    check('fuori banda: messaggio di errore e nessun riavvio', (await p.textContent('#status')).includes('shift') && !(await cmds(p)).includes('CFG REBOOT'), await p.textContent('#status'));
+  });
+
+  await scenario('shift: firmware vecchio senza shift, campo spento', async (p) => {
+    await p.evaluate(() => { window.__st.noShift = true; });
+    await connect(p);
+    check('campo shift resta spento', await p.isDisabled('#shift'));
+  });
+
+  await scenario('shift: nascosto per ripetitore e nodo', async (p) => {
+    await connect(p);
+    await until(p, () => !document.getElementById('role').disabled);
+    await p.selectOption('#role', 'rpttx');
+    check('TX: shift nascosto', await p.isHidden('#shift'));
+    await p.selectOption('#role', 'node');
+    check('nodo: shift nascosto', await p.isHidden('#shift'));
+    await p.selectOption('#role', 'off');
+    check('stazione: shift visibile', await p.isVisible('#shift'));
+  });
+
   await browser.close();
   server.close();
   console.log(`\n${checks} controlli, ${failures} falliti`);
