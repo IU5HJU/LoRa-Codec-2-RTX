@@ -32,7 +32,8 @@ Packet makeBusyPacket(uint16_t session, const char* callsign, uint16_t seconds);
 uint16_t busySeconds(const Packet& p);
 
 // Identificativo del ripetitore (testo con seq = kTextSeqBeacon): nominativo del ripetitore e un breve testo fisso.
-Packet makeBeaconPacket(uint16_t session, const char* callsign);
+// 'text' (1..kMaxTextChars caratteri) e' il breve testo fisso; nullptr = "Ripetitore VoLoRa". Il nodo Internet manda "Nodo VoLoRa".
+Packet makeBeaconPacket(uint16_t session, const char* callsign, const char* text = nullptr);
 
 // Testo ammesso nei messaggi: ASCII stampabile (0x20-0x7E) senza '{' e '}'. Lunghezza 1..kMaxTextChars (150).
 bool isValidText(const char* t, size_t len);

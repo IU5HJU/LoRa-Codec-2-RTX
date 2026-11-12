@@ -1,4 +1,5 @@
 // Il nodo su Wi-Fi: due nodi che si portano i pacchetti radio a vicenda, con rete finta (perdite, duplicati, collegamento che cade).
+#include <cmath>
 #include <cstring>
 #include <deque>
 #include <memory>
@@ -353,6 +354,106 @@ static void testBadDatagrams() {
   CHECK(r.b.core->stats().netBad == 1 && r.b.core->queue().size() == 0);
 }
 
+static Packet decodeSent(const Bytes& w) {
+  Packet p;
+  CHECK(decodePacket(w.data(), w.size(), p));
+  return p;
+}
+
+static void testIdentification() {
+  // Identificativo periodico: il primo dopo 15 s, poi a ogni intervallo, con il nominativo e il testo "Nodo VoLoRa"
+  Rig r;
+  r.b.core->setIdentification("IU5HJU", 60000, 433900);
+  r.run(14000);
+  CHECK(r.b.air.sent[0] == 0 && r.b.core->stats().beacons == 0);
+  r.run(2000);
+  CHECK(r.b.air.sent[0] == 1 && r.b.core->stats().beacons == 1);
+  const Packet id = decodeSent(r.b.air.log[0][0]);
+  CHECK(id.mode == kModeText && id.seq == kTextSeqBeacon && (id.flags & kFlagStart) && (id.flags & kFlagEnd));
+  CHECK(!(id.flags & kFlagRelayed) && strcmp(id.callsign, "IU5HJU") == 0);
+  CHECK(id.payloadLen == 11 && memcmp(id.payload, "Nodo VoLoRa", 11) == 0);
+  CHECK(r.a.air.sent[0] == 0);  // l'altro nodo non e' configurato: niente identificativo
+  r.run(58000);
+  CHECK(r.b.air.sent[0] == 1);  // non prima dell'intervallo
+  r.run(4000);
+  CHECK(r.b.air.sent[0] == 2 && r.b.core->stats().beacons == 2);
+  // sessioni diverse
+  CHECK(decodeSent(r.b.air.log[0][1]).session != id.session);
+  // l'identificativo non passa in rete
+  CHECK(r.b.core->stats().toNet == 0 && r.a.core->stats().fromNet == 0);
+
+  // spento (intervallo 0) o con N0CALL: niente
+  Rig q;
+  q.b.core->setIdentification("IU5HJU", 0, 433900);
+  q.run(40000);
+  CHECK(q.b.air.sent[0] == 0);
+  Rig n;
+  n.txB = false;
+  n.b.core->setIdentification("IU5HJU", 60000, 433900);
+  n.run(40000);
+  CHECK(n.b.air.sent[0] == 0 && n.b.core->stats().beacons == 0);
+}
+
+static void testIdentificationWaitsForQuiet() {
+  // Canale occupato: si rimanda, e parte appena e' libero (e senza attivita' radio negli ultimi 3 s)
+  Rig r;
+  r.b.core->setIdentification("IU5HJU", 60000, 433900);
+  r.b.air.busy = true;
+  r.run(20000);
+  CHECK(r.b.air.sent[0] == 0 && r.b.core->stats().beaconDeferred == 1);
+  r.b.air.busy = false;
+  r.run(200);
+  CHECK(r.b.air.sent[0] == 1);
+
+  // Una stazione locale parla (pacchetti ricevuti in radio): l'identificativo aspetta 3 s dopo l'ultimo
+  Rig q;
+  q.b.core->setIdentification("IU5HJU", 60000, 433900);
+  q.run(14000);
+  const auto msg = makeMessage(0x2222, 60);
+  for (int i = 0; i < 40; i++) {  // un pacchetto ogni 250 ms per 10 s, a cavallo dell'ora dell'identificativo
+    q.b.air.inbox[0].push_back(wireOf(msg[i % msg.size()]));
+    q.run(250);
+  }
+  CHECK(q.b.air.sent[0] == 0);
+  q.run(2000);
+  CHECK(q.b.air.sent[0] == 0);
+  q.run(2000);
+  CHECK(q.b.air.sent[0] == 1);
+}
+
+static void testMorseId() {
+  Rig r;
+  r.b.core->setIdentification("IU5HJU", 60000, 433900);
+  r.b.core->setMorseId(true, 15, 700.0f, 2.5f);
+  r.run(16000);
+  CHECK(r.b.air.sent[0] == 1 && r.b.radio.fskBegins == 1 && r.b.core->morseActive() && r.b.radio.inFsk);
+  CHECK(std::fabs(r.b.radio.fskMhz - 433.9f) < 1e-3 && std::fabs(r.b.radio.fskDev - 2.5f) < 1e-4);
+  r.run(20000);
+  CHECK(!r.b.core->morseActive() && !r.b.radio.inFsk && r.b.radio.fskEnds == 1 && r.b.core->stats().morseIds == 1);
+  CHECK(r.b.radio.fskBursts.size() > 10 && r.b.radio.fskBursts[0].pattern == 0xAA);
+  // al periodo successivo ancora, una volta sola
+  r.run(60000);
+  CHECK(r.b.radio.fskBegins == 2 && r.b.radio.fskEnds == 2 && r.b.air.sent[0] == 2);
+
+  // un pacchetto dalla rete interrompe il Morse (poi il pacchetto parte)
+  Rig q;
+  q.b.core->setIdentification("IU5HJU", 60000, 433900);
+  q.b.core->setMorseId(true);
+  q.run(16000);
+  CHECK(q.b.core->morseActive());
+  const auto msg = makeMessage(0x3333, 12);
+  injectToA(q, msg);
+  q.run(2000);
+  CHECK(!q.b.core->morseActive() && !q.b.radio.inFsk && q.b.core->stats().morseAborted == 1 && q.b.core->stats().morseIds == 0);
+  CHECK(q.b.air.sent[0] == 1 + static_cast<int>(msg.size()));
+
+  // senza Morse acceso: solo il testo
+  Rig p;
+  p.b.core->setIdentification("IU5HJU", 60000, 433900);
+  p.run(20000);
+  CHECK(p.b.air.sent[0] == 1 && p.b.radio.fskBegins == 0);
+}
+
 int main() {
   testLinkComesUp();
   testVoiceAcrossTheNet();
@@ -366,5 +467,8 @@ int main() {
   testQueueFull();
   testStandardMode();
   testBadDatagrams();
+  testIdentification();
+  testIdentificationWaitsForQuiet();
+  testMorseId();
   TEST_MAIN_END();
 }

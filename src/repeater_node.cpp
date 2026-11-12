@@ -417,12 +417,15 @@ class UdpNet : public lcr::INodeNet {
   lc.peerId = settings.peerId;
   memcpy(lc.key, settings.nodeKey, sizeof(lc.key));
   static lcr::NodeCore core(radio, net, lc, esp_random(), []() -> uint32_t { return esp_random(); }, lcr::profileFor(settings.profile).codecMode);
+  core.setIdentification(settings.callsign, static_cast<uint32_t>(settings.idIntervalMin) * 60000u, settings.profileFreqKhz());  // IDINT, come il ripetitore
+  core.setMorseId(settings.idMorse);  // IDMORSE: dopo il testo, il nominativo in Morse a tono in FM (15 wpm, 700 Hz, +-2,5 kHz)
   UsbConsole usb(handler);
 
   Serial.printf("[nodo] id %lu, rete \"%s\", altro nodo %s:%u (id %lu), ascolto sulla porta %u, radio %.3f MHz profilo %s%s\n",
                 static_cast<unsigned long>(settings.nodeId), settings.wifiSsid, settings.peerIp, static_cast<unsigned>(settings.peerPort),
                 static_cast<unsigned long>(settings.peerId), static_cast<unsigned>(settings.nodePort), static_cast<double>(settings.freqMhz()),
                 lcr::profileFor(settings.profile).name, mayTransmit ? "" : " (N0CALL: non trasmette)");
+  if (mayTransmit) Serial.printf("[nodo] identificativo ogni %u min%s (il primo dopo 15 s)\n", static_cast<unsigned>(settings.idIntervalMin), settings.idMorse ? ", poi in Morse" : "");
   Serial.printf("[nodo] memoria libera: %u byte (blocco piu' grande %u)\n", static_cast<unsigned>(ESP.getFreeHeap()), static_cast<unsigned>(ESP.getMaxAllocHeap()));
 
   uint32_t lastDispMs = 0, lastLogMs = 0;
@@ -444,10 +447,11 @@ class UdpNet : public lcr::INodeNet {
       lastLogMs = now;
       const lcr::NodeCore::Stats& s = core.stats();
       const lcr::NodeLink::Stats& ls = core.link().stats();
-      Serial.printf("[nodo] radio->rete %lu, rete->radio %lu (trasmessi %lu), persi coda %lu, firma errata %lu, ripetuti %lu, scartati collegamento giu' %lu, heap %u\n",
+      Serial.printf("[nodo] radio->rete %lu, rete->radio %lu (trasmessi %lu), persi coda %lu, firma errata %lu, ripetuti %lu, scartati collegamento giu' %lu, id %lu (Morse %lu), heap %u\n",
                     static_cast<unsigned long>(s.toNet), static_cast<unsigned long>(s.fromNet), static_cast<unsigned long>(s.transmitted),
                     static_cast<unsigned long>(core.queue().dropped()), static_cast<unsigned long>(ls.badSignature), static_cast<unsigned long>(ls.replays),
-                    static_cast<unsigned long>(s.droppedLinkDown), static_cast<unsigned>(ESP.getFreeHeap()));
+                    static_cast<unsigned long>(s.droppedLinkDown), static_cast<unsigned long>(s.beacons), static_cast<unsigned long>(s.morseIds),
+                    static_cast<unsigned>(ESP.getFreeHeap()));
     }
 
     if (now - lastDispMs >= kDisplayMs) {

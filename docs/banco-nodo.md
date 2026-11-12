@@ -54,10 +54,23 @@ Dettagli in [prove.md](prove.md). In sintesi: con un `PEER` sbagliato il collega
 
 Il 12/11/2026 sono poi riusciti, con due stazioni, il **testo nei due sensi** (con "via RPT" sulla stazione ricevente) e la **voce intelligibile con `persi 0`**, con un ritardo misurato a mano di **1,4 s** da una stazione all'altra. Anche la prova del router spento è superata (ripartenza da sola entro 30 secondi). Anche il riavvio di un nodo è superato (collegamento di nuovo `ok` in circa 10 secondi; il nodo rimasto acceso si accorge dello spegnimento dell'altro dopo circa 1 minuto, come da progetto). Anche la conversazione lunga (trasmissioni da 30 s di seguito, 0 persi) è superata. Anche il blocco sul canale occupato (sovrapposizione fra voce locale e voce dalla rete) è stato provato dall'operatore e funziona.
 
+## Identificativo periodico del nodo (13/11/2026, scritto, provato sul PC, non su scheda)
+Il nodo manda da solo il proprio identificativo, come il ripetitore: **un testo** con il nominativo del nodo (testo "Nodo VoLoRa", `seq` 1: le stazioni lo mostrano come "Ultimo ... ID", senza bip) e, se `IDMORSE` è acceso, **il nominativo in Morse** con un tono in FM stretta (15 wpm, 700 Hz, ±2,5 kHz). Impostazioni: `CFG SET IDINT 1..10` (minuti, di base 10) e `CFG SET IDMORSE ON|OFF` (di base acceso), con un nominativo vero. Il primo parte 15 secondi dopo l'avvio. Parte **solo a canale libero, a coda vuota e se negli ultimi 3 secondi non è stato ricevuto né trasmesso niente** (mai sopra la voce); un pacchetto dalla rete interrompe il Morse. L'identificativo **non passa in rete**: ogni nodo identifica sulla propria frequenza.
+
+Prove da fare:
+| Prova | Atteso |
+|---|---|
+| All'avvio, seriale | `[nodo] identificativo ogni 10 min, poi in Morse (il primo dopo 15 s)` e, a 15 s, la riga a 30 s con `id 1` |
+| Stazione sulla frequenza del nodo | compare "Ultimo <nominativo del nodo> ID" (senza bip), poi a ogni intervallo |
+| Ricevitore FM (o SDR) sulla frequenza del nodo | dopo il testo si sente il nominativo in Morse |
+| `CFG SET IDMORSE OFF` o `IDINT` più breve (1 minuto) | solo il testo, oppure ogni minuto |
+| Voce di rete in corso | l'identificativo non parte nel mezzo e, se dovuto, esce 3 s dopo la fine |
+| Nominativo `N0CALL` | nessun identificativo |
+
 ## Cosa mandarmi
 Le righe `[nodo]` dell'avvio (con la memoria libera), le righe ogni 30 s dopo una prova con traffico, l'esito di ogni prova della tabella e, se qualcosa non va, il display e **dove** (rete, radio, firma).
 
 ## Limiti noti del primo passo
-- **Nessun identificativo periodico** del nodo (il ripetitore ce l'ha; il nodo no, per ora) e **nessuna prova di sicurezza** sul numero di trasmissioni consecutive.
+- **Nessuna prova di sicurezza** sul numero di trasmissioni consecutive.
 - Il nodo accetta datagrammi da qualunque indirizzo (conta la firma) ma **risponde solo all'indirizzo impostato** con `PEER`: va bene per la rete locale; per Internet vero serve il reflector.
 - La password del Wi-Fi è salvata in chiaro nella memoria della scheda (come tutte le impostazioni).

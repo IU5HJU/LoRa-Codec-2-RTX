@@ -33,8 +33,8 @@
 //   CFG SET SYSOP IU5HJU         -> CFG OK sysop=IU5HJU        (nominativo del sysop: il solo che puo' comandare il ripetitore; NONE lo toglie; vale dal riavvio)
 //   CFG SET SYSOPKEY <32 cifre esadecimali> -> CFG OK sysopkey=set  (chiave condivisa di 16 byte per firmare i comandi; NONE la toglie; mai mostrata)
 //   CFG SET SYSOPMODE ON         -> CFG OK sysopmode=on        (modo Sysop: nel menu "Comandi Sysop" al posto di "Invia testo"; OFF lo spegne; vale dal riavvio)
-//   CFG SET IDINT 10             -> CFG OK idint=10            (ripetitore: ogni quanti minuti, da 1 a 10, la scheda TX manda l'identificativo; di base 10; vale dal riavvio)
-//   CFG SET IDMORSE ON           -> CFG OK idmorse=on          (ripetitore: dopo l'identificativo in testo anche il Morse in FM, per chi non ha le schede LoRa; di base ON; vale dal riavvio)
+//   CFG SET IDINT 10             -> CFG OK idint=10            (ripetitore e nodo: ogni quanti minuti, da 1 a 10, la scheda TX manda l'identificativo; di base 10; vale dal riavvio)
+//   CFG SET IDMORSE ON           -> CFG OK idmorse=on          (ripetitore e nodo: dopo l'identificativo in testo anche il Morse in FM, per chi non ha le schede LoRa; di base ON; vale dal riavvio)
 //   CFG GET IDMORSE              -> CFG IDMORSE=on
 //   CFG GET IDINT                -> CFG IDINT=10
 //   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-fm.md)

@@ -38,8 +38,11 @@ Packet makeBusyPacket(uint16_t session, const char* callsign, uint16_t seconds) 
   return p;
 }
 
-Packet makeBeaconPacket(uint16_t session, const char* callsign) {
-  static const char kText[] = "Ripetitore VoLoRa";
+Packet makeBeaconPacket(uint16_t session, const char* callsign, const char* text) {
+  static const char kDefault[] = "Ripetitore VoLoRa";
+  const char* kText = (text && text[0]) ? text : kDefault;
+  size_t textLen = strlen(kText);
+  if (textLen > kMaxPayload) textLen = kMaxPayload;
   Packet p;
   p.mode = kModeText;
   p.session = session;
@@ -47,7 +50,7 @@ Packet makeBeaconPacket(uint16_t session, const char* callsign) {
   p.flags = kFlagStart | kFlagEnd;
   strncpy(p.callsign, callsign, kMaxCallsign);
   p.callsign[kMaxCallsign] = 0;
-  p.payloadLen = sizeof(kText) - 1;
+  p.payloadLen = textLen;
   memcpy(p.payload, kText, p.payloadLen);
   return p;
 }

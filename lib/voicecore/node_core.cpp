@@ -1,12 +1,15 @@
 #include "node_core.h"
 
+#include <cstring>
+
 #include "packet.h"
 #include "protocol.h"
 
 namespace lcr {
 
 NodeCore::NodeCore(IRadio& radio, INodeNet& net, const NodeLink::Config& link, uint32_t bootId, uint32_t (*rng)(), uint8_t voiceMode)
-    : radio_(radio), net_(net), link_(link, bootId, rng), voiceMode_(voiceMode) {
+    : radio_(radio), net_(net), rng_(rng), link_(link, bootId, rng), voiceMode_(voiceMode) {
+  nextSession_ = static_cast<uint16_t>(rng ? rng() : bootId);
   rep_.setModeMask(static_cast<uint16_t>((1u << voiceMode) | (1u << kModeText)));  // solo il modo voce del profilo e il testo
 }
 
@@ -29,6 +32,74 @@ void NodeCore::onDatagram(const uint8_t* d, size_t n, uint32_t nowMs) {
   if (queue_.push(wire, m)) stats_.fromNet++;  // coda piena: contato dalla coda
 }
 
+void NodeCore::setIdentification(const char* callsign, uint32_t intervalMs, uint32_t freqKhz) {
+  strncpy(callsign_, callsign ? callsign : "", kMaxCallsign);
+  callsign_[kMaxCallsign] = 0;
+  beaconIntervalMs_ = intervalMs;
+  freqKhz_ = freqKhz;
+}
+
+void NodeCore::setMorseId(bool on, int wpm, float toneHz, float devKhz) {
+  morseOn_ = on;
+  morseReq_ = RadioTestRequest();
+  morseReq_.kind = RadioTestKind::Morse;
+  morseReq_.fm = true;
+  morseReq_.wpm = wpm;
+  morseReq_.toneHz = toneHz;
+  morseReq_.devKhz = devKhz;
+}
+
+bool NodeCore::beaconDue(uint32_t nowMs) const {
+  if (beaconIntervalMs_ == 0 || callsign_[0] == 0) return false;
+  if (!haveBeacon_) return nowMs >= kBeaconFirstMs;
+  return nowMs - lastBeaconMs_ >= beaconIntervalMs_;
+}
+
+// Dopo il testo: la radio passa in FSK e trasmette il nominativo in Morse a tono, un elemento alla volta a ogni giro (un tono e' un
+// pacchetto e blocca per la sua durata, una pausa e' solo un'attesa).
+void NodeCore::startMorse(uint32_t nowMs) {
+  if (!morseOn_ || callsign_[0] == 0) return;
+  strncpy(morseReq_.text, callsign_, sizeof(morseReq_.text) - 1);
+  morseReq_.text[sizeof(morseReq_.text) - 1] = 0;
+  morseN_ = planMorseBursts(morseReq_, morseBursts_, sizeof(morseBursts_) / sizeof(morseBursts_[0]), nullptr);
+  if (morseN_ == 0) return;
+  morseKbps_ = radioTestBitRateKbps(morseReq_);
+  if (!radio_.fskBegin(static_cast<float>(freqKhz_) / 1000.0f, morseKbps_, morseReq_.devKhz, -1, 0)) {
+    radio_.fskEnd();  // torna ai parametri di prima, se qualcosa e' cambiato
+    stats_.morseAborted++;
+    return;
+  }
+  morseIdx_ = 0;
+  morseNextMs_ = nowMs;
+  morseActive_ = true;
+}
+
+void NodeCore::morseStep(uint32_t nowMs) {
+  if (static_cast<int32_t>(nowMs - morseNextMs_) < 0) return;
+  if (morseIdx_ >= morseN_) {
+    endMorse(false);
+    return;
+  }
+  const MorseBurst& b = morseBursts_[morseIdx_++];
+  if (!b.tone) {
+    morseNextMs_ = nowMs + b.ms;
+    return;
+  }
+  if (!radio_.fskSend(radioTestPattern(morseReq_), b.bytes)) {
+    endMorse(true);
+    return;
+  }
+  morseNextMs_ = nowMs;
+}
+
+// Fine del Morse (completo o interrotto): la radio torna LoRa ai parametri di prima, in ascolto.
+void NodeCore::endMorse(bool aborted) {
+  radio_.fskEnd();
+  morseActive_ = false;
+  if (aborted) stats_.morseAborted++;
+  else stats_.morseIds++;
+}
+
 void NodeCore::tick(uint32_t nowMs, bool mayTransmit) {
   uint8_t dg[kNodeMaxDatagram];
   const size_t md = link_.maintenance(nowMs, dg, sizeof(dg));
@@ -46,6 +117,8 @@ void NodeCore::tick(uint32_t nowMs, bool mayTransmit) {
       continue;
     }
     stats_.radioRx++;
+    haveActivity_ = true;
+    lastActivityMs_ = nowMs;
     Packet out;
     if (rep_.onPacket(p, nowMs, out) != Repeater::Verdict::Forward) continue;
     if (!link_.linkUp(nowMs)) {
@@ -58,6 +131,38 @@ void NodeCore::tick(uint32_t nowMs, bool mayTransmit) {
     if (k) {
       net_.sendDatagram(dg, k);
       stats_.toNet++;
+    }
+  }
+
+  // Morse in corso: un pacchetto dalla rete (o la TX non piu' permessa) lo interrompe, altrimenti prosegue
+  if (morseActive_) {
+    if (queue_.size() > 0 || !mayTransmit) endMorse(true);
+    else {
+      morseStep(nowMs);
+      return;
+    }
+  }
+
+  // identificativo periodico: a canale libero, coda vuota e senza attivita' radio recente (voce in corso: prima la voce)
+  if (mayTransmit && queue_.size() == 0 && beaconDue(nowMs)) {
+    const bool quiet = !haveActivity_ || nowMs - lastActivityMs_ >= kQuietMs;
+    if (!quiet || radio_.channelBusy()) {
+      if (!deferredNoted_) stats_.beaconDeferred++;  // una volta per identificativo
+      deferredNoted_ = true;
+    } else {
+      deferredNoted_ = false;
+      uint8_t wire[kMaxWireBytes];
+      const size_t m = encodePacket(makeBeaconPacket(nextSession_++, callsign_, "Nodo VoLoRa"), wire, sizeof(wire));
+      if (m) {
+        radio_.send(wire, m);
+        haveActivity_ = true;
+        lastActivityMs_ = nowMs;
+        stats_.beacons++;
+        startMorse(nowMs);  // poi il nominativo in Morse a tono, se acceso
+      }
+      haveBeacon_ = true;
+      lastBeaconMs_ = nowMs;
+      return;
     }
   }
 
@@ -78,6 +183,8 @@ void NodeCore::tick(uint32_t nowMs, bool mayTransmit) {
   }
   if (queue_.next(nowMs, pkt, sizeof(pkt), len)) {
     radio_.send(pkt, len);  // bloccante: dura il tempo in aria del pacchetto
+    haveActivity_ = true;
+    lastActivityMs_ = nowMs;
     queue_.sent(nowMs);
     stats_.transmitted++;
   }
