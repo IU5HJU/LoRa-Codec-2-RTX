@@ -25,6 +25,7 @@
 | [roadmap.md](roadmap.md) | Decisioni e prossimi lavori |
 | [ripetitore.md](ripetitore.md) | **Riepilogo del ripetitore**: com'è fatto, collegamento a quattro fili, configurazione, funzioni, cosa è provato e cosa no |
 | [banco-ripetitore.md](banco-ripetitore.md) | Prova a banco del ripetitore con due T3: cablaggio, seriale, display, altoparlante |
+| [studio-nodo-internet.md](studio-nodo-internet.md) | Studio del primo passo: due T3 collegate in Wi-Fi (UDP/TCP) che si portano la voce LoRa a vicenda; protocollo, risorse, prove, verso il reflector |
 | [studio-collegamento-internet.md](studio-collegamento-internet.md) | Studio: collegare VoLoRa a Internet e ai reflector (SvxLink, YSF/C4FM, DMR, NXDN): pro, contro, ordine dei lavori |
 | [studio-identificativo-fm.md](studio-identificativo-fm.md) | Identificativo del ripetitore in FM: Morse a tono con il nominativo; studio di fattibilità, decisione e firmware di prova |
 | [studio-ripetitore.md](studio-ripetitore.md) | Studio di fattibilità del ripetitore con due schede (RX e TX), opzioni per ripetere tutti i profili |
