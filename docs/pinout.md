@@ -75,12 +75,12 @@ Perché così:
 
 ## Ripetitore: due T3 collegate fra loro (12/11/2026)
 
-Il ripetitore unisce **due T3** già cablate come stazioni normali (microfono non necessario sulla RX; altoparlante di monitor facoltativo, pulsante volume invariato) con **quattro fili**: 5V, GND e la seriale incrociata. La seriale usa due pin che il cablaggio normale non tocca:
+Il ripetitore unisce **due T3** già cablate come stazioni normali (microfono, altoparlante e pulsanti restano come sono) con **quattro fili**: 5V, GND e la seriale incrociata. Il microfono resta dov'è (IO34). La seriale usa due pin che nessun cablaggio normale tocca:
 
 | Segnale | GPIO | Collegamento |
 |---|---|---|
-| Seriale RX | 34 | TX (IO2) dell'altra scheda (GPIO34 è solo ingresso: va bene, è il pin del microfono che qui non c'è) |
-| Seriale TX | 2 | RX (IO34) dell'altra scheda (MISO dello slot microSD: lasciarlo vuoto) |
+| Seriale RX | 36 (`S_VP`) | TX (IO2) dell'altra scheda (GPIO36 è solo ingresso, senza pull-up interno e non collegato a nulla sulla scheda) |
+| Seriale TX | 2 | RX (S_VP, IO36) dell'altra scheda (MISO dello slot microSD: lasciarlo vuoto) |
 
 Due T-Beam sarebbero uno spreco (GPS, PMU e batteria non servono a un ripetitore fisso): il ripetitore è solo T3. ![Collegamenti del ripetitore](images/collegamenti-ripetitore.png)
 

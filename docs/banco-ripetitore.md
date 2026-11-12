@@ -29,13 +29,13 @@ Il nominativo resta **N0CALL** (valore di fabbrica) su entrambe: così la TX non
 Sul display, per 1,5 s: "RIPETITORE / scheda RX" (o TX).
 
 ## Fase 1: i quattro fili e la seriale
-**Spegni tutto, poi** collega fra le due schede (schema in alto): GND-GND, **RX.IO2 → TX.IO34** e **TX.IO2 → RX.IO34** (la seriale è incrociata).
+**Spegni tutto, poi** collega fra le due schede (schema in alto): GND-GND, **RX.IO2 → TX.S_VP (IO36)** e **TX.IO2 → RX.S_VP (IO36)** (la seriale è incrociata).
 
 **Alimentazione, la parte che non ho potuto verificare:** lo schema della T3 dice solo che il pin `5V` del connettore esce quando c'è l'USB; non so se accetta anche un ingresso, né se due 5V collegati fra loro con due USB diversi creino problemi. **Per la prima prova usa tre fili** (GND e le due della seriale) con **un cavo USB per scheda** e **lascia scollegato il filo dei 5V**. Il filo dei 5V, con un solo alimentatore, si aggiunge dopo, quando hai controllato lo schema dell'alimentazione (o con un multimetro sul pin 5V) e mi dici com'è andata.
 
 | Cosa guardare | Atteso | Se no |
 |---|---|---|
-| Display RX, ultima riga | `TX ok coda 0` entro 2-3 s | `TX NON RISPONDE`: fili IO2/IO34 invertiti, filo staccato, masse non comuni |
+| Display RX, ultima riga | `TX ok coda 0` entro 2-3 s | `TX NON RISPONDE`: fili IO2/S_VP invertiti, filo staccato, masse non comuni |
 | Display TX, ultima riga | `N0CALL no TX, RX ok` | `... RX NO`: stessa lista; controlla anche che la TX sia davvero in ruolo `rpttx` |
 | Display RX, riga 1-2 | `RIPETITORE  RX`, `In 433.900 MHz std` | frequenza o ruolo sbagliati: `CFG GET` |
 | Display TX, riga 1-2 | `RIPETITORE  TX`, `Out 434.400 MHz std` | idem |
@@ -49,7 +49,7 @@ Sul display, per 1,5 s: "RIPETITORE / scheda RX" (o TX).
 Con le due schede collegate e funzionanti, collega il cavo USB a una scheda e chiedi `CFG GET`: deve rispondere con `role=rptrx` (o `rpttx`) e le frequenze impostate, e la seriale fra le schede **non deve perdere il collegamento** (display `ok`). Poi `CFG SET IDINT 1` sulla TX, `CFG GET IDINT` deve rispondere `CFG IDINT=1` (non serve riavviare per questa prova).
 
 ## Fase 3 (facoltativa): altoparlante di monitor sulla RX
-1. Collega MAX98357A e altoparlante **come su una scheda normale** (schema [collegamenti-t3.png](images/collegamenti-t3.png): IO14 BCLK, IO13 LRC, IO4 DIN, IO25 SD, 5V e GND), con il pulsante del volume su IO15 se lo vuoi. **Nessun microfono.**
+1. Collega MAX98357A e altoparlante **come su una scheda normale** (schema [collegamenti-t3.png](images/collegamenti-t3.png): IO14 BCLK, IO13 LRC, IO4 DIN, IO25 SD, 5V e GND), con il pulsante del volume su IO15 se lo vuoi. Il microfono, se c'è, resta com'è.
 2. Sulla RX: `CFG SET MONITOR ON`, `CFG REBOOT`.
 3. Atteso: all'avvio "MONITOR / altoparlante"; sul display RX la riga 4 diventa `Scarti 0  Vol 5/10` (il volume parte da `CFG SET VOLUME`); la seriale fra le schede continua a dire `TX ok` (era il punto del cambio di pin). Il pulsante volume sposta il volume e fa un bip.
 4. **Se la seriale cade quando accendi il monitor** o l'altoparlante soffia sempre: lo schema dei pin ha un conflitto: segnalalo (quale pin, quale scheda).
@@ -62,7 +62,7 @@ Serve una **terza T3 normale** con un nominativo vero, `CFG SET POWER 2` (la pot
 4. Con il monitor acceso la voce si sente dall'altoparlante.
 
 ## Cosa mandarmi
-Per ogni fase che hai fatto: una foto dei due display (o le righe lette), l'esito `ok` o `NON RISPONDE`, e le righe della seriale USB dell'avvio (due righe per scheda). Se qualcosa non va, dimmi **quale pin e quale scheda**: i pin sono in `src/board_pins_t3_v161.h` (`kLinkRx`, `kLinkTx`) e si cambiano in un minuto.
+Per ogni fase che hai fatto: una foto dei due display (o le righe lette), l'esito `ok` o `NON RISPONDE`, e le righe della seriale USB dell'avvio (due righe per scheda). Se qualcosa non va, dimmi **quale pin e quale scheda**: i pin sono in `src/board_pins_t3_v161.h` (`kLinkRx`, `kLinkTx`) e si cambiano in un minuto. Se la linea sembra disturbata (display che dice `ok` e poi `NON RISPONDE`), prova un resistore da 10 kΩ fra S_VP e 3,3 V sulle due schede: l'ingresso S_VP non ha il pull-up interno.
 
 ## Dopo la prova
 `CFG SET ROLE OFF` e `CFG REBOOT` su ogni scheda per tornare stazioni normali. Il primo test **in aria** con un nominativo vero (identificativo periodico, risposte del sysop, ritrasmissione dei messaggi) è un passo successivo e si fa con carico fittizio e potenza minima.

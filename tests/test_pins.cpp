@@ -45,7 +45,7 @@ static void checkCommon(const Board& b) {
 // Seriale fra le due T3 del ripetitore: nessun pin del cablaggio normale (I2S, microfono tranne il suo pin dati, pulsanti, LED), RX su un
 // ingresso, TX su una uscita, niente GPIO12 di avvio, niente radio e OLED.
 static void checkLink(int rx, int tx, const std::vector<int>& used, const std::vector<int>& normal) {
-  CHECK(rx != tx && tx < 34 && tx != 12 && rx != 12);
+  CHECK(rx != tx && tx < 34 && tx != 12 && rx != 12 && rx >= 34);  // RX su un ingresso senza altre funzioni, TX su un'uscita
   for (int u : used) CHECK(rx != u && tx != u);
   for (int n : normal) CHECK(tx != n && rx != n);
 }
@@ -65,10 +65,10 @@ int main() {
     CHECK(kI2sBclk == kSdSclk && kI2sWs == kSdCs && kVolume == kSdMosi);
     CHECK(kLed == kAmpShutdown);  // LED condiviso con lo shutdown dell'amplificatore
     CHECK(kPtt == 0 && kPttHasInternalPullup);
-    // Seriale del ripetitore: GPIO34 (RX, il pin del microfono: sul ripetitore non c'e') e GPIO2 (TX, MISO dello slot microSD). Altoparlante,
+    // Seriale del ripetitore: GPIO36 (RX, S_VP) e GPIO2 (TX, MISO dello slot microSD). Il microfono (IO34), l'altoparlante,
     // pulsante del volume e PTT restano quelli della scheda normale e non si toccano.
-    CHECK(kLinkRx == 34 && kLinkTx == 2 && kLinkRx == kMicData && kLinkTx == kSdMiso);
-    checkLink(kLinkRx, kLinkTx, b.used, {kI2sBclk, kI2sWs, kAmpData, kAmpShutdown, kPtt, kVolume});
+    CHECK(kLinkRx == 36 && kLinkTx == 2 && kLinkTx == kSdMiso);
+    checkLink(kLinkRx, kLinkTx, b.used, {kI2sBclk, kI2sWs, kMicData, kAmpData, kAmpShutdown, kPtt, kVolume, kBatteryAdc, kLed});
   }
 
   // ---- T-Beam V1.2 ----

@@ -83,7 +83,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
 [[noreturn]] void runRx(const lcr::Settings& settings, UiNotifier& ui, CfgHandler handler, AudioIo* audio, lcr::ICodec* codec) {
   RadioLora radio;
   if (!radio.begin(settings)) stopWithError(ui, "radio", radio.lastError());
-  // La seriale verso la TX usa GPIO34 (RX) e GPIO2 (TX), fuori dal cablaggio normale: l'altoparlante (I2S su 14 e 13) e il pulsante del
+  // La seriale verso la TX usa GPIO36 (RX, S_VP) e GPIO2 (TX), fuori dal cablaggio normale (il microfono resta su IO34): l'altoparlante (I2S su 14 e 13) e il pulsante del
   // volume si collegano come su una scheda normale (board_pins_t3_v161.h).
   const bool monitor = audio != nullptr && codec != nullptr;
   Serial2.begin(kLinkBaud, SERIAL_8N1, pins::kLinkRx, pins::kLinkTx);

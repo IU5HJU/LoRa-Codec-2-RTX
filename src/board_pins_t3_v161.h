@@ -36,12 +36,12 @@ constexpr int kMicData = 34;     // INMP441 SD -> ESP32 (GPIO34: solo ingresso, 
 constexpr int kAmpData = 4;      // ESP32 -> MAX98357A DIN
 constexpr int kAmpShutdown = 25; // MAX98357A SD (alto = acceso). Condiviso col LED di bordo.
 
-// --- Ripetitore (due T3 collegate fra loro): la seriale fra RX e TX usa due pin che il cablaggio normale (microfono, altoparlante,
-// pulsanti) non tocca, cosi' l'altoparlante di monitor e il pulsante del volume si collegano come su una scheda normale e fra le due
-// schede bastano 4 fili: 5 V, GND, e la seriale incrociata (TX di una = GPIO2 -> RX dell'altra = GPIO34 e viceversa).
-// GPIO34 e' il pin dati del microfono (solo ingresso, va bene per una RX: sulle schede del ripetitore il microfono non c'e'); GPIO2 e' il
-// MISO dello slot microSD (da lasciare vuoto) e secondo docs/pinout.md e' libero. Entrambi escono sul connettore. DA VERIFICARE sul banco. ---
-constexpr int kLinkRx = kMicData;
+// --- Ripetitore (due T3 normali, gia' cablate, collegate fra loro): la seriale fra RX e TX usa due pin che il cablaggio normale
+// (microfono IO34, altoparlante IO14/IO13/IO4/IO25, pulsanti IO0 e IO15, batteria IO35, radio, OLED) non tocca MAI, anche se il microfono resta
+// montato. Fra le due schede bastano 4 fili: 5 V, GND, e la seriale incrociata (TX di una = GPIO2 -> RX dell'altra = GPIO36 e viceversa).
+// GPIO36 e' il pin S_VP del connettore (solo ingresso, senza pull-up interno, non collegato a nulla sulla scheda); GPIO2 e' il MISO
+// dello slot microSD (da lasciare vuoto) e secondo docs/pinout.md e' libero. DA VERIFICARE sul banco. ---
+constexpr int kLinkRx = 36;
 constexpr int kLinkTx = kSdMiso;
 
 // --- PTT: pulsante esterno tra GPIO0 e massa (la scheda ha solo RST) ---

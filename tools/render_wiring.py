@@ -373,7 +373,7 @@ def draw_ripetitore():
     global els
     els = []
     header("Ripetitore: due T3 collegate con quattro fili",
-           "Le due schede sono T3 normali: l'altoparlante e il pulsante del volume (facoltativi) si collegano alla RX come su una scheda normale.")
+           "Le due schede sono T3 normali, gia' cablate (microfono, altoparlante, pulsanti): per il ripetitore si aggiungono solo i quattro fili.")
 
     def board(x0, title, role):
         rect(x0, 110, 420, 560, "#1f2937", "#111827", rx=18)
@@ -391,9 +391,9 @@ def draw_ripetitore():
     board(TX0, "SCHEDA TX", "trasmette l'uscita")
 
     # pin usati: i punti si disegnano sul bordo rivolto verso l'altra scheda; sulla scheda vera stanno sulle due file del connettore
-    rows = {"5V": 450, "GND": 506, "IO2": 562, "IO34": 618}
-    colors = {"5V": C["5v"], "GND": C["gnd"], "IO2": "#0d9488", "IO34": C["mic"]}
-    side = {"5V": "fila sinistra", "GND": "fila sinistra", "IO2": "fila destra", "IO34": "fila destra"}
+    rows = {"5V": 450, "GND": 506, "IO2": 562, "S_VP": 618}
+    colors = {"5V": C["5v"], "GND": C["gnd"], "IO2": "#0d9488", "S_VP": C["mic"]}
+    side = {"5V": "fila sinistra", "GND": "fila sinistra", "IO2": "fila destra", "S_VP": "fila destra (IO36)"}
     XA, XB = RX0 + 420, TX0          # bordo destro della RX, bordo sinistro della TX
     for name, y in rows.items():
         dot(XA, y, colors[name], 8)
@@ -406,9 +406,9 @@ def draw_ripetitore():
     # fili fra le due schede
     wire([(XA, rows["5V"]), (XB, rows["5V"])], C["5v"], 5)
     wire([(XA, rows["GND"]), (XB, rows["GND"])], C["gnd"], 5)
-    # seriale incrociata: TX (IO2) di una -> RX (IO34) dell'altra
-    wire([(XA, rows["IO2"]), (XA + 80, rows["IO2"]), (XB - 80, rows["IO34"]), (XB, rows["IO34"])], "#0d9488", 5)
-    wire([(XA, rows["IO34"]), (XA + 80, rows["IO34"]), (XB - 80, rows["IO2"]), (XB, rows["IO2"])], C["mic"], 5)
+    # seriale incrociata: TX (IO2) di una -> RX (S_VP) dell'altra
+    wire([(XA, rows["IO2"]), (XA + 80, rows["IO2"]), (XB - 80, rows["S_VP"]), (XB, rows["S_VP"])], "#0d9488", 5)
+    wire([(XA, rows["S_VP"]), (XA + 80, rows["S_VP"]), (XB - 80, rows["IO2"]), (XB, rows["IO2"])], C["mic"], 5)
     dot(XA, rows["IO2"], "#0d9488", 8)
     dot(XB, rows["IO2"], C["mic"], 8)
 
@@ -416,8 +416,8 @@ def draw_ripetitore():
     legend = [
         ("5V - 5V", C["5v"], "alimentazione (vedi procedura)"),
         ("GND - GND", C["gnd"], "massa comune"),
-        ("RX.IO2 -> TX.IO34", "#0d9488", "seriale RX -> TX"),
-        ("RX.IO34 <- TX.IO2", C["mic"], "seriale TX -> RX"),
+        ("RX.IO2 -> TX.S_VP", "#0d9488", "seriale RX -> TX"),
+        ("RX.S_VP <- TX.IO2", C["mic"], "seriale TX -> RX"),
     ]
     for i, (a, col, b) in enumerate(legend):
         y = 170 + i * 34
@@ -432,11 +432,11 @@ def draw_ripetitore():
     text(RX0 + 210, 756, "MAX98357A + altoparlante 8 ohm, come sulla scheda normale:", 13, "middle", "normal", "#92400e")
     text(RX0 + 210, 780, "IO14 BCLK, IO13 LRC, IO4 DIN, IO25 SD, 5V e GND", 13, "middle", "normal", "#92400e")
     text(RX0 + 210, 806, "Pulsante del volume (facoltativo): IO15 e GND", 13, "middle", "normal", "#92400e")
-    text(RX0 + 210, 832, "Nessun microfono sulla RX (IO34 e' la seriale)", 13, "middle", "bold", "#92400e")
+    text(RX0 + 210, 832, "Il microfono (IO34), se c'e', resta com'e'", 13, "middle", "bold", "#92400e")
 
     notes_panel([
-        "Quattro fili fra le due schede: 5V, GND e la seriale incrociata. RX e TX usano gli stessi due pin, IO2 (TX) e IO34 (RX): la T3 e' la stessa, cambia solo il ruolo (CFG SET ROLE).",
-        "IO34 e' solo ingresso (il pin del microfono, che sul ripetitore non c'e'); IO2 e' il MISO dello slot microSD: scheda microSD sempre tolta. Pin 5V solo con l'USB collegato.",
+        "Quattro fili fra le due schede: 5V, GND e la seriale incrociata. RX e TX usano gli stessi due pin, IO2 (TX) e S_VP = IO36 (RX): la T3 e' la stessa, cambia solo il ruolo (CFG SET ROLE).",
+        "Nessun pin del cablaggio normale e' toccato (microfono IO34 compreso). S_VP e' solo ingresso senza pull-up interno; IO2 e' il MISO dello slot microSD: microSD sempre tolta.",
         "Il display di ciascuna scheda mostra lo stato: 'TX ok' sulla RX e 'RX ok' sulla TX indicano che la seriale funziona. Fili corti e lontani dall'antenna.",
         "Il ripetitore usa solo la T3: due T-Beam sarebbero uno spreco. Senza nominativo (N0CALL) la scheda TX non trasmette: ideale per la prova a banco.",
         "Procedura di prova: docs/banco-ripetitore.md.",
