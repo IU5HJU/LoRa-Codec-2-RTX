@@ -11,6 +11,8 @@
     noGps: false,
     noMc: false,          // firmware senza profilo MeshCom (piu' vecchio): CFG GET MC e CFG SET FREQMC/MCDEST/MCSSID sconosciuti
     mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
+    noRole: false,        // firmware senza ruolo del ripetitore (piu' vecchio): niente role= nel CFG GET
+    monitor: 'off',
     noIdint: false,       // firmware senza identificativo periodico (piu' vecchio)
     idint: '10',
     noSysop: false,       // firmware senza modo Sysop (piu' vecchio): CFG GET SYSOP e CFG SET SYSOP* sconosciuti
@@ -35,7 +37,7 @@
   const get = () => {
     const c = st.cfg, a = st.active;
     const reboot = (c.callsign !== a.callsign || c.freq !== a.freq || c.power !== a.power || c.volume !== a.volume || c.profile !== a.profile || c.freqmsg !== a.freqmsg || c.freqqual !== a.freqqual) ? 1 : 0;
-    return `CFG callsign=${c.callsign} freq=${c.freq}${st.noFreqMsg ? '' : ' freqmsg=' + c.freqmsg + ' freqqual=' + c.freqqual} power=${c.power} volume=${c.volume} micfloor=${c.micfloor}${st.noProfile ? '' : ' profile=' + c.profile} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}${st.noPos ? '' : ' pos=' + c.pos + ' qth=' + c.qth}${st.noGps ? '' : ' gps=' + c.gps}`;
+    return `CFG callsign=${c.callsign} freq=${c.freq}${st.noFreqMsg ? '' : ' freqmsg=' + c.freqmsg + ' freqqual=' + c.freqqual} power=${c.power} volume=${c.volume} micfloor=${c.micfloor}${st.noProfile ? '' : ' profile=' + c.profile} board=${st.board} reboot=${reboot} test=${st.test ? 1 : 0}${st.noPos ? '' : ' pos=' + c.pos + ' qth=' + c.qth}${st.noGps ? '' : ' gps=' + c.gps}${st.noRole ? '' : ' role=' + (c.role || 'off') + ' freqout=' + (c.freqout || c.freq)}`;
   };
   const inRange = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
   const handle = (line) => {
@@ -44,6 +46,19 @@
     if (t[0] !== 'CFG') return;
     const cmd = t[1];
     // CFG SET TEXTn <testo> (il testo e' il resto della riga) e CFG GET TEXTn, come il firmware
+    if (!st.noRole) {
+      if (/^CFG\s+GET\s+MONITOR$/i.test(line.trim())) return out('CFG MONITOR=' + st.monitor);
+      const rm = /^CFG\s+SET\s+(ROLE|MONITOR|FREQOUT)\s+(\S+)$/i.exec(line.trim());
+      if (rm) {
+        const k = rm[1].toUpperCase(), v = rm[2];
+        if (st.reject === k) return out('CFG ERR ' + k.toLowerCase() + ' rifiutato dal firmware');
+        if (k === 'ROLE') { if (!/^(off|rptrx|rpttx)$/i.test(v)) return out('CFG ERR role usa OFF, RPTRX o RPTTX'); st.cfg.role = v.toLowerCase(); return out('CFG OK role=' + st.cfg.role); }
+        if (k === 'MONITOR') { st.monitor = v.toLowerCase(); return out('CFG OK monitor=' + st.monitor); }
+        const khz = Math.round(parseFloat(v) * 1000);
+        if (!(khz >= 430000 && khz <= 440000)) return out('CFG ERR freqout fuori dai limiti');
+        st.cfg.freqout = v; return out('CFG OK freqout=' + v);
+      }
+    }
     if (!st.noIdint) {
       if (/^CFG\s+GET\s+IDINT$/i.test(line.trim())) return out('CFG IDINT=' + st.idint);
       const im = /^CFG\s+SET\s+IDINT\s+(\S+)$/i.exec(line.trim());

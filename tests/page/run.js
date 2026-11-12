@@ -429,8 +429,54 @@ async function scenario(name, fn, opts = {}) {
     check('senza chiave nuova non si manda SYSOPKEY', !(await cmds(p)).some((x) => x.startsWith('CFG SET SYSOPKEY')));
   });
 
+  await scenario('ruolo del ripetitore: stazione, TX con frequenza di uscita, RX con monitor', async (p) => {
+    check('campi spenti prima di collegare', (await p.isDisabled('#role')) && (await p.isDisabled('#freqout')) && (await p.isDisabled('#monitor')));
+    await connect(p);
+    await until(p, () => !document.getElementById('role').disabled);
+    check('di base stazione normale, riquadri nascosti', (await p.inputValue('#role')) === 'off' && (await p.isHidden('#rxbox')) && (await p.isHidden('#txbox')));
+    await p.fill('#callsign', 'IR5XXX');
+    await p.selectOption('#role', 'rpttx');
+    check('TX: compaiono frequenza di uscita e identificativo', (await p.isVisible('#txbox')) && (await p.isHidden('#rxbox')));
+    await p.fill('#freqout', '999');
+    await p.click('#save');
+    await sleep(400);
+    check('frequenza di uscita fuori limite bloccata', /430\.000 e 440\.000/.test(await p.textContent('#status')) && !(await cmds(p)).some((x) => x.startsWith('CFG SET ROLE')));
+    await p.fill('#freqout', '434.400');
+    await p.fill('#idint', '5');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    let c = await cmds(p);
+    check('ROLE RPTTX, FREQOUT e IDINT', c.includes('CFG SET ROLE rpttx') && c.includes('CFG SET FREQOUT 434.400') && c.includes('CFG SET IDINT 5') && !c.some((x) => x.startsWith('CFG SET MONITOR')), c.join(' | '));
+    check('la scheda ha il ruolo', await p.evaluate(() => window.__st.cfg.role === 'rpttx' && window.__st.cfg.freqout === '434.400'));
+  });
+
+  await scenario('ruolo del ripetitore: scheda RX con il monitor', async (p) => {
+    await connect(p);
+    await until(p, () => !document.getElementById('role').disabled);
+    await p.fill('#callsign', 'IR5XXX');
+    await p.selectOption('#role', 'rptrx');
+    check('RX: compare il monitor, non la frequenza di uscita', (await p.isVisible('#rxbox')) && (await p.isHidden('#txbox')));
+    await p.selectOption('#monitor', 'on');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c = await cmds(p);
+    check('ROLE RPTRX e MONITOR, nessun FREQOUT/IDINT', c.includes('CFG SET ROLE rptrx') && c.includes('CFG SET MONITOR on') && !c.some((x) => /^CFG SET (FREQOUT|IDINT)/.test(x)), c.join(' | '));
+  });
+
+  await scenario('firmware senza ruolo: campi spenti e nessun comando', async (p) => {
+    await p.evaluate(() => { window.__st.noRole = true; });
+    await connect(p);
+    await sleep(600);
+    check('campi del ruolo spenti', (await p.isDisabled('#role')) && (await p.isDisabled('#freqout')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('nessun comando ROLE/FREQOUT/MONITOR', !(await cmds(p)).some((x) => /^CFG SET (ROLE|FREQOUT|MONITOR)/.test(x)));
+  });
+
   await scenario('identificativo del ripetitore: lettura, salvataggio e limiti', async (p) => {
     check('campo spento prima di collegare', await p.isDisabled('#idint'));
+    await p.evaluate(() => { window.__st.cfg.role = 'rpttx'; });
     await connect(p);
     await until(p, () => !document.getElementById('idint').disabled);
     check('letto dalla scheda (di base 10)', (await p.inputValue('#idint')) === '10');

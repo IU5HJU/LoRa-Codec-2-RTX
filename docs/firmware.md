@@ -207,7 +207,9 @@ Studio e decisioni: [studio-ripetitore.md](studio-ripetitore.md). **Scritto, non
 
 **Il ripetitore** è fatto da **due schede uguali** (T3 o T-Beam, **senza audio**; la RX può avere un altoparlante di monitor, vedi sotto): la scheda **RX** ascolta la frequenza di ingresso e manda i pacchetti da ripetere alla scheda **TX**, che li trasmette sulla frequenza di uscita. Ripete il **modo del profilo scelto** (di base lo Standard, Codec2 1200) e i **messaggi di testo** (modo 7, dall'11/11/2026: un pacchetto solo, la seconda copia del mittente non si ripete) e aggiunge ai pacchetti il flag `RELAYED`. Un testo non fa parte del turno vocale in corso e non ne cambia la durata. Ogni scheda ha la **sua antenna**: la separazione fra le due antenne (distanza, filtri, cavità) è a cura dell'operatore.
 
-**Impostazioni** (stesse per le due schede salvo il ruolo, dalla seriale USB; valgono dal riavvio):
+**Ruolo dalla pagina di configurazione (12/11/2026):** il ruolo (stazione normale, scheda RX, scheda TX) si sceglie anche dalle pagine web (la pagina interna della scheda e il sito): *Ruolo della scheda*; con la RX compare il monitor audio, con la TX la frequenza di uscita e l'intervallo dell'identificativo. Salvando, la pagina manda gli stessi comandi `CFG SET ROLE`, `FREQOUT`, `MONITOR`, `IDINT` descritti sotto, e rilegge il ruolo dalla scheda. Per tornare scheda normale basta scegliere *Stazione normale* (dalla scheda in ruolo da ripetitore la pagina interna non è raggiungibile dal menu: serve la seriale, `CFG SET ROLE OFF`, oppure il sito con il cavo USB).
+
+**Impostazioni** (stesse per le due schede salvo il ruolo, dalla seriale USB o dalle pagine; valgono dal riavvio):
 
 ```
 CFG SET CALLSIGN IU5HJU       nominativo del ripetitore (con N0CALL la scheda TX non trasmette)

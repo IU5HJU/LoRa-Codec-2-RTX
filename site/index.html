@@ -202,9 +202,22 @@
       <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S, M o Q), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo Q 433.900&rdquo;.</p>
 
       <h3>Ripetitore</h3>
-      <p class="hint">Solo per le schede del ripetitore. Ogni quanti minuti la scheda TX trasmette l'identificativo (il nominativo del ripetitore, in modo testo: le stazioni lo vedono passare senza suoni). Da 1 a 10 minuti, di base 10.</p>
-      <label for="idint">Identificativo ogni (minuti, 1-10)</label>
-      <input id="idint" type="number" min="1" max="10" step="1" placeholder="10" disabled>
+      <p class="hint">Due schede possono fare da ripetitore: una <strong>RX</strong> ascolta la frequenza di ingresso (quella del profilo, qui sopra) e una <strong>TX</strong> ritrasmette sulla frequenza di uscita. Con un ruolo da ripetitore la scheda non funziona pi&ugrave; da stazione: dopo il riavvio mostra lo stato del ripetitore. <strong>Attenzione:</strong> una scheda in ruolo da ripetitore non ha il menu a bordo, quindi non apre pi&ugrave; la pagina interna: per tornare stazione scegli <em>Stazione normale</em> qui, con il cavo USB.</p>
+      <label for="role">Ruolo della scheda</label>
+      <select id="role" disabled><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option></select>
+      <div id="rxbox" hidden>
+        <label for="monitor">Altoparlante di monitor sulla RX</label>
+        <select id="monitor" disabled><option value="off">Spento</option><option value="on">Acceso</option></select>
+        <p class="hint">Con un altoparlante collegato la RX fa ascoltare la voce che riceve. Cambia i fili della seriale fra le due schede (vedi la guida del firmware).</p>
+      </div>
+      <div id="txbox" hidden>
+        <label for="freqout">Frequenza di uscita (MHz)</label>
+        <input id="freqout" inputmode="decimal" placeholder="434.400" autocomplete="off" disabled>
+        <p class="hint">Da 430.000 a 440.000. Sulla scheda TX &egrave; anche la frequenza dei messaggi.</p>
+        <label for="idint">Identificativo ogni (minuti, 1-10)</label>
+        <input id="idint" type="number" min="1" max="10" step="1" placeholder="10" disabled>
+        <p class="hint">Ogni quanti minuti la TX trasmette l'identificativo del ripetitore (il nominativo qui sopra, in modo testo: le stazioni lo vedono passare senza suoni). Di base 10.</p>
+      </div>
 
       <h3>Modo Sysop</h3>
       <p class="hint" id="sysophint">Per chi gestisce un ripetitore. Con il <strong>modo Sysop</strong> acceso il menu della scheda (volume lungo) mostra <strong>Comandi Sysop</strong> al posto di Invia testo: scegli il comando (STATO, SPEGNI, RIACCENDI, RIAVVIA, IDENTIFICA, POTENZA) e la scheda lo trasmette firmato al ripetitore. Resta acceso finch&eacute; non lo spegni. Nominativo e chiave vanno impostati uguali sul ripetitore (schede RX e TX) e sulla scheda del sysop; la chiave non si rilegge mai.</p>
@@ -421,6 +434,15 @@
     } catch (e) { mcSeen = false; }
     updateMcControls(!!port);
   }
+  let roleSeen = false;      // l'ultimo CFG GET conteneva role= (firmware piu' vecchi: no)
+  function roleShow() { const r = $('role').value; $('rxbox').hidden = r !== 'rptrx'; $('txbox').hidden = r !== 'rpttx'; }
+  function updateRoleControls(on) { for (const id of ['role', 'monitor', 'freqout']) $(id).disabled = !on || !roleSeen; }
+  async function readMonitor() {
+    try {
+      const r = await send('CFG GET MONITOR', /^CFG MONITOR=/, 2500);
+      $('monitor').value = r.slice(12) === 'on' ? 'on' : 'off';
+    } catch (e) { /* firmware senza monitor: il campo resta com'e' */ }
+  }
   let idintSeen = false;     // la scheda risponde a CFG GET IDINT (firmware piu' vecchi: no)
   async function readIdint() {
     try {
@@ -482,8 +504,9 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; }
+    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; roleSeen = false; }
     $('idint').disabled = !on || !idintSeen;
+    updateRoleControls(on);
     updatePosControls(on);
     updateMcControls(on);
     updateTextControls(on);
@@ -513,6 +536,7 @@
         lastBoard = m.board || '';
         if (m.pos !== undefined) { $('pos').value = m.pos; setQth(m.qth); posSeen = true; }
         if (m.gps !== undefined) { $('gps').value = m.gps; gpsSeen = true; }
+        if (m.role !== undefined) { $('role').value = m.role; if (m.freqout) $('freqout').value = m.freqout; roleSeen = true; updateRoleControls(!!port); roleShow(); }
         updatePosControls(!!port);
       }
     }
@@ -611,6 +635,7 @@
         await readTexts();
         await readSysop();
         await readIdint();
+        await readMonitor();
         return true;
       } catch (e) { if (!writer) return false; }
     }
@@ -690,7 +715,17 @@
       }
     }
     let idint = null;
-    if (!$('idint').disabled) {
+    let role = null, freqout = null, monitor = null;
+    if (!$('role').disabled) {
+      role = $('role').value;
+      if (role === 'rpttx') {
+        freqout = $('freqout').value.trim();
+        const fk = Math.round(parseFloat(freqout) * 1000);
+        if (!/^\d{3}(\.\d{1,3})?$/.test(freqout) || fk < LIMITS.freqMin || fk > LIMITS.freqMax) return { err: 'La frequenza di uscita deve essere tra 430.000 e 440.000 MHz.' };
+      }
+      if (role === 'rptrx') monitor = $('monitor').value;
+    }
+    if (!$('idint').disabled && role === 'rpttx') {
       const im = $('idint').value.trim();
       if (!/^\d{1,2}$/.test(im) || +im < 1 || +im > 10) return { err: 'L\'identificativo del ripetitore va da 1 a 10 minuti.' };
       idint = String(parseInt(im, 10));
@@ -703,7 +738,7 @@
       if (sk !== '' && !/^[0-9a-fA-F]{32}$/.test(sk)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
       sysop = { call: sy, mode: $('sysopmode').value, key: sk };
     }
-    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint };
+    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, role, freqout, monitor };
   }
 
   // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
@@ -739,6 +774,9 @@
         replies.push(await send('CFG SET MCWINDOW ' + v.mc.window, /^CFG (OK|ERR)/));
         for (let i = 0; i < 5; i++) replies.push(await send('CFG SET MCDEST' + (i + 1) + ' ' + (v.mc.dests[i] || 'NONE'), /^CFG (OK|ERR)/));
       }
+      if (v.role !== null) replies.push(await send('CFG SET ROLE ' + v.role, /^CFG (OK|ERR)/));
+      if (v.freqout !== null) replies.push(await send('CFG SET FREQOUT ' + v.freqout, /^CFG (OK|ERR)/));
+      if (v.monitor !== null) replies.push(await send('CFG SET MONITOR ' + v.monitor, /^CFG (OK|ERR)/));
       if (v.idint !== null) replies.push(await send('CFG SET IDINT ' + v.idint, /^CFG (OK|ERR)/));
       if (v.sysop !== null) {
         replies.push(await send('CFG SET SYSOP ' + (v.sysop.call || 'NONE'), /^CFG (OK|ERR)/));
@@ -754,6 +792,7 @@
       if (!$('profile').disabled && !state.includes('profile=' + v.prof)) throw new Error('la scheda non ha salvato il profilo');
       if (v.pos !== null && !state.includes('pos=' + v.pos)) throw new Error('la scheda non ha salvato la trasmissione della posizione');
       if (v.qth !== null && !qthSaved(state, v.qth)) throw new Error('la scheda non ha salvato la posizione fissa');
+      if (v.role !== null && !state.includes('role=' + v.role)) throw new Error('la scheda non ha salvato il ruolo');
       if (v.gps !== null && !state.includes('gps=' + v.gps)) throw new Error('la scheda non ha salvato l\'impostazione del GPS');
       setStatus('Salvato. Riavvio della scheda…', 'ok');
       await send('CFG REBOOT', /^CFG OK reboot/);
@@ -767,6 +806,7 @@
     }
   }
 
+  $('role').addEventListener('change', roleShow);
   $('sysopmode').addEventListener('change', sysopShow);
   $('genkey').addEventListener('click', () => {
     const b = new Uint8Array(16);

@@ -11,7 +11,8 @@ if (!m) { console.log('pagina non trovata in wifi_page.h'); process.exit(1); }
 const PAGE = m[1];
 
 const st = {
-  cfg: { callsign: 'IU5HJU', profile: 'std', freq: '433.900', freqmsg: '433.900', freqqual: '433.900', power: 10, volume: 7, micfloor: -60, pos: 'off', qth: 'none', gps: 'off' },
+  cfg: { callsign: 'IU5HJU', profile: 'std', freq: '433.900', freqmsg: '433.900', freqqual: '433.900', power: 10, volume: 7, micfloor: -60, pos: 'off', qth: 'none', gps: 'off', role: 'off', freqout: '433.900' },
+  monitor: 'off',
   cmds: [],
   board: 't3',
   texts: ['%C QRV su VoLoRa modo %M %F', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
@@ -20,9 +21,12 @@ const st = {
   sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
-const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps'];
+const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps', 'role', 'freqout'];
 function handle(line) {
   st.cmds.push(line);
+  if (line === 'CFG GET MONITOR') return 'CFG MONITOR=' + st.monitor;
+  const mo = /^CFG SET MONITOR (on|off)$/.exec(line);
+  if (mo) { st.monitor = mo[1]; return 'CFG OK monitor=' + mo[1]; }
   if (line === 'CFG GET IDINT') return 'CFG IDINT=' + st.idint;
   const im = /^CFG SET IDINT (\d+)$/.exec(line);
   if (im) { if (+im[1] < 1 || +im[1] > 10) return 'CFG ERR idint da 1 a 10'; st.idint = im[1]; return 'CFG OK idint=' + im[1]; }
@@ -53,6 +57,8 @@ function handle(line) {
   if (t[1] === 'SET') {
     const k = t[2].toLowerCase();
     if (k === 'gps' && st.board !== 'tbeam') return 'CFG ERR gps questa scheda non ha il GPS';
+    if (k === 'role') { st.cfg.role = t[3].toLowerCase(); return 'CFG OK role=' + st.cfg.role; }
+    if (k === 'freqout' && !(+t[3] >= 430 && +t[3] <= 440)) return 'CFG ERR freqout 430-440';
     if (k === 'power' && (+t[3] < 2 || +t[3] > 17)) return 'CFG ERR power da 2 a 17';
     if (st.drop !== k) st.cfg[k] = k === 'callsign' ? t[3].toUpperCase() : t[3];
     return 'CFG OK ' + k + '=' + t[3];
@@ -94,7 +100,7 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('comandi inviati', st.cmds.includes('CFG SET PROFILE qua') && st.cmds.includes('CFG SET FREQQUAL 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
   check('testi salvati (con spazi) e posto vuoto con NONE', st.cmds.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami') && st.cmds.includes('CFG SET TEXT4 NONE') && st.texts[1] === 'Sono QRV su 433.775, chiamami' && st.texts[3] === '', JSON.stringify(st.texts));
   check('MeshCom salvato (destinatario in maiuscolo, vuoto = NONE)', st.mc.dests[3] === 'IU5ABC-9' && st.mc.dests[4] === '' && st.mc.ssid === '12' && st.mc.window === '90' && st.cmds.includes('CFG SET MCDEST4 IU5ABC-9') && st.cmds.includes('CFG SET MCDEST5 NONE'), JSON.stringify(st.mc));
-  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 3] === 'CFG GET' && st.cmds[st.cmds.length - 2] === 'CFG GET SYSOP' && st.cmds[st.cmds.length - 1] === 'CFG GET IDINT');
+  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 4] === 'CFG GET' && st.cmds[st.cmds.length - 3] === 'CFG GET SYSOP' && st.cmds[st.cmds.length - 2] === 'CFG GET IDINT' && st.cmds[st.cmds.length - 1] === 'CFG GET MONITOR');
   check('nominativo maiuscolo', st.cfg.callsign === 'IU5HJU/P');
 
   // Modo Sysop: di partenza spento (testi visibili, elenco comandi nascosto), chiave non impostata
@@ -128,14 +134,29 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
   check('sysop spento e nominativo tolto', st.sysop.mode === 'off' && st.sysop.call === 'none' && (await p.isVisible('#textsbox')));
 
-  check('identificativo: letto e salvato', (await p.inputValue('#idint')) === '10' && st.cmds.includes('CFG SET IDINT 10'));
+  // Ruolo: di base stazione normale, riquadri del ripetitore nascosti e nessun comando del ripetitore
+  check('ruolo letto: stazione normale, riquadri nascosti', (await p.inputValue('#role')) === 'off' && (await p.isHidden('#rxbox')) && (await p.isHidden('#txbox')));
+  check('stazione normale: nessun comando ROLE a parte quello del ruolo, nessun IDINT/MONITOR', !st.cmds.some((c) => /^CFG SET (IDINT|MONITOR|FREQOUT)/.test(c)) && st.cmds.includes('CFG SET ROLE off'));
+  await p.selectOption('#role', 'rpttx');
+  check('scheda TX: compaiono frequenza di uscita e identificativo, non il monitor', (await p.isVisible('#txbox')) && (await p.isHidden('#rxbox')) && (await p.inputValue('#idint')) === '10' && (await p.inputValue('#freqout')) === '433.900');
+  await p.fill('#freqout', '999'); await p.click('#save');
+  await p.waitForTimeout(400);
+  check('frequenza di uscita fuori limite bloccata', st.cfg.role === 'off' && !st.cmds.some((c) => c.startsWith('CFG SET FREQOUT')));
+  await p.fill('#freqout', '434.400'); await p.fill('#idint', '11'); await p.click('#save');
+  await p.waitForTimeout(400);
+  check('identificativo 11 minuti bloccato', st.idint === '10');
   await p.fill('#idint', '3'); await p.click('#save');
   await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
-  check('identificativo 3 minuti salvato', st.idint === '3' && (await p.inputValue('#idint')) === '3');
-  await p.fill('#idint', '11'); await p.click('#save');
-  await p.waitForTimeout(400);
-  check('identificativo fuori limite bloccato', st.idint === '3');
-  await p.fill('#idint', '10');
+  check('TX salvata: ruolo, frequenza di uscita e identificativo', st.cfg.role === 'rpttx' && st.cfg.freqout === '434.400' && st.idint === '3' && st.cmds.includes('CFG SET ROLE rpttx') && st.cmds.includes('CFG SET FREQOUT 434.400') && st.cmds.includes('CFG SET IDINT 3'), st.cmds.slice(-12).join('|'));
+  check('rilettura: ruolo TX e riquadro visibile', (await p.inputValue('#role')) === 'rpttx' && (await p.isVisible('#txbox')) && (await p.inputValue('#idint')) === '3');
+  await p.selectOption('#role', 'rptrx');
+  check('scheda RX: compare il monitor, non la frequenza di uscita', (await p.isVisible('#rxbox')) && (await p.isHidden('#txbox')));
+  await p.selectOption('#monitor', 'on'); await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  check('RX salvata: ruolo e monitor', st.cfg.role === 'rptrx' && st.monitor === 'on' && st.cmds.includes('CFG SET MONITOR on'));
+  await p.selectOption('#role', 'off'); await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  check('di nuovo stazione normale', st.cfg.role === 'off' && (await p.isHidden('#rxbox')) && (await p.isHidden('#txbox')));
 
   check('GPS nascosto sulla T3', await p.isHidden('#gps'));
   check('nessun comando GPS sulla T3', !st.cmds.some((c) => c.startsWith('CFG SET GPS')));
