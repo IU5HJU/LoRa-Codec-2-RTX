@@ -298,3 +298,11 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Voce** (frase di circa 5 secondi, profilo Standard, Codec2 3200): **voce intelligibile, `persi 0`** secondo l'operatore. **Ritardo da una stazione all'altra attraverso i nodi: 1,4 s**, misurato a mano (comprende il pre-buffer di 1 s del ricevitore).
 - **Display dei nodi** (collegamento `ok`, `Coda 0`, `persi 0`): T-Beam `R>N 2`, `N>R 9`; T3 `R>N 16`, `N>R 18`. I contatori delle due schede non si corrispondono uno a uno: i contatori ripartono a ogni avvio e le schede erano state riavviate durante le prove; **da chiarire** con le righe `[nodo]` della seriale (`scartati collegamento giu'`, `ripetuti`).
 - Non annotato: direzione e profilo esatti della prova voce, RSSI, SNR, distanza. Ancora da fare: riavvio di un nodo, router spento, conversazione lunga, trasmissione di una stazione mentre il nodo trasmette.
+
+### 12/11/2026, casa, IU5HJU (nodo Internet: router spento)
+
+- Router Wi-Fi spento e poi riacceso, con i due nodi (T-Beam e T3, firmware `808bc07`) in funzione.
+- **Router spento:** il display di entrambi i nodi mostra `WiFi: connessione...` e `Nodo ... NO`. Contatori: T-Beam `R>N 39`, `N>R 53`; T3 `R>N 60`, `N>R 55`; `Coda 0`, `persi 0`.
+- **Router riacceso:** entrambi i nodi tornano da soli a `Nodo ... ok`, con gli stessi contatori (nessun pacchetto perso). L'operatore riferisce che entro **30 secondi al massimo** tutto è tornato a posto.
+- Nelle fotografie scattate subito dopo il ritorno la riga Wi-Fi dice ancora `connessione...` pur con il collegamento `ok`; secondo l'operatore, entro 30 secondi tutto è a posto. Non sono state registrate le righe della seriale.
+- Esito: **superata** (la prova "router spento per un minuto" della tabella di [banco-nodo.md](banco-nodo.md)).
