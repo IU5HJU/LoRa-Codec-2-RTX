@@ -318,3 +318,8 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - L'operatore riferisce **0 persi** (contatore `persi` dei nodi). Esito: **superata**.
 - Non annotati: i contatori finali `R>N`, `N>R` e `Coda` dei nodi, la memoria libera (`heap`) dopo la prova, il giudizio sull'intelligibilità, la direzione. La seriale della stazione non indica se il traffico è passato dai nodi ("via RPT" compare solo sul display).
 - **Contatori seriali di un nodo durante la conversazione lunga** (uno dei due nodi, non precisato quale): `radio->rete` da 471 a 733 in sei righe consecutive (una ogni 30 s, circa 73 pacchetti per ogni trasmissione da 30 s), `rete->radio 0`, **`persi coda 0`, `firma errata 0`, `ripetuti 0`, `scartati collegamento giu' 0`**, e **`heap` costante a 140792 byte** per tutte le righe (nessuna perdita di memoria visibile su 262 pacchetti). Il traffico era in un solo senso (radio → rete): nel tratto riportato il nodo non ha trasmesso in radio.
+
+### 12/11/2026, casa, IU5HJU (nodo Internet: canale occupato)
+
+- Prova "una stazione parla mentre il nodo trasmette" (sovrapposizione fra voce locale e voce dalla rete). L'operatore l'ha provata sfruttando le latenze fra trasmissione e ricezione, senza la procedura scritta in [banco-nodo.md](banco-nodo.md), e riferisce che il **blocco sul canale occupato funziona perfettamente**, nei due casi (la stazione locale inizia a parlare mentre il nodo ritrasmette; la voce dalla rete arriva mentre una stazione locale sta già parlando). Esito: **superata** secondo l'operatore.
+- Non annotati: i contatori dei nodi (`persi coda`), cosa viene perso in pratica, e il modo preciso della prova.
