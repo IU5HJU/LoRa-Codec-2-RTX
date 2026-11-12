@@ -289,3 +289,12 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Memoria della T3:** libera all'avvio circa **145,8 KB** (blocco più grande 77,8 KB); con il collegamento attivo e traffico l'heap resta stabile a circa **140,7 KB**.
 - Errore nelle istruzioni: nella procedura data a voce era scritto `CFG SET CALL`, che non esiste (`CFG ERR CALL parametro sconosciuto`); il comando è `CFG SET CALLSIGN`. Corretto in `banco-nodo.md` e `firmware.md`.
 - **Non annotato / ancora da fare:** direzione radio → rete (nel registro riportato `radio->rete` è 0), voce nei due sensi con una stazione vera e il flag "via RPT" sul display della stazione, riavvio di un nodo e router spento, conversazione lunga, trasmissione della stazione mentre il nodo trasmette. Nessun valore di RSSI, distanza o ritardo.
+
+### 12/11/2026, casa, IU5HJU (nodo Internet: radio, rete, radio con due stazioni)
+
+- Stessa configurazione della prova precedente (nodo T-Beam a 433.900 MHz, nodo T3 a 430.000 MHz, firmware `808bc07`, profilo Standard, potenza 2); due stazioni T3 normali, una su ciascuna frequenza, a distanza di banco.
+- **Testo, 433.900 → 430.000:** la stazione sul 430.000 ha ricevuto il messaggio ("MESSAGGIO RICEVUTO", poi il testo con il PTT) e a riposo mostra "Ultimo ... **via RPT**", `persi 0`, `recup. 3`. Esito: **superata**.
+- **Testo, 430.000 → 433.900:** la stazione sul 433.900 ha ricevuto il messaggio e il testo letto era quello inviato; a riposo "Ultimo ... via RPT", `persi 0`, `recup. 0`. Esito: **superata**.
+- **Voce** (frase di circa 5 secondi, profilo Standard, Codec2 3200): **voce intelligibile, `persi 0`** secondo l'operatore. **Ritardo da una stazione all'altra attraverso i nodi: 1,4 s**, misurato a mano (comprende il pre-buffer di 1 s del ricevitore).
+- **Display dei nodi** (collegamento `ok`, `Coda 0`, `persi 0`): T-Beam `R>N 2`, `N>R 9`; T3 `R>N 16`, `N>R 18`. I contatori delle due schede non si corrispondono uno a uno: i contatori ripartono a ogni avvio e le schede erano state riavviate durante le prove; **da chiarire** con le righe `[nodo]` della seriale (`scartati collegamento giu'`, `ripetuti`).
+- Non annotato: direzione e profilo esatti della prova voce, RSSI, SNR, distanza. Ancora da fare: riavvio di un nodo, router spento, conversazione lunga, trasmissione di una stazione mentre il nodo trasmette.
