@@ -57,6 +57,8 @@ const cmds = (page) => page.evaluate(() => window.__st.cmds.slice());
 async function connect(page) {
   await page.click('#connect');
   await until(page, () => document.getElementById('callsign').value !== '');
+  // i riquadri richiudibili (frequenze degli altri profili, modo Sysop) partono chiusi: i test li aprono come farebbe l'utente
+  await page.evaluate(() => { for (const d of document.querySelectorAll('#config details')) d.open = true; });
 }
 async function scenario(name, fn, opts = {}) {
   const before = failures;
@@ -472,7 +474,7 @@ async function scenario(name, fn, opts = {}) {
     await p.click('#save');
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
     const c = await cmds(p);
-    check('ROLE node sulla T-Beam, nessun comando del ripetitore', c.includes('CFG SET ROLE node') && !c.some((x) => /^CFG SET (FREQOUT|MONITOR|IDINT|IDMORSE)/.test(x)), c.join(' | '));
+    check('ROLE node sulla T-Beam: identificativo del nodo (IDINT, IDMORSE), nessun comando del ripetitore', c.includes('CFG SET ROLE node') && c.includes('CFG SET IDINT 10') && c.includes('CFG SET IDMORSE on') && !c.some((x) => /^CFG SET (FREQOUT|MONITOR)/.test(x)), c.join(' | '));
   });
 
   await scenario('ruolo del ripetitore: scheda RX con il monitor', async (p) => {
@@ -808,6 +810,43 @@ async function scenario(name, fn, opts = {}) {
     console.log((contrast >= 4.5 ? 'ok    ' : 'FALLITO ') + 'tema scuro');
     await p.close();
   }
+
+  await scenario('modalita: ogni modalita mostra solo le sue impostazioni', async (p) => {
+    await connect(p);
+    await until(p, () => !document.getElementById('role').disabled);
+    const vis = async (ids) => { const r = {}; for (const id of ids) r[id] = await p.isVisible('#' + id); return r; };
+    const all = ['callsign', 'profile', 'freq', 'freqmsg', 'power', 'volume', 'micfloor', 'qthlat', 'gps', 'mcdest1', 'sysopmode', 'text1', 'monitor', 'freqout', 'idint', 'idmorse'];
+    let v = await vis(all);
+    check('stazione: tutto della stazione, niente del ripetitore e del nodo', v.callsign && v.profile && v.freq && v.freqmsg && v.power && v.volume && v.micfloor && v.qthlat && v.gps && v.mcdest1 && v.sysopmode && v.text1 &&
+          !v.monitor && !v.freqout && !v.idint && !v.idmorse, JSON.stringify(v));
+    await p.selectOption('#role', 'rptrx');
+    v = await vis(all);
+    check('RX: nominativo, profilo, frequenze, potenza, volume e monitor; niente posizione, MeshCom, testi, sysop, microfono, uscita, identificativo',
+          v.callsign && v.profile && v.freq && v.power && v.volume && v.monitor && !v.micfloor && !v.qthlat && !v.gps && !v.mcdest1 && !v.sysopmode && !v.text1 && !v.freqout && !v.idint, JSON.stringify(v));
+    await p.selectOption('#role', 'rpttx');
+    v = await vis(all);
+    check('TX: uscita e identificativo; niente volume, monitor, microfono, posizione, MeshCom, testi, sysop',
+          v.callsign && v.freq && v.power && v.freqout && v.idint && v.idmorse && !v.volume && !v.monitor && !v.micfloor && !v.qthlat && !v.mcdest1 && !v.sysopmode && !v.text1, JSON.stringify(v));
+    await p.selectOption('#role', 'node');
+    v = await vis(all);
+    check('nodo: identificativo; niente uscita, monitor, volume, microfono, posizione, MeshCom, testi, sysop, frequenze degli altri profili',
+          v.callsign && v.profile && v.freq && v.power && v.idint && v.idmorse && !v.freqout && !v.monitor && !v.volume && !v.micfloor && !v.qthlat && !v.mcdest1 && !v.sysopmode && !v.text1 && !v.freqmsg, JSON.stringify(v));
+    await p.selectOption('#role', 'off');
+    v = await vis(all);
+    check('di nuovo stazione: tutto torna', v.volume && v.micfloor && v.qthlat && v.mcdest1 && v.sysopmode && v.text1 && !v.idint, JSON.stringify(v));
+    check('nessun errore JavaScript', p.errors.length === 0);
+  });
+
+  await scenario('modalita: i riquadri richiudibili partono chiusi', async (p) => {
+    check('frequenze degli altri profili e modo Sysop chiusi', await p.evaluate(() => !document.getElementById('otherfreq').open && !document.getElementById('sysopdet').open));
+    await p.click('#connect');
+    await until(p, () => document.getElementById('callsign').value !== '');
+    check('dopo il collegamento restano chiusi', await p.evaluate(() => !document.getElementById('otherfreq').open && !document.getElementById('sysopdet').open));
+    await p.evaluate(() => { document.getElementById('freqmsg').value = '999.000'; });
+    await p.click('#save');
+    await until(p, () => document.getElementById('otherfreq').open, null, 5000);
+    check('un errore nelle frequenze apre il riquadro', await p.evaluate(() => document.getElementById('otherfreq').open));
+  });
 
   await browser.close();
   server.close();

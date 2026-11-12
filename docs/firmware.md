@@ -212,6 +212,8 @@ Studio e decisioni: [studio-ripetitore.md](studio-ripetitore.md). **Scritto, non
 
 **Ruolo dalla pagina di configurazione (12/11/2026):** il ruolo (stazione normale, scheda RX, scheda TX) si sceglie anche dalle pagine web (la pagina interna della scheda e il sito): *Ruolo della scheda*; con la RX compare il monitor audio, con la TX la frequenza di uscita e l'intervallo dell'identificativo. Salvando, la pagina manda gli stessi comandi `CFG SET ROLE`, `FREQOUT`, `MONITOR`, `IDINT` descritti sotto, e rilegge il ruolo dalla scheda. Per tornare scheda normale basta scegliere *Stazione normale* (dalla scheda in ruolo da ripetitore la pagina interna non è raggiungibile dal menu: serve la seriale, `CFG SET ROLE OFF`, oppure il sito con il cavo USB).
 
+**Pagina di configurazione: le impostazioni compaiono in base alla modalità (13/11/2026).** La *Modalità della scheda* (stazione normale, ripetitore RX, ripetitore TX, nodo Internet) si sceglie subito dopo il nominativo e la pagina mostra solo le impostazioni che servono a quella modalità: la **stazione normale** vede posizione, GPS, MeshCom, testi e modo Sysop (richiudibile) oltre a volume e fondo del microfono; la **RX** vede il monitor e il volume; la **TX** la frequenza di uscita e l'identificativo; il **nodo** l'identificativo (`IDINT`, `IDMORSE`). Le frequenze dei profili Range e Messaggio stanno in un riquadro richiudibile, chiuso di base (si apre da solo se c'è un errore). I campi nascosti non cambiano: si salvano con i valori letti dalla scheda.
+
 **Impostazioni** (stesse per le due schede salvo il ruolo, dalla seriale USB o dalle pagine; valgono dal riavvio):
 
 ```

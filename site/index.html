@@ -29,6 +29,7 @@
   .verhelp { margin: 8px 0 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: .92rem; }
   .verhelp p { margin: 4px 0; }
   .verhelp ul { margin: 6px 0; padding-left: 22px; }
+  .nomode { display:none !important; }
   .hint { font-size:.85rem; color:var(--muted); margin:.2em 0 0; }
   /* Messaggio di stato: fisso in basso nella finestra, cosi' si vede accanto al pulsante premuto, ovunque sia nella pagina. */
   #status { font-weight:600; }
@@ -124,6 +125,35 @@
       <input id="callsign" maxlength="8" pattern="[A-Za-z0-9/]{1,8}" placeholder="IU5HJU" disabled required>
       <p class="hint">Solo lettere, cifre e “/”, massimo 8 caratteri. Con N0CALL la scheda non trasmette.</p>
 
+      <label for="role">Modalit&agrave; della scheda</label>
+      <select id="role" disabled><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option><option value="node">Nodo Internet (su Wi-Fi)</option></select>
+      <p class="hint" id="rolehint">Di base la scheda &egrave; una <strong>stazione normale</strong>. Le altre modalit&agrave; (ripetitore, nodo Internet) mostrano qui sotto le loro impostazioni solo quando le scegli; le impostazioni della stazione (posizione, MeshCom, testi, sysop) compaiono solo per la stazione normale.</p>
+      <p class="hint" id="rolenote" hidden><strong>Su questa scheda (T-Beam)</strong> il ripetitore non c&egrave;: due T-Beam sarebbero uno spreco (GPS, PMU e batteria che non servono). Il <strong>nodo Internet</strong> va bene anche sulla T-Beam.</p>
+      <div id="rptinfo" data-modes="rptrx rpttx">
+        <p class="hint">Due schede possono fare da ripetitore: una <strong>RX</strong> ascolta la frequenza di ingresso (quella del profilo, qui sotto) e una <strong>TX</strong> ritrasmette sulla frequenza di uscita. Con un ruolo da ripetitore la scheda non funziona pi&ugrave; da stazione: dopo il riavvio mostra lo stato del ripetitore. <strong>Attenzione:</strong> una scheda in ruolo da ripetitore non ha il menu a bordo, quindi non apre pi&ugrave; la pagina interna: per tornare stazione scegli <em>Stazione normale</em> qui, con il cavo USB.</p>
+      </div>
+      <div id="nodebox" hidden>
+        <p class="hint"><strong>Nodo Internet:</strong> la scheda porta i pacchetti LoRa a un'altra scheda via Wi-Fi (UDP firmato). Solo profilo Standard. Rete, indirizzo dell'altro nodo, id e chiave si impostano da seriale (<code>CFG SET WIFISSID</code>, <code>WIFIPASS</code>, <code>PEER</code>, <code>NODEID</code>, <code>PEERID</code>, <code>NODEKEY</code>: vedi la guida del firmware). Come per il ripetitore, in questo ruolo la scheda non ha il menu: per tornare stazione scegli <em>Stazione normale</em> qui, con il cavo USB.</p>
+      </div>
+      <div id="rxbox" hidden>
+        <label for="monitor">Altoparlante di monitor sulla RX</label>
+        <select id="monitor" disabled><option value="off">Spento</option><option value="on">Acceso</option></select>
+        <p class="hint">Con un altoparlante collegato (per il sysop in postazione) la RX fa ascoltare la voce che riceve. La seriale fra le due schede non cambia; i pin dell'altoparlante sono nella guida del firmware.</p>
+      </div>
+      <div id="txbox" hidden>
+        <label for="freqout">Frequenza di uscita (MHz)</label>
+        <input id="freqout" inputmode="decimal" placeholder="434.400" autocomplete="off" disabled>
+        <p class="hint">Da 430.000 a 440.000. Sulla scheda TX &egrave; anche la frequenza dei messaggi.</p>
+      </div>
+      <div id="idbox" data-modes="rpttx node">
+        <label for="idint">Identificativo ogni (minuti, 1-10)</label>
+        <input id="idint" type="number" min="1" max="10" step="1" placeholder="10" disabled>
+        <p class="hint">Ogni quanti minuti la scheda (TX del ripetitore o nodo) trasmette il proprio identificativo, con il nominativo qui sopra, in modo testo: le stazioni lo vedono passare senza suoni. Di base 10.</p>
+        <label for="idmorse">Identificativo anche in Morse (FM)</label>
+        <select id="idmorse" disabled><option value="on">S&igrave;</option><option value="off">No</option></select>
+        <p class="hint">Dopo il testo la scheda manda il nominativo in Morse con un tono in FM stretta (15 parole al minuto, 700 Hz): chi non ha le schede LoRa lo sente con un ricevitore FM qualsiasi e capisce che la frequenza &egrave; occupata. Dura circa 6 secondi.</p>
+      </div>
+
       <label for="profile">Profilo di trasmissione</label>
       <select id="profile" disabled>
         <option value="std">Standard: voce in tempo reale, più fedele (SF7, 250 kHz, Codec2 3200)</option>
@@ -136,6 +166,8 @@
       <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
       <p class="hint">Da 430.000 a 440.000. Il valore predefinito è un segnaposto: scegli il canale con il band plan IARU Regione 1 / ARI. Le stazioni che si ascoltano devono usare la stessa frequenza.</p>
 
+      <details class="falsi" id="otherfreq" data-modes="off rptrx rpttx">
+      <summary>Frequenze degli altri profili (Range e Messaggio)</summary>
       <label for="freqmsg">Frequenza del profilo Messaggio (MHz)</label>
       <input id="freqmsg" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
       <p class="hint" id="freqmsghint">La scheda usa la frequenza del profilo scelto. Le due frequenze <strong>possono essere uguali</strong> (nelle prove si usa spesso una frequenza nota): non c'è nessun obbligo di usarne di diverse. <button id="sameFreq" type="button" class="secondary" disabled>Usa quella dello Standard</button></p>
@@ -144,14 +176,18 @@
       <p class="hint">Come sopra, per il profilo Range: può essere uguale alle altre.</p>
       <p class="hint" id="freqnote" hidden>Stessa frequenza per i due profili: va bene per le prove, ma <strong>non è un canale condiviso</strong>. Profili diversi non si decodificano a vicenda e il controllo "canale occupato" non vede un segnale dell'altro profilo.</p>
 
+      </details>
       <label for="power">Potenza (dBm)</label>
       <input id="power" type="number" min="2" max="17" step="1" placeholder="10" disabled required>
       <p class="hint">Da 2 a 17 dBm.</p>
 
+      <div data-modes="off rptrx">
       <label for="volume">Volume iniziale dell'altoparlante</label>
       <input id="volume" type="number" min="0" max="10" step="1" placeholder="5" disabled required>
       <p class="hint">Da 0 (muto) a 10, in passi da 3 dB: il <strong>5</strong> è il livello di prima (0 dB), da 6 a 10 la voce si alza fino a +15 dB (con il limitatore che evita la saturazione). Con il pulsante volume (GPIO15) si cambia poi a scheda accesa; allo spegnimento torna a questo valore.</p>
 
+      </div>
+      <div data-modes="off">
       <label for="micfloor">Fondo del microfono (dBFS)</label>
       <p class="hint floorhint"><strong>Per misurarlo: resta in silenzio, non toccare il microfono e premi "Misura il fondo"</strong> (3 secondi). Il valore trovato viene salvato e vale subito.
       Poi lo puoi correggere a mano con &minus; e +: <strong>più alto</strong> = l'AGC taglia più rumore (ma può tagliare la voce debole), <strong>più basso</strong> = più sensibile (ma amplifica il fondo).
@@ -163,6 +199,8 @@
         <button id="measure" type="button" disabled>Misura il fondo</button>
       </div>
 
+      </div>
+      <div data-modes="off">
       <h3>Posizione (facoltativa)</h3>
       <label for="pos">Trasmissione della posizione</label>
       <select id="pos" disabled>
@@ -201,32 +239,9 @@
       <label for="mcdest5">Destinatario 5</label><input id="mcdest5" maxlength="15" autocomplete="off" disabled>
       <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S Standard, R Range, M Messaggio), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo S 433.900&rdquo;.</p>
 
-      <h3>Ripetitore</h3>
-      <p class="hint">Due schede possono fare da ripetitore: una <strong>RX</strong> ascolta la frequenza di ingresso (quella del profilo, qui sopra) e una <strong>TX</strong> ritrasmette sulla frequenza di uscita. Con un ruolo da ripetitore la scheda non funziona pi&ugrave; da stazione: dopo il riavvio mostra lo stato del ripetitore. <strong>Attenzione:</strong> una scheda in ruolo da ripetitore non ha il menu a bordo, quindi non apre pi&ugrave; la pagina interna: per tornare stazione scegli <em>Stazione normale</em> qui, con il cavo USB.</p>
-      <label for="role">Ruolo della scheda</label>
-      <select id="role" disabled><option value="off">Stazione normale</option><option value="rptrx">Ripetitore: scheda RX (ascolta l'ingresso)</option><option value="rpttx">Ripetitore: scheda TX (trasmette l'uscita)</option><option value="node">Nodo Internet (T3 su Wi-Fi)</option></select>
-      <p class="hint" id="rolenote" hidden><strong>Su questa scheda (T-Beam)</strong> il ripetitore non c&egrave;: due T-Beam sarebbero uno spreco (GPS, PMU e batteria che non servono). Il <strong>nodo Internet</strong> va bene anche sulla T-Beam.</p>
-      <div id="nodebox" hidden>
-        <p class="hint"><strong>Nodo Internet:</strong> la T3 porta i pacchetti LoRa a un'altra T3 via Wi-Fi (UDP firmato). Solo profilo Standard. Rete, indirizzo dell'altro nodo, id e chiave si impostano da seriale (<code>CFG SET WIFISSID</code>, <code>WIFIPASS</code>, <code>PEER</code>, <code>NODEID</code>, <code>PEERID</code>, <code>NODEKEY</code>: vedi la guida del firmware). Come per il ripetitore, in questo ruolo la scheda non ha il menu.</p>
       </div>
-      <div id="rxbox" hidden>
-        <label for="monitor">Altoparlante di monitor sulla RX</label>
-        <select id="monitor" disabled><option value="off">Spento</option><option value="on">Acceso</option></select>
-        <p class="hint">Con un altoparlante collegato (per il sysop in postazione) la RX fa ascoltare la voce che riceve. La seriale fra le due schede non cambia; i pin dell'altoparlante sono nella guida del firmware.</p>
-      </div>
-      <div id="txbox" hidden>
-        <label for="freqout">Frequenza di uscita (MHz)</label>
-        <input id="freqout" inputmode="decimal" placeholder="434.400" autocomplete="off" disabled>
-        <p class="hint">Da 430.000 a 440.000. Sulla scheda TX &egrave; anche la frequenza dei messaggi.</p>
-        <label for="idint">Identificativo ogni (minuti, 1-10)</label>
-        <input id="idint" type="number" min="1" max="10" step="1" placeholder="10" disabled>
-        <label for="idmorse">Identificativo anche in Morse (FM)</label>
-        <select id="idmorse" disabled><option value="on">S&igrave;</option><option value="off">No</option></select>
-        <p class="hint">Dopo il testo la TX manda il nominativo in Morse con un tono in FM stretta (15 parole al minuto, 700 Hz): chi non ha le schede LoRa lo sente con un ricevitore FM qualsiasi e capisce che la frequenza &egrave; occupata da un ripetitore. Dura circa 6 secondi.</p>
-        <p class="hint">Ogni quanti minuti la TX trasmette l'identificativo del ripetitore (il nominativo qui sopra, in modo testo: le stazioni lo vedono passare senza suoni). Di base 10.</p>
-      </div>
-
-      <h3>Modo Sysop</h3>
+      <details class="falsi" id="sysopdet" data-modes="off">
+      <summary>Modo Sysop (per chi gestisce un ripetitore)</summary>
       <p class="hint" id="sysophint">Per chi gestisce un ripetitore. Con il <strong>modo Sysop</strong> acceso il menu della scheda (volume lungo) mostra <strong>Comandi Sysop</strong> al posto di Invia testo: scegli il comando (STATO, SPEGNI, RIACCENDI, RIAVVIA, IDENTIFICA, POTENZA) e la scheda lo trasmette firmato al ripetitore. Resta acceso finch&eacute; non lo spegni. Nominativo e chiave vanno impostati uguali sul ripetitore (schede RX e TX) e sulla scheda del sysop; la chiave non si rilegge mai.</p>
       <label for="sysopmode">Modo Sysop</label>
       <select id="sysopmode" disabled><option value="off">Spento</option><option value="on">Acceso</option></select>
@@ -240,7 +255,9 @@
         <ol id="sysoplist"><li>STATO</li><li>SPEGNI</li><li>SPEGNI 15 MIN</li><li>SPEGNI 60 MIN</li><li>RIACCENDI</li><li>RIAVVIA</li><li>IDENTIFICA</li><li>POTENZA 17 dBm</li><li>POTENZA 14 dBm</li><li>POTENZA 10 dBm</li></ol>
       </div>
 
-      <div id="textsbox">
+      </details>
+
+      <div id="textsbox" data-modes="off">
       <h3>Testi predefiniti (SMS)</h3>
       <p class="hint" id="texthint">Fino a <strong>5 testi brevi</strong> (massimo 150 caratteri ciascuno, solo lettere, cifre e simboli senza accenti e senza le parentesi graffe) da inviare dalla scheda: menu a bordo (volume lungo) &rarr; <strong>Invia testo</strong>. Chi riceve sente &ldquo;SMS&rdquo; in Morse, vede una busta sul display e preme il PTT per leggere. Lascia vuoto un posto per non usarlo. Valgono subito, senza riavvio.</p>
       <label for="text1">Testo 1</label><input id="text1" maxlength="150" autocomplete="off" disabled>
@@ -443,7 +460,11 @@
     updateMcControls(!!port);
   }
   let roleSeen = false;      // l'ultimo CFG GET conteneva role= (firmware piu' vecchi: no)
-  function roleShow() { const r = $('role').value; $('rxbox').hidden = r !== 'rptrx'; $('txbox').hidden = r !== 'rpttx'; $('nodebox').hidden = r !== 'node'; }
+  function roleShow() {
+    const r = roleSeen ? $('role').value : 'off';  // senza ruolo (firmware vecchio, scheda non collegata) si vedono le impostazioni della stazione
+    $('rxbox').hidden = r !== 'rptrx'; $('txbox').hidden = r !== 'rpttx'; $('nodebox').hidden = r !== 'node';
+    for (const el of document.querySelectorAll('[data-modes]')) el.classList.toggle('nomode', !el.dataset.modes.split(' ').includes(r));
+  }
   function updateRoleControls(on) {
     for (const id of ['role', 'monitor', 'freqout']) $(id).disabled = !on || !roleSeen;
     for (const o of $('role').options) if (o.value === 'rptrx' || o.value === 'rpttx') o.disabled = lastBoard === 'tbeam';  // il ripetitore solo sulla T3
@@ -523,7 +544,7 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; roleSeen = false; }
+    if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; roleSeen = false; roleShow(); }
     $('idint').disabled = !on || !idintSeen;
     $('idmorse').disabled = !on || !idmorseSeen;
     updateRoleControls(on);
@@ -750,13 +771,13 @@
       }
       if (role === 'rptrx') monitor = $('monitor').value;
     }
-    if (!$('idint').disabled && role === 'rpttx') {
+    if (!$('idint').disabled && (role === 'rpttx' || role === 'node')) {
       const im = $('idint').value.trim();
       if (!/^\d{1,2}$/.test(im) || +im < 1 || +im > 10) return { err: 'L\'identificativo del ripetitore va da 1 a 10 minuti.' };
       idint = String(parseInt(im, 10));
     }
     let idmorse = null;
-    if (!$('idmorse').disabled && role === 'rpttx') idmorse = $('idmorse').value === 'off' ? 'off' : 'on';
+    if (!$('idmorse').disabled && (role === 'rpttx' || role === 'node')) idmorse = $('idmorse').value === 'off' ? 'off' : 'on';
     let sysop = null;
     if (!$('sysopmode').disabled) {
       const sy = $('sysop').value.trim().toUpperCase();
@@ -781,7 +802,7 @@
     ev.preventDefault();
     if (legacyFw) { setStatus('Firmware precedente al 12/11/2026: aggiornalo prima di salvare le impostazioni da qui.', 'err'); return; }
     const v = validate();
-    if (v.err) { setStatus(v.err, 'err'); return; }
+    if (v.err) { $('otherfreq').open = true; setStatus(v.err, 'err'); return; }
     setStatus('Salvataggio…', '');
     try {
       const replies = [];
@@ -1057,6 +1078,7 @@
   }
   $('testOn').addEventListener('click', () => setTest(true));
   $('testOff').addEventListener('click', () => setTest(false));
+  roleShow();
   if (!supported) $('connect').disabled = true;
 })();
 </script>
