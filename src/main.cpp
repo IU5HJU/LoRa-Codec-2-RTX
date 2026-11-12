@@ -23,6 +23,7 @@
 #include "ptt_button.h"
 #include "radio_lora.h"
 #include "repeater_node.h"
+#include "radio_test.h"
 #include "settings.h"
 #include "sysop.h"
 #include "settings_nvs.h"
@@ -507,6 +508,118 @@ static void runSysopCommand(const char* args) {
   sendSysop(code, static_cast<uint16_t>(param));
 }
 
+// ---- Prove radio del Morse (CFG RADIOTEST, docs/studio-identificativo-cw.md): CW puro e tono Morse in FM stretta con i pacchetti FSK ----
+
+static bool radioTestAbort() {  // un tasto qualsiasi dalla seriale ferma la prova
+  if (Serial.available() <= 0) return false;
+  while (Serial.available() > 0) Serial.read();
+  return true;
+}
+
+// Un identificativo: i pacchetti dei toni e le pause. Ritorna false se la radio non ha trasmesso o la prova e' stata fermata.
+static bool radioTestMorse(const lcr::RadioTestRequest& rq, const lcr::MorseBurst* b, size_t n, float kbps, uint8_t pattern) {
+  const uint32_t t0 = millis();
+  for (size_t i = 0; i < n; i++) {
+    if (radioTestAbort()) return false;
+    if (b[i].tone) {
+      if (!radio.fskSend(pattern, b[i].bytes)) {
+        Serial.printf("CFG RADIOTEST ERR trasmissione (errore radio %d)\n", radio.lastError());
+        return false;
+      }
+    } else {
+      delay(b[i].ms);
+    }
+  }
+  uint32_t planned = 0;
+  for (size_t i = 0; i < n; i++) planned += b[i].tone ? static_cast<uint32_t>(lcr::burstAirMs(b[i].bytes, kbps) + 0.5f) : b[i].ms;
+  Serial.printf("CFG RADIOTEST morse fine durata=%lu ms (prevista dai pacchetti %lu ms, testo %s)\n", static_cast<unsigned long>(millis() - t0),
+                static_cast<unsigned long>(planned), rq.text);
+  return true;
+}
+
+static void runRadioTest(const lcr::RadioTestRequest& rq) {
+  if (lcr::isPlaceholderCallsign(settings.callsign)) {
+    Serial.println("CFG RADIOTEST ERR imposta il nominativo (non N0CALL): la prova trasmette");
+    return;
+  }
+  if (node->state() != lcr::VoiceNode::State::Idle || node->recPhase() != lcr::VoiceNode::RecPhase::None || node->meshcomActive()) {
+    Serial.println("CFG RADIOTEST ERR la scheda sta ricevendo o trasmettendo");
+    return;
+  }
+  if (radio.channelBusy()) {
+    Serial.println("CFG RADIOTEST ERR canale occupato (CAD)");
+    return;
+  }
+  const bool fmTone = rq.kind == lcr::RadioTestKind::Tone || ((rq.kind == lcr::RadioTestKind::Morse || rq.kind == lcr::RadioTestKind::Beacon) && rq.fm);
+  const float kbps = lcr::radioTestBitRateKbps(rq);
+  const float dev = fmTone ? rq.devKhz : lcr::kCwDevKhz;
+  const float centerMhz = settings.freqMhz();
+  // In FSK un bit 1 e' la frequenza centrale + la deviazione: per il CW (tutti 1) si compensa, cosi' la portante cade sulla frequenza
+  const float carrierMhz = fmTone ? centerMhz : centerMhz - dev / 1000.0f;
+  const uint8_t pattern = lcr::radioTestPattern(rq);
+  static const char* const kKind[] = {"morse", "beacon", "carrier", "tone"};
+  Serial.printf("CFG RADIOTEST start tipo=%s modo=%s freq=%.4f MHz portante=%.4f MHz dev=%.2f kHz bitrate=%.3f kbps tono=%.0f Hz potenza=%d dBm ramp=%d shape=%d\n",
+                kKind[static_cast<int>(rq.kind)], fmTone ? "FM" : "CW", static_cast<double>(centerMhz), static_cast<double>(carrierMhz), static_cast<double>(dev),
+                static_cast<double>(kbps), fmTone ? static_cast<double>(kbps * 500.0f) : 0.0, settings.powerDbm, rq.ramp, rq.shape);
+  char l2[24];
+  snprintf(l2, sizeof(l2), "%s %s", fmTone ? "FM" : "CW", rq.text[0] ? rq.text : kKind[static_cast<int>(rq.kind)]);
+  ui.showMessage("PROVA MORSE", l2);
+
+  lcr::MorseBurst bursts[160];
+  size_t nb = 0;
+  if (rq.kind == lcr::RadioTestKind::Morse || rq.kind == lcr::RadioTestKind::Beacon) {
+    bool clamped = false;
+    nb = lcr::planMorseBursts(rq, bursts, sizeof(bursts) / sizeof(bursts[0]), &clamped);
+    if (clamped) Serial.println("CFG RADIOTEST avviso: un tono e' piu' lungo di un pacchetto (255 byte) ed e' stato accorciato (abbassa hz o alza wpm)");
+    if (nb == 0) {
+      Serial.println("CFG RADIOTEST ERR il testo non ha lettere ne' cifre");
+      ui.refresh();
+      return;
+    }
+  }
+
+  uint32_t cycles = 0;
+  bool ok = true;
+  do {
+    const uint32_t ts = millis();
+    if (!radio.fskBegin(carrierMhz, kbps, dev, rq.ramp, fmTone ? rq.shape : 0)) {
+      Serial.printf("CFG RADIOTEST ERR radio FSK non parte (errore %d)\n", radio.lastError());
+      ok = false;
+    } else {
+      const uint32_t tb = millis() - ts;
+      if (rq.kind == lcr::RadioTestKind::Carrier || rq.kind == lcr::RadioTestKind::Tone) {
+        // portante o tono continuo: pacchetti da 255 byte uno dopo l'altro (fra uno e l'altro la portante si ferma per un attimo)
+        const float packetMs = lcr::burstAirMs(255, kbps);
+        const uint32_t n = static_cast<uint32_t>(rq.seconds * 1000.0f / packetMs) + 1;
+        for (uint32_t i = 0; i < n && ok; i++) {
+          if (radioTestAbort()) break;
+          ok = radio.fskSend(pattern, 255);
+        }
+        Serial.printf("CFG RADIOTEST %s fine pacchetti=%lu da %.0f ms\n", kKind[static_cast<int>(rq.kind)], static_cast<unsigned long>(n), static_cast<double>(packetMs));
+      } else {
+        ok = radioTestMorse(rq, bursts, nb, kbps, pattern);
+      }
+      const uint32_t te = millis();
+      radio.fskEnd();  // di nuovo LoRa e in ascolto
+      cycles++;
+      Serial.printf("CFG RADIOTEST ciclo %lu: cambio a FSK %lu ms, ritorno a LoRa %lu ms\n", static_cast<unsigned long>(cycles), static_cast<unsigned long>(tb),
+                    static_cast<unsigned long>(millis() - te));
+    }
+    if (rq.kind == lcr::RadioTestKind::Beacon && ok) {  // pausa fino al prossimo identificativo, interrotta da un tasto
+      const uint32_t until = millis() + static_cast<uint32_t>(rq.periodS) * 1000u;
+      while (static_cast<int32_t>(until - millis()) > 0) {
+        if (radioTestAbort()) {
+          ok = false;
+          break;
+        }
+        delay(20);
+      }
+    }
+  } while (rq.kind == lcr::RadioTestKind::Beacon && ok);
+  Serial.println("CFG RADIOTEST fine");
+  ui.refresh();
+}
+
 // Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
 static void serviceConsole() {
   static char line[224];  // "CFG SET TEXTn " + fino a 150 caratteri
@@ -529,6 +642,7 @@ static void serviceConsole() {
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);
       if (r == lcr::ConsoleResult::AudioTest) runAudioTest();
+      if (r == lcr::ConsoleResult::RadioTest) runRadioTest(console->radioTestRequest());
       if (r == lcr::ConsoleResult::CodecTest) runCodecTest();
       audio.setMicFloor(console->stored().micFloorDb);  // il fondo si applica subito (CFG SET MICFLOOR)
       node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio

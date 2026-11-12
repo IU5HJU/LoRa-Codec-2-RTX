@@ -35,6 +35,7 @@
 //   CFG SET SYSOPMODE ON         -> CFG OK sysopmode=on        (modo Sysop: nel menu "Comandi Sysop" al posto di "Invia testo"; OFF lo spegne; vale dal riavvio)
 //   CFG SET IDINT 10             -> CFG OK idint=10            (ripetitore: ogni quanti minuti, da 1 a 10, la scheda TX manda l'identificativo; di base 10; vale dal riavvio)
 //   CFG GET IDINT                -> CFG IDINT=10
+//   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-cw.md)
 //   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set mode=off
 //   CFG GET MCDEST1              -> CFG MCDEST1=22251
 //   CFG SET MCWINDOW 300         -> CFG OK mcwindow=300        (secondi di ascolto dopo l'invio, 30-1800)
@@ -56,6 +57,7 @@
 
 #include "position.h"
 #include "profile.h"
+#include "radio_test.h"
 #include "protocol.h"
 
 namespace lcr {
@@ -205,6 +207,7 @@ enum class ConsoleResult {
   Reboot,  // risposta pronta; il chiamante deve riavviare la scheda
   MicMeasure,  // risposta pronta; il chiamante deve misurare il fondo per 3 s e stampare il risultato
   CodecTest,   // risposta pronta; il chiamante deve registrare 3 s e riprodurli senza e con Codec2
+  RadioTest,   // risposta pronta; il chiamante deve fare la prova radio del Morse (radioTestRequest(), docs/studio-identificativo-cw.md)
   AudioTest,   // risposta pronta; il chiamante deve suonare i toni di prova e stampare i livelli del microfono
 };
 
@@ -225,6 +228,8 @@ class SettingsConsole {
   bool testMode() const { return testMode_; }
   // Modo "registra e poi trasmetti" (CFG REC ON/OFF): anche questo non viene salvato.
   bool recordMode() const { return recMode_; }
+  // Ultima richiesta di CFG RADIOTEST (valida dopo ConsoleResult::RadioTest).
+  const RadioTestRequest& radioTestRequest() const { return radioTest_; }
   // Allinea lo stato quando la prova viene attivata o disattivata da tre clic sul PTT.
   void setTestMode(bool on) { testMode_ = on; }
 
@@ -242,6 +247,7 @@ class SettingsConsole {
 
   bool testMode_ = false;
   bool recMode_ = false;
+  RadioTestRequest radioTest_;
   Settings active_;
   Settings defaults_;
   Settings stored_;

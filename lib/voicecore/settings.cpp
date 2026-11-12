@@ -186,6 +186,21 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
   if (reply && cap > 0) reply[0] = 0;
   if (!line) return ConsoleResult::NotCommand;
 
+  // CFG RADIOTEST ...: prove radio del Morse (parametri liberi, letti da radio_test.cpp)
+  if (strncasecmp(line, "CFG", 3) == 0 && (line[3] == ' ' || line[3] == '\t')) {
+    const char* q = line + 3;
+    while (*q == ' ' || *q == '\t') q++;
+    if (strncasecmp(q, "RADIOTEST", 9) == 0 && (q[9] == 0 || q[9] == ' ' || q[9] == '\t')) {
+      char err[80];
+      if (!parseRadioTest(q + 9, radioTest_, err, sizeof(err))) {
+        say(reply, cap, "CFG ERR radiotest %s", err);
+        return ConsoleResult::Error;
+      }
+      say(reply, cap, "CFG OK radiotest in corso (un tasto in seriale la ferma)");
+      return ConsoleResult::RadioTest;
+    }
+  }
+
   // Spezza in parole (massimo 4) su una copia: la riga originale non si tocca.
   char buf[96];  // solo per spezzare in parole: i testi (CFG SET TEXTn) si leggono dalla riga originale
   strncpy(buf, line, sizeof(buf) - 1);

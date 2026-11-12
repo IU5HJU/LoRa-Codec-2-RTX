@@ -128,6 +128,17 @@ static void testMonitor() {
   CHECK(f.run("CFG SET MONITOR MAYBE") == ConsoleResult::Error && !f.st.data.rxMonitor);
 }
 
+static void testRadioTestCommand() {
+  Fixture f;
+  CHECK(f.run("CFG RADIOTEST MORSE FM IR5XXX wpm=12") == ConsoleResult::RadioTest && strstr(f.reply, "CFG OK"));
+  CHECK(f.con.radioTestRequest().kind == RadioTestKind::Morse && f.con.radioTestRequest().wpm == 12 && strcmp(f.con.radioTestRequest().text, "IR5XXX") == 0);
+  CHECK(f.run("cfg radiotest tone 3 hz=900") == ConsoleResult::RadioTest && f.con.radioTestRequest().seconds == 3 && f.con.radioTestRequest().toneHz == 900);
+  CHECK(f.run("CFG RADIOTEST MORSE SSB X") == ConsoleResult::Error && strstr(f.reply, "CFG ERR radiotest"));
+  CHECK(f.run("CFG RADIOTEST") == ConsoleResult::Error);
+  CHECK(f.run("CFG RADIOTESTX") == ConsoleResult::Error);  // comando sconosciuto, non una prova
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=0"));  // non cambia nessuna impostazione
+}
+
 static void testIdInterval() {
   Fixture f;
   CHECK(f.run("CFG GET IDINT") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDINT=10") == 0);
@@ -577,6 +588,7 @@ int main() {
   testRoleNotOnTbeam();
   testTexts();
   testMonitor();
+  testRadioTestCommand();
   testIdInterval();
   testSysop();
   testMeshcomSettings();

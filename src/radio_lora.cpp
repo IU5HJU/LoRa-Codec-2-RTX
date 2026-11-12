@@ -22,13 +22,19 @@ void IRAM_ATTR RadioLora::onPacketIsr() {
 bool RadioLora::begin(const lcr::Settings& settings) {
   settings_ = settings;
   SPI.begin(pins::kRadioSclk, pins::kRadioMiso, pins::kRadioMosi, pins::kRadioCs);
-  radio_ = new SX1278(new Module(pins::kRadioCs, pins::kRadioDio0, pins::kRadioRst, pins::kRadioDio1, SPI));
+  module_ = new Module(pins::kRadioCs, pins::kRadioDio0, pins::kRadioRst, pins::kRadioDio1, SPI);
+  radio_ = new SX1278(module_);
 
-  // I parametri LoRa vengono dal profilo scelto (profile.h): Standard SF8/BW250, Messaggio SF12/BW125.
-  const lcr::Profile& prof = lcr::profileFor(settings.profile);
+  return initLora();
+}
+
+// I parametri LoRa vengono dal profilo scelto (profile.h): Standard SF8/BW250, Messaggio SF12/BW125. Si usa anche per tornare a LoRa
+// dopo una prova FSK (fskEnd): begin() rifa' il reset del chip.
+bool RadioLora::initLora() {
+  const lcr::Profile& prof = lcr::profileFor(settings_.profile);
   // La sync word e' quella del profilo (0 = LCR_SYNC_WORD): l'escursione MeshCom usa quella della rete a pacchetto (0x2B)
-  int state = radio_->begin(settings.freqMhz(), prof.bwKhz, prof.sf, prof.cr, prof.syncWord ? prof.syncWord : LCR_SYNC_WORD,
-                            static_cast<int8_t>(settings.powerDbm), prof.preambleSymbols);
+  int state = radio_->begin(settings_.freqMhz(), prof.bwKhz, prof.sf, prof.cr, prof.syncWord ? prof.syncWord : LCR_SYNC_WORD,
+                            static_cast<int8_t>(settings_.powerDbm), prof.preambleSymbols);
   if (state != RADIOLIB_ERR_NONE) {
     lastError_ = state;
     return false;
@@ -38,6 +44,43 @@ bool RadioLora::begin(const lcr::Settings& settings) {
   radio_->setPacketReceivedAction(onPacketIsr);
   startReceive();
   return true;
+}
+
+bool RadioLora::fskBegin(float mhz, float kbps, float devKhz, int ramp, int shape) {
+  // preambolo 0, nessuna parola di sincronismo, nessun CRC: il pacchetto e' solo il suo contenuto
+  int state = radio_->beginFSK(mhz, kbps, devKhz, 125.0f, static_cast<int8_t>(settings_.powerDbm), 0, false);
+  if (state == RADIOLIB_ERR_NONE) {
+    uint8_t unused = 0;
+    state = radio_->setSyncWord(&unused, 0);
+  }
+  if (state == RADIOLIB_ERR_NONE) state = radio_->setCRC(false);
+  if (state == RADIOLIB_ERR_NONE && shape != 0) {
+    state = radio_->setDataShaping(shape == 3 ? RADIOLIB_SHAPING_0_3 : (shape == 5 ? RADIOLIB_SHAPING_0_5 : RADIOLIB_SHAPING_1_0));
+  }
+  if (state == RADIOLIB_ERR_NONE && ramp >= 0) {  // salita della potenza: 4 bit bassi di PaRamp (da verificare sul datasheet: 0 = la piu' lenta)
+    state = module_->SPIsetRegValue(RADIOLIB_SX127X_REG_PA_RAMP, static_cast<uint8_t>(ramp), 3, 0);
+  }
+  if (state != RADIOLIB_ERR_NONE) lastError_ = state;
+  return state == RADIOLIB_ERR_NONE;
+}
+
+bool RadioLora::fskSend(uint8_t pattern, uint16_t bytes) {
+  static uint8_t buf[255];
+  if (bytes == 0 || bytes > sizeof(buf)) return false;
+  memset(buf, pattern, bytes);
+  int state = radio_->fixedPacketLengthMode(static_cast<uint8_t>(bytes));
+  if (state == RADIOLIB_ERR_NONE) {
+    txActive_ = true;
+    state = radio_->transmit(buf, bytes);  // bloccante: dura bytes * 8 / bit rate
+    txActive_ = false;
+  }
+  if (state != RADIOLIB_ERR_NONE) lastError_ = state;
+  return state == RADIOLIB_ERR_NONE;
+}
+
+void RadioLora::fskEnd() {
+  radio_->standby();
+  initLora();
 }
 
 // Porta frequenza, banda, SF, CR, sync word e preambolo ai valori dati (i setter di RadioLib mettono la radio in standby e ricalcolano da

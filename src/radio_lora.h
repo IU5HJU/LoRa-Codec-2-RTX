@@ -25,6 +25,14 @@ class RadioLora : public lcr::IRadio {
   bool setParams(const lcr::Profile& prof, uint32_t freqKhz) override;
   bool setPower(int dbm) override { return radio_->setOutputPower(static_cast<int8_t>(dbm)) == RADIOLIB_ERR_NONE; }
 
+  // Prove radio del Morse (radio_test.h): la radio esce da LoRa e trasmette pacchetti FSK a lunghezza fissa senza preambolo, sincronismo
+  // ne' CRC (tutti 0xFF = portante, 0xAA = tono quadro di bit rate / 2); fskEnd riporta la radio a LoRa e in ascolto. NON usare mentre
+  // la scheda sta ricevendo o trasmettendo voce.
+  //   mhz: frequenza centrale; kbps: bit rate; devKhz: deviazione; ramp: 0..15 (registro PaRamp) o -1; shape: 0, 3, 5, 10 (gaussiano).
+  bool fskBegin(float mhz, float kbps, float devKhz, int ramp, int shape);
+  bool fskSend(uint8_t pattern, uint16_t bytes);
+  void fskEnd();
+
   float lastRssi() const { return lastRssi_; }
   bool hasSnr() const override { return true; }
   float lastSnr() const override { return lastSnr_; }
@@ -49,7 +57,9 @@ class RadioLora : public lcr::IRadio {
   static volatile uint32_t rxIsrCount_;
 
   bool applyParams(const lcr::Profile& prof, float mhz);
+  bool initLora();  // begin() LoRa con i parametri del profilo in uso + CRC, intestazione esplicita, interrupt e ascolto
   SX1278* radio_ = nullptr;
+  Module* module_ = nullptr;  // lo stesso modulo di radio_ (getMod() e' protetto): serve per scrivere il registro PaRamp
   lcr::Settings settings_;  // impostazioni con cui e' partita la radio (profilo in uso e frequenze)
   float lastRssi_ = 0;
   float lastSnr_ = 0;

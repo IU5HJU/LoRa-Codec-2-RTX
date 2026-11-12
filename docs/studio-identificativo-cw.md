@@ -38,4 +38,38 @@ Un pacchetto FSK con i byte `0xAA` (10101010...) fa alternare la frequenza fra d
 
 ## Verdetto
 
-**Fattibile con l'hardware attuale** per entrambi i modi, senza fili aggiunti, con la parte difficile spostata sulle misure: precisione di frequenza, deviazione, spettro del tasto. Il modo **B (tono Morse in FM stretta)** è quello che serve a chi ha un ricevitore FM qualsiasi; il **A (CW puro)** a chi ascolta in SSB o con un SDR. Ordine di prova proposto: (1) B su una T3, ascoltato con un walkie-talkie e con RTL-SDR, per misurare la frequenza del tono, la deviazione e l'errore di frequenza; (2) A con diverse rampe; (3) controllo di DIO2 sulla T-Beam solo se serve un tono sinusoidale. Non scrivo il codice prima della prova (1): se lo spettro non è pulito, l'identificativo in aria va ripensato (filtro o amplificatore esterni).
+**Fattibile con l'hardware attuale** per entrambi i modi, senza fili aggiunti, con la parte difficile spostata sulle misure: precisione di frequenza, deviazione, spettro del tasto. Il modo **B (tono Morse in FM stretta)** è quello che serve a chi ha un ricevitore FM qualsiasi; il **A (CW puro)** a chi ascolta in SSB o con un SDR. Ordine di prova proposto: (1) B su una T3, ascoltato con un walkie-talkie e con RTL-SDR, per misurare la frequenza del tono, la deviazione e l'errore di frequenza; (2) A con diverse rampe; (3) controllo di DIO2 sulla T-Beam solo se serve un tono sinusoidale. Il firmware di prova per le misure (1) e (2) è scritto (sotto); l'identificativo vero del ripetitore in Morse si scrive solo dopo le misure: se lo spettro non è pulito, va ripensato (filtro o amplificatore esterni).
+
+## Firmware di prova (12/11/2026)
+
+Non c'è un firmware a parte: i comandi di prova stanno nel firmware normale (come `CFG TEST AUDIO`), quindi basta il firmware T3 dell'ultimo run verde di [GitHub Actions](https://github.com/IU5HJU/VoLoRa/actions) (artefatto `firmware-t3-v161`). La parte radio è scritta contro **le sorgenti vere di RadioLib 7.5.0** (la stessa versione del progetto: controllato che la sintassi compili con quelle intestazioni); **non è mai stata eseguita su una scheda**.
+
+**Cosa ho potuto verificare dalle sorgenti di RadioLib** (non dal datasheet, che non è raggiungibile da questa sessione):
+- deviazione di frequenza: minima 0,6 kHz (il codice la chiama "il valore più basso, necessario per i modi digitali"), massima 200 kHz, con il vincolo deviazione + bit rate/2 ≤ 250 kHz; passo di circa 61 Hz (quarzo da 32 MHz);
+- bit rate FSK da 0,5 a 300 kbit/s; preambolo, parola di sincronismo (si può spegnere) e CRC (si può spegnere) sono regolabili, quindi un pacchetto può essere **solo** il suo contenuto;
+- filtro gaussiano BT 0,3, 0,5 o 1,0 e salita della potenza stanno nello stesso registro `PaRamp` (0x0A): il filtro nei bit 6-5; per la salita uso i bit 3-0, **con il significato dei valori da verificare sul banco** (parto dal valore 0 e salgo).
+
+**Comandi** (dal terminale seriale a 115200 o dal sito, scheda normale con un nominativo vero; la potenza è quella di `CFG SET POWER`, la frequenza è quella del profilo in uso):
+
+| Comando | Cosa trasmette |
+|---|---|
+| `CFG RADIOTEST CARRIER 5` | portante pura (tutti i bit a 1) per 5 s: serve a misurare la **frequenza** e la sua deriva |
+| `CFG RADIOTEST TONE 5 hz=700 dev=2.5` | tono continuo in FM (bit 1010...) per 5 s: serve a misurare **deviazione, frequenza del tono, armoniche** |
+| `CFG RADIOTEST MORSE FM IR5XXX` | l'identificativo in Morse con tono in FM stretta (15 parole al minuto, tono 700 Hz, deviazione ±2,5 kHz) |
+| `CFG RADIOTEST MORSE CW IR5XXX` | lo stesso in CW puro (portante accesa e spenta) |
+| `CFG RADIOTEST BEACON FM IR5XXX 60` | l'identificativo in FM ripetuto ogni 60 s (da 10 s a un'ora), per vedere nel tempo **frequenza, rientro a LoRa e deriva**; si ferma con un tasto qualsiasi dalla seriale |
+
+Parametri facoltativi di tutti i comandi (dopo i fissi): `wpm=5..30`, `hz=300..2500` (tono, solo FM), `dev=0.6..10` (kHz, solo FM), `shape=0|0.3|0.5|1.0` (filtro gaussiano, solo FM), `ramp=0..15` (salita della potenza). Il testo ha lettere e cifre; `_` vale spazio. Esempio per provare le rampe del tasto: `CFG RADIOTEST MORSE CW IR5XXX ramp=0`, poi `ramp=9`, e confrontare i "click" nello spettro.
+
+**Come lavora:** la scheda esce da LoRa (`beginFSK` di RadioLib), manda pacchetti FSK a lunghezza fissa senza preambolo, sincronismo né CRC (`0xFF` = portante, `0xAA` = tono quadro di bit rate / 2), e torna a LoRa e in ascolto. Un punto e una linea sono pacchetti della durata giusta (in FM a 700 Hz un punto a 15 wpm è di 14 byte a 1,4 kbit/s; in CW 24 byte a 2,4 kbit/s), le pause sono silenzio. Per il CW la frequenza è spostata di -0,6 kHz per compensare la deviazione minima, così la portante cade sulla frequenza del profilo. La scheda **rifiuta** la prova con N0CALL, se sta ricevendo o trasmettendo o se il canale è occupato (CAD). Sulla seriale stampa tutti i parametri usati (`CFG RADIOTEST start ...`), la durata misurata contro quella prevista e il **tempo di cambio LoRa → FSK → LoRa** di ogni ciclo.
+
+**Cosa misurare e annotare** (con RTL-SDR e un walkie-talkie FM sulla frequenza, potenza minima `CFG SET POWER 2`, antenna collegata):
+1. *Portante (`CARRIER`)*: frequenza reale contro quella impostata (errore in kHz e ppm), deriva in 5 s e a freddo/caldo. Fra un pacchetto e l'altro da 255 byte (circa 850 ms) la portante si ferma un attimo: quanto dura?
+2. *Tono (`TONE`)*: frequenza del tono (deve essere 700 Hz se `hz=700`), deviazione di picco, armoniche del quadro, se il walkie-talkie lo riproduce e a che volume.
+3. *Morse FM*: si capisce a orecchio al walkie-talkie? la durata dei punti è giusta (misurata contro quella prevista)? ci sono ritardi all'inizio dei pacchetti (tempo di aggancio e salita)?
+4. *Morse CW*: lo stesso in SSB/SDR; i click del tasto con `ramp=0` e `ramp=9`: larghezza di banda occupata.
+5. *Beacon* per mezz'ora: la scheda torna a LoRa ogni volta? (si vede dal tempo di ritorno e riascoltando un pacchetto LoRa di un'altra scheda dopo il Morse.)
+6. *Spettro*: potenza reale, armoniche e spurie dell'amplificatore (con l'SDR sulla banda di 433 MHz e sui multipli).
+
+Quando hai i numeri, tarare i parametri (tono, deviazione, rampa, wpm) e decidere se e come inserire il Morse nell'identificativo del ripetitore.
+
