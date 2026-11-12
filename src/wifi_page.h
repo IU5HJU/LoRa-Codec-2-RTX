@@ -22,7 +22,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <form id="f" autocomplete="off">
 <label for="callsign">Nominativo</label><input id="callsign" maxlength="8" required>
 <label for="profile">Profilo</label>
-<select id="profile"><option value="std">Standard (Codec2 3200)</option><option value="rng">Range (Codec2 1200)</option><option value="msg">Messaggio</option></select>
+<select id="profile"><option value="std">Standard (Codec2 3200)</option><option value="rng">Range (Codec2 1200, collegamenti difficili)</option><option value="msg">Messaggio</option></select>
 <label for="freq">Frequenza Standard (MHz)</label><input id="freq" inputmode="decimal" required>
 <label for="freqmsg">Frequenza Messaggio (MHz)</label><input id="freqmsg" inputmode="decimal" required>
 <label for="freqrange">Frequenza Range (MHz)</label><input id="freqrange" inputmode="decimal" required>

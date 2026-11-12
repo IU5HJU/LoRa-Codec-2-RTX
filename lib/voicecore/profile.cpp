@@ -12,7 +12,8 @@ constexpr size_t kNever = static_cast<size_t>(kMaxPackets) * kFramesPerPacket;  
 
 const Profile kProfiles[kProfileCount] = {
     // Range (fino al 12/11/2026 "Standard"): i valori storici di protocol.h e user_config.h, SF8/BW250 e Codec2 1200. Circa 2,5 dB in piu'
-    // di sensibilita' rispetto allo Standard (un gradino di SF: valore teorico di LoRa, non misurato qui), un pacchetto piu' lungo in aria.
+    // di sensibilita' rispetto allo Standard (un gradino di SF: valore teorico di LoRa, non misurato qui), un pacchetto piu' lungo in aria. Dal 12/11/2026 non e' piu' il modo di base (il guadagno e' modesto rispetto alla qualita' persa): resta per i
+    // collegamenti in condizioni difficili, quando serve quel poco in piu' di portata a discapito della voce.
     {kProfileRange, "rng", "Range", 8, 250.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, false, kPrebufferFrames, kPrebufferTimeoutMs,
      kSessionTimeoutMs, 0, false},
     // Messaggio: SF12/BW125 (circa +13 dB rispetto allo Standard). Un pacchetto da 77 byte dura circa 3,4 s in aria: la ricezione aspetta la fine del

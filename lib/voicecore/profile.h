@@ -2,7 +2,7 @@
 //
 //   Standard   voce in tempo reale a Codec2 3200, SF7/BW250: piu' fedele, il modo di base (via ripetitore o nodo). Dal 12/11/2026;
 //              fino ad allora si chiamava "Qualita'" e "Standard" era il Codec2 1200.
-//   Range      voce in tempo reale a Codec2 1200, SF8/BW250 (il vecchio "Standard"): un po' piu' di portata, meno fedelta'.
+//   Range      voce in tempo reale a Codec2 1200, SF8/BW250 (il vecchio "Standard"): un po' piu' di portata, meno fedelta'; resta per i collegamenti in condizioni difficili.
 //   Messaggio  lungo raggio: SF12/BW125. Si registra un messaggio, lo si trasmette piu' lentamente del parlato e chi
 //              riceve lo memorizza e lo riproduce a ricezione conclusa.
 //
