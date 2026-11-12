@@ -11,6 +11,8 @@ La voce è compressa con Codec2 e trasmessa con LoRa, con tre **profili** da sce
 | **Range** (R) | SF8, banda 250 kHz | 1200 bps | voce in tempo reale con un po' più di portata (circa 2,5 dB teorici, non misurati) |
 | **Messaggio** (M) | SF12, banda 125 kHz | 1200 bps | lungo raggio: si registra un messaggio (fino a 15 s); chi riceve lo trova in una casella e lo ascolta premendo il PTT, con la percentuale sul display |
 
+**Perché lo Standard è il 3200 (decisione del 12/11/2026):** il guadagno di portata del 1200 (Range) è modesto, circa 2,5 dB teorici e non misurati, mentre la voce a 3200 bit/s suona meglio. Il **Range** resta nel firmware per i collegamenti in condizioni difficili, quando serve quel poco di portata in più a scapito della qualità vocale ([decisione](docs/roadmap.md)).
+
 Funzionamento in breve:
 
 1. Si preme il PTT: il microfono viene bufferizzato subito.

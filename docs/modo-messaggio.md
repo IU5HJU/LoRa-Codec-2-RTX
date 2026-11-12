@@ -6,9 +6,9 @@
 
 Il profilo **Messaggio** serve per il **lungo raggio estremo**. Non è una conversazione: si **registra un messaggio**, la scheda lo **trasmette molto più lentamente del parlato** e chi riceve lo **memorizza e lo riproduce a ricezione conclusa**.
 
-- Radio: **SF12, banda 125 kHz**, coding rate 4/5 (circa **+13 dB** di sensibilità rispetto allo Range SF8/BW250).
+- Radio: **SF12, banda 125 kHz**, coding rate 4/5 (circa **+13 dB** di sensibilità rispetto al Range SF8/BW250).
 - Codec2 **1200**: **scelta definitiva** (10/11/2026). Il 450 e il 700C, più compatti (meno 43% e meno 28% di tempo in aria), non si faranno: il 1200 è un compromesso accettabile e il loro suono è molto peggiore ([codec2.md](codec2.md)).
-- Durata massima di un messaggio: **15 secondi di voce** (deciso l'11/11/2026; il 09/11 era 30 s, come lo Range): è quanto il ripetitore ripete, così ciò che si registra viene sempre ripetuto. Lo Range e la Standard restano a 30 s.
+- Durata massima di un messaggio: **15 secondi di voce** (deciso l'11/11/2026; il 09/11 era 30 s, come il Range): è quanto il ripetitore ripete, così ciò che si registra viene sempre ripetuto. Lo Range e lo Standard restano a 30 s.
 
 | Voce | Tempo in aria (stima, Codec2 1200) |
 |---|---|
@@ -32,7 +32,7 @@ Un pacchetto da 77 byte dura circa 3,4 secondi in aria: per questo il ricevitore
 
 Per le prime prove usa messaggi **brevi** (3-5 secondi): bastano 30-50 secondi in aria.
 
-**Frequenza:** il profilo Messaggio ha la **sua frequenza** (`CFG SET FREQMSG`, o il campo nella pagina), che può essere **uguale** a quella dello Range: nelle prove si usa spesso una frequenza nota. Con la stessa frequenza i due profili non sono un canale condiviso (vedi sotto).
+**Frequenza:** il profilo Messaggio ha la **sua frequenza** (`CFG SET FREQMSG`, o il campo nella pagina), che può essere **uguale** a quella del Range: nelle prove si usa spesso una frequenza nota. Con la stessa frequenza i due profili non sono un canale condiviso (vedi sotto).
 
 **Attenzione:** le schede con profili diversi **non si sentono**. Se una scheda Range e una Messaggio sono accese insieme, non c'è collegamento. Il profilo vale dal riavvio.
 
@@ -54,7 +54,7 @@ Il messaggio vocale ricevuto **non si riproduce più da solo**: finita la ricezi
 
 - Il modo "registra e trasmetti" è **sempre acceso** (`CFG REC OFF` non lo spegne).
 - La **prova di collegamento** (tre clic sul PTT) non c'è: 12 secondi di frame a SF12 sarebbero circa 17 minuti in aria.
-- Il limite di durata è quello del profilo (**15 secondi di voce**, dall'11/11/2026; lo Range ha 30 s), ma il tempo in aria è molto maggiore (vedi sopra).
+- Il limite di durata è quello del profilo (**15 secondi di voce**, dall'11/11/2026; il Range ha 30 s), ma il tempo in aria è molto maggiore (vedi sopra).
 - **Percentuale di avanzamento (10/11/2026):** un messaggio lungo resta in aria minuti e sembrerebbe bloccato, quindi il display mostra da **1% a 100%**, in invio ("Invio messaggio 45%", con una barra) e in ricezione ("Ricevo messaggio 45%"). Chi trasmette conosce già la lunghezza (il messaggio è registrato) e la dichiara nel pacchetto START (campo **TOTAL**, 1 byte, [protocollo.md](protocollo.md)); chi riceve calcola la percentuale dal pacchetto più avanzato ricevuto, che non torna indietro se un pacchetto si perde, e a 100% alla fine anche se l'ultimo pacchetto è andato perso. La voce Range non ha la percentuale. **Da provare su scheda.**
 - **Riproduzione:** dall'11/11/2026 la voce non parte da sola: va in casella e si apre con il PTT (sezione sopra).
 - **Segnale di messaggio in arrivo (10/11/2026):** appena comincia la ricezione di un messaggio la scheda suona **"MSG" in Morse** (M S G, 1000 Hz, circa 1,6 s), come lo squillo degli SMS dei vecchi telefoni, per **attirare l'attenzione** su una ricezione che dura minuti (prima del 10/11, nella versione `cf17027`, suonava alla fine, subito prima della voce, e non serviva). Lo schermo di ricezione compare prima del suono. Col volume a 0 non suona. **Da provare su scheda.**

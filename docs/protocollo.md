@@ -1,6 +1,8 @@
 # Protocollo (v2)
 
 Trasmissione vocale **broadcast** a turni (stile QSO) su LoRa, con voce Codec2 a 1200 bps (profili Range e Messaggio) o a 3200 bps (profilo Standard, modo 4).
+
+Il modo 1 (Codec2 1200) resta per il profilo **Range**, usato nei collegamenti in condizioni difficili; il profilo di base, lo **Standard**, usa dal 12/11/2026 il modo 4 (Codec2 3200): il guadagno di portata del 1200 è modesto ([roadmap.md](roadmap.md)).
 Nessun indirizzamento, nessun ACK: chiunque sia in ascolto sulla frequenza decodifica.
 
 ## Sequenza di un turno

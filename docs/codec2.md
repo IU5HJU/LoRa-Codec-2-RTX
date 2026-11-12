@@ -9,11 +9,12 @@ Verifiche del punto "Codec2" della [roadmap](roadmap.md), fatte **sul PC con gli
 | Modo | Frame | Bit per frame | Byte per frame (interi) | Note |
 |---|---|---|---|---|
 | 3200 | 20 ms | 64 | 8 | il modo di M17, obiettivo della modalità Standard |
-| 2400 | 20 ms | 48 | 6 | ripiego della Standard |
+| 2400 | 20 ms | 48 | 6 | ripiego dello Standard |
 | 1600 | 40 ms | 64 | 8 | |
 | 1400 | 40 ms | 56 | 7 | |
 | 1300 | 40 ms | 52 | 7 | |
-| **1200** | 40 ms | 48 | 6 | quello di oggi (Range) |
+| **1200** | 40 ms | 48 | 6 | il profilo **Range**: dal 12/11/2026 non è più il modo di base ma resta per i collegamenti in condizioni difficili (circa 2,5 dB teorici in più di portata rispetto al 3200 su SF7, non misurati; [roadmap.md](roadmap.md)) |
+
 | 700C | 40 ms | **28** | 4 | non è intero: in pacchetto serve l'impacchettamento a bit |
 | 450 | 40 ms | **18** | 3 | idem |
 
@@ -76,7 +77,7 @@ Con la stessa struttura di pacchetti di oggi (12 frame per pacchetto, parità 1 
 | 700C | 7,3 s (24%) | **194 s** | 3,9 s (13%) | 42 B |
 | 450 | 5,8 s (19%) | **156 s** | 3,1 s (10%) | 27 B |
 
-- **Il 3200 sullo Range (SF8) sfora il limite del 70%**: per questo la Standard va su SF7/BW250, dove sta al 42% (come previsto dalla roadmap).
+- **Il 3200 sul Range (SF8) sfora il limite del 70%**: per questo lo Standard va su SF7/BW250, dove sta al 42% (come previsto dalla roadmap).
 - **Messaggio:** il 700C farebbe risparmiare il 28% del tempo in aria rispetto al 1200 (194 s contro 271 s), il 450 il 43% (156 s). Il Messaggio da 30 s di voce resta di minuti.
 - **Serve l'impacchettamento a bit.** I numeri del 700C e del 450 sono con i frame impacchettati (28 e 18 bit). A byte interi (4 e 3 byte per frame) il 700C va a 210 s e il 450 a 181 s: perderebbero circa la metà del vantaggio.
 
@@ -110,6 +111,6 @@ ffplay -nodisp -autoexit confronto/1200.wav
 
 ## 6. Cosa resta da fare
 
-1. ~~Scegliere il codec del Messaggio~~: **deciso il 10/11/2026, resta il 1200** (il 450 farebbe risparmiare il 43% del tempo in aria, il 700C il 28%, ma il 1200 è già un compromesso accettabile e il loro suono è molto peggiore). Da ascoltare con una voce vera il **3200 e il 2400** per confermare la Standard.
+1. ~~Scegliere il codec del Messaggio~~: **deciso il 10/11/2026, resta il 1200** (il 450 farebbe risparmiare il 43% del tempo in aria, il 700C il 28%, ma il 1200 è già un compromesso accettabile e il loro suono è molto peggiore). Da ascoltare con una voce vera il **3200 e il 2400** per confermare lo Standard.
 2. **Cronometrare sulla scheda** codifica e decodifica dei modi scelti (stima: circa 50% e 31% per il 3200).
 3. ~~Impacchettamento a bit (28 e 18 bit per frame)~~: **non serve più**. Restano i **blocchi da 20 ms** del 3200 e del 2400, che hanno frame di 8 e 6 byte interi.

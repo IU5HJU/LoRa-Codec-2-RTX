@@ -10,7 +10,7 @@ Data: 10/11/2026. Stato: **studio, nessun codice scritto**. I numeri di tempo in
 
 ## Obiettivo
 
-Un ripetitore fatto da **due schede**: una sempre in **ricezione** (frequenza di ingresso) e una sempre in **trasmissione** (frequenza di uscita), che lavorano **nello stesso momento**. Il vincolo da superare: ripetere **qualsiasi modo** del progetto (Range, Messaggio, Standard), cosa che la roadmap dell'8/11/2026 escludeva per la Standard ("solo collegamento diretto"). Qui si valuta se e come si può.
+Un ripetitore fatto da **due schede**: una sempre in **ricezione** (frequenza di ingresso) e una sempre in **trasmissione** (frequenza di uscita), che lavorano **nello stesso momento**. Il vincolo da superare: ripetere **qualsiasi modo** del progetto (Range, Messaggio, Standard), cosa che la roadmap dell'8/11/2026 escludeva per lo Standard ("solo collegamento diretto"). Qui si valuta se e come si può.
 
 ## Architettura base (due schede)
 
@@ -47,8 +47,8 @@ Una SX127x **demodula un solo SF e una sola banda alla volta**. Non ascolta tre 
 | 1200 | 19% / 40% | 33% / 54% | 61% / 82% |
 | 3200 | **41% / 62%** | 73% / **94%** | 131% / 152% |
 
-- **A SF7 reggono tutti i modi** (la Standard al 62%).
-- **A SF8 la Standard è al 94%** con le pause: non regge con margine. Un canale universale a SF8 non va bene.
+- **A SF7 reggono tutti i modi** (lo Standard al 62%).
+- **A SF8 lo Standard è al 94%** con le pause: non regge con margine. Un canale universale a SF8 non va bene.
 - Un **messaggio** (registrato) trasmesso a SF7 occupa circa 12,5 s per 30 s di voce: nessun problema.
 
 ## Separazione fisica
@@ -142,7 +142,7 @@ La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitor
 Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa durata se ne serve un altro in ricezione. Conviene un **limite di durata per i messaggi ripetuti** (per esempio 10-15 s di voce, circa 1,5-2,3 minuti), da decidere.
 
 **Occupazione e segnale di "canale occupato" (cosa serve davvero):**
-- **Gli utenti in Range o in Standard (SF8 e SF7) non vedono con il CAD una trasmissione SF12**: il rilevamento del preambolo funziona solo con lo stesso SF. Perciò, **prima** di una ritrasmissione lunga, la TX manda un **breve pacchetto di annuncio** con i parametri dello Range (nuovo modo, per esempio il **6**: "ripetitore occupato per N secondi") e un altro a fine servizio. Le stazioni lo mostrano sul display e rifiutano il PTT per il tempo indicato. **I modi 5-14 sono ancora liberi** (il 5 è già previsto per i comandi del sysop).
+- **Gli utenti in Range o in Standard (SF8 e SF7) non vedono con il CAD una trasmissione SF12**: il rilevamento del preambolo funziona solo con lo stesso SF. Perciò, **prima** di una ritrasmissione lunga, la TX manda un **breve pacchetto di annuncio** con i parametri del Range (nuovo modo, per esempio il **6**: "ripetitore occupato per N secondi") e un altro a fine servizio. Le stazioni lo mostrano sul display e rifiutano il PTT per il tempo indicato. **I modi 5-14 sono ancora liberi** (il 5 è già previsto per i comandi del sysop).
 - Gli utenti **in Messaggio** (SF12) sull'uscita ricevono la ritrasmissione stessa e quindi hanno già il PTT rifiutato come per ogni ricezione.
 - **La ricezione dei messaggi** (SF12 sulla frequenza di ingresso) la fa la TX **nei tempi in cui è libera**. Mentre la TX riceve un messaggio, **la voce in tempo reale non si può ritrasmettere**. Due regole possibili: (a) **vince il messaggio**: la voce in arrivo mentre si ascolta un messaggio non si ritrasmette (utenti Range senza segnale di occupato: meno bello); (b) **vince la voce**: se arriva voce, la ricezione del messaggio si interrompe e i pacchetti persi si recuperano con la parità finché possibile. Da scegliere.
 - **Un utente che trasmette un messaggio mentre il ripetitore è occupato lo perde**: la TX non ascolta. Gli utenti nel raggio dell'uscita lo sanno perché sentono la ritrasmissione; gli altri no.
@@ -165,7 +165,7 @@ Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa du
 1. **Durata massima: 15 s di voce** per messaggio ripetuto (**dall'11/11/2026 è anche il TOT del profilo Messaggio**: quello che si registra è sempre ripetibile) (circa 139 s in aria a SF12/125 kHz). Il pacchetto `START` dichiara già il numero totale di pacchetti (`TOTAL`): la TX sa subito se un messaggio supera il limite e, in quel caso, **non lo memorizza né lo ripete** (nessuna ripetizione parziale).
 2. **Priorità alla voce.** La TX **memorizza** i messaggi ricevuti e li **ritrasmette appena il ripetitore è libero**. La voce in arrivo dalla scheda RX ha sempre la precedenza.
 3. **Frequenza:** i messaggi usano la **frequenza di trasmissione del ripetitore** (la frequenza di uscita), con il profilo radio del Messaggio (SF12, banda 125 kHz). **Confermato il 11/11/2026**: le stazioni in Messaggio trasmettono e ascoltano sull'uscita del ripetitore (in simplex), e la TX, quando è libera, ascolta lì; la voce in tempo reale ha invece ingresso e uscita separati.
-4. **Annuncio di "occupato" non bloccante** (modo nuovo, per esempio il 6): prima di ritrasmettere un messaggio la TX manda, con i parametri dello Range, un pacchetto con il **tempo di blocco** (ricavato dal messaggio stesso: ha tutti i pacchetti memorizzati, quindi il tempo in aria è esatto). Le radio **lo mostrano sul display ma non rifiutano il PTT**: una stazione può **forzare la voce** e la TX interrompe il messaggio e **ritenta appena possibile**.
+4. **Annuncio di "occupato" non bloccante** (modo nuovo, per esempio il 6): prima di ritrasmettere un messaggio la TX manda, con i parametri del Range, un pacchetto con il **tempo di blocco** (ricavato dal messaggio stesso: ha tutti i pacchetti memorizzati, quindi il tempo in aria è esatto). Le radio **lo mostrano sul display ma non rifiutano il PTT**: una stazione può **forzare la voce** e la TX interrompe il messaggio e **ritenta appena possibile**.
 
 **Cosa regge:** la TX non ritrasmette mai insieme voce e messaggio, il blocco è solo informativo, e la voce non aspetta mai un messaggio. La memorizzazione e la ripetizione usano la logica della parità già provata.
 

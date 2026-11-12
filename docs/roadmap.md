@@ -4,6 +4,16 @@
 
 Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le decisioni dell'8 novembre sono più sotto).
 
+## Decisione del 12/11/2026: lo Standard passa a Codec2 3200, il 1200 resta come Range
+
+**Cosa si è deciso.** Il profilo di base (**Standard**, lettera S) è ora il **Codec2 3200 su SF7/BW250**: era il profilo "Qualità". Il vecchio Standard (Codec2 1200 su SF8/BW250) si chiama **Range** (lettera R). Il Messaggio (M, SF12/BW125) non cambia. Gli id interni dei profili (0, 1, 2) e i modi del protocollo (1 e 4) non sono cambiati.
+
+**Perché.** Il vantaggio di portata del 1200 su SF8 rispetto al 3200 su SF7 è **modesto**: un gradino di fattore di diffusione vale circa 2,5 dB di sensibilità (valore teorico di LoRa, **non misurato** in questo progetto), mentre la voce a 3200 bit/s suona sensibilmente meglio ([codec2.md](codec2.md)). Per l'uso normale conviene quindi la qualità vocale. Il ripetitore e il nodo Internet usano di base lo Standard.
+
+**Il 1200 resta nel firmware.** Il profilo **Range** non è stato tolto: serve per i **collegamenti in condizioni difficili**, quando occorre quel poco di portata in più e si accetta una voce di qualità inferiore (stazioni al limite del collegamento, ostacoli, antenne modeste). Per i collegamenti più lunghi in assoluto resta il Messaggio (circa 13 dB in più, ma non in tempo reale). Si sceglie dal menu (voce "Modo Range"), con `CFG SET PROFILE RNG` o dalla pagina di configurazione. Tutte le stazioni che si devono sentire devono usare lo stesso profilo e la stessa frequenza.
+
+**Da misurare.** Il guadagno reale del Range sul campo, a pari condizioni, non è ancora misurato: se le prove mostrassero una differenza diversa da quella teorica, la decisione si rivede ([prove.md](prove.md)).
+
 ## Stato al 10/11/2026
 
 **Fatto e provato su scheda** (esiti in [prove.md](prove.md)):

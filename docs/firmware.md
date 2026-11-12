@@ -14,6 +14,8 @@ I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 > carico si può danneggiare. Prima l'antenna, poi il cavo USB.
 
 **Stato (10/11/2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam): voce a turni nei tre profili (con i nomi di allora: Standard, Messaggio, Qualità; dal 12/11/2026 Range, Messaggio, Standard), microfono e altoparlante, menu a bordo, configurazione dal Wi-Fi della scheda, volume con guadagno, posizione e GPS, impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da misurare:** distanze lunghe, mezzi in movimento. **CPU del Codec2 3200 misurata:** codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms ([codec2.md](codec2.md)).
+
+**Profili (12/11/2026).** Lo **Standard** è il Codec2 3200 (SF7/BW250), il profilo di base. Il **Range** (Codec2 1200, SF8/BW250) resta nel firmware per le prove di collegamento in condizioni difficili, quando serve quel poco in più di portata (circa 2,5 dB teorici, non misurati) a discapito della qualità vocale. Motivazione e decisione in [roadmap.md](roadmap.md).
 Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protocollo
 (`lib/voicecore/`) è testata sul PC. Il workflow `.github/workflows/build.yml` produce
 `web_factory.bin` e `ota_update.bin` come artefatti di ogni esecuzione.
