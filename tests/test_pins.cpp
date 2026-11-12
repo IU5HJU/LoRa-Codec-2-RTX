@@ -42,16 +42,12 @@ static void checkCommon(const Board& b) {
   CHECK(b.ptt < 34 || !b.pttHasPullup);
 }
 
-// Altoparlante di monitor (RX del ripetitore): uscite I2S e shutdown su pin con uscita, diversi dalla seriale verso la TX e dalla
-// radio, senza il GPIO12 di avvio; il volume e' un ingresso (il pin del PTT).
-static void checkMonitor(const std::vector<int>& spk, const std::vector<int>& link, int volume, const std::vector<int>& used) {
-  for (size_t i = 0; i < spk.size(); i++) {
-    CHECK(spk[i] < 34 && spk[i] != 12);
-    for (size_t j = i + 1; j < spk.size(); j++) CHECK(spk[i] != spk[j]);
-    for (int l : link) CHECK(spk[i] != l);
-    for (int u : used) CHECK(spk[i] != u);
-    CHECK(spk[i] != volume);
-  }
+// Seriale fra le due T3 del ripetitore: nessun pin del cablaggio normale (I2S, microfono tranne il suo pin dati, pulsanti, LED), RX su un
+// ingresso, TX su una uscita, niente GPIO12 di avvio, niente radio e OLED.
+static void checkLink(int rx, int tx, const std::vector<int>& used, const std::vector<int>& normal) {
+  CHECK(rx != tx && tx < 34 && tx != 12 && rx != 12);
+  for (int u : used) CHECK(rx != u && tx != u);
+  for (int n : normal) CHECK(tx != n && rx != n);
 }
 
 int main() {
@@ -69,10 +65,10 @@ int main() {
     CHECK(kI2sBclk == kSdSclk && kI2sWs == kSdCs && kVolume == kSdMosi);
     CHECK(kLed == kAmpShutdown);  // LED condiviso con lo shutdown dell'amplificatore
     CHECK(kPtt == 0 && kPttHasInternalPullup);
-    CHECK(kLinkTx == kI2sBclk && kLinkRx == kI2sWs);  // la seriale del ripetitore riusa i pin dell'I2S
-    // Altoparlante di monitor sulla RX: I2S su altri pin (slot microSD), seriale invariata, volume sul pin del PTT
-    CHECK(kMonI2sBclk == kSdMiso && kMonI2sWs == kSdMosi && kMonVolume == kPtt);
-    checkMonitor({kMonI2sBclk, kMonI2sWs, kAmpData, kAmpShutdown}, {kLinkTx, kLinkRx}, kMonVolume, b.used);
+    // Seriale del ripetitore: GPIO34 (RX, il pin del microfono: sul ripetitore non c'e') e GPIO2 (TX, MISO dello slot microSD). Altoparlante,
+    // pulsante del volume e PTT restano quelli della scheda normale e non si toccano.
+    CHECK(kLinkRx == 34 && kLinkTx == 2 && kLinkRx == kMicData && kLinkTx == kSdMiso);
+    checkLink(kLinkRx, kLinkTx, b.used, {kI2sBclk, kI2sWs, kAmpData, kAmpShutdown, kPtt, kVolume});
   }
 
   // ---- T-Beam V1.2 ----
@@ -87,9 +83,7 @@ int main() {
     // Il PTT e' il tasto di bordo IO38, senza pull-up interno.
     CHECK(kPtt == 38 && !kPttHasInternalPullup);
     CHECK(kLinkTx == kI2sBclk && kLinkRx == kI2sWs && kLinkTx < 34 && kLinkRx < 34);
-    CHECK(kMonI2sBclk == kVolume && kMonI2sWs == kLed && kMonVolume == kPtt);
-    checkMonitor({kMonI2sBclk, kMonI2sWs, kAmpData, kAmpShutdown}, {kLinkTx, kLinkRx}, kMonVolume, b.used);
-    for (int a : {kMonI2sBclk, kMonI2sWs, kAmpData, kAmpShutdown}) CHECK(a != kGpsTx && a != kGpsRx && a != kPmuIrq);
+
     // La radio e' sugli stessi pin della T3.
     CHECK(kRadioSclk == pins_t3_v161::kRadioSclk && kRadioMiso == pins_t3_v161::kRadioMiso &&
           kRadioMosi == pins_t3_v161::kRadioMosi && kRadioCs == pins_t3_v161::kRadioCs &&

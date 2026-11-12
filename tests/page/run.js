@@ -450,6 +450,17 @@ async function scenario(name, fn, opts = {}) {
     check('la scheda ha il ruolo', await p.evaluate(() => window.__st.cfg.role === 'rpttx' && window.__st.cfg.freqout === '434.400'));
   });
 
+  await scenario('ruolo del ripetitore: sulla T-Beam non si cambia (solo T3)', async (p) => {
+    await p.evaluate(() => { window.__st.board = 'tbeam'; });
+    await connect(p);
+    await until(p, () => document.getElementById('rolenote') && !document.getElementById('rolenote').hidden);
+    check('ruolo spento e avviso visibile', (await p.isDisabled('#role')) && (await p.isVisible('#rolenote')) && (await p.isDisabled('#freqout')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('nessun comando ROLE sulla T-Beam', !(await cmds(p)).some((x) => /^CFG SET (ROLE|FREQOUT|MONITOR|IDINT)/.test(x)));
+  });
+
   await scenario('ruolo del ripetitore: scheda RX con il monitor', async (p) => {
     await connect(p);
     await until(p, () => !document.getElementById('role').disabled);

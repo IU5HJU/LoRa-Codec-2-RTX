@@ -378,6 +378,10 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     next.freqOutKhz = khz;
     snprintf(shown, sizeof(shown), "freqout=%u.%03u", static_cast<unsigned>(khz / 1000), static_cast<unsigned>(khz % 1000));
   } else if (equalsIgnoreCase(key, "ROLE")) {
+    if (!equalsIgnoreCase(value, "OFF") && equalsIgnoreCase(board_, "tbeam")) {
+      say(reply, cap, "CFG ERR role %s", "il ripetitore usa solo la T3 (due T-Beam sarebbero uno spreco)");
+      return ConsoleResult::Error;
+    }
     if (equalsIgnoreCase(value, "OFF")) {
       next.role = kRoleNormal;
     } else if (equalsIgnoreCase(value, "RPTRX")) {

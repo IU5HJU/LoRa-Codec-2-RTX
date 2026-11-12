@@ -38,8 +38,8 @@ constexpr int kMicData = 36;      // INMP441 SD -> ESP32 (pin VP: solo ingresso,
 constexpr int kAmpData = 2;       // ESP32 -> MAX98357A DIN (GPIO2: pin di avvio, ma qui e' un'uscita)
 constexpr int kAmpShutdown = 25;  // MAX98357A SD (alto = acceso)
 
-// --- Ripetitore (due schede, nessun audio): la seriale fra RX e TX usa i pin dell'I2S, liberi in quel ruolo.
-// Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
+// --- Ripetitore: NON supportato sulla T-Beam (il ripetitore usa due T3: due T-Beam sarebbero uno spreco, docs/studio-ripetitore.md).
+// Il firmware rifiuta il ruolo del ripetitore su questa scheda (CFG SET ROLE); i due pin servono solo perche' il codice compili. ---
 constexpr int kLinkTx = kI2sBclk;
 constexpr int kLinkRx = kI2sWs;
 
@@ -52,13 +52,5 @@ constexpr bool kPttHasInternalPullup = false;
 // --- Volume: pulsante esterno opzionale tra GPIO15 e massa (pull-up interno) ---
 constexpr int kVolume = 15;
 
-// --- Altoparlante di monitor sulla scheda RX del ripetitore (CFG SET MONITOR ON) ---
-// La seriale fra RX e TX resta sempre sui pin 14 e 13. L'I2S dell'altoparlante, solo uscita (niente microfono sulla RX), usa altri
-// pin: BCLK su GPIO15 (il pin del pulsante volume, che qui non serve) e WS su GPIO4 (il LED di bordo: si accende appena, e' normale);
-// DIN (kAmpData, GPIO2) e SD (kAmpShutdown, GPIO25) restano quelli di sempre. Il GPIO12 (avvio) non si usa. Il volume si regola con
-// il tasto di bordo IO38, lo stesso del PTT (inutile in questo ruolo). DA VERIFICARE sul banco.
-constexpr int kMonI2sBclk = kVolume;
-constexpr int kMonI2sWs = kLed;
-constexpr int kMonVolume = kPtt;
 
 }  // namespace pins_tbeam_v12

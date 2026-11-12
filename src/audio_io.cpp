@@ -96,9 +96,8 @@ bool AudioIo::begin(bool speakerOnly) {
 
   i2s_pin_config_t pin = {};
   pin.mck_io_num = I2S_PIN_NO_CHANGE;
-  // Solo altoparlante (scheda RX del ripetitore): BCLK e WS su altri pin, la seriale verso la TX occupa quelli di sempre
-  pin.bck_io_num = speakerOnly ? pins::kMonI2sBclk : pins::kI2sBclk;
-  pin.ws_io_num = speakerOnly ? pins::kMonI2sWs : pins::kI2sWs;
+  pin.bck_io_num = pins::kI2sBclk;
+  pin.ws_io_num = pins::kI2sWs;
   pin.data_out_num = pins::kAmpData;
   pin.data_in_num = speakerOnly ? I2S_PIN_NO_CHANGE : pins::kMicData;
   if (i2s_set_pin(kPort, &pin) != ESP_OK) return false;

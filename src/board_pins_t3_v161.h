@@ -36,24 +36,17 @@ constexpr int kMicData = 34;     // INMP441 SD -> ESP32 (GPIO34: solo ingresso, 
 constexpr int kAmpData = 4;      // ESP32 -> MAX98357A DIN
 constexpr int kAmpShutdown = 25; // MAX98357A SD (alto = acceso). Condiviso col LED di bordo.
 
-// --- Ripetitore (due schede, nessun audio): la seriale fra RX e TX usa i pin dell'I2S, liberi in quel ruolo.
-// Collegare TX di una scheda con RX dell'altra e le masse: A.14 -> B.13 e A.13 <- B.14. ---
-constexpr int kLinkTx = kI2sBclk;
-constexpr int kLinkRx = kI2sWs;
+// --- Ripetitore (due T3 collegate fra loro): la seriale fra RX e TX usa due pin che il cablaggio normale (microfono, altoparlante,
+// pulsanti) non tocca, cosi' l'altoparlante di monitor e il pulsante del volume si collegano come su una scheda normale e fra le due
+// schede bastano 4 fili: 5 V, GND, e la seriale incrociata (TX di una = GPIO2 -> RX dell'altra = GPIO34 e viceversa).
+// GPIO34 e' il pin dati del microfono (solo ingresso, va bene per una RX: sulle schede del ripetitore il microfono non c'e'); GPIO2 e' il
+// MISO dello slot microSD (da lasciare vuoto) e secondo docs/pinout.md e' libero. Entrambi escono sul connettore. DA VERIFICARE sul banco. ---
+constexpr int kLinkRx = kMicData;
+constexpr int kLinkTx = kSdMiso;
 
 // --- PTT: pulsante esterno tra GPIO0 e massa (la scheda ha solo RST) ---
 constexpr int kPtt = 0;
 constexpr bool kPttHasInternalPullup = true;
-
-// --- Altoparlante di monitor sulla scheda RX del ripetitore (CFG SET MONITOR ON) ---
-// La seriale fra RX e TX resta sempre sui pin 14 e 13 (stesso cablaggio con o senza altoparlante). L'I2S dell'altoparlante, solo
-// uscita (niente microfono sulla RX), usa altri pin: il segnale I2S puo' uscire da qualunque GPIO con funzione di uscita.
-// BCLK su GPIO2 (MISO dello slot microSD) e WS su GPIO15 (MOSI dello slot): senza scheda inserita sono liberi; DIN (kAmpData, GPIO4) e
-// SD (kAmpShutdown, GPIO25) restano quelli di sempre. Il volume si regola con il pulsante sul pin del PTT (GPIO0, inutile in questo
-// ruolo; non tenerlo premuto all'accensione). DA VERIFICARE sul banco.
-constexpr int kMonI2sBclk = kSdMiso;
-constexpr int kMonI2sWs = kSdMosi;
-constexpr int kMonVolume = kPtt;
 
 // --- Volume: pulsante esterno opzionale tra GPIO15 e massa (pull-up interno).
 // Se non e' collegato resta alto e non fa nulla. GPIO15 e' un pin di strapping:

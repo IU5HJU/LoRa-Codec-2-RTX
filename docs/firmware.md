@@ -205,7 +205,7 @@ Se il telefono dice "nessun Internet" e la pagina non si apre: scegli di **resta
 
 Studio e decisioni: [studio-ripetitore.md](studio-ripetitore.md). **Scritto, non ancora provato sulle schede** (compila solo se Actions è verde; la logica è provata sul PC).
 
-**Il ripetitore** è fatto da **due schede uguali** (T3 o T-Beam, **senza audio**; la RX può avere un altoparlante di monitor, vedi sotto): la scheda **RX** ascolta la frequenza di ingresso e manda i pacchetti da ripetere alla scheda **TX**, che li trasmette sulla frequenza di uscita. Ripete il **modo del profilo scelto** (di base lo Standard, Codec2 1200) e i **messaggi di testo** (modo 7, dall'11/11/2026: un pacchetto solo, la seconda copia del mittente non si ripete) e aggiunge ai pacchetti il flag `RELAYED`. Un testo non fa parte del turno vocale in corso e non ne cambia la durata. Ogni scheda ha la **sua antenna**: la separazione fra le due antenne (distanza, filtri, cavità) è a cura dell'operatore.
+**Il ripetitore** è fatto da **due T3 uguali** (**senza microfono**; la RX può avere un altoparlante di monitor, vedi sotto): la scheda **RX** ascolta la frequenza di ingresso e manda i pacchetti da ripetere alla scheda **TX**, che li trasmette sulla frequenza di uscita. Ripete il **modo del profilo scelto** (di base lo Standard, Codec2 1200) e i **messaggi di testo** (modo 7, dall'11/11/2026: un pacchetto solo, la seconda copia del mittente non si ripete) e aggiunge ai pacchetti il flag `RELAYED`. Un testo non fa parte del turno vocale in corso e non ne cambia la durata. Ogni scheda ha la **sua antenna**: la separazione fra le due antenne (distanza, filtri, cavità) è a cura dell'operatore.
 
 **Ruolo dalla pagina di configurazione (12/11/2026):** il ruolo (stazione normale, scheda RX, scheda TX) si sceglie anche dalle pagine web (la pagina interna della scheda e il sito): *Ruolo della scheda*; con la RX compare il monitor audio, con la TX la frequenza di uscita e l'intervallo dell'identificativo. Salvando, la pagina manda gli stessi comandi `CFG SET ROLE`, `FREQOUT`, `MONITOR`, `IDINT` descritti sotto, e rilegge il ruolo dalla scheda. Per tornare scheda normale basta scegliere *Stazione normale* (dalla scheda in ruolo da ripetitore la pagina interna non è raggiungibile dal menu: serve la seriale, `CFG SET ROLE OFF`, oppure il sito con il cavo USB).
 
@@ -220,29 +220,23 @@ CFG SET ROLE RPTRX            sulla scheda RX   (oppure RPTTX sulla scheda TX; O
 CFG REBOOT
 ```
 
-**Collegamento fra le due schede** (seriale a 115200, 3,3 V, nessun altro filo oltre alla massa): **pin 14 e pin 13** di ciascuna (gli stessi dell'I2S, liberi senza audio):
+**Collegamento fra le due schede (12/11/2026): quattro fili.** Il ripetitore unisce **due T3** già complete, collegate così (seriale a 115200, 3,3 V):
 
-| Scheda RX | Scheda TX |
-|---|---|
-| pin 14 (TX) | pin 13 (RX) |
-| pin 13 (RX) | pin 14 (TX) |
-| GND | GND |
+| Filo | Scheda RX | Scheda TX |
+|---|---|---|
+| alimentazione | 5V | 5V |
+| massa | GND | GND |
+| seriale | **IO2** (TX) | **IO34** (RX) |
+| seriale | **IO34** (RX) | **IO2** (TX) |
 
-Sulla T3 i pin 14 e 13 sono sullo slot microSD: **toglierla**. Il display di ciascuna scheda mostra lo stato (pacchetti ricevuti, ripetuti, scartati, coda della TX, collegamento). La scheda TX trasmette ogni pacchetto della coda con la pausa minima di 80 ms. Per uscire dal ruolo: `CFG SET ROLE OFF` e `CFG REBOOT`.
+Sono pin che il cablaggio normale (altoparlante su IO14, IO13, IO4 e IO25, pulsante volume su IO15, PTT su IO0, vedi [pinout.md](pinout.md) e le immagini dei collegamenti) **non usa**: l'altoparlante di monitor e il pulsante del volume si collegano **come su una scheda normale**, senza spostare niente. IO34 è il pin dati del microfono (solo ingresso): sulle schede del ripetitore il microfono non c'è. IO2 è il MISO dello slot microSD, che va lasciato **vuoto** (sulla T3 anche IO13, IO14 e IO15 sono pin dello slot). L'alimentazione: **un solo alimentatore da 5 V** per le due schede (il pin 5V esce solo con l'USB collegato, vedi [pinout.md](pinout.md)): non collegare fra loro i 5V di due schede alimentate ognuna dal proprio USB. **Da verificare sul banco** (pin e alimentazione).
+
+**Il ripetitore usa solo la T3.** Due T-Beam sarebbero uno spreco: GPS, PMU con batteria e schermo di una scheda pensata per il portatile non servono a un ripetitore fisso, e la T3 costa meno. Il firmware rifiuta `CFG SET ROLE RPTRX/RPTTX` sulla T-Beam e le pagine di configurazione lo dicono.
+Il display di ciascuna scheda mostra lo stato (pacchetti ricevuti, ripetuti, scartati, coda della TX, collegamento). La scheda TX trasmette ogni pacchetto della coda con la pausa minima di 80 ms. Per uscire dal ruolo: `CFG SET ROLE OFF` e `CFG REBOOT`.
 
 **Monitor audio sulla scheda RX (11/11/2026):** con un **altoparlante** (amplificatore MAX98357A come sulle schede normali) la scheda RX fa ascoltare la voce che riceve sulla frequenza di ingresso, per sorvegliare il traffico. Si accende con `CFG SET MONITOR ON` (e `CFG REBOOT`; `CFG GET MONITOR` lo legge; di base è spento). Si ascolta solo la voce del modo del profilo (non il testo né le prove), al ritmo normale e con la parità che recupera i pacchetti persi, come una scheda normale; nel profilo Messaggio la voce parte a messaggio concluso. Il monitor non cambia cosa viene ripetuto e non trasmette mai. Volume iniziale: `CFG SET VOLUME`; il pulsante volume (GPIO15) lo alza a scheda accesa. Sul display, a voce in corso, compare "RX" con il nominativo di chi parla.
 
-**Fili dell'altoparlante (12/11/2026):** la **seriale fra le due schede è sempre la stessa**, con o senza altoparlante (pin 14 e 13 di ciascuna, tabella sopra). L'altoparlante è per il sysop che va alla postazione: ascolta il traffico dalla scheda RX e guarda i display di RX e TX. Poiché sulla RX non c'è il microfono l'I2S è solo in uscita e il segnale I2S può uscire da qualunque pin con funzione di uscita dell'ESP32: la RX con il monitor usa **altri pin per BCLK e WS** (DIN, SD e alimentazione dell'amplificatore MAX98357A restano quelli di sempre):
-
-| MAX98357A | T3 V1.6.1 (RX) | T-Beam V1.2 (RX) |
-|---|---|---|
-| BCLK | GPIO2 (MISO dello slot microSD) | GPIO15 |
-| LRC (WS) | GPIO15 (MOSI dello slot microSD) | GPIO4 (LED di bordo: si accende appena) |
-| DIN | GPIO4 | GPIO2 |
-| SD (acceso/spento) | GPIO25 | GPIO25 |
-| Pulsante del volume (verso massa) | GPIO0 (non premerlo all'accensione) | tasto di bordo IO38 |
-
-Sulla RX **non va montato il microfono**; sulla T3 la microSD va tolta; sulla T-Beam il GPS deve restare spento (e il GPIO12, pin di avvio, non si usa). **Da verificare sul banco**: la scelta dei pin è teorica (nei file `board_pins_*.h`: `kMonI2sBclk`, `kMonI2sWs`, `kMonVolume`; il test sul PC controlla solo che non ci siano conflitti), soprattutto che i pin siano raggiungibili sul connettore della T-Beam e che GPIO2 non disturbi l'avvio della T3.
+**Altoparlante di monitor (12/11/2026):** per il sysop che va alla postazione: ascolta il traffico dalla scheda RX e guarda i display di RX e TX. Si collega alla RX **come su una scheda normale** (MAX98357A su IO14, IO13, IO4 e IO25, con il pulsante del volume su IO15: schema in [pinout.md](pinout.md)), perché la seriale fra le due schede usa altri pin. Sulla RX non va montato il microfono.
 
 **Messaggi (11/11/2026):** la scheda TX ascolta il profilo Messaggio sulla frequenza di uscita quando è libera, tiene fino a 3 messaggi (massimo 15 s di voce) e li ritrasmette dopo 20 s di silenzio vocale, con la voce sempre prioritaria; vedi [studio-ripetitore.md](studio-ripetitore.md) ("Il regista della TX"). Logica provata sul PC, **non ancora sulla scheda**.
 

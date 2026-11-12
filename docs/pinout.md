@@ -73,6 +73,17 @@ Perché così:
 - **GPIO12, 1, 3, 6-11 evitati:** strapping, UART di debug e flash.
 - Restano liberi: GPIO2 (strapping, ma utilizzabile), GPIO35 (ADC batteria), GPIO22/21 se l'OLED non serve.
 
+## Ripetitore: due T3 collegate fra loro (12/11/2026)
+
+Il ripetitore unisce **due T3** già cablate come stazioni normali (microfono non necessario sulla RX; altoparlante di monitor facoltativo, pulsante volume invariato) con **quattro fili**: 5V, GND e la seriale incrociata. La seriale usa due pin che il cablaggio normale non tocca:
+
+| Segnale | GPIO | Collegamento |
+|---|---|---|
+| Seriale RX | 34 | TX (IO2) dell'altra scheda (GPIO34 è solo ingresso: va bene, è il pin del microfono che qui non c'è) |
+| Seriale TX | 2 | RX (IO34) dell'altra scheda (MISO dello slot microSD: lasciarlo vuoto) |
+
+Due T-Beam sarebbero uno spreco (GPS, PMU e batteria non servono a un ripetitore fisso): il ripetitore è solo T3. Dettagli in [firmware.md](firmware.md) e [studio-ripetitore.md](studio-ripetitore.md). **Da verificare sul banco.**
+
 ## Alimentazione
 
 - Il pin `5V` del connettore dà i 5 V solo con USB collegato. Con batteria l'amplificatore va a 3,3 V (circa 0,7 W su 8 Ω); il 3,3 V è condiviso con ESP32 e radio, quindi un condensatore da circa 100 µF vicino all'amplificatore è utile.

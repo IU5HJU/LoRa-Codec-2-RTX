@@ -209,6 +209,16 @@ static void testTexts() {
   CHECK(isValidSettings(empty));
 }
 
+static void testRoleNotOnTbeam() {
+  FakeStorage st;
+  Settings active = kDefaults;
+  SettingsConsole con{active, kDefaults, st, "tbeam", "v0"};
+  char reply[300];
+  CHECK(con.handleLine("CFG SET ROLE RPTTX", reply, sizeof(reply)) == ConsoleResult::Error && strstr(reply, "solo la T3") && st.data.role == kRoleNormal);
+  CHECK(con.handleLine("CFG SET ROLE RPTRX", reply, sizeof(reply)) == ConsoleResult::Error);
+  CHECK(con.handleLine("CFG SET ROLE OFF", reply, sizeof(reply)) == ConsoleResult::Ok);  // tornare stazione si puo' sempre
+}
+
 static void testRepeaterRole() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "role=off") && strstr(f.reply, "freqout=433.900"));
@@ -564,6 +574,7 @@ void testSmallBuffer() {
 int main() {
   testVolumeMigration();
   testRepeaterRole();
+  testRoleNotOnTbeam();
   testTexts();
   testMonitor();
   testIdInterval();

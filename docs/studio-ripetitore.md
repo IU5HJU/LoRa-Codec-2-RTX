@@ -227,3 +227,8 @@ La scheda TX trasmette **ogni 1-10 minuti** (di base 10; `CFG SET IDINT n` o cam
 - **Sulle stazioni:** niente bip e niente casella. Il display mostra "**Ultimo IR5XXX ID**" con RSSI e SNR sulla riga sotto, finché non arriva altro. Una voce passata dal ripetitore si legge ora "**Ultimo IZ5FSN via RPT**" (flag `RELAYED`), una voce diretta "Ultimo IZ5FSN" come prima.
 - **Per chi non ha schede LoRa:** studio di fattibilità in [studio-identificativo-cw.md](studio-identificativo-cw.md) (Morse in CW o in FM stretta con la radio che c'è).
 
+### Collegamento e schede (12/11/2026)
+
+- **Solo T3.** Il ripetitore usa due T3: due T-Beam sarebbero uno spreco (GPS, PMU con batteria e uno schermo pensati per il portatile non servono a un ripetitore fisso). Il firmware rifiuta il ruolo del ripetitore sulla T-Beam.
+- **Quattro fili** fra le due schede: 5V, GND, seriale RX e seriale TX (RX = IO34, TX = IO2 su entrambe, incrociati). Sono pin che il cablaggio normale non usa, quindi **l'altoparlante di monitor** (per il sysop in postazione, insieme ai display di RX e TX) e il **pulsante del volume** restano come su una scheda normale: l'obiettivo è unire due dispositivi esistenti senza rifare i cablaggi. Tabella e avvertenze in [firmware.md](firmware.md) e [pinout.md](pinout.md).
+

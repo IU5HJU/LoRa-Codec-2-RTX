@@ -172,13 +172,14 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('valore fuori limite bloccato dal modulo', !st.cmds.includes('CFG SET POWER 99'));
   await p.fill('#power', '10');
 
-  // Sulla T-Beam il campo GPS compare e il comando parte
+  // Sulla T-Beam il campo GPS compare e il comando parte; il ruolo del ripetitore e' spento (solo T3)
   st.board = 'tbeam';
   await p.reload();
   await p.waitForFunction(() => !document.getElementById('gpsbox').hidden);
   await p.selectOption('#gps', 'on');
   await p.click('#save');
   await p.waitForFunction(() => /Salvato|diversi|Rifiutato/.test(document.getElementById('st').textContent));
+  check('T-Beam: ruolo del ripetitore non modificabile', (await p.isDisabled('#role')) && (await p.isVisible('#rolenote')));
   check('GPS sulla T-Beam', st.cmds.includes('CFG SET GPS on') && st.cfg.gps === 'on', st.cmds.slice(-3).join('|'));
 
   const n = st.cmds.length;
