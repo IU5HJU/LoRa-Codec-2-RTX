@@ -2,7 +2,7 @@
 
 namespace lcr {
 
-const MenuItem* defaultMenuItems(size_t& count) {
+const MenuItem* defaultMenuItems(size_t& count, bool sysopMode) {
   static const MenuItem kItems[] = {
       // "Modo ..." davanti ai tre profili. La "a" accentata di "Qualita'" e' il byte 0x85 (CP437): e' il codice con cui il
       // font 5x7 dell'OLED (Adafruit_GFX) disegna la "a" con l'accento grave; l'UTF-8 verrebbe stampato come due simboli strani.
@@ -13,8 +13,16 @@ const MenuItem* defaultMenuItems(size_t& count) {
       {"MeshCom", kMenuMeshId, true},
       {"Wi-Fi", kMenuWifiId, true},
   };
+  static const MenuItem kSysopItems[] = {
+      {"Modo Standard", 0, true},
+      {"Modo Messaggio", 1, true},
+      {"Modo Qualit\x85", 2, true},
+      {"Comandi Sysop", kMenuSysopId, true},
+      {"MeshCom", kMenuMeshId, true},
+      {"Wi-Fi", kMenuWifiId, true},
+  };
   count = sizeof(kItems) / sizeof(kItems[0]);
-  return kItems;
+  return sysopMode ? kSysopItems : kItems;
 }
 
 bool Menu::open(uint8_t currentId, uint32_t nowMs) {

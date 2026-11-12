@@ -32,7 +32,8 @@
 //                                   numerico (22251, 222...), un nominativo-SSID (IU5ABC-9) o * per tutti; NONE svuota il posto; valgono subito)
 //   CFG SET SYSOP IU5HJU         -> CFG OK sysop=IU5HJU        (nominativo del sysop: il solo che puo' comandare il ripetitore; NONE lo toglie; vale dal riavvio)
 //   CFG SET SYSOPKEY <32 cifre esadecimali> -> CFG OK sysopkey=set  (chiave condivisa di 16 byte per firmare i comandi; NONE la toglie; mai mostrata)
-//   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set
+//   CFG SET SYSOPMODE ON         -> CFG OK sysopmode=on        (modo Sysop: nel menu "Comandi Sysop" al posto di "Invia testo"; OFF lo spegne; vale dal riavvio)
+//   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set mode=off
 //   CFG GET MCDEST1              -> CFG MCDEST1=22251
 //   CFG SET MCWINDOW 300         -> CFG OK mcwindow=300        (secondi di ascolto dopo l'invio, 30-1800)
 //   CFG SET MCSSID 99            -> CFG OK mcssid=99           (SSID del tuo nominativo in rete, 0-99; 0 = nessuno)
@@ -120,6 +121,9 @@ struct Settings {
   char sysopCall[kMaxCallsign + 1] = {0};
   uint8_t sysopKey[16] = {0};
   bool sysopKeySet = false;
+  // Modo Sysop (scheda del sysop): il menu "Invia testo" diventa "Comandi Sysop" (elenco dei comandi al posto dei testi). Resta attivo
+  // finche' il sysop non lo spegne; vale dal riavvio.
+  bool sysopMode = false;
   bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
   uint32_t freqOutKhz = 0;   // frequenza di uscita del ripetitore, usata dalla scheda TX (0 = come la frequenza del profilo)
   int powerDbm = 0;

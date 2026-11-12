@@ -70,7 +70,9 @@ class UiNotifier : public lcr::INotifier {
   bool nextTextPage();
   bool textOpen() const { return openedText_; }
   // Prima di node->sendText(): lo schermo di trasmissione dice "INVIO SMS" invece del tempo di parlato.
-  void setSendingText(bool on) { sendingText_ = on; }
+  void setSendingText(bool on) { sendingText_ = on; sendingCmd_ = false; }
+  // Come sopra per un comando del sysop: "INVIO COMANDO".
+  void setSendingCommand(bool on) { sendingText_ = on; sendingCmd_ = on; }
 
   // false se il display non risponde (il resto del sistema funziona comunque).
   bool begin();
@@ -160,7 +162,7 @@ class UiNotifier : public lcr::INotifier {
   int txPct_ = 0;                // avanzamento dell'invio di un messaggio, 1-100 (0 = non noto)
   int rxPct_ = 0;                // avanzamento della ricezione di un messaggio, 1-100 (0 = non noto)
   bool playing_ = false;         // profilo Messaggio: sta riproducendo (altrimenti sta ancora ricevendo)
-  char noticeBuf_[16] = {0};
+  char noticeBuf_[24] = {0};
   int recPhase_ = 0;  // registra e poi trasmetti: 0 nessuna, 1 registra, 2 attesa, 3 trasmette
   lcr::VoiceNode::State state_ = lcr::VoiceNode::State::Idle;
   int volume_ = 0;
@@ -187,6 +189,7 @@ class UiNotifier : public lcr::INotifier {
   const lcr::TextPicker* picker_ = nullptr;
   bool openedText_ = false;       // testo aperto e in mostra
   bool sendingText_ = false;
+  bool sendingCmd_ = false;
   bool openedVoice_ = false;      // messaggio vocale in riproduzione
   int textPage_ = 0;
   int textLineCount_ = 0;

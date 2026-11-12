@@ -104,7 +104,7 @@ Un solo pacchetto `START`+`END`+`CALLSIGN` (nominativo di chi manda), `seq` 0, s
 
 **Firma:** HMAC-SHA256 con una chiave condivisa di 16 byte, troncato a **8 byte**, calcolato sul pacchetto come esce da `encodePacket` **senza gli ultimi 8 byte** (intestazione, sessione e nominativo compresi: la sessione di un comando firmato non può essere 0). La firma **non cifra**: il comando resta leggibile.
 
-**Controlli del ripetitore** (la scheda RX): nominativo uguale a quello del sysop configurato, firma valida, **contatore maggiore dell'ultimo accettato** (salvato in memoria: una registrazione riascoltata non funziona, nemmeno la seconda copia dello stesso comando). Altrimenti il comando si ignora in silenzio (nemmeno STATO senza firma). Il comando non si ripete mai.
+**Controlli del ripetitore** (la scheda RX): nominativo uguale a quello del sysop configurato, firma valida, **contatore maggiore dell'ultimo accettato** (salvato in memoria: una registrazione riascoltata non funziona, nemmeno la seconda copia dello stesso comando). Altrimenti il comando si ignora in silenzio (nemmeno STATO senza firma). Un'eccezione: se la **firma è valida ma il contatore è più basso** dell'ultimo (la stazione del sysop è fuori sincronia, per esempio dopo aver cancellato la scheda) la TX risponde con esito 4 e l'ultimo contatore accettato nel campo contatore; la stazione lo salva e il comando successivo passa. Chi riascolta una registrazione non ottiene altro che questa risposta, al massimo una ogni 10 s. La seconda copia di un comando (stesso contatore) si scarta senza risposta. Il comando non si ripete mai.
 
 | Codice | Comando | Parametro | Effetto |
 |---|---|---|---|
@@ -114,9 +114,9 @@ Un solo pacchetto `START`+`END`+`CALLSIGN` (nominativo di chi manda), `seq` 0, s
 | 4 | SPEGNI A TEMPO | minuti 1..1440 | spenta per N minuti |
 | 5 | RIAVVIA | – | riavvio delle due schede |
 | 6 | IDENTIFICA | – | trasmette il nominativo (testo "Ripetitore VoLoRa") |
-| 7 | POTENZA | dBm 2..17 | potenza di uscita (fino al riavvio) |
+| 7 | POTENZA | dBm 2..17 | potenza di uscita, **salvata in memoria** (come `CFG SET POWER`) |
 
-**Risposta:** firmata con la stessa chiave, trasmessa con i parametri della voce, **una volta** (se il sysop non la vede, ripete il comando: l'esito è lo stesso). Esito: 0 ok, 1 parametro fuori limiti, 2 comando sconosciuto, 3 non consentito. Dati: byte 3 = 1 se la TX è spenta, byte 2 = potenza in dBm, byte 1-0 = minuti che restano allo spegnimento a tempo (0xFFFF = senza scadenza). A TX spenta la risposta **non si trasmette**, salvo quella al comando che l'ha appena spenta.
+**Risposta:** firmata con la stessa chiave, trasmessa con i parametri della voce, **una volta** (se il sysop non la vede, ripete il comando: l'esito è lo stesso). Esito: 0 ok, 1 parametro fuori limiti, 2 comando sconosciuto, 3 non consentito, 4 contatore troppo basso. Dati: byte 3 = 1 se la TX è spenta, byte 2 = potenza in dBm, byte 1-0 = minuti che restano allo spegnimento a tempo (0xFFFF = senza scadenza). A TX spenta la risposta **non si trasmette**, salvo quella al comando che l'ha appena spenta.
 
 **Sicurezza del ripetitore** (indipendente dai comandi): una trasmissione **continua** (pause fra pacchetti inferiori a 1,5 s) oltre **60 s di voce** o **180 s di messaggio** spegne la TX per 5 minuti; RIACCENDI la riaccende prima.
 

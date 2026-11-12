@@ -1,5 +1,7 @@
 #include "ui.h"
 
+#include "settings_nvs.h"
+
 #include <Wire.h>
 
 #include <cmath>
@@ -120,6 +122,7 @@ void UiNotifier::txStarted() {
 
 void UiNotifier::txEnded(bool turnLimitReached) {
   sendingText_ = false;
+  sendingCmd_ = false;
   limitHit_ = turnLimitReached;
   if (turnLimitReached) {
     snprintf(noticeBuf_, sizeof(noticeBuf_), "LIMITE %lu s", static_cast<unsigned long>(maxTurnSec_));
@@ -360,6 +363,21 @@ void UiNotifier::sysopReply(const char* callsign, const lcr::SysopReply& r) {
   Serial.printf("CFG SYSCMD RISPOSTA da=%s codice=%u esito=%u contatore=%lu spento=%u potenza=%u minuti=%u\n", callsign, static_cast<unsigned>(r.code),
                 static_cast<unsigned>(r.result), static_cast<unsigned long>(r.counter), static_cast<unsigned>(r.data >> 24),
                 static_cast<unsigned>((r.data >> 16) & 0xFF), static_cast<unsigned>(r.data & 0xFFFF));
+  if (r.result == lcr::kSysopCounterLow) {
+    saveSysopCounter(r.counter);  // il ripetitore dice l'ultimo contatore accettato: il prossimo comando passa
+    snprintf(noticeBuf_, sizeof(noticeBuf_), "RIPETI IL COMANDO");
+  } else if (r.result != lcr::kSysopOk) {
+    snprintf(noticeBuf_, sizeof(noticeBuf_), "RIP: RIFIUTATO %u", static_cast<unsigned>(r.result));
+  } else if (r.code == lcr::kSysopStatus || r.code == lcr::kSysopOff || r.code == lcr::kSysopOffMinutes || r.code == lcr::kSysopOn) {
+    const unsigned mins = r.data & 0xFFFF;
+    if ((r.data >> 24) == 0) snprintf(noticeBuf_, sizeof(noticeBuf_), "RIP: ATTIVO %udBm", static_cast<unsigned>((r.data >> 16) & 0xFF));
+    else if (mins == 0xFFFF) snprintf(noticeBuf_, sizeof(noticeBuf_), "RIP: SPENTO");
+    else snprintf(noticeBuf_, sizeof(noticeBuf_), "RIP: SPENTO %umin", mins);
+  } else {
+    snprintf(noticeBuf_, sizeof(noticeBuf_), "RIP: OK");
+  }
+  notice_ = noticeBuf_;
+  noticeUntilMs_ = millis() + 4000;
   audio_.beep(r.result == lcr::kSysopOk ? 1000 : 400, 80);
   dirty_ = true;
 }
@@ -538,7 +556,7 @@ void UiNotifier::draw(uint32_t nowMs) {
     case lcr::VoiceNode::State::Idle: snprintf(big, sizeof(big), "%s", meshSec_ > 0 ? "MESHCOM" : (message_ ? "MESSAGGIO" : (testMode_ ? "PROVA ON" : "ASCOLTO"))); break;
     case lcr::VoiceNode::State::Receiving: snprintf(big, sizeof(big), "RX %s", rxCall_); break;
     default:
-      if (sendingText_) snprintf(big, sizeof(big), "INVIO SMS");
+      if (sendingText_) snprintf(big, sizeof(big), sendingCmd_ ? "COMANDO" : "INVIO SMS");
       else if (recPhase_ == 1) snprintf(big, sizeof(big), "REGISTRA");
       else if (recPhase_ == 2) snprintf(big, sizeof(big), "ATTESA");
       else if (recPhase_ == 3) snprintf(big, sizeof(big), "INVIO");
@@ -552,7 +570,7 @@ void UiNotifier::draw(uint32_t nowMs) {
   if (notice_) {
     display_.print(notice_);
   } else if (state_ == lcr::VoiceNode::State::Transmitting && sendingText_) {
-    display_.print("Trasmetto il testo");
+    display_.print(sendingCmd_ ? "Trasmetto il comando" : "Trasmetto il testo");
   } else if (state_ == lcr::VoiceNode::State::Transmitting && recPhase_ == 1) {
     display_.printf("Registro %lu/%lu s", static_cast<unsigned long>((nowMs - txStartMs_) / 1000),
                     static_cast<unsigned long>(maxTurnSec_));

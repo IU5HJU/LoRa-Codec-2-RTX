@@ -201,6 +201,21 @@
       <label for="mcdest5">Destinatario 5</label><input id="mcdest5" maxlength="15" autocomplete="off" disabled>
       <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S, M o Q), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo Q 433.900&rdquo;.</p>
 
+      <h3>Modo Sysop</h3>
+      <p class="hint" id="sysophint">Per chi gestisce un ripetitore. Con il <strong>modo Sysop</strong> acceso il menu della scheda (volume lungo) mostra <strong>Comandi Sysop</strong> al posto di Invia testo: scegli il comando (STATO, SPEGNI, RIACCENDI, RIAVVIA, IDENTIFICA, POTENZA) e la scheda lo trasmette firmato al ripetitore. Resta acceso finch&eacute; non lo spegni. Nominativo e chiave vanno impostati uguali sul ripetitore (schede RX e TX) e sulla scheda del sysop; la chiave non si rilegge mai.</p>
+      <label for="sysopmode">Modo Sysop</label>
+      <select id="sysopmode" disabled><option value="off">Spento</option><option value="on">Acceso</option></select>
+      <label for="sysop">Nominativo del sysop</label><input id="sysop" maxlength="8" autocomplete="off" placeholder="IU5HJU" disabled>
+      <label for="sysopkey">Chiave (32 cifre esadecimali)</label><input id="sysopkey" maxlength="32" autocomplete="off" spellcheck="false" disabled>
+      <p class="hint" id="sysopkeyhint">Chiave non impostata.</p>
+      <button id="genkey" type="button" class="secondary" disabled>Genera una chiave nuova</button>
+      <div id="sysopbox" hidden>
+        <h3>Comandi Sysop</h3>
+        <p class="hint">L'elenco che compare sulla scheda al posto dei testi predefiniti.</p>
+        <ol id="sysoplist"><li>STATO</li><li>SPEGNI</li><li>SPEGNI 15 MIN</li><li>SPEGNI 60 MIN</li><li>RIACCENDI</li><li>RIAVVIA</li><li>IDENTIFICA</li><li>POTENZA 17 dBm</li><li>POTENZA 14 dBm</li><li>POTENZA 10 dBm</li></ol>
+      </div>
+
+      <div id="textsbox">
       <h3>Testi predefiniti (SMS)</h3>
       <p class="hint" id="texthint">Fino a <strong>5 testi brevi</strong> (massimo 150 caratteri ciascuno, solo lettere, cifre e simboli senza accenti e senza le parentesi graffe) da inviare dalla scheda: menu a bordo (volume lungo) &rarr; <strong>Invia testo</strong>. Chi riceve sente &ldquo;SMS&rdquo; in Morse, vede una busta sul display e preme il PTT per leggere. Lascia vuoto un posto per non usarlo. Valgono subito, senza riavvio.</p>
       <label for="text1">Testo 1</label><input id="text1" maxlength="150" autocomplete="off" disabled>
@@ -208,6 +223,7 @@
       <label for="text3">Testo 3</label><input id="text3" maxlength="150" autocomplete="off" disabled>
       <label for="text4">Testo 4</label><input id="text4" maxlength="150" autocomplete="off" disabled>
       <label for="text5">Testo 5</label><input id="text5" maxlength="150" autocomplete="off" disabled>
+      </div>
 
       <button id="save" type="submit" disabled>Salva e riavvia</button>
       <button id="reload" type="button" class="secondary" disabled>Rileggi</button>
@@ -400,6 +416,23 @@
     } catch (e) { mcSeen = false; }
     updateMcControls(!!port);
   }
+  let sysopSeen = false;     // la scheda risponde a CFG GET SYSOP (firmware piu' vecchi: no)
+  function sysopShow() { const on = $('sysopmode').value === 'on'; $('sysopbox').hidden = !on; $('textsbox').hidden = on; }
+  function updateSysopControls(on) { for (const id of ['sysopmode', 'sysop', 'sysopkey', 'genkey']) $(id).disabled = !on || !sysopSeen; }
+  async function readSysop() {
+    try {
+      const r = await send('CFG GET SYSOP', /^CFG SYSOP /, 2500);
+      const m = {};
+      for (const kv of r.slice(10).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = kv.slice(i + 1); }
+      $('sysop').value = m.call && m.call !== 'none' ? m.call : '';
+      $('sysopmode').value = m.mode === 'on' ? 'on' : 'off';
+      $('sysopkey').value = '';
+      $('sysopkeyhint').textContent = m.key === 'set' ? 'Chiave impostata (non si mostra). Lascia vuoto per non cambiarla.' : 'Chiave non impostata.';
+      sysopSeen = true;
+    } catch (e) { sysopSeen = false; }
+    updateSysopControls(!!port);
+    sysopShow();
+  }
   function updateTextControls(on) { for (let i = 1; i <= 5; i++) $('text' + i).disabled = !on || !textSeen; }
   async function readTexts() {   // un comando per ogni testo: le righe sono lunghe e CFG GET resterebbe troppo grande
     try {
@@ -435,10 +468,11 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; }
+    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; }
     updatePosControls(on);
     updateMcControls(on);
     updateTextControls(on);
+    updateSysopControls(on);
     $('freqmsg').disabled = !on || !freqMsgSeen;   // il firmware piu' vecchio ha una sola frequenza
     $('sameFreq').disabled = !on || !freqMsgSeen;
     $('freqqual').disabled = !on || !freqQualSeen;
@@ -560,6 +594,7 @@
         } catch (e) { $('fwinfo').textContent = 'Versione del firmware non disponibile (firmware più vecchio).'; }
         await readMc();
         await readTexts();
+        await readSysop();
         return true;
       } catch (e) { if (!writer) return false; }
     }
@@ -638,7 +673,15 @@
         texts.push(t);
       }
     }
-    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts, mc };
+    let sysop = null;
+    if (!$('sysopmode').disabled) {
+      const sy = $('sysop').value.trim().toUpperCase();
+      if (sy !== '' && !/^[A-Z0-9\/]{1,8}$/.test(sy)) return { err: 'Il nominativo del sysop non \u00e8 valido.' };
+      const sk = $('sysopkey').value.trim();
+      if (sk !== '' && !/^[0-9a-fA-F]{32}$/.test(sk)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
+      sysop = { call: sy, mode: $('sysopmode').value, key: sk };
+    }
+    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop };
   }
 
   // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
@@ -674,6 +717,11 @@
         replies.push(await send('CFG SET MCWINDOW ' + v.mc.window, /^CFG (OK|ERR)/));
         for (let i = 0; i < 5; i++) replies.push(await send('CFG SET MCDEST' + (i + 1) + ' ' + (v.mc.dests[i] || 'NONE'), /^CFG (OK|ERR)/));
       }
+      if (v.sysop !== null) {
+        replies.push(await send('CFG SET SYSOP ' + (v.sysop.call || 'NONE'), /^CFG (OK|ERR)/));
+        replies.push(await send('CFG SET SYSOPMODE ' + v.sysop.mode, /^CFG (OK|ERR)/));
+        if (v.sysop.key !== '') replies.push(await send('CFG SET SYSOPKEY ' + v.sysop.key, /^CFG (OK|ERR)/));
+      }
       if (v.texts !== null) for (let i = 0; i < 5; i++) replies.push(await send('CFG SET TEXT' + (i + 1) + ' ' + (v.texts[i] || 'NONE'), /^CFG (OK|ERR)/));
       const bad = replies.find(r => r.startsWith('CFG ERR'));
       if (bad) throw new Error(bad);
@@ -696,6 +744,13 @@
     }
   }
 
+  $('sysopmode').addEventListener('change', sysopShow);
+  $('genkey').addEventListener('click', () => {
+    const b = new Uint8Array(16);
+    crypto.getRandomValues(b);
+    $('sysopkey').value = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+    $('sysopkeyhint').textContent = 'Copia questa chiave adesso: dopo il salvataggio non si rilegge. Va impostata uguale sulle due schede del ripetitore e su questa.';
+  });
   $('qthclear').addEventListener('click', () => { $('qthlat').value = ''; $('qthlon').value = ''; });
   $('freq').addEventListener('input', updateFreqNote);
   $('freqmsg').addEventListener('input', updateFreqNote);

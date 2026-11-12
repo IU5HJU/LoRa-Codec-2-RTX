@@ -65,7 +65,7 @@ static lcr::Menu* menu = nullptr;
 static lcr::MenuFlow* menuFlow = nullptr;
 static lcr::TextPicker textPicker;  // voce "Invia testo" del menu
 // Voce "MeshCom" del menu (escursione sulla rete di testo): prima si sceglie il testo (o il solo ascolto), poi il destinatario.
-enum class McStage { None, Text, Dest };
+enum class McStage { None, Text, Dest, Sysop };
 static lcr::ChoicePicker mcPicker;
 static McStage mcStage = McStage::None;
 static const char* mcItems[lcr::ChoicePicker::kMaxItems];
@@ -120,7 +120,7 @@ void setup() {
   ui.setOwnPosition(settings.qth());
   {
     size_t n = 0;
-    const lcr::MenuItem* items = lcr::defaultMenuItems(n);
+    const lcr::MenuItem* items = lcr::defaultMenuItems(n, settings.sysopMode);
     menu = new lcr::Menu(items, n);
     menuFlow = new lcr::MenuFlow(*menu);
     ui.setMenu(menu, settings.profile);
@@ -463,6 +463,28 @@ static void runCodecTest() {
   ui.refresh();
 }
 
+// Trasmette un comando firmato al ripetitore (due copie, senza PTT). true se e' partito; il motivo di un rifiuto e' sul display.
+static bool sendSysop(uint8_t code, uint16_t param) {
+  if (!settings.sysopKeySet) {
+    Serial.println("CFG SYSCMD ERR manca la chiave (CFG SET SYSOPKEY, poi CFG REBOOT)");
+    ui.showMessage("MANCA LA CHIAVE", "Impostala dal Wi-Fi");
+    delay(1500);
+    return false;
+  }
+  const uint32_t counter = loadSysopCounter() + 1;
+  uint16_t session = static_cast<uint16_t>(counter & 0xFFFF);
+  if (session == 0) session = 1;  // 0 = "assegna tu": con una firma sulla sessione non va bene
+  ui.setSendingCommand(true);
+  if (!node->sendSingle(lcr::makeSysopCommand(session, settings.callsign, settings.sysopKey, {code, param, counter}), millis())) {
+    ui.setSendingCommand(false);
+    Serial.println("CFG SYSCMD ERR non trasmesso (canale occupato, nominativo o trasmissione in corso)");
+    return false;
+  }
+  saveSysopCounter(counter);
+  Serial.printf("CFG SYSCMD OK codice=%u contatore=%lu\n", static_cast<unsigned>(code), static_cast<unsigned long>(counter));
+  return true;
+}
+
 // CFG SYSCMD STATO | SPEGNI [minuti] | RIACCENDI | RIAVVIA | IDENTIFICA | POTENZA <dBm>: trasmette un comando firmato al ripetitore
 // (modo 5, docs/studio-ripetitore.md). Serve la chiave (CFG SET SYSOPKEY); il contatore cresce a ogni comando ed e' salvato.
 static void runSysopCommand(const char* args) {
@@ -482,19 +504,7 @@ static void runSysopCommand(const char* args) {
     Serial.println("CFG SYSCMD ERR uso: STATO | SPEGNI [minuti] | RIACCENDI | RIAVVIA | IDENTIFICA | POTENZA <dBm>");
     return;
   }
-  if (!settings.sysopKeySet) {
-    Serial.println("CFG SYSCMD ERR manca la chiave (CFG SET SYSOPKEY, poi CFG REBOOT)");
-    return;
-  }
-  const uint32_t counter = loadSysopCounter() + 1;
-  uint16_t session = static_cast<uint16_t>(counter & 0xFFFF);
-  if (session == 0) session = 1;  // 0 = "assegna tu": con una firma sulla sessione non va bene
-  if (!node->sendSingle(lcr::makeSysopCommand(session, settings.callsign, settings.sysopKey, {code, static_cast<uint16_t>(param), counter}), millis())) {
-    Serial.println("CFG SYSCMD ERR non trasmesso (canale occupato, nominativo o trasmissione in corso)");
-    return;
-  }
-  saveSysopCounter(counter);
-  Serial.printf("CFG SYSCMD OK codice=%u contatore=%lu\n", static_cast<unsigned>(code), static_cast<unsigned long>(counter));
+  sendSysop(code, static_cast<uint16_t>(param));
 }
 
 // Righe "CFG ..." dalla seriale (pagina di configurazione o terminale). Le altre si ignorano.
@@ -623,6 +633,19 @@ static void mcOpenText(uint32_t now) {
   if (!mcPicker.open(mcItems, n, now)) mcStage = McStage::None;
 }
 
+// Modo Sysop: l'elenco dei comandi al posto dei testi predefiniti
+static void sysopOpenList(uint32_t now) {
+  size_t n = 0;
+  const lcr::SysopMenuEntry* e = lcr::sysopMenuEntries(n);
+  for (size_t i = 0; i < n && i < lcr::ChoicePicker::kMaxItems; i++) {
+    mcItems[i] = e[i].label;
+    mcSlots[i] = static_cast<int>(i);
+  }
+  ui.setChoiceTitle("COMANDI SYSOP");
+  mcStage = McStage::Sysop;
+  if (!mcPicker.open(mcItems, n < lcr::ChoicePicker::kMaxItems ? n : lcr::ChoicePicker::kMaxItems, now)) mcStage = McStage::None;
+}
+
 static void mcStart(const char* text, const char* dest, uint32_t now) {
   // Oltre ai messaggi diretti a noi si vedono quelli dei gruppi impostati tra i destinatari (le risposte ai nostri QRV)
   const char* groups[lcr::kMcDestSlots];
@@ -638,6 +661,16 @@ static void mcStart(const char* text, const char* dest, uint32_t now) {
 // Scelta confermata: nello stadio del testo, poi in quello del destinatario
 static void mcChosen(size_t index, uint32_t now) {
   const lcr::Settings& st = console->stored();
+  if (mcStage == McStage::Sysop) {
+    mcStage = McStage::None;
+    size_t n = 0;
+    const lcr::SysopMenuEntry* e = lcr::sysopMenuEntries(n);
+    if (index < n) {
+      Serial.printf("[sysop] comando %s\n", e[index].label);
+      sendSysop(e[index].code, e[index].param);
+    }
+    return;
+  }
   if (mcStage == McStage::Text) {
     const int slot = mcSlots[index];
     if (slot < 0) {  // solo ascolto
@@ -754,6 +787,9 @@ void loop() {
       rebootIntoWifiConfig();
     } else if (act.outcome.id == lcr::kMenuMeshId) {
       mcOpenText(now);
+      ui.refresh();
+    } else if (act.outcome.id == lcr::kMenuSysopId) {
+      sysopOpenList(now);
       ui.refresh();
     } else if (act.outcome.id == lcr::kMenuTextId) {
       if (!textPicker.open(console->stored(), now)) {

@@ -81,6 +81,15 @@ SysopResult TxScheduler::onControl(const SysopCommand& c, uint32_t nowMs, Repeat
   return r;
 }
 
+void TxScheduler::onStaleCommand(uint8_t code, uint32_t lastCounter, uint32_t nowMs) {
+  if (!control_ || !control_->txAllowed(nowMs)) return;
+  if (haveStaleReply_ && nowMs - lastStaleReplyMs_ < kStaleReplyGapMs) return;
+  haveStaleReply_ = true;
+  lastStaleReplyMs_ = nowMs;
+  sendNow(makeSysopReply(nextSession_++, callsign_, key_, {code, kSysopCounterLow, lastCounter, control_->statusData(nowMs)}), nowMs, false);
+  stats_.replies++;
+}
+
 void TxScheduler::setCallsign(const char* callsign) {
   strncpy(callsign_, callsign ? callsign : "", kMaxCallsign);
   callsign_[kMaxCallsign] = 0;

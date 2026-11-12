@@ -434,7 +434,28 @@ static void testSafetyTripsOnLongVoice() {
   CHECK(r.air.sent[0] == sent);
 }
 
+static void testStaleReply() {
+  CtlRig r;
+  r.run(500);
+  r.sch->onStaleCommand(kSysopOff, 41, r.t);
+  CHECK(r.air.sent[0] == 1);
+  SysopReply rep;
+  CHECK(parseSysopReply(dec(r.air.log[0][0]), KEY, rep) && rep.result == kSysopCounterLow && rep.counter == 41 && rep.code == kSysopOff);
+  r.run(2000);
+  r.sch->onStaleCommand(kSysopOff, 41, r.t);  // troppo presto: niente
+  CHECK(r.air.sent[0] == 1);
+  r.run(TxScheduler::kStaleReplyGapMs);
+  r.sch->onStaleCommand(kSysopOff, 41, r.t);
+  CHECK(r.air.sent[0] == 2);
+  r.sch->onControl({kSysopOff, 0, 50}, r.t, r.fx);  // TX spenta: niente risposte di risincronizzazione
+  const int sent = r.air.sent[0];
+  r.run(TxScheduler::kStaleReplyGapMs + 1000);
+  r.sch->onStaleCommand(kSysopOff, 50, r.t);
+  CHECK(r.air.sent[0] == sent);
+}
+
 int main() {
+  testStaleReply();
   testControlReplyAndOff();
   testControlOffMinutes();
   testControlStopsRelay();

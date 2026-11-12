@@ -121,13 +121,24 @@ SysopAuth::Verdict SysopAuth::check(const Packet& p, SysopCommand& out) {
   const uint32_t counter = get32(p.payload + 3);
   if (counter <= last_) {
     rejected_++;
-    return Verdict::Replay;
+    return counter == last_ ? Verdict::Replay : Verdict::Stale;
   }
   last_ = counter;
   out.code = p.payload[0];
   out.param = static_cast<uint16_t>((p.payload[1] << 8) | p.payload[2]);
   out.counter = counter;
   return Verdict::Ok;
+}
+
+const SysopMenuEntry* sysopMenuEntries(size_t& count) {
+  static const SysopMenuEntry kEntries[] = {
+      {"STATO", kSysopStatus, 0},          {"SPEGNI", kSysopOff, 0},          {"SPEGNI 15 MIN", kSysopOffMinutes, 15},
+      {"SPEGNI 60 MIN", kSysopOffMinutes, 60}, {"RIACCENDI", kSysopOn, 0},    {"RIAVVIA", kSysopRestart, 0},
+      {"IDENTIFICA", kSysopIdentify, 0},   {"POTENZA 17 dBm", kSysopPower, 17}, {"POTENZA 14 dBm", kSysopPower, 14},
+      {"POTENZA 10 dBm", kSysopPower, 10},
+  };
+  count = sizeof(kEntries) / sizeof(kEntries[0]);
+  return kEntries;
 }
 
 SysopResult RepeaterControl::apply(const SysopCommand& c, uint32_t nowMs, Effects& fx, uint32_t& data) {

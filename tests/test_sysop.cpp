@@ -88,13 +88,29 @@ static void testReplay() {
   const Packet c5 = makeSysopCommand(1, "IZ0SOP", KEY, {kSysopOff, 0, 5});
   CHECK(a.check(overAir(c5), cmd) == V::Ok);
   CHECK(a.check(overAir(c5), cmd) == V::Replay);  // stessa registrazione riascoltata
-  CHECK(a.check(overAir(makeSysopCommand(2, "IZ0SOP", KEY, {kSysopOn, 0, 4})), cmd) == V::Replay);  // contatore piu' basso
+  CHECK(a.check(overAir(makeSysopCommand(2, "IZ0SOP", KEY, {kSysopOn, 0, 4})), cmd) == V::Stale);  // contatore piu' basso: firma valida
   CHECK(a.check(overAir(makeSysopCommand(3, "IZ0SOP", KEY, {kSysopOn, 0, 6})), cmd) == V::Ok);
   CHECK(a.lastCounter() == 6);
   // contatore ripristinato dalla memoria dopo un riavvio
   SysopAuth b = makeAuth();
   b.setLastCounter(6);
-  CHECK(b.check(overAir(c5), cmd) == V::Replay);
+  CHECK(b.check(overAir(c5), cmd) == V::Stale);
+  // firma sbagliata con contatore basso: nessuna risposta possibile (BadSignature, non Stale)
+  CHECK(b.check(overAir(makeSysopCommand(1, "IZ0SOP", KEY2, {kSysopOn, 0, 2})), cmd) == V::BadSignature);
+  CHECK(b.check(overAir(makeSysopCommand(1, "IZ0SOP", KEY, {kSysopOn, 0, 2})), cmd) == V::Stale);
+}
+
+static void testMenuEntries() {
+  size_t n = 0;
+  const SysopMenuEntry* e = sysopMenuEntries(n);
+  CHECK(n >= 8 && n <= 10 && strcmp(e[0].label, "STATO") == 0 && e[0].code == kSysopStatus);
+  RepeaterControl c(2, 17, 10);
+  for (size_t i = 0; i < n; i++) {
+    RepeaterControl::Effects fx;
+    uint32_t d;
+    CHECK(c.apply({e[i].code, e[i].param, static_cast<uint32_t>(i + 1)}, 0, fx, d) == kSysopOk);  // ogni voce e' un comando valido
+    c.apply({kSysopOn, 0, 99}, 0, fx, d);
+  }
 }
 
 static void testReply() {
@@ -178,6 +194,7 @@ int main() {
   testRejects();
   testReplay();
   testReply();
+  testMenuEntries();
   testControl();
   testSafetyLimit();
   TEST_MAIN_END();

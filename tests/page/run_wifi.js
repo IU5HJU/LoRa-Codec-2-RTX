@@ -16,11 +16,19 @@ const st = {
   board: 't3',
   texts: ['%C QRV su VoLoRa modo %M %F', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
   mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
+  sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
 const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps'];
 function handle(line) {
   st.cmds.push(line);
+  if (line === 'CFG GET SYSOP') return 'CFG SYSOP call=' + st.sysop.call + ' key=' + st.sysop.key + ' mode=' + st.sysop.mode;
+  let sm = /^CFG SET SYSOP (.+)$/.exec(line);
+  if (sm) { st.sysop.call = sm[1] === 'NONE' ? 'none' : sm[1]; return 'CFG OK sysop=' + st.sysop.call; }
+  sm = /^CFG SET SYSOPMODE (on|off)$/.exec(line);
+  if (sm) { st.sysop.mode = sm[1]; return 'CFG OK sysopmode=' + sm[1]; }
+  sm = /^CFG SET SYSOPKEY (.+)$/.exec(line);
+  if (sm) { if (sm[1] !== 'NONE' && !/^[0-9a-fA-F]{32}$/.test(sm[1])) return 'CFG ERR sysopkey servono 32 cifre'; st.sysop.key = sm[1] === 'NONE' ? 'none' : 'set'; st.sysop.keyHex = sm[1]; return 'CFG OK sysopkey=' + st.sysop.key; }
   const tm = /^CFG SET TEXT([1-5]) (.+)$/.exec(line);
   if (tm) { st.texts[+tm[1] - 1] = tm[2] === 'NONE' ? '' : tm[2]; return 'CFG OK text' + tm[1] + '=' + (tm[2] === 'NONE' ? '' : tm[2]); }
   const tg = /^CFG GET TEXT([1-5])$/.exec(line);
@@ -82,8 +90,39 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('comandi inviati', st.cmds.includes('CFG SET PROFILE qua') && st.cmds.includes('CFG SET FREQQUAL 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
   check('testi salvati (con spazi) e posto vuoto con NONE', st.cmds.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami') && st.cmds.includes('CFG SET TEXT4 NONE') && st.texts[1] === 'Sono QRV su 433.775, chiamami' && st.texts[3] === '', JSON.stringify(st.texts));
   check('MeshCom salvato (destinatario in maiuscolo, vuoto = NONE)', st.mc.dests[3] === 'IU5ABC-9' && st.mc.dests[4] === '' && st.mc.ssid === '12' && st.mc.window === '90' && st.cmds.includes('CFG SET MCDEST4 IU5ABC-9') && st.cmds.includes('CFG SET MCDEST5 NONE'), JSON.stringify(st.mc));
-  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 1] === 'CFG GET');
+  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 2] === 'CFG GET' && st.cmds[st.cmds.length - 1] === 'CFG GET SYSOP');
   check('nominativo maiuscolo', st.cfg.callsign === 'IU5HJU/P');
+
+  // Modo Sysop: di partenza spento (testi visibili, elenco comandi nascosto), chiave non impostata
+  check('sysop: lettura iniziale', (await p.inputValue('#sysopmode')) === 'off' && (await p.inputValue('#sysop')) === '' && /non impostata/.test(await p.textContent('#sysopkeyhint')));
+  check('sysop spento: testi visibili, elenco nascosto', (await p.isVisible('#textsbox')) && (await p.isHidden('#sysopbox')));
+  check('sysop: senza chiave nuova non si manda SYSOPKEY', !st.cmds.some((c) => c.startsWith('CFG SET SYSOPKEY')));
+  await p.click('#genkey');
+  const gk = await p.inputValue('#sysopkey');
+  check('chiave generata: 32 cifre esadecimali, diversa a ogni volta', /^[0-9a-f]{32}$/.test(gk));
+  await p.click('#genkey');
+  check('seconda chiave diversa', (await p.inputValue('#sysopkey')) !== gk);
+  const gk2 = await p.inputValue('#sysopkey');
+  await p.selectOption('#sysopmode', 'on');
+  check('sysop acceso: elenco comandi visibile e testi nascosti', (await p.isVisible('#sysopbox')) && (await p.isHidden('#textsbox')) && (await p.locator('#sysoplist li').count()) === 10);
+  await p.fill('#sysop', 'iu5hju');
+  await p.fill('#sysopkey', 'abc');
+  await p.click('#save');
+  await p.waitForFunction(() => /chiave|Salvato/.test(document.getElementById('st').textContent));
+  check('chiave non valida bloccata', /32 cifre/.test(await p.textContent('#st')) && st.sysop.mode === 'off');
+  await p.fill('#sysopkey', gk2);
+  await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  check('sysop salvato (nominativo maiuscolo, modo, chiave)', st.sysop.call === 'IU5HJU' && st.sysop.mode === 'on' && st.sysop.key === 'set' && st.sysop.keyHex === gk2, JSON.stringify(st.sysop));
+  check('dopo il salvataggio la chiave non si rilegge', (await p.inputValue('#sysopkey')) === '' && /impostata/.test(await p.textContent('#sysopkeyhint')) && (await p.inputValue('#sysopmode')) === 'on');
+  const nk = st.cmds.filter((c) => c.startsWith('CFG SET SYSOPKEY')).length;
+  await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  check('chiave lasciata vuota: non cambia', st.cmds.filter((c) => c.startsWith('CFG SET SYSOPKEY')).length === nk && st.sysop.keyHex === gk2);
+  await p.selectOption('#sysopmode', 'off'); await p.fill('#sysop', '');
+  await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  check('sysop spento e nominativo tolto', st.sysop.mode === 'off' && st.sysop.call === 'none' && (await p.isVisible('#textsbox')));
 
   check('GPS nascosto sulla T3', await p.isHidden('#gps'));
   check('nessun comando GPS sulla T3', !st.cmds.some((c) => c.startsWith('CFG SET GPS')));

@@ -14,7 +14,7 @@ namespace lcr {
 
 class ChoicePicker {
  public:
-  static constexpr size_t kMaxItems = 8;
+  static constexpr size_t kMaxItems = 10;
   struct Actions {
     bool redraw = false;
     MenuBeep beep = MenuBeep::None;

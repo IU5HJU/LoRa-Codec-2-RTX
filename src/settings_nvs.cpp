@@ -49,6 +49,7 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.rxMonitor = p.getBool("mon", false);  // assente nelle versioni precedenti
     memset(out.sysopCall, 0, sizeof(out.sysopCall));
     if (p.isKey("sop")) p.getString("sop", out.sysopCall, sizeof(out.sysopCall));
+    out.sysopMode = p.getBool("som", false);
     out.sysopKeySet = p.isKey("sky") && p.getBytesLength("sky") == sizeof(out.sysopKey);
     if (out.sysopKeySet) p.getBytes("sky", out.sysopKey, sizeof(out.sysopKey));
     out.powerDbm = p.getInt("pwr", 0);
@@ -84,6 +85,7 @@ bool NvsSettingsStorage::save(const lcr::Settings& s) {
                     p.putInt("qlon", s.qthLonE7) > 0;
   p.putUShort("mcw", s.mcWindowS);
   p.putString("sop", s.sysopCall);
+  p.putBool("som", s.sysopMode);
   if (s.sysopKeySet) p.putBytes("sky", s.sysopKey, sizeof(s.sysopKey));
   else p.remove("sky");
   for (size_t i = 0; i < lcr::kMcDestSlots; i++) {  // un posto vuoto salva una stringa vuota

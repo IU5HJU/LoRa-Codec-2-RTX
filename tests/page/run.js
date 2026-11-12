@@ -395,6 +395,51 @@ async function scenario(name, fn, opts = {}) {
     check('il limite di 150 caratteri e\' sul campo', (await p.getAttribute('#text1', 'maxlength')) === '150');
   });
 
+  await scenario('modo Sysop: lettura, chiave generata, salvataggio e elenco comandi', async (p) => {
+    check('campi sysop spenti prima di collegare', (await p.isDisabled('#sysopmode')) && (await p.isDisabled('#sysopkey')) && (await p.isDisabled('#genkey')));
+    await connect(p);
+    await until(p, () => !document.getElementById('sysopmode').disabled);
+    check('sysop: spento, nominativo vuoto, chiave non impostata', (await p.inputValue('#sysopmode')) === 'off' && (await p.inputValue('#sysop')) === '' && /non impostata/.test(await p.textContent('#sysopkeyhint')));
+    check('testi visibili e elenco nascosto', (await p.isVisible('#textsbox')) && (await p.isHidden('#sysopbox')));
+    await p.click('#genkey');
+    const gk = await p.inputValue('#sysopkey');
+    check('chiave generata: 32 cifre esadecimali', /^[0-9a-f]{32}$/.test(gk));
+    await p.selectOption('#sysopmode', 'on');
+    check('acceso: elenco comandi visibile, testi nascosti', (await p.isVisible('#sysopbox')) && (await p.isHidden('#textsbox')) && (await p.locator('#sysoplist li').count()) === 10);
+    await p.fill('#callsign', 'IU5HJU');
+    await p.fill('#sysop', 'iu5hju');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c = await cmds(p);
+    check('CFG SET SYSOP (maiuscolo), SYSOPMODE e SYSOPKEY', c.includes('CFG SET SYSOP IU5HJU') && c.includes('CFG SET SYSOPMODE on') && c.includes('CFG SET SYSOPKEY ' + gk), c.join(' | '));
+    check('la scheda ha tutto', await p.evaluate(() => window.__st.sysop.call === 'IU5HJU' && window.__st.sysop.mode === 'on' && window.__st.sysop.key === 'set'));
+  });
+
+  await scenario('modo Sysop: chiave non valida bloccata, chiave vuota non cambia', async (p) => {
+    await connect(p);
+    await until(p, () => !document.getElementById('sysopmode').disabled);
+    await p.fill('#callsign', 'IU5HJU');
+    await p.fill('#sysopkey', 'abc');
+    await p.click('#save');
+    await sleep(500);
+    check('chiave corta rifiutata dalla pagina', /32 cifre/.test(await p.textContent('#status')) && !(await cmds(p)).some((x) => x.startsWith('CFG SET SYSOP')));
+    await p.fill('#sysopkey', '');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('senza chiave nuova non si manda SYSOPKEY', !(await cmds(p)).some((x) => x.startsWith('CFG SET SYSOPKEY')));
+  });
+
+  await scenario('firmware senza modo Sysop: campi spenti e nessun comando nuovo', async (p) => {
+    await p.evaluate(() => { window.__st.noSysop = true; });
+    await connect(p);
+    await sleep(600);
+    check('campi sysop spenti', (await p.isDisabled('#sysopmode')) && (await p.isDisabled('#sysop')) && (await p.isDisabled('#genkey')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    check('nessun comando SYSOP', !(await cmds(p)).some((x) => /SYSOP/.test(x) && x.startsWith('CFG SET')));
+  });
+
   await scenario('firmware senza testi predefiniti: campi spenti e nessun comando nuovo', async (p) => {
     await p.evaluate(() => { window.__st.noTexts = true; });
     await connect(p);

@@ -131,7 +131,13 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
             sendFrame(lcr::kLinkControl, d, sizeof(d));
             Serial.printf("[ripetitore] comando del sysop %s: codice %u contatore %lu\n", p.callsign, static_cast<unsigned>(cmd.code), static_cast<unsigned long>(cmd.counter));
             if (cmd.code == lcr::kSysopRestart) restartAtMs = now + 3000;  // la TX prima risponde
-          } else if (v != lcr::SysopAuth::Verdict::NotCommand) {
+          } else if (v == lcr::SysopAuth::Verdict::Stale) {
+            // firma valida ma contatore basso: la TX dice alla stazione l'ultimo contatore (rate limit alla TX)
+            const uint32_t last = auth.lastCounter();
+            uint8_t d[5] = {p.payload[0], static_cast<uint8_t>(last >> 24), static_cast<uint8_t>(last >> 16), static_cast<uint8_t>(last >> 8), static_cast<uint8_t>(last)};
+            sendFrame(lcr::kLinkControlStale, d, sizeof(d));
+            Serial.printf("[ripetitore] comando di %s con contatore basso (ultimo %lu)\n", p.callsign, static_cast<unsigned long>(last));
+          } else if (v != lcr::SysopAuth::Verdict::NotCommand && v != lcr::SysopAuth::Verdict::Replay) {
             Serial.printf("[ripetitore] comando rifiutato da %s (motivo %d)\n", p.callsign, static_cast<int>(v));
           }
           continue;  // un comando non si ripete e non e' voce
@@ -247,7 +253,18 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
         lcr::RepeaterControl::Effects fx;
         const lcr::SysopResult res = sched.onControl(cmd, millis(), fx);  // esegue e trasmette la risposta firmata
         Serial.printf("[ripetitore] comando %u contatore %lu: esito %u\n", static_cast<unsigned>(cmd.code), static_cast<unsigned long>(cmd.counter), static_cast<unsigned>(res));
+        if (fx.power >= 0) {  // la potenza scelta dal sysop e' permanente: si salva come CFG SET POWER
+          NvsSettingsStorage storage;
+          lcr::Settings saved;
+          if (storage.load(saved)) {
+            saved.powerDbm = fx.power;
+            storage.save(saved);
+          }
+        }
         if (fx.restart) restartAtMs = millis() + 500;
+      } else if (f.type == lcr::kLinkControlStale && f.len >= 5) {
+        const uint32_t last = (static_cast<uint32_t>(f.data[1]) << 24) | (static_cast<uint32_t>(f.data[2]) << 16) | (static_cast<uint32_t>(f.data[3]) << 8) | f.data[4];
+        sched.onStaleCommand(f.data[0], last, millis());
       } else if (f.type == lcr::kLinkHeartbeat && f.len >= 4) {
         rxCount = (static_cast<uint32_t>(f.data[0]) << 24) | (static_cast<uint32_t>(f.data[1]) << 16) | (static_cast<uint32_t>(f.data[2]) << 8) | f.data[3];
         lastHbMs = now;

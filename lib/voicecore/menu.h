@@ -23,6 +23,8 @@ constexpr uint32_t kMenuTimeoutMs = 10000;
 constexpr uint8_t kMenuWifiId = 100;
 // Voce "Invia testo": apre la scelta di uno dei testi predefiniti (text_picker.h). Non e' un profilo.
 constexpr uint8_t kMenuTextId = 101;
+// Voce "Comandi Sysop" del modo Sysop (prende il posto di "Invia testo"): apre l'elenco dei comandi al ripetitore (sysop.h).
+constexpr uint8_t kMenuSysopId = 103;
 // Voce "MeshCom": invia un testo sulle reti di testo e ascolta per un po' (escursione, docs/meshcom-testo.md). Non e' un profilo.
 constexpr uint8_t kMenuMeshId = 102;
 
@@ -33,7 +35,8 @@ struct MenuItem {
 };
 
 // Le voci del menu: Standard, Messaggio, Qualita', Invia testo, MeshCom (escursione) e Wi-Fi (configurazione).
-const MenuItem* defaultMenuItems(size_t& count);
+// sysopMode: al posto di "Invia testo" c'e' "Comandi Sysop".
+const MenuItem* defaultMenuItems(size_t& count, bool sysopMode = false);
 
 // Segnali acustici suggeriti per ogni azione (la scheda senza display si guida con quelli).
 enum class MenuBeep { None, Open, Next, Confirm, Cancel };

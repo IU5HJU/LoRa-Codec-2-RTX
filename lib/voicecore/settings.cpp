@@ -13,7 +13,7 @@ bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet &&
+         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode &&
          (!a.sysopKeySet || memcmp(a.sysopKey, b.sysopKey, sizeof(a.sysopKey)) == 0) &&
          a.profile == b.profile && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
@@ -231,7 +231,10 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
     return ConsoleResult::Ok;
   }
   if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "SYSOP")) {
-    say(reply, cap, "CFG SYSOP call=%s key=%s", stored_.sysopCall[0] ? stored_.sysopCall : "none", stored_.sysopKeySet ? "set" : "none");
+    if (reply && cap > 0) {
+      snprintf(reply, cap, "CFG SYSOP call=%s key=%s mode=%s", stored_.sysopCall[0] ? stored_.sysopCall : "none", stored_.sysopKeySet ? "set" : "none",
+               stored_.sysopMode ? "on" : "off");
+    }
     return ConsoleResult::Ok;
   }
   if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "MONITOR")) {
@@ -393,6 +396,16 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "sysop=%s", next.sysopCall[0] ? next.sysopCall : "none");
+  } else if (equalsIgnoreCase(key, "SYSOPMODE")) {
+    if (equalsIgnoreCase(value, "ON")) {
+      next.sysopMode = true;
+    } else if (equalsIgnoreCase(value, "OFF")) {
+      next.sysopMode = false;
+    } else {
+      say(reply, cap, "CFG ERR sysopmode %s", "usa ON oppure OFF");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "sysopmode=%s", next.sysopMode ? "on" : "off");
   } else if (equalsIgnoreCase(key, "SYSOPKEY")) {
     if (equalsIgnoreCase(value, "NONE")) {
       next.sysopKeySet = false;

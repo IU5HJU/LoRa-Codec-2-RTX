@@ -37,6 +37,7 @@ class TxScheduler {
   static constexpr uint32_t kBusyRetryMs = 300;
   static constexpr uint32_t kBetweenMsgMs = 5000;
   static constexpr uint32_t kParamRetryMs = 1000;
+  static constexpr uint32_t kStaleReplyGapMs = 10000;
 
   // Announce e Release usano i parametri della voce: mandano l'annuncio di occupato prima e dopo un messaggio.
   enum class State : uint8_t { Voice, Listen, Relay, Announce, Release };
@@ -68,6 +69,9 @@ class TxScheduler {
   // Un comando gia' verificato dalla RX: lo esegue e trasmette la risposta firmata (anche se questo comando ha appena spento la TX);
   // 'fx' dice cosa resta da fare alla scheda (potenza, riavvio). L'identificazione la trasmette lo stesso regista.
   SysopResult onControl(const SysopCommand& c, uint32_t nowMs, RepeaterControl::Effects& fx);
+  // Comando con firma valida ma contatore troppo basso (la RX ha gia' rifiutato): risponde con l'ultimo contatore accettato, perche' la
+  // stazione si risincronizzi. Al massimo una risposta ogni kStaleReplyGapMs (chi riascolta una registrazione non deve far trasmettere).
+  void onStaleCommand(uint8_t code, uint32_t lastCounter, uint32_t nowMs);
   // false (profilo Messaggio ripetuto come voce, o messaggi spenti): la radio non va mai in ascolto messaggi ne' ritrasmette.
   void setMessagesEnabled(bool on) { messages_ = on; }
   State state() const { return state_; }
@@ -111,6 +115,8 @@ class TxScheduler {
   char callsign_[kMaxCallsign + 1] = {0};
   RepeaterControl* control_ = nullptr;
   uint8_t key_[kSysopKeyBytes] = {0};
+  bool haveStaleReply_ = false;
+  uint32_t lastStaleReplyMs_ = 0;
   uint8_t annSent_ = 0;  // copie dell'annuncio gia' mandate
   uint32_t lastAnnMs_ = 0;
   uint16_t annSession_ = 0;

@@ -32,13 +32,22 @@ enum SysopCode : uint8_t {
   kSysopPower = 7,       // potenza di uscita in dBm, parametro entro i limiti
 };
 constexpr uint16_t kSysopMaxOffMinutes = 1440;
+
+// Voci del modo Sysop (elenco al posto dei testi predefiniti, sulla scheda e nella pagina web).
+struct SysopMenuEntry {
+  const char* label;
+  uint8_t code;
+  uint16_t param;
+};
+const SysopMenuEntry* sysopMenuEntries(size_t& count);
 constexpr uint8_t kSysopReplyBit = 0x80;
 
 enum SysopResult : uint8_t {
   kSysopOk = 0,
   kSysopBadParam = 1,    // parametro fuori limiti
   kSysopUnknown = 2,     // codice sconosciuto
-  kSysopNotAllowed = 3,  // per esempio SPEGNI mentre e' gia' spento (non usato) o potenza oltre il limite
+  kSysopNotAllowed = 3,  // non consentito (nessun regista di controllo)
+  kSysopCounterLow = 4,  // contatore troppo basso: la risposta ripete l'ultimo contatore accettato, la stazione si risincronizza
 };
 
 // Senza valori iniziali nei membri: il firmware e' C++11, dove una struttura cosi' si inizializza con le graffe solo se e' un aggregato.
@@ -64,7 +73,9 @@ bool parseSysopReply(const Packet& p, const uint8_t key[kSysopKeyBytes], SysopRe
 // Lato ripetitore: accetta solo comandi del sysop firmati e con contatore nuovo.
 class SysopAuth {
  public:
-  enum class Verdict : uint8_t { Ok, NotCommand, WrongCallsign, BadSignature, Replay, NoKey };
+  // Replay: stesso contatore dell'ultimo (la seconda copia di un comando): silenzio. Stale: firma valida ma contatore piu' basso
+  // dell'ultimo: la stazione e' fuori sincronia, il ripetitore glielo dice (rate limit nella TX).
+  enum class Verdict : uint8_t { Ok, NotCommand, WrongCallsign, BadSignature, Replay, Stale, NoKey };
 
   void setKey(const uint8_t key[kSysopKeyBytes]);
   void clearKey() { haveKey_ = false; }

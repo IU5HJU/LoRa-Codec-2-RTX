@@ -11,6 +11,8 @@
     noGps: false,
     noMc: false,          // firmware senza profilo MeshCom (piu' vecchio): CFG GET MC e CFG SET FREQMC/MCDEST/MCSSID sconosciuti
     mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
+    noSysop: false,       // firmware senza modo Sysop (piu' vecchio): CFG GET SYSOP e CFG SET SYSOP* sconosciuti
+    sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
     noTexts: false,       // firmware senza testi predefiniti (piu' vecchio): CFG GET TEXTn e CFG SET TEXTn sconosciuti
     texts: ['%C QRV su VoLoRa modo %M %F', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
     // (riga seguente: firmware senza GPS)
@@ -40,6 +42,18 @@
     if (t[0] !== 'CFG') return;
     const cmd = t[1];
     // CFG SET TEXTn <testo> (il testo e' il resto della riga) e CFG GET TEXTn, come il firmware
+    if (!st.noSysop) {
+      if (/^CFG\s+GET\s+SYSOP$/i.test(line.trim())) return out(`CFG SYSOP call=${st.sysop.call} key=${st.sysop.key} mode=${st.sysop.mode}`);
+      const sm = /^CFG\s+SET\s+(SYSOPMODE|SYSOPKEY|SYSOP)\s+(\S+)$/i.exec(line.trim());
+      if (sm) {
+        const k = sm[1].toUpperCase(), v = sm[2];
+        if (st.reject === k) return out('CFG ERR ' + k.toLowerCase() + ' rifiutato dal firmware');
+        if (k === 'SYSOP') { st.sysop.call = v.toUpperCase() === 'NONE' ? 'none' : v.toUpperCase(); return out('CFG OK sysop=' + st.sysop.call); }
+        if (k === 'SYSOPMODE') { st.sysop.mode = v.toLowerCase(); return out('CFG OK sysopmode=' + st.sysop.mode); }
+        if (v.toUpperCase() !== 'NONE' && !/^[0-9a-fA-F]{32}$/.test(v)) return out('CFG ERR sysopkey servono 32 cifre esadecimali');
+        st.sysop.key = v.toUpperCase() === 'NONE' ? 'none' : 'set'; st.sysop.keyHex = v; return out('CFG OK sysopkey=' + st.sysop.key);
+      }
+    }
     const tm = /^CFG\s+SET\s+TEXT([1-5])\s+(.*?)\s*$/i.exec(line.trim());
     if (tm && !st.noTexts) {
       const n = +tm[1];
