@@ -41,17 +41,18 @@ enum SysopResult : uint8_t {
   kSysopNotAllowed = 3,  // per esempio SPEGNI mentre e' gia' spento (non usato) o potenza oltre il limite
 };
 
+// Senza valori iniziali nei membri: il firmware e' C++11, dove una struttura cosi' si inizializza con le graffe solo se e' un aggregato.
 struct SysopCommand {
-  uint8_t code = 0;
-  uint16_t param = 0;
-  uint32_t counter = 0;
+  uint8_t code;
+  uint16_t param;
+  uint32_t counter;
 };
 
 struct SysopReply {
-  uint8_t code = 0;
-  uint8_t result = 0;
-  uint32_t counter = 0;
-  uint32_t data = 0;
+  uint8_t code;
+  uint8_t result;
+  uint32_t counter;
+  uint32_t data;
 };
 
 Packet makeSysopCommand(uint16_t session, const char* callsign, const uint8_t key[kSysopKeyBytes], const SysopCommand& c);
