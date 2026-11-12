@@ -23,6 +23,7 @@
 | [sdr.md](sdr.md) | Ricevere e decodificare le trasmissioni con un SDR (NESDR / RTL-SDR, GNU Radio, `lcr_decode`) |
 | [prove.md](prove.md) | Registro delle prove sulle schede e aiuto per la diagnosi |
 | [roadmap.md](roadmap.md) | Decisioni e prossimi lavori |
+| [ripetitore.md](ripetitore.md) | **Riepilogo del ripetitore**: com'è fatto, collegamento a quattro fili, configurazione, funzioni, cosa è provato e cosa no |
 | [banco-ripetitore.md](banco-ripetitore.md) | Prova a banco del ripetitore con due T3: cablaggio, seriale, display, altoparlante |
 | [studio-identificativo-fm.md](studio-identificativo-fm.md) | Identificativo del ripetitore in FM: Morse a tono con il nominativo; studio di fattibilità, decisione e firmware di prova |
 | [studio-ripetitore.md](studio-ripetitore.md) | Studio di fattibilità del ripetitore con due schede (RX e TX), opzioni per ripetere tutti i profili |
