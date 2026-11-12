@@ -311,3 +311,9 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 
 - Riavviato il nodo T-Beam (tasto RST) lasciando acceso il nodo T3, firmware `808bc07`.
 - Esito: il collegamento torna `ok` da solo, senza interventi sull'altro nodo, in circa **10 secondi** (tempo riferito dall'operatore). Il nodo rimasto acceso invece si accorge che l'altro è spento solo dopo circa **1 minuto**: è il tempo previsto dal progetto (keepalive ogni 20 s, collegamento dichiarato giù dopo 60 s senza datagrammi validi). Prova "riavvia un nodo" della tabella di [banco-nodo.md](banco-nodo.md): **superata**. Contatori non annotati.
+
+### 12/11/2026, casa, IU5HJU (nodo Internet: conversazione lunga)
+
+- Prova "conversazione lunga": una stazione T3 (profilo Standard, potenza 2, firmware `808bc07`) ha ricevuto da un'altra stazione una serie di trasmissioni da circa 30 secondi (750 frame, 79 pacchetti ciascuna) e alcune più brevi. Dalla seriale della stazione ricevente: **`frame persi 0`** in tutte, `errori CRC 0`, `sovrascritti 0`; pacchetti recuperati 0 (in due ricezioni 1); RSSI da -23 a -38 dBm, SNR da 9,5 a 12,5 dB; codifica 10,4-11,2 ms e decodifica 16,5-17,3 ms per frame (limite 40 ms).
+- L'operatore riferisce **0 persi** (contatore `persi` dei nodi). Esito: **superata**.
+- Non annotati: i contatori finali `R>N`, `N>R` e `Coda` dei nodi, la memoria libera (`heap`) dopo la prova, il giudizio sull'intelligibilità, la direzione. La seriale della stazione non indica se il traffico è passato dai nodi ("via RPT" compare solo sul display).
