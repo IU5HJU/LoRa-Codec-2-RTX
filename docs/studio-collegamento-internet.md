@@ -2,7 +2,7 @@
 
 12/11/2026. **Solo studio, nessun codice.** Domanda: un nodo connesso a Internet che porta la voce LoRa da una T3 a un'altra via TCP/IP (invece che per seriale), e che la colleghi al **reflector di SvxLink** (per i ripetitori analogici) e a **reflector C4FM/YSF** (e da lì ai sistemi MMDVM: DMR, NXDN). Quello che segue distingue ciò che ho **verificato con fonti** da ciò che è **mia deduzione** o **da verificare**.
 
-**Due termini che non ho saputo identificare:** "ODMR" (la ricerca restituisce solo fisica: *optically detected magnetic resonance*) e "53FM". Qui ho letto "reflector C4FM" come **reflector YSF** (Yaesu System Fusion, C4FM). Se "ODMR" è un servizio preciso, dimmi quale e lo guardo.
+**Obiettivo chiarito (12/11/2026): DMR e C4FM** (YSF, Yaesu System Fusion). I due nomi "ODMR" e "53FM" non li avevo identificati (la ricerca di "ODMR" restituisce solo fisica); la risposta è stata "DMR e C4FM", quindi la sezione operativa è [«DMR e C4FM»](#dmr-e-c4fm-come-si-collegherebbe) più sotto. Il resto del documento (livelli, SvxLink) resta come confronto.
 
 ## Cosa si porta in rete: i pacchetti, non l'audio
 
@@ -61,6 +61,56 @@ Un tunnel dei pacchetti VoLoRa fra due ripetitori (o fra la RX e la TX dello ste
 - **Banda e tempi:** i sistemi digitali parlano a ritmo continuo e a turni lunghi; il canale LoRa regge una conversazione alla volta (stesso limite di sopra).
 - **Il protocollo dei frame YSF non è verificato** qui: serve il codice di riferimento (YSFReflector di G4KLX).
 
+## DMR e C4FM: come si collegherebbe
+
+Dalle fonti (guide e forum della comunità, per lo più del 2018-2020: **da controllare sulla documentazione attuale** prima di costruire) lo strumento che unisce audio generico e reti digitali è **DVSwitch**: **Analog_Bridge** prende l'audio PCM da una porta UDP (il lato "USRP") e lo **codifica in AMBE** per l'altra porta; **MMDVM_Bridge** collega il lato digitale alle reti come un hotspot virtuale (DMR, YSF, NXDN). Una catena tipica: nodo audio → Analog_Bridge → MMDVM_Bridge → master DMR ([guida](https://lucifernet.com/?p=109), [catena con BrandMeister](https://redfast00.github.io/2020-building-a-brandmeister-dmr-bridge.html), [MMDVM_CM](https://github.com/nostar/MMDVM_CM)).
+
+Il nostro nodo avrebbe questa forma, su un Raspberry/PC collegato alla T3 per seriale:
+
+`T3 (LoRa) ⇄ seriale ⇄ gateway VoLoRa (Codec2 ↔ PCM) ⇄ UDP/PCM ⇄ Analog_Bridge (PCM ↔ AMBE) ⇄ MMDVM_Bridge ⇄ master DMR e/o reflector YSF`
+
+Il gateway VoLoRa farebbe due cose sole: **Codec2 ↔ PCM** (libreria aperta, già nel progetto) e la **segnalazione** (inizio e fine del PTT dalle sessioni; chi parla dal nominativo nel pacchetto `START`). Tutto l'AMBE e il dialogo con le reti sta in programmi esistenti.
+
+### Dove sta il vincolo: l'AMBE
+Le fonti indicano tre modi di avere l'AMBE in Analog_Bridge:
+1. **Chip DVSI (hardware):** NW Digital **ThumbDV / DV3000**, il dispositivo che le guide di DVSwitch raccomandano per D-STAR, DMR, YSF e NXDN. Nessun dubbio di licenza per chi lo usa, costo e una dipendenza USB.
+2. **md380-emu (software):** un emulatore del vocoder del firmware di un ricetrasmettitore DMR; è la via più usata senza chip. Il suo **stato legale e di brevetto è dubbio** secondo le stesse fonti: una scrive che andrebbe verificato dove si vive; un'altra indica un brevetto in scadenza il 7/11/2023 **senza che io abbia trovato una conferma autorevole** né un parere legale ([esempio](https://github.com/redfast00/brandmeister-dmr-sea), [pagina sul vocoder lato server](https://dmrhub.ru/tech/en/server-vokoder-ambe-bez-dongla)). Non lo decido io: lo valuta l'operatore.
+3. **Fallback software** del decodificatore (`decoderFallBack`) quando manca il chip, secondo un file di esempio.
+
+### DMR (BrandMeister e altre reti)
+- **Serve un DMR ID** per il nodo; BrandMeister lo chiede anche per i ripetitori e i personali ([regole](https://help.brandmeister.network/bridges/bridging-to-brandmeister/)).
+- **BrandMeister vieta il "peer bridging"** (usare MMDVM per fare da ponte fra server o reflector) e non fa ponti verso altre reti; i ponti analogici non sono supportati. Un collegamento "hotspot virtuale" è una cosa diversa dal ponte, ma una fonte riferisce che BrandMeister **non gradisce** MMDVM_Bridge e DVSwitch porta un componente che si collega con un altro protocollo (aneddoto di un forum, non verificato). Da chiarire con i gestori della rete **prima** di collegarsi.
+- **Un talk group (TG)** va scelto: statico o dinamico, con il proprio ID.
+- **Un solo ID per tutto il nodo:** gli utenti LoRa non hanno DMR ID; il nodo si presenta con il suo.
+
+### C4FM / YSF
+- **YSF è più semplice del DMR** come trasporto (UDP, pacchetti `YSFP`/`YSFD`/`YSFU`/`YSFS`, porta 42000, [fonte](https://hub.docker.com/r/siteworxpro/ysf-reflector-go)); il vocoder è comunque AMBE+2 (stesse tre strade).
+- **Il nominativo si porta nei frame** (il formato dei frame va letto dal codice di riferimento): un nodo YSF può quindi dichiarare **il nominativo del singolo utente LoRa**, a differenza del DMR dove conta l'ID. Da verificare.
+- Molte reti YSF sono **a connessione libera** (si sceglie il reflector e ci si collega), con meno burocrazia del DMR; il gestore del reflector decide chi accetta.
+
+### Pro e contro, riassunti per il vostro caso
+| | DMR | C4FM (YSF) |
+|---|---|---|
+| Base di utenti | enorme (BrandMeister e altre reti) | molto estesa (Fusion, hotspot) |
+| Requisiti | **DMR ID**, regole della rete, TG | un reflector che accetta il nodo |
+| Identità del parlante | un ID per nodo | nominativo nei frame, da verificare |
+| Regole di ponte | **restrittive** (peer bridging vietato, nuove reti no) | più libere, decide il gestore |
+| Vocoder | AMBE+2 (chip DVSI, oppure software dubbio) | AMBE+2 (idem) |
+| Conversione fra modi | con MMDVM_CM / DMRGateway ecc. | idem (YSF2DMR ecc.) |
+| Ordine consigliato | **dopo** YSF | **prima**: meno vincoli e più prove possibili |
+
+### Limiti comuni (valgono per entrambi)
+- **Qualità:** Codec2 1200 → PCM → AMBE+2 → l'altro lato: due vocoder in cascata, voce molto più povera di quella nativa dei sistemi digitali.
+- **Canale LoRa:** una conversazione alla volta; una rete affollata lo terrebbe in trasmissione. Servono un **TG o reflector tranquillo**, un limite di durata e la priorità alla voce locale.
+- **Ritardi:** LoRa (mezzo secondo a pacchetto) + due transcodifiche + Internet: alcuni secondi.
+- **Messaggi memorizzati e testo** non hanno corrispondenti; l'identificativo del ripetitore andrebbe adattato (annuncio vocale o testo di stato del nodo).
+- **Tutta la parte autorizzativa** (uso dell'AMBE, collegamento fra reti, regole dei gestori) è dell'operatore.
+
+### Primo passo proposto per DMR e C4FM
+1. **Prova senza trasmettere in aria dalla parte digitale:** gateway VoLoRa che porta una sessione LoRa in PCM su UDP e un Analog_Bridge su un Raspberry con il chip ThumbDV/DV3000 verso **un reflector YSF di prova** (o un reflector YSF privato su un altro Raspberry), solo in una direzione.
+2. Se funziona, il **senso inverso** (YSF → LoRa) con il limite di durata.
+3. Poi si guarda il DMR: con il gestore, il DMR ID del nodo e un TG di prova.
+
 ## Una terza strada, da verificare: M17 e i reflector con transcodifica
 
 **M17** è un protocollo digitale amatoriale aperto **basato su Codec2** (mia conoscenza; un commit di un client M17 che usa Codec2 a 3200 bit/s è l'unico riscontro che ho trovato, [esempio](https://code.octet-stream.net/m17rt/commitdiff/2c7d53c113f4e19f24c928b2c5eca1c3f6f799af)). Il nostro **profilo Qualità (Codec2 3200)** parla già lo stesso codec. Esistono **reflector con transcodifica** (XLX con hardware AMBE, [spiegazione](https://w8wky.org/what-are-transcoding-reflectors/)) che collegano fra loro modi diversi: se un reflector accetta M17 o un protocollo con Codec2 e fa lui la conversione verso DMR/YSF/D-STAR, **la licenza AMBE resta a carico di chi gestisce il reflector** e il nostro gateway non tocca l'AMBE. **Non ho verificato** quali modi (NXDN compreso) colleghi un dato reflector con M17. Vale la pena guardare prima di costruire un transcodificatore proprio.
@@ -87,7 +137,9 @@ Un tunnel dei pacchetti VoLoRa fra due ripetitori (o fra la RX e la TX dello ste
 4. **YSF/DMR/NXDN solo dopo** aver deciso come gestire l'AMBE (chip DVSI, o l'idea M17/XLX con transcodifica a carico del reflector), e con l'accordo dei gestori.
 
 ## Domande aperte per te
-- Cos'è "ODMR" e "53FM" (nomi precisi dei servizi)?
+- Hai già a disposizione un chip **ThumbDV / DV3000** (o ne compri uno), o si pensa al software? (cambia tutto il lato AMBE)
+- Un **reflector YSF di prova** o un reflector YSF tuo, per cominciare, e quale (nome e gestore)?
+- Un **DMR ID** per il nodo (il tuo, o quello del ripetitore) e un **TG** di prova?
 - Il nodo Internet serve prima a **collegare due nostri ripetitori** (livello 0) o prima ad aprire verso gli analogici (SvxLink)?
 - Hai già un reflector/rete di riferimento (SvxLink o YSF) con cui parlare, e chi lo gestisce?
 - La parte di autorizzazioni e regole sui collegamenti fra reti diverse (anche l'uso dell'AMBE) la valuti tu come operatore.
