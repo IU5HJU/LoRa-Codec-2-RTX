@@ -217,6 +217,9 @@
         <p class="hint">Da 430.000 a 440.000. Sulla scheda TX &egrave; anche la frequenza dei messaggi.</p>
         <label for="idint">Identificativo ogni (minuti, 1-10)</label>
         <input id="idint" type="number" min="1" max="10" step="1" placeholder="10" disabled>
+        <label for="idmorse">Identificativo anche in Morse (FM)</label>
+        <select id="idmorse" disabled><option value="on">S&igrave;</option><option value="off">No</option></select>
+        <p class="hint">Dopo il testo la TX manda il nominativo in Morse con un tono in FM stretta (15 parole al minuto, 700 Hz): chi non ha le schede LoRa lo sente con un ricevitore FM qualsiasi e capisce che la frequenza &egrave; occupata da un ripetitore. Dura circa 6 secondi.</p>
         <p class="hint">Ogni quanti minuti la TX trasmette l'identificativo del ripetitore (il nominativo qui sopra, in modo testo: le stazioni lo vedono passare senza suoni). Di base 10.</p>
       </div>
 
@@ -447,6 +450,7 @@
       $('monitor').value = r.slice(12) === 'on' ? 'on' : 'off';
     } catch (e) { /* firmware senza monitor: il campo resta com'e' */ }
   }
+  let idmorseSeen = false;   // la scheda risponde a CFG GET IDMORSE
   let idintSeen = false;     // la scheda risponde a CFG GET IDINT (firmware piu' vecchi: no)
   async function readIdint() {
     try {
@@ -455,6 +459,12 @@
       idintSeen = true;
     } catch (e) { idintSeen = false; }
     $('idint').disabled = !port || !idintSeen;
+    try {
+      const m = await send('CFG GET IDMORSE', /^CFG IDMORSE=/, 2500);
+      $('idmorse').value = m.slice(12) === 'off' ? 'off' : 'on';
+      idmorseSeen = true;
+    } catch (e) { idmorseSeen = false; }
+    $('idmorse').disabled = !port || !idmorseSeen;
   }
   let sysopSeen = false;     // la scheda risponde a CFG GET SYSOP (firmware piu' vecchi: no)
   function sysopShow() { const on = $('sysopmode').value === 'on'; $('sysopbox').hidden = !on; $('textsbox').hidden = on; }
@@ -508,8 +518,9 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; roleSeen = false; }
+    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; roleSeen = false; }
     $('idint').disabled = !on || !idintSeen;
+    $('idmorse').disabled = !on || !idmorseSeen;
     updateRoleControls(on);
     updatePosControls(on);
     updateMcControls(on);
@@ -734,6 +745,8 @@
       if (!/^\d{1,2}$/.test(im) || +im < 1 || +im > 10) return { err: 'L\'identificativo del ripetitore va da 1 a 10 minuti.' };
       idint = String(parseInt(im, 10));
     }
+    let idmorse = null;
+    if (!$('idmorse').disabled && role === 'rpttx') idmorse = $('idmorse').value === 'off' ? 'off' : 'on';
     let sysop = null;
     if (!$('sysopmode').disabled) {
       const sy = $('sysop').value.trim().toUpperCase();
@@ -742,7 +755,7 @@
       if (sk !== '' && !/^[0-9a-fA-F]{32}$/.test(sk)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
       sysop = { call: sy, mode: $('sysopmode').value, key: sk };
     }
-    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, role, freqout, monitor };
+    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
   }
 
   // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
@@ -782,6 +795,7 @@
       if (v.freqout !== null) replies.push(await send('CFG SET FREQOUT ' + v.freqout, /^CFG (OK|ERR)/));
       if (v.monitor !== null) replies.push(await send('CFG SET MONITOR ' + v.monitor, /^CFG (OK|ERR)/));
       if (v.idint !== null) replies.push(await send('CFG SET IDINT ' + v.idint, /^CFG (OK|ERR)/));
+      if (v.idmorse !== null) replies.push(await send('CFG SET IDMORSE ' + v.idmorse, /^CFG (OK|ERR)/));
       if (v.sysop !== null) {
         replies.push(await send('CFG SET SYSOP ' + (v.sysop.call || 'NONE'), /^CFG (OK|ERR)/));
         replies.push(await send('CFG SET SYSOPMODE ' + v.sysop.mode, /^CFG (OK|ERR)/));

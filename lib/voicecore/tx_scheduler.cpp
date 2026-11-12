@@ -42,6 +42,7 @@ void TxScheduler::sendNow(const Packet& p, uint32_t nowMs, bool message) {
   uint8_t wire[kMaxWireBytes];
   const size_t m = encodePacket(p, wire, sizeof(wire));
   if (m == 0) return;
+  if (state_ == State::Morse) endMorse(true);
   if (state_ == State::Relay) abortRelay(nowMs, true);
   if (state_ == State::Listen || state_ == State::Relay) {  // Voice, Announce e Release hanno gia' i parametri della voce
     if (!radio_.setParams(voice_, freqKhz_)) {
@@ -67,6 +68,7 @@ SysopResult TxScheduler::onControl(const SysopCommand& c, uint32_t nowMs, Repeat
     if (fx.identify && control_->txAllowed(nowMs)) {
       Packet id = makeBeaconPacket(nextSession_++, callsign_);  // lo stesso identificativo di quello periodico
       sendNow(id, nowMs, false);
+      startMorse(nowMs);  // e in Morse, se acceso
     }
   } else {
     stats_.repliesDropped++;
@@ -87,6 +89,63 @@ bool TxScheduler::beaconDue(uint32_t nowMs) const {
   if (beaconIntervalMs_ == 0 || callsign_[0] == 0) return false;
   if (!haveBeacon_) return nowMs >= kBeaconFirstMs;
   return nowMs - lastBeaconMs_ >= beaconIntervalMs_;
+}
+
+void TxScheduler::setMorseId(bool on, int wpm, float toneHz, float devKhz) {
+  morseOn_ = on;
+  morseReq_ = RadioTestRequest();
+  morseReq_.kind = RadioTestKind::Morse;
+  morseReq_.fm = true;
+  morseReq_.wpm = wpm;
+  morseReq_.toneHz = toneHz;
+  morseReq_.devKhz = devKhz;
+}
+
+// Dopo il testo dell'identificativo: la radio passa in FSK e trasmette il nominativo in Morse a tono. Un elemento alla volta, a ogni
+// giro: un tono e' un pacchetto (blocca per la sua durata), una pausa e' solo un'attesa.
+void TxScheduler::startMorse(uint32_t nowMs) {
+  if (!morseOn_ || callsign_[0] == 0) return;
+  strncpy(morseReq_.text, callsign_, sizeof(morseReq_.text) - 1);
+  morseReq_.text[sizeof(morseReq_.text) - 1] = 0;
+  morseN_ = planMorseBursts(morseReq_, morseBursts_, sizeof(morseBursts_) / sizeof(morseBursts_[0]), nullptr);
+  if (morseN_ == 0) return;
+  morseKbps_ = radioTestBitRateKbps(morseReq_);
+  if (!radio_.fskBegin(static_cast<float>(freqKhz_) / 1000.0f, morseKbps_, morseReq_.devKhz, -1, 0)) {
+    stats_.paramErrors++;
+    radio_.fskEnd();  // torna ai parametri di prima, se qualcosa e' cambiato
+    stats_.morseAborted++;
+    return;
+  }
+  morseIdx_ = 0;
+  morseNextMs_ = nowMs;
+  state_ = State::Morse;
+}
+
+void TxScheduler::morseStep(uint32_t nowMs) {
+  if (static_cast<int32_t>(nowMs - morseNextMs_) < 0) return;
+  if (morseIdx_ >= morseN_) {
+    endMorse(false);
+    return;
+  }
+  const MorseBurst& b = morseBursts_[morseIdx_++];
+  if (!b.tone) {
+    morseNextMs_ = nowMs + b.ms;
+    return;
+  }
+  if (!radio_.fskSend(radioTestPattern(morseReq_), b.bytes)) {
+    endMorse(true);
+    return;
+  }
+  if (control_) control_->noteTx(nowMs, static_cast<uint32_t>(burstAirMs(b.bytes, morseKbps_) + 0.5f), false);
+  morseNextMs_ = nowMs;
+}
+
+// Fine dell'identificativo in Morse (completo, o interrotto): la radio torna LoRa ai parametri della voce, in ascolto.
+void TxScheduler::endMorse(bool aborted) {
+  radio_.fskEnd();
+  state_ = State::Voice;
+  if (aborted) stats_.morseAborted++;
+  else stats_.morseIds++;
 }
 
 void TxScheduler::setCallsign(const char* callsign) {
@@ -175,6 +234,7 @@ void TxScheduler::listen(uint32_t nowMs) {
 void TxScheduler::tick(uint32_t nowMs, bool mayTransmit) {
   if (control_ && !control_->txAllowed(nowMs)) {  // spenta dal sysop, a tempo o dalla sicurezza: niente si trasmette
     mayTransmit = false;
+    if (state_ == State::Morse) endMorse(true);
     if (state_ == State::Relay || state_ == State::Announce || state_ == State::Release) {
       const bool needSwitch = (state_ == State::Relay);
       relayIdx_ = 0;
@@ -193,6 +253,7 @@ void TxScheduler::tick(uint32_t nowMs, bool mayTransmit) {
 
   // 1. voce in coda: ha sempre la precedenza
   if (queue_.size() > 0) {
+    if (state_ == State::Morse) endMorse(true);  // la radio torna ai parametri della voce
     if (state_ == State::Relay) abortRelay(nowMs, true);
     if (!switchTo(State::Voice, nowMs)) return;
     uint8_t pkt[kMaxWireBytes];
@@ -215,6 +276,12 @@ void TxScheduler::tick(uint32_t nowMs, bool mayTransmit) {
     haveBeacon_ = true;
     lastBeaconMs_ = nowMs;
     stats_.beacons++;
+    startMorse(nowMs);  // poi il nominativo in Morse a tono, se acceso
+    return;
+  }
+
+  if (state_ == State::Morse) {
+    morseStep(nowMs);
     return;
   }
 

@@ -500,6 +500,7 @@ async function scenario(name, fn, opts = {}) {
     await p.click('#save');
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
     check('CFG SET IDINT 4', (await cmds(p)).includes('CFG SET IDINT 4') && (await p.evaluate(() => window.__st.idint)) === '4');
+    check('identificativo in Morse: acceso di base e comando mandato', (await p.inputValue('#idmorse')) === 'on' && (await cmds(p)).includes('CFG SET IDMORSE on'));
   });
 
   await scenario('firmware senza identificativo: campo spento e nessun comando', async (p) => {

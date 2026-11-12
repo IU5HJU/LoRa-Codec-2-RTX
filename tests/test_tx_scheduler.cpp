@@ -1,4 +1,5 @@
 // Regista della scheda TX del ripetitore: voce prioritaria, ascolto messaggi, ritrasmissione, attese e interruzioni.
+#include <cmath>
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -7,6 +8,7 @@
 #include "packet.h"
 #include "tx_scheduler.h"
 #include "testing.h"
+#include "radio_test.h"
 #include "sysop.h"
 #include "tx_session.h"
 
@@ -541,7 +543,108 @@ static void testBeaconWaitsForVoiceAndMessages() {
   CHECK(countBeacons(r) == n + 1);
 }
 
+static void testMorseId() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.sch->setBeaconInterval(60000);
+  r.sch->setMorseId(true, 15, 700.0f, 2.5f);
+  r.run(14000);
+  CHECK(r.radio.fskBegins == 0);
+  r.run(1500);  // il testo esce a 15 s, poi parte il Morse
+  CHECK(countBeacons(r) == 1 && r.sch->state() == TxScheduler::State::Morse && r.radio.fskBegins == 1 && r.radio.inFsk);
+  CHECK(std::fabs(r.radio.fskMhz - 433.5f) < 1e-3 && std::fabs(r.radio.fskKbps - 1.4f) < 1e-4 && std::fabs(r.radio.fskDev - 2.5f) < 1e-4);
+  r.run(12000);
+  CHECK(r.sch->state() != TxScheduler::State::Morse && !r.radio.inFsk && r.radio.fskEnds == 1);
+  CHECK(r.sch->stats().morseIds == 1 && r.sch->stats().morseAborted == 0);
+  // i pacchetti sono quelli del piano: tono a 0xAA, durate e byte come planMorseBursts
+  RadioTestRequest rq;
+  rq.text[0] = 0;
+  strcpy(rq.text, "IZ0RPT");
+  rq.wpm = 15;
+  rq.toneHz = 700;
+  MorseBurst plan[160];
+  size_t tones = 0;
+  const size_t n = planMorseBursts(rq, plan, 160, nullptr);
+  for (size_t i = 0; i < n; i++) {
+    if (!plan[i].tone) continue;
+    CHECK(tones < r.radio.fskBursts.size() && r.radio.fskBursts[tones].pattern == 0xAA && r.radio.fskBursts[tones].bytes == plan[i].bytes);
+    tones++;
+  }
+  CHECK(tones == r.radio.fskBursts.size() && tones > 10);
+  // dopo il Morse si torna ad ascoltare i messaggi (parametri del Messaggio)
+  r.run(5000);
+  CHECK(r.sch->state() == TxScheduler::State::Listen && r.radio.curId == kProfileMessage);
+  // il secondo identificativo, un minuto dopo il primo
+  r.run(60000);
+  CHECK(r.radio.fskBegins == 2 && countBeacons(r) == 2);
+}
+
+static void testMorseOffByDefault() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.sch->setBeaconInterval(60000);
+  r.run(60000);
+  CHECK(countBeacons(r) >= 1 && r.radio.fskBegins == 0 && r.sch->stats().morseIds == 0);
+  Rig q;
+  q.sch->setCallsign("IZ0RPT");
+  q.sch->setBeaconInterval(60000);
+  q.sch->setMorseId(false);
+  q.run(60000);
+  CHECK(q.radio.fskBegins == 0);
+}
+
+static void testMorseAbortedByVoice() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.sch->setBeaconInterval(60000);
+  r.sch->setMorseId(true);
+  r.run(18000);
+  CHECK(r.sch->state() == TxScheduler::State::Morse);
+  r.voice(3);  // la voce passa: il Morse si ferma, la radio torna LoRa con i parametri della voce
+  CHECK(r.sch->state() == TxScheduler::State::Voice && !r.radio.inFsk && r.radio.fskEnds == 1 && r.sch->stats().morseAborted == 1);
+  CHECK(r.sch->stats().voiceSent == 3);
+  r.run(10000);
+  CHECK(r.sch->stats().morseIds == 0 && r.radio.fskBegins == 1);  // non riparte da solo: il prossimo e' al prossimo periodo
+}
+
+static void testMorseFailures() {
+  Rig r;
+  r.sch->setCallsign("IZ0RPT");
+  r.sch->setBeaconInterval(60000);
+  r.sch->setMorseId(true);
+  r.radio.failFsk = true;  // la radio non passa in FSK: nessun blocco, il testo e' uscito e il regista torna normale
+  r.run(30000);
+  CHECK(countBeacons(r) == 1 && r.sch->stats().morseAborted == 1 && r.sch->state() != TxScheduler::State::Morse);
+  r.run(5000);
+  CHECK(r.sch->state() == TxScheduler::State::Listen);
+  // TX spenta dal sysop durante il Morse: si ferma
+  CtlRig c;
+  c.sch->setBeaconInterval(60000);
+  c.sch->setMorseId(true);
+  c.run(18000);
+  CHECK(c.sch->state() == TxScheduler::State::Morse);
+  c.sch->onControl({kSysopOff, 0, 1}, c.t, c.fx);
+  CHECK(c.sch->state() != TxScheduler::State::Morse && !c.radio.inFsk && c.sch->stats().morseAborted == 1);
+  c.run(5000);
+  CHECK(!c.radio.inFsk);
+}
+
+static void testIdentifyCommandAlsoMorse() {
+  CtlRig r;
+  r.sch->setMorseId(true);
+  r.run(500);
+  r.sch->onControl({kSysopIdentify, 0, 1}, r.t, r.fx);
+  CHECK(r.sch->state() == TxScheduler::State::Morse && r.radio.fskBegins == 1);
+  r.run(12000);
+  CHECK(r.sch->stats().morseIds == 1 && !r.radio.inFsk);
+}
+
 int main() {
+  testMorseId();
+  testMorseOffByDefault();
+  testMorseAbortedByVoice();
+  testMorseFailures();
+  testIdentifyCommandAlsoMorse();
   testBeaconPeriodic();
   testBeaconOff();
   testBeaconWaitsForVoiceAndMessages();

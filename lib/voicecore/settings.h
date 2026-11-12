@@ -34,6 +34,8 @@
 //   CFG SET SYSOPKEY <32 cifre esadecimali> -> CFG OK sysopkey=set  (chiave condivisa di 16 byte per firmare i comandi; NONE la toglie; mai mostrata)
 //   CFG SET SYSOPMODE ON         -> CFG OK sysopmode=on        (modo Sysop: nel menu "Comandi Sysop" al posto di "Invia testo"; OFF lo spegne; vale dal riavvio)
 //   CFG SET IDINT 10             -> CFG OK idint=10            (ripetitore: ogni quanti minuti, da 1 a 10, la scheda TX manda l'identificativo; di base 10; vale dal riavvio)
+//   CFG SET IDMORSE ON           -> CFG OK idmorse=on          (ripetitore: dopo l'identificativo in testo anche il Morse in FM, per chi non ha le schede LoRa; di base ON; vale dal riavvio)
+//   CFG GET IDMORSE              -> CFG IDMORSE=on
 //   CFG GET IDINT                -> CFG IDINT=10
 //   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-cw.md)
 //   CFG GET SYSOP                -> CFG SYSOP call=IU5HJU key=set mode=off
@@ -130,6 +132,7 @@ struct Settings {
   // Modo Sysop (scheda del sysop): il menu "Invia testo" diventa "Comandi Sysop" (elenco dei comandi al posto dei testi). Resta attivo
   // finche' il sysop non lo spegne; vale dal riavvio.
   bool sysopMode = false;
+  bool idMorse = true;         // dopo l'identificativo in testo, il nominativo in Morse con tono in FM stretta (docs/studio-identificativo-cw.md); vale dal riavvio
   uint8_t idIntervalMin = 10;  // identificativo periodico del ripetitore (scheda TX), in minuti: 1..10, di base 10; vale dal riavvio
   bool rxMonitor = false;    // scheda RX del ripetitore con altoparlante: ascolta la voce che riceve (vale dal riavvio)
   uint32_t freqOutKhz = 0;   // frequenza di uscita del ripetitore, usata dalla scheda TX (0 = come la frequenza del profilo)

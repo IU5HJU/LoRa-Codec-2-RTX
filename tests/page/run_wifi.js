@@ -18,6 +18,7 @@ const st = {
   texts: ['%C QRV su VoLoRa modo %M %F', 'Arrivo tra 10 minuti', 'Chiamami appena puoi', 'Tutto OK', '73 e buona giornata'],
   mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
   idint: '10',
+  idmorse: 'on',
   sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
@@ -27,6 +28,9 @@ function handle(line) {
   if (line === 'CFG GET MONITOR') return 'CFG MONITOR=' + st.monitor;
   const mo = /^CFG SET MONITOR (on|off)$/.exec(line);
   if (mo) { st.monitor = mo[1]; return 'CFG OK monitor=' + mo[1]; }
+  if (line === 'CFG GET IDMORSE') return 'CFG IDMORSE=' + st.idmorse;
+  const dm = /^CFG SET IDMORSE (on|off)$/.exec(line);
+  if (dm) { st.idmorse = dm[1]; return 'CFG OK idmorse=' + dm[1]; }
   if (line === 'CFG GET IDINT') return 'CFG IDINT=' + st.idint;
   const im = /^CFG SET IDINT (\d+)$/.exec(line);
   if (im) { if (+im[1] < 1 || +im[1] > 10) return 'CFG ERR idint da 1 a 10'; st.idint = im[1]; return 'CFG OK idint=' + im[1]; }
@@ -100,7 +104,7 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('comandi inviati', st.cmds.includes('CFG SET PROFILE qua') && st.cmds.includes('CFG SET FREQQUAL 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
   check('testi salvati (con spazi) e posto vuoto con NONE', st.cmds.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami') && st.cmds.includes('CFG SET TEXT4 NONE') && st.texts[1] === 'Sono QRV su 433.775, chiamami' && st.texts[3] === '', JSON.stringify(st.texts));
   check('MeshCom salvato (destinatario in maiuscolo, vuoto = NONE)', st.mc.dests[3] === 'IU5ABC-9' && st.mc.dests[4] === '' && st.mc.ssid === '12' && st.mc.window === '90' && st.cmds.includes('CFG SET MCDEST4 IU5ABC-9') && st.cmds.includes('CFG SET MCDEST5 NONE'), JSON.stringify(st.mc));
-  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 4] === 'CFG GET' && st.cmds[st.cmds.length - 3] === 'CFG GET SYSOP' && st.cmds[st.cmds.length - 2] === 'CFG GET IDINT' && st.cmds[st.cmds.length - 1] === 'CFG GET MONITOR');
+  check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 5] === 'CFG GET' && st.cmds[st.cmds.length - 4] === 'CFG GET SYSOP' && st.cmds[st.cmds.length - 3] === 'CFG GET IDINT' && st.cmds[st.cmds.length - 2] === 'CFG GET IDMORSE' && st.cmds[st.cmds.length - 1] === 'CFG GET MONITOR');
   check('nominativo maiuscolo', st.cfg.callsign === 'IU5HJU/P');
 
   // Modo Sysop: di partenza spento (testi visibili, elenco comandi nascosto), chiave non impostata
@@ -148,6 +152,12 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.fill('#idint', '3'); await p.click('#save');
   await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
   check('TX salvata: ruolo, frequenza di uscita e identificativo', st.cfg.role === 'rpttx' && st.cfg.freqout === '434.400' && st.idint === '3' && st.cmds.includes('CFG SET ROLE rpttx') && st.cmds.includes('CFG SET FREQOUT 434.400') && st.cmds.includes('CFG SET IDINT 3'), st.cmds.slice(-12).join('|'));
+  check('identificativo in Morse: letto (acceso di base) e salvato', (await p.inputValue('#idmorse')) === 'on' && st.idmorse === 'on' && st.cmds.includes('CFG SET IDMORSE on'));
+  await p.selectOption('#idmorse', 'off'); await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
+  check('Morse spento salvato e riletto', st.idmorse === 'off' && (await p.inputValue('#idmorse')) === 'off');
+  await p.selectOption('#idmorse', 'on'); await p.click('#save');
+  await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
   check('rilettura: ruolo TX e riquadro visibile', (await p.inputValue('#role')) === 'rpttx' && (await p.isVisible('#txbox')) && (await p.inputValue('#idint')) === '3');
   await p.selectOption('#role', 'rptrx');
   check('scheda RX: compare il monitor, non la frequenza di uscita', (await p.isVisible('#rxbox')) && (await p.isHidden('#txbox')));

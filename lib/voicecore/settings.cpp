@@ -13,7 +13,7 @@ bool operator==(const Settings& a, const Settings& b) {
   return strncmp(a.callsign, b.callsign, sizeof(a.callsign)) == 0 && a.freqKhz == b.freqKhz && a.freqMsgKhz == b.freqMsgKhz &&
          a.qualFreqKhz() == b.qualFreqKhz() && a.role == b.role && a.outFreqKhz() == b.outFreqKhz() &&
          a.powerDbm == b.powerDbm && a.volume == b.volume && a.micFloorDb == b.micFloorDb &&
-         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode && a.idIntervalMin == b.idIntervalMin &&
+         strncmp(a.sysopCall, b.sysopCall, sizeof(a.sysopCall)) == 0 && a.sysopKeySet == b.sysopKeySet && a.sysopMode == b.sysopMode && a.idIntervalMin == b.idIntervalMin && a.idMorse == b.idMorse &&
          (!a.sysopKeySet || memcmp(a.sysopKey, b.sysopKey, sizeof(a.sysopKey)) == 0) &&
          a.profile == b.profile && a.rxMonitor == b.rxMonitor && a.gpsOn == b.gpsOn && a.posTx == b.posTx && a.qthSet == b.qthSet &&
          (!a.qthSet || (a.qthLatE7 == b.qthLatE7 && a.qthLonE7 == b.qthLonE7));
@@ -245,6 +245,10 @@ ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t 
     }
     return ConsoleResult::Ok;
   }
+  if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "IDMORSE")) {
+    say(reply, cap, stored_.idMorse ? "CFG IDMORSE=on" : "CFG IDMORSE=off");
+    return ConsoleResult::Ok;
+  }
   if (n == 3 && equalsIgnoreCase(tok[1], "GET") && equalsIgnoreCase(tok[2], "IDINT")) {
     if (reply && cap > 0) snprintf(reply, cap, "CFG IDINT=%u", static_cast<unsigned>(stored_.idIntervalMin));
     return ConsoleResult::Ok;
@@ -419,6 +423,16 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       return ConsoleResult::Error;
     }
     snprintf(shown, sizeof(shown), "sysop=%s", next.sysopCall[0] ? next.sysopCall : "none");
+  } else if (equalsIgnoreCase(key, "IDMORSE")) {
+    if (equalsIgnoreCase(value, "ON")) {
+      next.idMorse = true;
+    } else if (equalsIgnoreCase(value, "OFF")) {
+      next.idMorse = false;
+    } else {
+      say(reply, cap, "CFG ERR idmorse %s", "usa ON oppure OFF");
+      return ConsoleResult::Error;
+    }
+    snprintf(shown, sizeof(shown), "idmorse=%s", next.idMorse ? "on" : "off");
   } else if (equalsIgnoreCase(key, "IDINT")) {
     int mins = 0;
     if (!parseInt(value, mins) || mins < kMinIdIntervalMin || mins > kMaxIdIntervalMin) {

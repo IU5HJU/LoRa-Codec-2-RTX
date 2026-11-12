@@ -13,6 +13,8 @@
     mc: { freq: '433.175', ssid: '99', window: '300', dests: ['22251', '222', '*', '', ''] },
     noRole: false,        // firmware senza ruolo del ripetitore (piu' vecchio): niente role= nel CFG GET
     monitor: 'off',
+    idmorse: 'on',
+    noIdmorse: false,
     noIdint: false,       // firmware senza identificativo periodico (piu' vecchio)
     idint: '10',
     noSysop: false,       // firmware senza modo Sysop (piu' vecchio): CFG GET SYSOP e CFG SET SYSOP* sconosciuti
@@ -58,6 +60,11 @@
         if (!(khz >= 430000 && khz <= 440000)) return out('CFG ERR freqout fuori dai limiti');
         st.cfg.freqout = v; return out('CFG OK freqout=' + v);
       }
+    }
+    if (!st.noIdmorse) {
+      if (/^CFG\s+GET\s+IDMORSE$/i.test(line.trim())) return out('CFG IDMORSE=' + st.idmorse);
+      const dm = /^CFG\s+SET\s+IDMORSE\s+(\S+)$/i.exec(line.trim());
+      if (dm) { if (!/^(on|off)$/i.test(dm[1])) return out('CFG ERR idmorse usa ON oppure OFF'); st.idmorse = dm[1].toLowerCase(); return out('CFG OK idmorse=' + st.idmorse); }
     }
     if (!st.noIdint) {
       if (/^CFG\s+GET\s+IDINT$/i.test(line.trim())) return out('CFG IDINT=' + st.idint);

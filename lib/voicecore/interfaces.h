@@ -39,6 +39,22 @@ class IRadio {
     (void)dbm;
     return true;
   }
+  // Prove e identificativo in Morse (radio_test.h): la radio esce da LoRa e trasmette pacchetti FSK a lunghezza fissa senza preambolo,
+  // sincronismo ne' CRC (0xFF = portante, 0xAA = tono quadro di bit rate / 2); fskEnd la riporta ai parametri LoRa di prima e in ascolto.
+  virtual bool fskBegin(float mhz, float kbps, float devKhz, int ramp, int shape) {
+    (void)mhz;
+    (void)kbps;
+    (void)devKhz;
+    (void)ramp;
+    (void)shape;
+    return false;
+  }
+  virtual bool fskSend(uint8_t pattern, uint16_t bytes) {  // bloccante: dura bytes * 8 / bit rate
+    (void)pattern;
+    (void)bytes;
+    return false;
+  }
+  virtual void fskEnd() {}
   // Non bloccante. Ritorna i byte copiati in buf, 0 se non c'e' nulla.
   virtual size_t receive(uint8_t* buf, size_t cap, int* rssi) = 0;
   // SNR (dB) dell'ultimo pacchetto ricevuto, se la radio lo fornisce.

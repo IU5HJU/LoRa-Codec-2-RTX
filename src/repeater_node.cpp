@@ -227,6 +227,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
   lcr::MessageStore* store = new lcr::MessageStore;
   lcr::TxScheduler sched(radio, *store, prof, lcr::profileFor(lcr::kProfileMessage), out.profileFreqKhz(), static_cast<uint16_t>(esp_random()));
   sched.setBeaconInterval(static_cast<uint32_t>(settings.idIntervalMin) * 60000u);  // identificativo periodico (testo, senza bip sulle stazioni)
+  sched.setMorseId(settings.idMorse);  // dopo il testo, il nominativo in Morse a tono in FM (15 wpm, 700 Hz, +-2,5 kHz)
   sched.setCallsign(settings.callsign);  // annuncio di occupato (modo 6) prima e dopo i messaggi
   sched.setMessagesEnabled(!prof.message);  // se la voce e' gia' il profilo Messaggio non c'e' nulla da alternare
   lcr::RepeaterControl control(lcr::kMinPowerDbm, lcr::kMaxPowerDbm, settings.powerDbm);
@@ -296,8 +297,15 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       const bool linkOk = lastHbMs != 0 && now - lastHbMs < kLinkDeadMs;
       if (!mayTransmit) snprintf(l5, sizeof(l5), "N0CALL no TX, RX %s", linkOk ? "ok" : "NO");  // con N0CALL non trasmette: la riga mostra comunque la seriale
       else if (control.off()) snprintf(l5, sizeof(l5), "TX SPENTA (sysop)");
-      else snprintf(l5, sizeof(l5), "RX %s %s M%u/%lu", linkOk ? "ok" : "NO", sched.state() == lcr::TxScheduler::State::Voice ? "voce" : sched.state() == lcr::TxScheduler::State::Listen ? "ascolto" : "rilancio",
-                    static_cast<unsigned>(store->readyCount()), static_cast<unsigned long>(sched.stats().relayed));
+      else {
+        const lcr::TxScheduler::State ss = sched.state();
+        const char* what = ss == lcr::TxScheduler::State::Voice || ss == lcr::TxScheduler::State::Announce || ss == lcr::TxScheduler::State::Release ? "voce"
+                           : ss == lcr::TxScheduler::State::Listen ? "ascolto"
+                           : ss == lcr::TxScheduler::State::Morse ? "morse"
+                                                                  : "rilancio";
+        snprintf(l5, sizeof(l5), "RX %s %s M%u/%lu", linkOk ? "ok" : "NO", what, static_cast<unsigned>(store->readyCount()),
+                 static_cast<unsigned long>(sched.stats().relayed));
+      }
       ui.showLines(l1, l2, l3, l4, l5);
     }
 

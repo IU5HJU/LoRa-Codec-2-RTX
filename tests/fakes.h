@@ -59,6 +59,33 @@ class Radio : public lcr::IRadio {
     return true;
   }
   std::vector<int> powers;
+  bool fskBegin(float mhz, float kbps, float devKhz, int ramp, int shape) override {
+    (void)ramp;
+    (void)shape;
+    if (failFsk) return false;
+    fskBegins++;
+    fskMhz = mhz;
+    fskKbps = kbps;
+    fskDev = devKhz;
+    inFsk = true;
+    return true;
+  }
+  bool fskSend(uint8_t pattern, uint16_t bytes) override {
+    fskBursts.push_back({pattern, bytes});
+    return inFsk;
+  }
+  void fskEnd() override {
+    inFsk = false;
+    fskEnds++;
+  }
+  struct FskBurst {
+    uint8_t pattern;
+    uint16_t bytes;
+  };
+  std::vector<FskBurst> fskBursts;
+  bool inFsk = false, failFsk = false;
+  int fskBegins = 0, fskEnds = 0;
+  float fskMhz = 0, fskKbps = 0, fskDev = 0;
   bool failParams = false;
   bool meshcom = false;
   int meshcomSwitches = 0;

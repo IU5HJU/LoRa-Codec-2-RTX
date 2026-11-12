@@ -73,3 +73,7 @@ Parametri facoltativi di tutti i comandi (dopo i fissi): `wpm=5..30`, `hz=300..2
 
 Quando hai i numeri, tarare i parametri (tono, deviazione, rampa, wpm) e decidere se e come inserire il Morse nell'identificativo del ripetitore.
 
+## Decisione del 12/11/2026: il Morse in FM entra subito nell'identificativo
+
+Dopo il testo dell'identificativo periodico (e con IDENTIFICA del sysop) il ripetitore manda il nominativo in **Morse con tono in FM stretta**: 15 parole al minuto, 700 Hz, deviazione ±2,5 kHz, `CFG SET IDMORSE ON` (di base acceso). Provato sul PC con un'altra radio finta (`test_tx_scheduler`: piano dei pacchetti, durata, interruzione dalla voce, TX spenta, radio che non va in FSK); **parametri e comportamento della radio vera sono da misurare** con il firmware di prova qui sopra, sulla T3 TX con N0CALL tolto solo a banco e a potenza minima. Il CW puro resta solo nella prova. Se le misure dicono che tono o deviazione vanno cambiati, sono tre costanti nel firmware.
+

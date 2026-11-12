@@ -57,6 +57,8 @@ button.sec{background:#e5e7eb;color:#14181f}
 <p class="hint">Da 430.000 a 440.000. Sulla scheda TX sono anche la frequenza dei messaggi.</p>
 <label for="idint">Identificativo ogni (minuti, 1-10)</label><input id="idint" type="number" min="1" max="10">
 <p class="hint">Ogni quanti minuti la TX trasmette l'identificativo del ripetitore (il nominativo qui sopra, in modo testo: le stazioni lo vedono passare senza suoni). Di base 10.</p>
+<label for="idmorse">Identificativo anche in Morse (FM)</label><select id="idmorse"><option value="on">Sì</option><option value="off">No</option></select>
+<p class="hint">Dopo il testo la TX manda il nominativo in Morse con un tono in FM stretta (15 parole al minuto, 700 Hz): chi non ha le schede LoRa lo sente con un ricevitore FM qualsiasi e capisce che la frequenza è occupata da un ripetitore. Dura circa 6 secondi.</p>
 </div>
 <h2>Modo Sysop</h2>
 <p class="hint">Per chi gestisce un ripetitore. Con il <strong>modo Sysop</strong> acceso il menu della scheda (volume lungo) mostra <strong>Comandi Sysop</strong> al posto di Invia testo: scegli il comando (STATO, SPEGNI, RIACCENDI, RIAVVIA, IDENTIFICA, POTENZA) e la scheda lo trasmette firmato al ripetitore. Resta acceso finché non lo spegni. Il nominativo e la chiave vanno impostati uguali sul ripetitore (schede RX e TX) e sulla scheda del sysop; la chiave non si rilegge mai.</p>
@@ -92,7 +94,7 @@ async function loadRole(){try{const r=await cmd('CFG GET MONITOR');if(r.startsWi
 function sysopShow(){const on=$('sysopmode').value==='on';$('sysopbox').hidden=!on;$('textsbox').hidden=on;}
 $('sysopmode').addEventListener('change',sysopShow);
 $('genkey').addEventListener('click',()=>{const b=new Uint8Array(16);crypto.getRandomValues(b);$('sysopkey').value=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');$('sysopkeyhint').textContent='Copia questa chiave adesso: dopo il salvataggio non si rilegge. Va impostata uguale sulle due schede del ripetitore e su questa.';});
-async function loadIdint(){try{const r=await cmd('CFG GET IDINT');if(r.startsWith('CFG IDINT='))$('idint').value=r.slice(10);}catch(e){}}
+async function loadIdint(){try{const r=await cmd('CFG GET IDINT');if(r.startsWith('CFG IDINT='))$('idint').value=r.slice(10);}catch(e){}try{const r=await cmd('CFG GET IDMORSE');if(r.startsWith('CFG IDMORSE='))$('idmorse').value=r.slice(12)==='off'?'off':'on';}catch(e){}}
 async function loadSysop(){try{const r=await cmd('CFG GET SYSOP');if(r.startsWith('CFG SYSOP ')){const m=parse(r.slice(10));$('sysop').value=m.call&&m.call!=='none'?m.call:'';$('sysopmode').value=m.mode==='on'?'on':'off';$('sysopkey').value='';$('sysopkeyhint').textContent=m.key==='set'?'Chiave impostata (non si mostra). Lascia vuoto per non cambiarla.':'Chiave non impostata.';sysopShow();}}catch(e){}}
 async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))throw new Error(t);fill(parse(t));await loadSysop();await loadIdint();await loadRole();for(let i=1;i<=5;i++){const r=await cmd('CFG GET TEXT'+i);$('text'+i).value=r.startsWith('CFG TEXT'+i+'=')?r.slice(('CFG TEXT'+i+'=').length):'';}try{const r=await cmd('CFG GET MC');if(r.startsWith('CFG MC ')){const m=parse(r.slice(7));$('mcfreq').value=m.freqmc||'';$('mcssid').value=m.ssid||'';$('mcwindow').value=m.window||'';for(let i=1;i<=5;i++){const d=await cmd('CFG GET MCDEST'+i);$('mcdest'+i).value=d.startsWith('CFG MCDEST'+i+'=')?d.slice(('CFG MCDEST'+i+'=').length):'';}}}catch(e){}st('Valori letti dalla scheda.','ok');}catch(e){st('Lettura non riuscita: '+e.message,'err');}}
 $('f').addEventListener('submit',async ev=>{
@@ -109,7 +111,7 @@ $('f').addEventListener('submit',async ev=>{
     const mcw=+$('mcwindow').value;if(!(mcw>=30&&mcw<=1800)){st("L'ascolto dopo l'invio deve durare da 30 a 1800 secondi.",'err');return;}
     for(const c of ['CFG SET FREQMC '+$('mcfreq').value.trim(),'CFG SET MCSSID '+$('mcssid').value.trim(),'CFG SET MCWINDOW '+mcw].concat(mcds.map((d,i)=>'CFG SET MCDEST'+(i+1)+' '+(d||'NONE')))){const r=await cmd(c);if(!r.startsWith('CFG OK')){st('Rifiutato ('+c+'): '+r,'err');return;}}
     if(want.role==='rpttx'){const idn=+$('idint').value;if(!(idn>=1&&idn<=10)){st('Il tempo dell\'identificativo deve essere da 1 a 10 minuti.','err');return;}
-    const r=await cmd('CFG SET IDINT '+idn);if(!r.startsWith('CFG OK')){st('Rifiutato (IDINT): '+r,'err');return;}}
+    for(const c of ['CFG SET IDINT '+idn,'CFG SET IDMORSE '+$('idmorse').value]){const r=await cmd(c);if(!r.startsWith('CFG OK')){st('Rifiutato ('+c+'): '+r,'err');return;}}}
     if(want.role==='rptrx'){const r=await cmd('CFG SET MONITOR '+$('monitor').value);if(!r.startsWith('CFG OK')){st('Rifiutato (MONITOR): '+r,'err');return;}}
     const sy=$('sysop').value.trim().toUpperCase();if(sy!==''&&!/^[A-Z0-9\/]{1,8}$/.test(sy)){st('Il nominativo del sysop non è valido.','err');return;}
     const sk=$('sysopkey').value.trim();if(sk!==''&&!/^[0-9a-fA-F]{32}$/.test(sk)){st('La chiave deve avere 32 cifre esadecimali.','err');return;}

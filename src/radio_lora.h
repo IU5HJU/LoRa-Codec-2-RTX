@@ -29,9 +29,9 @@ class RadioLora : public lcr::IRadio {
   // ne' CRC (tutti 0xFF = portante, 0xAA = tono quadro di bit rate / 2); fskEnd riporta la radio a LoRa e in ascolto. NON usare mentre
   // la scheda sta ricevendo o trasmettendo voce.
   //   mhz: frequenza centrale; kbps: bit rate; devKhz: deviazione; ramp: 0..15 (registro PaRamp) o -1; shape: 0, 3, 5, 10 (gaussiano).
-  bool fskBegin(float mhz, float kbps, float devKhz, int ramp, int shape);
-  bool fskSend(uint8_t pattern, uint16_t bytes);
-  void fskEnd();
+  bool fskBegin(float mhz, float kbps, float devKhz, int ramp, int shape) override;
+  bool fskSend(uint8_t pattern, uint16_t bytes) override;
+  void fskEnd() override;
 
   float lastRssi() const { return lastRssi_; }
   bool hasSnr() const override { return true; }

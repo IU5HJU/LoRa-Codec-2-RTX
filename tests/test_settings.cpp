@@ -139,6 +139,16 @@ static void testRadioTestCommand() {
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=0"));  // non cambia nessuna impostazione
 }
 
+static void testIdMorse() {
+  Fixture f;
+  CHECK(f.run("CFG GET IDMORSE") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDMORSE=on") == 0);  // di base acceso
+  CHECK(f.run("CFG SET IDMORSE OFF") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK idmorse=off") == 0 && !f.st.data.idMorse);
+  CHECK(f.run("CFG GET IDMORSE") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDMORSE=off") == 0);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=1"));
+  CHECK(f.run("cfg set idmorse on") == ConsoleResult::Ok && f.st.data.idMorse);
+  CHECK(f.run("CFG SET IDMORSE FORSE") == ConsoleResult::Error && f.st.data.idMorse);
+}
+
 static void testIdInterval() {
   Fixture f;
   CHECK(f.run("CFG GET IDINT") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDINT=10") == 0);
@@ -589,6 +599,7 @@ int main() {
   testTexts();
   testMonitor();
   testRadioTestCommand();
+  testIdMorse();
   testIdInterval();
   testSysop();
   testMeshcomSettings();
