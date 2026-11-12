@@ -5,7 +5,7 @@
 Distinguo **fatti verificati** (dal codice del progetto, dall'esito della CI) da **conoscenza generale** dell'ESP32 e di lwIP (non verificata qui) e da **da misurare**.
 
 ## Cosa c'è già e si riusa
-- **I pacchetti radio** (formato, `encodePacket`/`decodePacket`) sono già un datagramma autosufficiente: nessuna conversione. Il più grande (profilo Qualità, 12 frame da 16 byte + intestazione) sta in poco più di 200 byte: con le intestazioni del nodo entra in **un solo datagramma UDP**.
+- **I pacchetti radio** (formato, `encodePacket`/`decodePacket`) sono già un datagramma autosufficiente: nessuna conversione. Il più grande (profilo Standard, 12 frame da 16 byte + intestazione) sta in poco più di 200 byte: con le intestazioni del nodo entra in **un solo datagramma UDP**.
 - **La logica del ripetitore** (`Repeater`): ripete solo i modi voluti, mette il flag `RELAYED`, scarta i pacchetti già ripetuti e i duplicati, limita la sessione a 35 s ([ripetitore.md](ripetitore.md)). È la stessa logica che serve a un nodo.
 - **`TxQueue`** (coda con pausa di 80 ms fra i pacchetti), **CAD** prima di trasmettere, **HMAC-SHA256** e firma con contatore (già scritti per i comandi del sysop, [protocollo.md](protocollo.md)), **ruoli** (`CFG SET ROLE`), console `CFG`, pagine di configurazione, display.
 - **Manca:** tutta la parte di rete (Wi-Fi in modalità client, socket, protocollo fra nodi, riconnessione). Oggi il Wi-Fi del firmware è **solo access point per la pagina di configurazione** (verificato: `src/wifi_config.cpp` usa `WIFI_AP`).
@@ -44,7 +44,7 @@ Un datagramma UDP: `magic (2) | versione (1) | tipo (1) | id nodo (4) | id di av
 ## Ritardo e ritmo
 - Ritardo di un pacchetto: durata in aria in ricezione + rete (nella LAN pochi ms, con il Wi-Fi qualche decina di ms di jitter) + coda di trasmissione + durata in aria in trasmissione. **Circa un pacchetto di ritardo in più** rispetto alla radio diretta, cioè **del mezzo secondo e oltre**: da misurare.
 - Il pacchetto di rete **non porta il ritmo originale**, ma le stazioni ricevono con il pre-buffer e i tempi di sessione di sempre; come per il ripetitore, la trasmissione riparte dal ritmo della coda (almeno 80 ms fra i pacchetti, in pratica il tempo in aria).
-- **Backpressure:** un nodo che ritrasmette (a SF8 un pacchetto dura molto più di quello che la rete consegna) può accumulare ritardo se arriva più voce di quanta il canale ne smaltisca: limite di coda e scarto dei pacchetti più vecchi, con contatore.
+- **Backpressure:** un nodo che ritrasmette (a SF7 o SF8 un pacchetto dura molto più di quello che la rete consegna) può accumulare ritardo se arriva più voce di quanta il canale ne smaltisca: limite di coda e scarto dei pacchetti più vecchi, con contatore.
 
 ## Risorse della T3 (ESP32-PICO-D4)
 - **Misurato dalla CI** (ultimo run, firmware T3): `text` 875 436 B, `data` 406 992 B, `bss` 80 185 B; la piattaforma dichiara **320 KB di RAM** utilizzabile e 4 MB di flash. Il Wi-Fi (stack, AsyncTCP, server web) **è già linkato** per la pagina di configurazione, quindi il costo in flash di un nodo è piccolo.

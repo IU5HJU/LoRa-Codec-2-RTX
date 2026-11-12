@@ -12,7 +12,7 @@ lcr::Settings compileTimeSettings() {
   lcr::Settings s;
   strncpy(s.callsign, LCR_CALLSIGN, lcr::kMaxCallsign);
   s.freqKhz = static_cast<uint32_t>(LCR_FREQUENCY_MHZ * 1000.0f + 0.5f);
-  s.freqQualKhz = s.freqKhz;
+  s.freqRangeKhz = s.freqKhz;
   s.freqMsgKhz = s.freqKhz;  // tutte le frequenze dei profili partono uguali
   s.powerDbm = LCR_TX_POWER_DBM;
   s.volume = LCR_VOLUME_STEP;
@@ -31,9 +31,19 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
   if (all) {
     memset(out.callsign, 0, sizeof(out.callsign));
     p.getString("call", out.callsign, sizeof(out.callsign));
-    out.freqKhz = p.getUInt("freq", 0);
+    // Dal 12/11/2026 "Standard" e' il Codec2 3200 (prima "Qualita'") e il 1200 si chiama "Range". Le impostazioni salvate prima di allora (senza
+    // "pv") hanno in "freq" la frequenza del vecchio Standard (il Codec2 1200, oggi Range) e in "fqua" quella della vecchia Qualita' (oggi
+    // Standard): si leggono scambiandole, cosi' una scheda gia' in uso resta sulla stessa frequenza e sullo stesso modo radio (l'id del
+    // profilo non cambia: 0 = Codec2 1200, 2 = Codec2 3200). Al primo salvataggio passano al formato nuovo.
+    const bool newFormat = p.isKey("pv");
+    if (newFormat) {
+      out.freqKhz = p.getUInt("freq", 0);
+      out.freqRangeKhz = p.getUInt("frng", out.freqKhz);
+    } else {
+      out.freqRangeKhz = p.getUInt("freq", 0);
+      out.freqKhz = p.getUInt("fqua", out.freqRangeKhz);
+    }
     out.freqMsgKhz = p.getUInt("fmsg", out.freqKhz);  // assente nelle versioni precedenti: stessa frequenza dello Standard
-    out.freqQualKhz = p.getUInt("fqua", out.freqKhz);
     out.role = static_cast<uint8_t>(p.getUChar("role", lcr::kRoleNormal));  // assenti nelle versioni precedenti
     out.freqOutKhz = p.getUInt("fout", 0);
     out.freqMcKhz = p.getUInt("fmc", 433175);  // assenti nelle versioni precedenti
@@ -71,7 +81,7 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
     out.volume = p.isKey("vol2") ? p.getInt("vol2", lcr::kDefaultVolume)
                                  : (p.isKey("vol") ? lcr::migrateOldVolume(p.getInt("vol", 10)) : lcr::kDefaultVolume);
     out.micFloorDb = p.getInt("floor", lcr::kDefaultMicFloorDb);
-    out.profile = static_cast<uint8_t>(p.getUChar("prof", lcr::kProfileStandard));  // assente nelle versioni precedenti
+    out.profile = static_cast<uint8_t>(p.getUChar("prof", newFormat ? lcr::kProfileStandard : lcr::kProfileRange));  // assente nelle versioni precedenti: erano sul Codec2 1200
     out.gpsOn = p.getBool("gps", false);  // assenti nelle versioni precedenti
     out.posTx = p.getBool("ptx", false);
     out.qthSet = p.getBool("qset", false);
@@ -92,12 +102,13 @@ bool NvsSettingsStorage::load(lcr::Settings& out) {
 bool NvsSettingsStorage::save(const lcr::Settings& s) {
   Preferences p;
   if (!p.begin(kNamespace, false)) return false;
-  const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putUInt("fqua", s.qualFreqKhz()) > 0 && p.putUChar("role", s.role) > 0 && p.putUInt("fout", s.freqOutKhz) > 0 && p.putBool("mon", s.rxMonitor) > 0 && p.putUInt("fmc", s.freqMcKhz) > 0 && p.putUChar("mcs", s.mcSsid) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
+  const bool ok = p.putString("call", s.callsign) > 0 && p.putUInt("freq", s.freqKhz) > 0 && p.putUInt("fmsg", s.freqMsgKhz) > 0 && p.putUInt("frng", s.rangeFreqKhz()) > 0 && p.putUChar("pv", 2) > 0 && p.putUChar("role", s.role) > 0 && p.putUInt("fout", s.freqOutKhz) > 0 && p.putBool("mon", s.rxMonitor) > 0 && p.putUInt("fmc", s.freqMcKhz) > 0 && p.putUChar("mcs", s.mcSsid) > 0 && p.putInt("pwr", s.powerDbm) > 0 &&
                     p.putInt("vol2", s.volume) > 0 &&
                     p.putInt("floor", s.micFloorDb) > 0 && p.putUChar("prof", s.profile) > 0 &&
                     p.putBool("gps", s.gpsOn) > 0 && p.putBool("ptx", s.posTx) > 0 && p.putBool("qset", s.qthSet) > 0 && p.putInt("qlat", s.qthLatE7) > 0 &&
                     p.putInt("qlon", s.qthLonE7) > 0;
   p.putUShort("mcw", s.mcWindowS);
+  p.remove("fqua");  // vecchio formato (prima del 12/11/2026)
   p.putString("sop", s.sysopCall);
   p.putBool("som", s.sysopMode);
   p.putUChar("idi", s.idIntervalMin);

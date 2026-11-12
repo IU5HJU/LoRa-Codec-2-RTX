@@ -41,19 +41,19 @@ bool UiNotifier::begin() {
   return ok_;
 }
 
-// Lettera del profilo in uso (S Standard, M Messaggio, Q Qualita') in alto a destra: bianca su sfondo nero (in positivo),
+// Lettera del profilo in uso (S Standard, R Range, M Messaggio) in alto a destra: bianca su sfondo nero (in positivo),
 // disegnata a mano su 10x9 punti con tratti di 2 punti per occupare tutto lo spazio sopra la riga e restare leggibile.
 void UiNotifier::drawProfileBadge() {
   static const char* const kS[9] = {".XXXXXXXX.", "XXXXXXXXXX", "XX........", "XXXXXXXX..", ".XXXXXXXX.",
                                     "..XXXXXXXX", "........XX", "XXXXXXXXXX", ".XXXXXXXX."};
   static const char* const kM[9] = {"XX......XX", "XXX....XXX", "XXXX..XXXX", "XX.XXXX.XX", "XX..XX..XX",
                                     "XX......XX", "XX......XX", "XX......XX", "XX......XX"};
-  static const char* const kQ[9] = {".XXXXXXXX.", "XXXXXXXXXX", "XX......XX", "XX......XX", "XX......XX",
-                                    "XX..XX..XX", "XX...XXXXX", "XXXXXXXXX.", ".XXXXXX.XX"};
+  static const char* const kR[9] = {"XXXXXXXX..", "XXXXXXXXX.", "XX.....XXX", "XX.....XXX", "XXXXXXXXX.",
+                                    "XXXXXXXX..", "XX..XXX...", "XX...XXX..", "XX....XXXX"};
   static const char* const kT[9] = {"XXXXXXXXXX", "XXXXXXXXXX", "....XX....", "....XX....", "....XX....",
                                     "....XX....", "....XX....", "....XX....", "....XX...."};
   const char b = meshSec_ > 0 ? 'T' : badge_;  // durante l'escursione MeshCom la lettera e' T
-  const char* const* g = b == 'M' ? kM : (b == 'Q' ? kQ : (b == 'T' ? kT : kS));
+  const char* const* g = b == 'M' ? kM : (b == 'R' ? kR : (b == 'T' ? kT : kS));
   for (int y = 0; y < 9; y++)
     for (int x = 0; x < 10; x++)
       if (g[y][x] == 'X') display_.drawPixel(118 + x, y, SSD1306_WHITE);

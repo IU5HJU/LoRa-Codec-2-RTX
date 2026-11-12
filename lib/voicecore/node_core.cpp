@@ -5,9 +5,9 @@
 
 namespace lcr {
 
-NodeCore::NodeCore(IRadio& radio, INodeNet& net, const NodeLink::Config& link, uint32_t bootId, uint32_t (*rng)())
-    : radio_(radio), net_(net), link_(link, bootId, rng) {
-  rep_.setModeMask(static_cast<uint16_t>((1u << kModeCodec2_1200) | (1u << kModeText)));  // solo profilo Standard e testo
+NodeCore::NodeCore(IRadio& radio, INodeNet& net, const NodeLink::Config& link, uint32_t bootId, uint32_t (*rng)(), uint8_t voiceMode)
+    : radio_(radio), net_(net), link_(link, bootId, rng), voiceMode_(voiceMode) {
+  rep_.setModeMask(static_cast<uint16_t>((1u << voiceMode) | (1u << kModeText)));  // solo il modo voce del profilo e il testo
 }
 
 void NodeCore::onDatagram(const uint8_t* d, size_t n, uint32_t nowMs) {
@@ -15,7 +15,7 @@ void NodeCore::onDatagram(const uint8_t* d, size_t n, uint32_t nowMs) {
   for (size_t i = 0; i < rx.nReplies; i++) net_.sendDatagram(rx.replies[i].data, rx.replies[i].len);
   if (rx.kind != NodeLink::Kind::Packet) return;
   Packet p;
-  if (!decodePacket(rx.packet, rx.packetLen, p) || !(p.mode == kModeCodec2_1200 || p.mode == kModeText)) {
+  if (!decodePacket(rx.packet, rx.packetLen, p) || !(p.mode == voiceMode_ || p.mode == kModeText)) {
     stats_.netBad++;
     return;
   }

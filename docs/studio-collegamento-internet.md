@@ -6,7 +6,7 @@
 
 ## Cosa si porta in rete: i pacchetti, non l'audio
 
-VoLoRa trasporta **Codec2** (1200 bit/s in Standard e Messaggio, 3200 bit/s in Qualità), 12 frame da 40 ms per pacchetto, parità XOR e sessione per ogni PTT ([protocollo.md](protocollo.md)). Un nodo Internet ha tre modi di lavorare:
+VoLoRa trasporta **Codec2** (1200 bit/s in Range e Messaggio, 3200 bit/s in Standard), 12 frame da 40 ms per pacchetto, parità XOR e sessione per ogni PTT ([protocollo.md](protocollo.md)). Un nodo Internet ha tre modi di lavorare:
 
 | Livello | Cosa fa | Transcodifica |
 |---|---|---|
@@ -35,7 +35,7 @@ Un tunnel dei pacchetti VoLoRa fra due ripetitori (o fra la RX e la TX dello ste
 ### Contro
 - **Transcodifica obbligatoria** (Codec2 ↔ OPUS): più ritardo e **qualità limitata dal Codec2 a 1200 bit/s** (suono "robotico": è il limite della nostra voce, non migliora). Il flusso dalla parte analogica, a banda piena, viene stretto a 1200 bit/s.
 - **Il nominativo del singolo parlante** probabilmente **non viaggia** (il reflector riconosce il nodo, non la persona): da verificare; in tal caso va annunciato a voce o si perde l'identificazione dell'operatore LoRa.
-- **Il canale LoRa è piccolo:** una conversazione alla volta, con TOT (30 s in Standard, 15 s in Messaggio) e pausa tra i turni. Un talk group affollato lo **occuperebbe** e lo terrebbe in trasmissione: serve una politica (quale talk group, limiti di durata, priorità alla voce locale).
+- **Il canale LoRa è piccolo:** una conversazione alla volta, con TOT (30 s in Range, 15 s in Messaggio) e pausa tra i turni. Un talk group affollato lo **occuperebbe** e lo terrebbe in trasmissione: serve una politica (quale talk group, limiti di durata, priorità alla voce locale).
 - **Semi-duplex e ritmo:** la voce LoRa arriva a pacchetti da 12 frame (circa mezzo secondo) con la parità; il ritardo totale (LoRa + Internet + ripetizione) è di diversi secondi. Normale per un reflector, ma da misurare.
 - **Il modo Messaggio (memorizza e ritrasmetti) e i messaggi di testo non hanno corrispondenti** nel reflector.
 - **Regole e accettazione:** ogni reflector ha il suo gestore e le sue regole su chi può collegarsi e con che tipo di nodo; un nodo "LoRa" va concordato.
@@ -100,7 +100,7 @@ Le fonti indicano tre modi di avere l'AMBE in Analog_Bridge:
 | Ordine consigliato | **dopo** YSF | **prima**: meno vincoli e più prove possibili |
 
 ### Limiti comuni (valgono per entrambi)
-- **Qualità:** Codec2 1200 → PCM → AMBE+2 → l'altro lato: due vocoder in cascata, voce molto più povera di quella nativa dei sistemi digitali.
+- **Range:** Codec2 1200 → PCM → AMBE+2 → l'altro lato: due vocoder in cascata, voce molto più povera di quella nativa dei sistemi digitali.
 - **Canale LoRa:** una conversazione alla volta; una rete affollata lo terrebbe in trasmissione. Servono un **TG o reflector tranquillo**, un limite di durata e la priorità alla voce locale.
 - **Ritardi:** LoRa (mezzo secondo a pacchetto) + due transcodifiche + Internet: alcuni secondi.
 - **Messaggi memorizzati e testo** non hanno corrispondenti; l'identificativo del ripetitore andrebbe adattato (annuncio vocale o testo di stato del nodo).
@@ -113,7 +113,7 @@ Le fonti indicano tre modi di avere l'AMBE in Analog_Bridge:
 
 ## Una terza strada, da verificare: M17 e i reflector con transcodifica
 
-**M17** è un protocollo digitale amatoriale aperto **basato su Codec2** (mia conoscenza; un commit di un client M17 che usa Codec2 a 3200 bit/s è l'unico riscontro che ho trovato, [esempio](https://code.octet-stream.net/m17rt/commitdiff/2c7d53c113f4e19f24c928b2c5eca1c3f6f799af)). Il nostro **profilo Qualità (Codec2 3200)** parla già lo stesso codec. Esistono **reflector con transcodifica** (XLX con hardware AMBE, [spiegazione](https://w8wky.org/what-are-transcoding-reflectors/)) che collegano fra loro modi diversi: se un reflector accetta M17 o un protocollo con Codec2 e fa lui la conversione verso DMR/YSF/D-STAR, **la licenza AMBE resta a carico di chi gestisce il reflector** e il nostro gateway non tocca l'AMBE. **Non ho verificato** quali modi (NXDN compreso) colleghi un dato reflector con M17. Vale la pena guardare prima di costruire un transcodificatore proprio.
+**M17** è un protocollo digitale amatoriale aperto **basato su Codec2** (mia conoscenza; un commit di un client M17 che usa Codec2 a 3200 bit/s è l'unico riscontro che ho trovato, [esempio](https://code.octet-stream.net/m17rt/commitdiff/2c7d53c113f4e19f24c928b2c5eca1c3f6f799af)). Il nostro **profilo Standard (Codec2 3200)** parla già lo stesso codec. Esistono **reflector con transcodifica** (XLX con hardware AMBE, [spiegazione](https://w8wky.org/what-are-transcoding-reflectors/)) che collegano fra loro modi diversi: se un reflector accetta M17 o un protocollo con Codec2 e fa lui la conversione verso DMR/YSF/D-STAR, **la licenza AMBE resta a carico di chi gestisce il reflector** e il nostro gateway non tocca l'AMBE. **Non ho verificato** quali modi (NXDN compreso) colleghi un dato reflector con M17. Vale la pena guardare prima di costruire un transcodificatore proprio.
 
 ## Confronto in breve
 

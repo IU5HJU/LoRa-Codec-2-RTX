@@ -1,6 +1,6 @@
 # Protocollo (v2)
 
-Trasmissione vocale **broadcast** a turni (stile QSO) su LoRa, con voce Codec2 a 1200 bps (profili Standard e Messaggio) o a 3200 bps (profilo Qualità, modo 4).
+Trasmissione vocale **broadcast** a turni (stile QSO) su LoRa, con voce Codec2 a 1200 bps (profili Range e Messaggio) o a 3200 bps (profilo Standard, modo 4).
 Nessun indirizzamento, nessun ACK: chiunque sia in ascolto sulla frequenza decodifica.
 
 ## Sequenza di un turno
@@ -22,7 +22,7 @@ Durata massima di un turno: **30 s** (750 frame). Al limite la trasmissione si c
 |---|---|
 | Codec | Codec2 1200 bps: 6 byte ogni 40 ms (320 campioni a 8 kHz) |
 | Pacchetto dati | 12 frame = 480 ms = 72 byte |
-| Radio | SX1278 433 MHz, CR 4/5. Per profilo: **Standard** SF8/BW250, **Messaggio** SF12/BW125, **Qualità** SF7/BW250 (`lib/voicecore/profile.cpp`; i valori storici in `src/user_config.h`) |
+| Radio | SX1278 433 MHz, CR 4/5. Per profilo: **Range** SF8/BW250, **Messaggio** SF12/BW125, **Standard** SF7/BW250 (`lib/voicecore/profile.cpp`; i valori storici in `src/user_config.h`) |
 | Parità | 1 pacchetto XOR ogni 4 pacchetti dati (disattivabile) |
 | Nominativo | in `START`, in `END` e ogni 10 pacchetti (~5 s) |
 
@@ -60,7 +60,7 @@ Dimensione massima sul canale: 5 + 9 + 7 + 1 + 75 = 97 byte (il pacchetto `START
 
 Il nominativo viaggia in chiaro e il contenuto non è cifrato, come richiesto dalla normativa radioamatoriale.
 
-**Pacchetti totali** (protocollo 2, flag `TOTAL`): 1 byte, solo nel pacchetto `START`, dopo la posizione. Dichiara quanti pacchetti (dati e parità, numeri di sequenza da 0 a totale - 1) trasmetterà il messaggio: chi riceve calcola la percentuale di avanzamento. Lo dichiara solo il modo Messaggio, dove il messaggio è già registrato quando parte l'invio; la voce in tempo reale (Standard) non conosce la lunghezza in anticipo e non lo manda. Valori da 1 a 255; il byte `0` non è valido. Costo: 1 byte.
+**Pacchetti totali** (protocollo 2, flag `TOTAL`): 1 byte, solo nel pacchetto `START`, dopo la posizione. Dichiara quanti pacchetti (dati e parità, numeri di sequenza da 0 a totale - 1) trasmetterà il messaggio: chi riceve calcola la percentuale di avanzamento. Lo dichiara solo il modo Messaggio, dove il messaggio è già registrato quando parte l'invio; la voce in tempo reale (Range) non conosce la lunghezza in anticipo e non lo manda. Valori da 1 a 255; il byte `0` non è valido. Costo: 1 byte.
 
 Il totale è `START + pacchetti pieni (1 ogni 12 frame) + END` più un pacchetto di parità ogni 4 pacchetti dati (l'ultimo gruppo, anche parziale, ne ha uno).
 
@@ -77,7 +77,7 @@ Una prova dura 300 frame (12 s) con gli stessi pacchetti e la stessa parità del
 (`START`+`END`, nominativo, stessa sessione) che porta 12 byte: frame consegnati, ok, danneggiati, persi, pacchetti recuperati, RSSI e SNR medi. Un ricevitore con una versione precedente scarta i pacchetti di modo sconosciuto.
 Dettagli in [prova-collegamento.md](prova-collegamento.md).
 
-## Modo 4: Codec2 3200 bps (profilo Qualità)
+## Modo 4: Codec2 3200 bps (profilo Standard)
 
 Stessa struttura del modo 1, ma ogni frame di 40 ms occupa **16 byte** (due blocchi Codec2 da 20 ms e 8 byte, uno dopo l'altro: il flusso si decodifica con `c2dec 3200`). Un pacchetto dati porta 12 frame = 192 byte (totale 197 byte con intestazione; la parità XOR è lunga come il pacchetto più lungo del gruppo). Un payload che non sia multiplo di 16 byte è scartato. 30 s di voce occupano circa 12,5 s in aria su SF7/BW250 (42 %). Il numero di sequenza resta a 7 bit (massimo 128 pacchetti, cioè 30 s a 3200): per durate maggiori servirà la sequenza a 16 bit.
 
@@ -122,7 +122,7 @@ Un solo pacchetto `START`+`END`+`CALLSIGN` (nominativo di chi manda), `seq` 0, s
 
 ## Annuncio di ripetitore occupato (modo 6)
 
-Un solo pacchetto `START`+`END`+`CALLSIGN` con il nominativo del **ripetitore** e, come payload, **2 byte big-endian** con i secondi di blocco previsti (**0 = di nuovo libero**). Niente parità, posizione o totale; `seq` 0; payload di lunghezza diversa da 2 e pacchetto senza nominativo sono scartati. Lo manda un ripetitore con i parametri della voce prima di ritrasmettere un messaggio lungo (le stazioni in Standard e Qualità non vedono con il CAD una trasmissione SF12), **due volte a 1 s di distanza** (stessa sessione, la seconda copia si scarta), e una volta con 0 secondi a servizio concluso se la ritrasmissione non è stata interrotta dalla voce.
+Un solo pacchetto `START`+`END`+`CALLSIGN` con il nominativo del **ripetitore** e, come payload, **2 byte big-endian** con i secondi di blocco previsti (**0 = di nuovo libero**). Niente parità, posizione o totale; `seq` 0; payload di lunghezza diversa da 2 e pacchetto senza nominativo sono scartati. Lo manda un ripetitore con i parametri della voce prima di ritrasmettere un messaggio lungo (le stazioni in Range e Standard non vedono con il CAD una trasmissione SF12), **due volte a 1 s di distanza** (stessa sessione, la seconda copia si scarta), e una volta con 0 secondi a servizio concluso se la ritrasmissione non è stata interrotta dalla voce.
 
 Le stazioni **lo mostrano sul display** ("RIP. OCCUPATO m:ss" a riposo, con un bip) e **non rifiutano il PTT**: chi vuole parlare può farlo e il ripetitore interrompe il messaggio. L'avviso si cancella da solo allo scadere, con un annuncio a 0, quando si riceve voce o quando si trasmette. Una versione precedente scarta il modo 6 come ogni modo sconosciuto.
 

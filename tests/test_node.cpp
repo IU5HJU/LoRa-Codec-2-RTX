@@ -18,9 +18,9 @@ static std::vector<std::string> g_meshLog;
 static void testMeshLog(const char* m) { g_meshLog.push_back(m); }
 
 struct Station {
-  Station(fake::Air& air, int id, const char* cs, const uint32_t& clock, uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0)
+  Station(fake::Air& air, int id, const char* cs, const uint32_t& clock, uint8_t profile = kProfileRange, uint32_t extraGapMs = 0)
       : radio(air, id), codec(frameBytesFor(profileFor(profile).codecMode)), mic(clock), node(makeCfg(cs, profile, extraGapMs), radio, codec, mic, spk, note) {}
-  static NodeConfig makeCfg(const char* cs, uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0) {
+  static NodeConfig makeCfg(const char* cs, uint8_t profile = kProfileRange, uint32_t extraGapMs = 0) {
     NodeConfig c;
     strcpy(c.callsign, cs);
     c.newSessionId = nextSession;
@@ -44,7 +44,7 @@ struct Sim {
   uint32_t clock = 0;
   Station a;
   Station b;
-  explicit Sim(uint8_t profile = kProfileStandard, uint32_t extraGapMs = 0)
+  explicit Sim(uint8_t profile = kProfileRange, uint32_t extraGapMs = 0)
       : a(air, 0, "IU5HJU", clock, profile, extraGapMs), b(air, 1, "IZ5ABC", clock, profile, extraGapMs) {}
   // Avanza il tempo di ms millisecondi a passi di 10 ms.
   void run(uint32_t ms) {
@@ -412,7 +412,7 @@ static void testMessageProfile() {
 }
 
 static void testQualityProfile() {
-  Sim s(kProfileQuality);
+  Sim s(kProfileStandard);
   s.air.clock = &s.clock;
   s.run(100);
   s.a.node.pttPressed(s.clock);
@@ -425,7 +425,7 @@ static void testQualityProfile() {
   CHECK(s.b.note.callsign == "IU5HJU");
   CHECK(s.b.note.rxEnds == 1);
   // Nessuna comunicazione con il profilo Standard: modo diverso, il pacchetto e' ignorato
-  Sim x(kProfileStandard);
+  Sim x(kProfileRange);
   x.air.clock = &x.clock;
   x.run(100);
   x.a.node.pttPressed(x.clock);
@@ -433,7 +433,7 @@ static void testQualityProfile() {
   x.a.node.pttReleased(x.clock);
   x.run(2000);
   CHECK(x.b.spk.played.size() > 5);
-  CHECK(profileFor(kProfileQuality).codecMode == kModeCodec2_3200 && !profileFor(kProfileQuality).message);
+  CHECK(profileFor(kProfileStandard).codecMode == kModeCodec2_3200 && !profileFor(kProfileStandard).message);
 }
 
 static void testMessageEndLost() {
@@ -1048,7 +1048,7 @@ static void testMeshcomRefused() {
   s.a.node.pttReleased(s.clock);
   s.run(3000);
   // senza nominativo reale (N0CALL) non si trasmette
-  NodeConfig c = Station::makeCfg("N0CALL", kProfileStandard);
+  NodeConfig c = Station::makeCfg("N0CALL", kProfileRange);
   fake::Air air;
   uint32_t clock = 0;
   fake::Radio radio(air, 0);

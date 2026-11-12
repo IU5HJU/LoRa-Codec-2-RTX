@@ -53,7 +53,7 @@ static void run(RxMonitor& m, const std::vector<Packet>& pk, uint32_t& now, uint
 static void testVoice() {
   fake::Codec codec(kFrameBytes);
   fake::Speaker spk;
-  RxMonitor m(kProfileStandard, codec, spk);
+  RxMonitor m(kProfileRange, codec, spk);
   uint32_t now = 0;
   CHECK(!m.active());
   const auto pk = makeTx(80);
@@ -72,7 +72,7 @@ static void testVoice() {
 static void testLossRecovered() {
   fake::Codec codec(kFrameBytes);
   fake::Speaker spk;
-  RxMonitor m(kProfileStandard, codec, spk);
+  RxMonitor m(kProfileRange, codec, spk);
   uint32_t now = 0;
   const auto pk = makeTx(80);
   run(m, pk, now, 100, 2);  // un pacchetto dati perso nel primo gruppo: la parita' lo recupera
@@ -82,7 +82,7 @@ static void testLossRecovered() {
 static void testNotVoice() {
   fake::Codec codec(kFrameBytes);
   fake::Speaker spk;
-  RxMonitor m(kProfileStandard, codec, spk);
+  RxMonitor m(kProfileRange, codec, spk);
   uint32_t now = 0;
   // testo (modo 7), prova (modo 2) e 3200 con il profilo Standard: ignorati
   Packet t;
@@ -101,7 +101,7 @@ static void testNotVoice() {
 static void testOtherSessionIgnoredWhilePlaying() {
   fake::Codec codec(kFrameBytes);
   fake::Speaker spk;
-  RxMonitor m(kProfileStandard, codec, spk);
+  RxMonitor m(kProfileRange, codec, spk);
   uint32_t now = 0;
   auto a = makeTx(40);
   auto b = makeTx(40);

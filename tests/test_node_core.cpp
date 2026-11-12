@@ -59,8 +59,8 @@ struct Rig {
     b.out = &net.toA;
     a.isA = true;
     b.isA = false;
-    a.core.reset(new NodeCore(a.radio, a, ca, 0xA0A0, rngFn));
-    b.core.reset(new NodeCore(b.radio, b, cb, 0xB0B0, rngFn));
+    a.core.reset(new NodeCore(a.radio, a, ca, 0xA0A0, rngFn, kModeCodec2_1200));
+    b.core.reset(new NodeCore(b.radio, b, cb, 0xB0B0, rngFn, kModeCodec2_1200));
   }
   void step() {
     while (!net.toA.empty()) {
@@ -224,7 +224,7 @@ static void testRebootOfOneNode() {
   cb.nodeId = 2;
   cb.peerId = 1;
   memset(cb.key, 0x42, sizeof(cb.key));
-  r.b.core.reset(new NodeCore(r.b.radio, r.b, cb, 0xB1B1, rngFn));
+  r.b.core.reset(new NodeCore(r.b.radio, r.b, cb, 0xB1B1, rngFn, kModeCodec2_1200));
   r.run(8000);
   CHECK(r.a.core->linkUp(r.t) && r.b.core->linkUp(r.t));
   const auto msg = makeMessage(0xABAB, 24);
@@ -293,6 +293,50 @@ static void testQueueFull() {
   CHECK(r.b.core->queue().size() == TxQueue::kSlots && r.b.core->queue().dropped() > 0);
 }
 
+// Il nodo con il profilo Standard (Codec2 3200, modo 4): porta quel modo e il testo, non il Codec2 1200.
+static void testStandardMode() {
+  Rig r;
+  NodeLink::Config ca, cb;
+  ca.nodeId = 1;
+  ca.peerId = 2;
+  cb.nodeId = 2;
+  cb.peerId = 1;
+  memset(ca.key, 0x42, sizeof(ca.key));
+  memset(cb.key, 0x42, sizeof(cb.key));
+  r.a.core.reset(new NodeCore(r.a.radio, r.a, ca, 0x1A1A, rngFn, kModeCodec2_3200));
+  r.b.core.reset(new NodeCore(r.b.radio, r.b, cb, 0x1B1B, rngFn, kModeCodec2_3200));
+  r.run(4000);
+  CHECK(r.a.core->linkUp(r.t) && r.b.core->linkUp(r.t));
+  // un messaggio a 3200 (16 byte per frame) passa
+  std::vector<Packet> v;
+  TxSession tx("IU5HJU", 0x3200, true, kModeCodec2_3200);
+  tx.setExpectedTotal(TxSession::expectedPackets(30, true));
+  auto drain = [&]() {
+    Packet p;
+    while (tx.popPacket(p)) v.push_back(p);
+  };
+  tx.begin();
+  drain();
+  for (int i = 0; i < 30; i++) {
+    uint8_t f[kMaxFrameBytes];
+    for (size_t k = 0; k < kMaxFrameBytes; k++) f[k] = static_cast<uint8_t>(i * 5 + k + 1);
+    tx.pushFrame(f);
+    drain();
+  }
+  tx.finish();
+  drain();
+  CHECK(v.size() > 4);
+  injectToA(r, v);
+  r.run(2000);
+  CHECK(r.b.air.sent[0] == static_cast<int>(v.size()));
+  // il Codec2 1200 non e' il modo del nodo: non si ripete
+  const auto old = makeMessage(0x1200, 12);
+  const int sent = r.b.air.sent[0];
+  injectToA(r, old);
+  r.run(1000);
+  CHECK(r.b.air.sent[0] == sent && r.a.core->stats().toNet == v.size());
+}
+
 static void testBadDatagrams() {
   Rig r;
   r.run(3000);
@@ -320,6 +364,7 @@ int main() {
   testNetworkLossAndDuplicates();
   testBusyChannelAndNoCallsign();
   testQueueFull();
+  testStandardMode();
   testBadDatagrams();
   TEST_MAIN_END();
 }

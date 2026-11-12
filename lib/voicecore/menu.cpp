@@ -4,19 +4,19 @@ namespace lcr {
 
 const MenuItem* defaultMenuItems(size_t& count, bool sysopMode) {
   static const MenuItem kItems[] = {
-      // "Modo ..." davanti ai tre profili. La "a" accentata di "Qualita'" e' il byte 0x85 (CP437): e' il codice con cui il
-      // font 5x7 dell'OLED (Adafruit_GFX) disegna la "a" con l'accento grave; l'UTF-8 verrebbe stampato come due simboli strani.
-      {"Modo Standard", 0, true},
+      // "Modo ..." davanti ai tre profili: Standard (Codec2 3200, id 2), Range (Codec2 1200, id 0), Messaggio (id 1). Dal 12/11/2026; prima
+      // erano Standard (1200), Messaggio e Qualita' (3200).
+      {"Modo Standard", 2, true},
+      {"Modo Range", 0, true},
       {"Modo Messaggio", 1, true},
-      {"Modo Qualit\x85", 2, true},
       {"Invia testo", kMenuTextId, true},
       {"MeshCom", kMenuMeshId, true},
       {"Wi-Fi", kMenuWifiId, true},
   };
   static const MenuItem kSysopItems[] = {
-      {"Modo Standard", 0, true},
+      {"Modo Standard", 2, true},
+      {"Modo Range", 0, true},
       {"Modo Messaggio", 1, true},
-      {"Modo Qualit\x85", 2, true},
       {"Comandi Sysop", kMenuSysopId, true},
       {"MeshCom", kMenuMeshId, true},
       {"Wi-Fi", kMenuWifiId, true},

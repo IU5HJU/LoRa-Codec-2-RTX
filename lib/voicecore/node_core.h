@@ -3,7 +3,8 @@
 //                  duplicato, sessione non troppo lunga) e, se il collegamento e' attivo, parte verso l'altro nodo con il flag RELAYED;
 //   rete -> radio: un datagramma firmato con un pacchetto valido va in coda e si trasmette (con controllo del canale, CAD) con il flag RELAYED.
 // Priorita' alla voce locale: se il canale e' occupato il pacchetto di rete aspetta in coda; a coda piena i pacchetti nuovi si perdono (contati).
-// Qui c'e' solo la logica, senza Wi-Fi ne' orologio: provata sul PC (tests/test_node_core.cpp). Solo profilo Standard (modo 1) e testo (modo 7).
+// Qui c'e' solo la logica, senza Wi-Fi ne' orologio: provata sul PC (tests/test_node_core.cpp). Un solo modo voce, quello del profilo del nodo (di base
+// lo Standard, Codec2 3200, modo 4), e il testo (modo 7).
 #pragma once
 
 #include <cstddef>
@@ -36,7 +37,8 @@ class NodeCore {
     uint32_t discardedNoTx = 0;   // scartati perche' il nominativo non permette di trasmettere
   };
 
-  NodeCore(IRadio& radio, INodeNet& net, const NodeLink::Config& link, uint32_t bootId, uint32_t (*rng)());
+  // voiceMode: il modo voce del profilo del nodo (kModeCodec2_3200 per lo Standard, kModeCodec2_1200 per il Range).
+  NodeCore(IRadio& radio, INodeNet& net, const NodeLink::Config& link, uint32_t bootId, uint32_t (*rng)(), uint8_t voiceMode);
 
   // Un datagramma dall'altro nodo.
   void onDatagram(const uint8_t* d, size_t n, uint32_t nowMs);
@@ -55,6 +57,7 @@ class NodeCore {
   NodeLink link_;
   Repeater rep_;
   TxQueue queue_;
+  uint8_t voiceMode_;
   Stats stats_;
 };
 

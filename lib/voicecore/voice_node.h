@@ -27,7 +27,7 @@ struct NodeConfig {
   bool fec = true;  // parita' XOR 1 su 4
   // Generatore di ID di sessione (uno per PTT). Se nullptr usa un contatore.
   uint16_t (*newSessionId)() = nullptr;
-  // Profilo di trasmissione (profile.h): Standard, Messaggio o Qualita'.
+  // Profilo di trasmissione (profile.h): Standard, Range o Messaggio.
   uint8_t profile = kProfileStandard;
   // Posizione di questa stazione e se trasmetterla nel pacchetto START (disattivato di default: la posizione e' un dato
   // personale, si trasmette solo se l'operatore lo sceglie). Vedi position.h.

@@ -31,10 +31,10 @@ constexpr uint8_t kMenuMeshId = 102;
 struct MenuItem {
   const char* label;  // testo sul display (al massimo 10 caratteri a testo grande)
   uint8_t id;         // per ora l'identificatore del profilo (profile.h)
-  bool enabled;       // false: si vede ma non si puo' scegliere (per esempio il profilo Qualita' prima che esista)
+  bool enabled;       // false: si vede ma non si puo' scegliere (per esempio un profilo non ancora disponibile)
 };
 
-// Le voci del menu: Standard, Messaggio, Qualita', Invia testo, MeshCom (escursione) e Wi-Fi (configurazione).
+// Le voci del menu: Standard, Range, Messaggio, Invia testo, MeshCom (escursione) e Wi-Fi (configurazione).
 // sysopMode: al posto di "Invia testo" c'e' "Comandi Sysop".
 const MenuItem* defaultMenuItems(size_t& count, bool sysopMode = false);
 

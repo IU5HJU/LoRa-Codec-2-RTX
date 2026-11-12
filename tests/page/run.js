@@ -158,7 +158,7 @@ async function scenario(name, fn, opts = {}) {
     const c = await cmds(p);
     const idx = (s) => c.indexOf(s);
     check('callsign maiuscolo', idx('CFG SET CALLSIGN IU5HJU') >= 0, c.join(' | '));
-    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET FREQMSG 433.900', 'CFG SET FREQQUAL 433.900', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
+    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET FREQMSG 433.900', 'CFG SET FREQRANGE 433.900', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
     check('ordine dei comandi', order.every((v, i) => v >= 0 && (i === 0 || v > order[i - 1])), c.join(' | '));
     check('messaggio di salvataggio', (await status(p)).includes('Salvato'));
     const st = await p.evaluate(() => window.__st.cfg);
@@ -393,6 +393,17 @@ async function scenario(name, fn, opts = {}) {
     check('messaggio sui caratteri non ammessi', (await status(p)).includes('Il testo 1'), await status(p));
     check('nessun CFG SET inviato', !(await cmds(p)).some((x) => x.startsWith('CFG SET')));
     check('il limite di 150 caratteri e\' sul campo', (await p.getAttribute('#text1', 'maxlength')) === '150');
+  });
+
+  await scenario('firmware precedente alla ridenominazione Standard/Range: la pagina avvisa e non salva', async (p) => {
+    await p.evaluate(() => { window.__st.legacyFw = true; });
+    await connect(p);
+    await sleep(800);
+    check('avviso visibile', /precedente al 12\/11\/2026/.test(await p.textContent('#status')));
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await sleep(500);
+    check('nessun comando di salvataggio', !(await cmds(p)).some((x) => x.startsWith('CFG SET')) && /Firmware precedente/.test(await p.textContent('#status')));
   });
 
   await scenario('modo Sysop: lettura, chiave generata, salvataggio e elenco comandi', async (p) => {

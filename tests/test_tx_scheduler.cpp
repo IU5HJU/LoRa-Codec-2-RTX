@@ -14,7 +14,7 @@
 
 using namespace lcr;
 
-static const Profile& V = profileFor(kProfileStandard);
+static const Profile& V = profileFor(kProfileRange);
 static const Profile& M = profileFor(kProfileMessage);
 
 static std::vector<Packet> makeMessage(uint16_t session, int frames) {
@@ -93,7 +93,7 @@ static void testVoiceUsesVoiceParams() {
   r.run(500);
   r.voice(5);
   CHECK(r.sch->state() == TxScheduler::State::Voice);
-  CHECK(r.radio.curId == kProfileStandard);
+  CHECK(r.radio.curId == kProfileRange);
   CHECK(r.air.sent[0] == 5 && r.sch->stats().voiceSent == 5);
   r.run(TxScheduler::kHoldMs - 500);  // ancora nel mantenimento
   CHECK(r.sch->state() == TxScheduler::State::Voice);
@@ -159,7 +159,7 @@ static void testVoiceInterruptsAndMessageRestarts() {
   CHECK(half > 0 && half < msg.size());
   r.voice(4);  // arriva voce: il messaggio si ferma
   CHECK(r.sch->stats().interrupted == 1 && r.sch->state() == TxScheduler::State::Voice);
-  CHECK(r.radio.curId == kProfileStandard);
+  CHECK(r.radio.curId == kProfileRange);
   CHECK(r.store->readyCount() == 1);  // resta nell'archivio
   r.run(TxScheduler::kTailMs + TxScheduler::kBetweenMsgMs + 8000);
   CHECK(r.sch->stats().relayed == 1);
@@ -291,7 +291,7 @@ static void testAnnounceBeforeAndAfter() {
   CHECK(f1.mode == kModeBusy && f2.mode == kModeBusy && busySeconds(f1) == 0 && f1.session == f2.session && f1.session != a1.session);
   // parametri: ascolto, voce (annuncio), messaggio (ritrasmissione), voce (fine), messaggio (ascolto)
   CHECK(r.radio.params.size() == 5);
-  const uint8_t ids[5] = {kProfileMessage, kProfileStandard, kProfileMessage, kProfileStandard, kProfileMessage};
+  const uint8_t ids[5] = {kProfileMessage, kProfileRange, kProfileMessage, kProfileRange, kProfileMessage};
   for (size_t i = 0; i < r.radio.params.size() && i < 5; i++) CHECK(r.radio.params[i].id == ids[i]);
 }
 
@@ -349,7 +349,7 @@ static void testControlReplyAndOff() {
   CtlRig r;
   r.run(500);
   CHECK(r.sch->onControl({kSysopStatus, 0, 1}, r.t, r.fx) == kSysopOk);
-  CHECK(r.air.sent[0] == 1 && r.radio.curId == kProfileStandard);  // la risposta esce con i parametri della voce
+  CHECK(r.air.sent[0] == 1 && r.radio.curId == kProfileRange);  // la risposta esce con i parametri della voce
   SysopReply rep;
   Packet p = dec(r.air.log[0][0]);
   CHECK(p.mode == kModeSysop && parseSysopReply(p, KEY, rep) && rep.code == kSysopStatus && rep.counter == 1 && rep.result == kSysopOk);

@@ -416,7 +416,7 @@ class UdpNet : public lcr::INodeNet {
   lc.nodeId = settings.nodeId;
   lc.peerId = settings.peerId;
   memcpy(lc.key, settings.nodeKey, sizeof(lc.key));
-  static lcr::NodeCore core(radio, net, lc, esp_random(), []() -> uint32_t { return esp_random(); });
+  static lcr::NodeCore core(radio, net, lc, esp_random(), []() -> uint32_t { return esp_random(); }, lcr::profileFor(settings.profile).codecMode);
   UsbConsole usb(handler);
 
   Serial.printf("[nodo] id %lu, rete \"%s\", altro nodo %s:%u (id %lu), ascolto sulla porta %u, radio %.3f MHz profilo %s%s\n",

@@ -49,19 +49,20 @@ static void testMenu() {
   size_t n = 0;
   const MenuItem* items = defaultMenuItems(n);
   CHECK(n == 6);
-  // i tre profili si chiamano "Modo ..." (con la a accentata del font dell'OLED, CP437 0x85); le altre voci no
-  CHECK(strcmp(items[0].label, "Modo Standard") == 0 && strcmp(items[1].label, "Modo Messaggio") == 0);
-  CHECK(strncmp(items[2].label, "Modo Qualit", 11) == 0 && static_cast<unsigned char>(items[2].label[11]) == 0x85 && items[2].label[12] == 0);
+  // i tre profili si chiamano "Modo ...": Standard (id 2, Codec2 3200), Range (id 0, Codec2 1200), Messaggio (id 1); le altre voci no
+  CHECK(strcmp(items[0].label, "Modo Standard") == 0 && items[0].id == 2);
+  CHECK(strcmp(items[1].label, "Modo Range") == 0 && items[1].id == 0);
+  CHECK(strcmp(items[2].label, "Modo Messaggio") == 0 && items[2].id == 1);
   for (size_t i = 0; i < n; i++) CHECK(strlen(items[i].label) <= 16);  // entrano nelle righe del menu (21 caratteri con "* ")
   Menu m(items, n);
   CHECK(!m.isOpen());
 
-  // Si apre sulla voce in uso.
-  CHECK(m.open(1, 0));
+  // Si apre sulla voce in uso (Range, id 0).
+  CHECK(m.open(0, 0));
   CHECK(m.isOpen() && m.selectedIndex() == 1);
-  // Messaggio -> Qualita' -> Wi-Fi -> Standard -> Messaggio
+  // Range -> Messaggio -> Invia testo -> MeshCom -> Wi-Fi -> Standard -> Range
   m.next(100);
-  CHECK(m.selectedIndex() == 2);
+  CHECK(m.selectedIndex() == 2 && m.item(2).id == 1);
   m.next(120);
   CHECK(m.selectedIndex() == 3 && m.item(3).id == kMenuTextId);  // Invia testo
   m.next(125);
@@ -76,28 +77,34 @@ static void testMenu() {
   Menu::Outcome o = m.confirm(300);
   CHECK(o.kind == K::Closed && !m.isOpen());
 
-  // Conferma di una voce diversa.
+  // Conferma di una voce diversa (da Range a Messaggio).
   CHECK(m.open(0, 1000));
   m.next(1100);
   o = m.confirm(1200);
   CHECK(o.kind == K::Selected && o.id == 1);
 
-  // Wi-Fi: la conferma e' una scelta (id 100), da qualunque profilo
-  CHECK(m.open(2, 500));
+  // Le altre voci si scelgono da qualunque profilo: Invia testo (101), MeshCom (102), Wi-Fi (100); si parte da Messaggio (id 1)
+  CHECK(m.open(1, 500));
   m.next(510);
   o = m.confirm(520);
   CHECK(o.kind == K::Selected && o.id == kMenuTextId);  // Invia testo: id 101
-  CHECK(m.open(2, 600));
+  CHECK(m.open(1, 600));
   m.next(610);
   m.next(615);
   o = m.confirm(620);
   CHECK(o.kind == K::Selected && o.id == kMenuMeshId);  // MeshCom: id 102, non e' un profilo
-  CHECK(m.open(2, 700));
+  CHECK(m.open(1, 700));
   m.next(710);
   m.next(720);
   m.next(725);
   o = m.confirm(730);
   CHECK(o.kind == K::Selected && o.id == kMenuWifiId);
+  // Dallo Standard (id 2, in cima) si va al Range con un tocco
+  CHECK(m.open(2, 800));
+  CHECK(m.selectedIndex() == 0);
+  m.next(810);
+  o = m.confirm(820);
+  CHECK(o.kind == K::Selected && o.id == 0);
 
   // Tempo massimo: 10 s dall'ultimo tasto.
   CHECK(m.open(0, 5000));
@@ -113,7 +120,7 @@ static void testMenu() {
   CHECK(pm.selectedIndex() == 0);
   pm.cancel();
   CHECK(!pm.isOpen());
-  CHECK(m.open(2, 0) && m.selectedIndex() == 2);  // Qualita' scegliibile
+  CHECK(m.open(2, 0) && m.selectedIndex() == 0);  // lo Standard e' la prima voce
   m.cancel();
 
   // Nessuna voce disponibile: non si apre.
@@ -147,7 +154,7 @@ static void testFlow() {
 
   // PTT nel menu: voce successiva, non trasmette, il rilascio non arriva al nodo.
   a = f.update(P::Pressed, G::None, true, 0, t += 500);
-  CHECK(!a.pttToNode && a.redraw && a.beep == MenuBeep::Next && m.selectedIndex() == 1);
+  CHECK(!a.pttToNode && a.redraw && a.beep == MenuBeep::Next && m.selectedIndex() == 2);
   a = f.update(P::Released, G::None, true, 0, t += 200);
   CHECK(!a.pttToNode);
 

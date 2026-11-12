@@ -11,7 +11,7 @@ if (!m) { console.log('pagina non trovata in wifi_page.h'); process.exit(1); }
 const PAGE = m[1];
 
 const st = {
-  cfg: { callsign: 'IU5HJU', profile: 'std', freq: '433.900', freqmsg: '433.900', freqqual: '433.900', power: 10, volume: 7, micfloor: -60, pos: 'off', qth: 'none', gps: 'off', role: 'off', freqout: '433.900' },
+  cfg: { callsign: 'IU5HJU', profile: 'std', freq: '433.900', freqmsg: '433.900', freqrange: '433.900', power: 10, volume: 7, micfloor: -60, pos: 'off', qth: 'none', gps: 'off', role: 'off', freqout: '433.900' },
   monitor: 'off',
   cmds: [],
   board: 't3',
@@ -22,7 +22,7 @@ const st = {
   sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
-const KEYS = ['callsign', 'freq', 'freqmsg', 'freqqual', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps', 'role', 'freqout'];
+const KEYS = ['callsign', 'freq', 'freqmsg', 'freqrange', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps', 'role', 'freqout'];
 function handle(line) {
   st.cmds.push(line);
   if (line === 'CFG GET MONITOR') return 'CFG MONITOR=' + st.monitor;
@@ -87,7 +87,7 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   const p = await browser.newPage();
   await p.goto(url);
   await p.waitForFunction(() => document.getElementById('callsign').value !== '');
-  check('lettura iniziale', (await p.inputValue('#callsign')) === 'IU5HJU' && (await p.inputValue('#freqqual')) === '433.900');
+  check('lettura iniziale', (await p.inputValue('#callsign')) === 'IU5HJU' && (await p.inputValue('#freqrange')) === '433.900');
   // La pagina legge prima i valori principali, poi MeshCom e i testi (decine di richieste): lo stato "letti" compare alla fine
   await p.waitForFunction(() => /letti/.test(document.getElementById('st').textContent), null, { timeout: 15000 });
   check('stato di lettura', /letti/.test(await p.textContent('#st')));
@@ -96,12 +96,12 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.fill('#text2', 'Sono QRV su 433.775, chiamami'); await p.fill('#text4', '');
   check('valori MeshCom letti', (await p.inputValue('#mcfreq')) === '433.175' && (await p.inputValue('#mcssid')) === '99' && (await p.inputValue('#mcwindow')) === '300' && (await p.inputValue('#mcdest1')) === '22251' && (await p.inputValue('#mcdest3')) === '*');
   await p.fill('#mcdest4', 'iu5abc-9'); await p.fill('#mcssid', '12'); await p.fill('#mcwindow', '90');
-  await p.fill('#callsign', 'iu5hju/p'); await p.selectOption('#profile', 'qua'); await p.fill('#freqqual', '434.250');
+  await p.fill('#callsign', 'iu5hju/p'); await p.selectOption('#profile', 'rng'); await p.fill('#freqrange', '434.250');
   await p.fill('#qth', '43.7696,11.2558'); await p.selectOption('#pos', 'on');
   await p.click('#save');
   await p.waitForFunction(() => /Salvato/.test(document.getElementById('st').textContent));
   check('salvato e riletto', /tutto coincide/.test(await p.textContent('#st')), await p.textContent('#st'));
-  check('comandi inviati', st.cmds.includes('CFG SET PROFILE qua') && st.cmds.includes('CFG SET FREQQUAL 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
+  check('comandi inviati', st.cmds.includes('CFG SET PROFILE rng') && st.cmds.includes('CFG SET FREQRANGE 434.250') && st.cmds.includes('CFG SET QTH 43.7696,11.2558'), st.cmds.join('|'));
   check('testi salvati (con spazi) e posto vuoto con NONE', st.cmds.includes('CFG SET TEXT2 Sono QRV su 433.775, chiamami') && st.cmds.includes('CFG SET TEXT4 NONE') && st.texts[1] === 'Sono QRV su 433.775, chiamami' && st.texts[3] === '', JSON.stringify(st.texts));
   check('MeshCom salvato (destinatario in maiuscolo, vuoto = NONE)', st.mc.dests[3] === 'IU5ABC-9' && st.mc.dests[4] === '' && st.mc.ssid === '12' && st.mc.window === '90' && st.cmds.includes('CFG SET MCDEST4 IU5ABC-9') && st.cmds.includes('CFG SET MCDEST5 NONE'), JSON.stringify(st.mc));
   check('rilettura dopo il salvataggio', st.cmds[st.cmds.length - 5] === 'CFG GET' && st.cmds[st.cmds.length - 4] === 'CFG GET SYSOP' && st.cmds[st.cmds.length - 3] === 'CFG GET IDINT' && st.cmds[st.cmds.length - 2] === 'CFG GET IDMORSE' && st.cmds[st.cmds.length - 1] === 'CFG GET MONITOR');

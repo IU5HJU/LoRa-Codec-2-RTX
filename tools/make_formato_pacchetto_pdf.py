@@ -6,7 +6,7 @@
 Serve reportlab (pip install reportlab). I numeri che dipendono dai parametri radio (tempi in aria, occupazione del
 canale) si calcolano qui sotto con la formula di Semtech; la versione del protocollo, i byte per frame, i frame per
 pacchetto e il gruppo di parita' si leggono da lib/voicecore/protocol.h e src/user_config.h; i parametri radio dei tre
-profili (Standard, Messaggio, Qualita') si controllano su lib/voicecore/profile.cpp: se non coincidono con quelli
+profili (Range, Messaggio, Standard) si controllano su lib/voicecore/profile.cpp: se non coincidono con quelli
 scritti nel testo il programma si ferma, cosi' il PDF non resta vecchio senza che ce ne si accorga. Il testo
 (descrizione dei campi) e' scritto a mano: va riletto se il protocollo cambia, vedi docs/protocollo.md.
 """
@@ -49,14 +49,14 @@ for k, v in ATTESI.items():
 
 # Profili (lib/voicecore/profile.cpp): (nome, SF, banda kHz, byte per frame, bit/s del Codec2, attesa del ricevitore)
 PROFILI = [
-    ("Standard", SF, BW_KHZ, 6, 1200),
+    ("Range", SF, BW_KHZ, 6, 1200),
     ("Messaggio", 12, 125, 6, 1200),
-    ("Qualità", 7, 250, 16, 3200),
+    ("Standard", 7, 250, 16, 3200),
 ]
 _prof = open(os.path.join(ROOT, "lib/voicecore/profile.cpp"), encoding="utf-8").read()
-for _marker in ('{kProfileStandard, "std", "Standard", 8, 250.0f, 5, 12, kModeCodec2_1200',
+for _marker in ('{kProfileRange, "rng", "Range", 8, 250.0f, 5, 12, kModeCodec2_1200',
                 '{kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, kModeCodec2_1200',
-                '{kProfileQuality, "qua", "Qualita\'", 7, 250.0f, 5, 12, kModeCodec2_3200'):
+                '{kProfileStandard, "std", "Standard", 7, 250.0f, 5, 12, kModeCodec2_3200'):
     if _marker not in _prof:
         sys.exit("profile.cpp non coincide piu' con i profili del testo del PDF (%s): rileggi e aggiorna il testo." % _marker)
 if costante("lib/voicecore/protocol.h", "kMaxFrameBytes") != 16:
@@ -118,8 +118,8 @@ VOCE_GRUPPO_MS = PARITY_GROUP * FRAMES_PER_PACKET * FRAME_MS
 ARIA_GRUPPO_MS = PARITY_GROUP * T["dati"][0] + T["parita"][0]
 CICLO_GRUPPO_MS = ARIA_GRUPPO_MS + (PARITY_GROUP + 1) * GAP_MS
 ARIA_30S = {nome: aria_messaggio_ms(30000, CS, sf, bw, fb) for (nome, sf, bw, fb, _bps) in PROFILI}
-# Controllo di coerenza con le stime della roadmap (30 s di voce): Standard circa 10 s, Messaggio circa 270 s, Qualita' circa 12,5 s
-for _n, _atteso in (("Standard", 10.2), ("Messaggio", 271.0), ("Qualità", 12.5)):
+# Controllo di coerenza con le stime della roadmap (30 s di voce): Range circa 10 s, Messaggio circa 270 s, Standard circa 12,5 s
+for _n, _atteso in (("Range", 10.2), ("Messaggio", 271.0), ("Standard", 12.5)):
     if abs(ARIA_30S[_n] / 1000.0 - _atteso) > 0.05 * _atteso:
         sys.exit("tempo in aria di %s: %.1f s, atteso circa %.1f s: controlla la formula" % (_n, ARIA_30S[_n] / 1000.0, _atteso))
 
@@ -184,18 +184,18 @@ s.append(P("VoLoRa", h1))
 s.append(P("Come viene trasmesso un pacchetto via radio: formato, sequenza e livello LoRa (protocollo versione %d)" % PROTO + "", sub))
 
 s.append(P("In breve", h2))
-s.append(P("La voce, compressa con <b>Codec2</b> (<b>1200 bit/s</b>: 6 byte ogni 40 ms; <b>3200 bit/s</b> nel profilo Qualità: 16 byte ogni 40 ms), viaggia in piccoli pacchetti <b>broadcast</b> sopra una normale modulazione <b>LoRa a 433 MHz</b>. "
-           "Ci sono <b>tre profili</b> con parametri radio diversi (sezione 1): <b>Standard</b> (voce in tempo reale), <b>Messaggio</b> (lungo raggio: si registra e si trasmette, chi riceve ascolta a messaggio completo) e <b>Qualità</b> (voce in tempo reale a 3200 bit/s). "
+s.append(P("La voce, compressa con <b>Codec2</b> (<b>1200 bit/s</b>: 6 byte ogni 40 ms; <b>3200 bit/s</b> nel profilo Standard: 16 byte ogni 40 ms), viaggia in piccoli pacchetti <b>broadcast</b> sopra una normale modulazione <b>LoRa a 433 MHz</b>. "
+           "Ci sono <b>tre profili</b> con parametri radio diversi (sezione 1): <b>Range</b> (voce in tempo reale), <b>Messaggio</b> (lungo raggio: si registra e si trasmette, chi riceve ascolta a messaggio completo) e <b>Standard</b> (voce in tempo reale a 3200 bit/s). "
            "Non ci sono indirizzi del destinatario, non c'è ACK, non ci sono ritrasmissioni e non c'è cifratura: chiunque sia in ascolto sulla frequenza e con lo stesso profilo decodifica. "
            "L'unica protezione contro la perdita di pacchetti è una <b>parità XOR</b> ogni quattro pacchetti dati.", base))
 
 s.append(P("1. Livello radio (LoRa)", h2))
 s.append(table([
-    ["Parametro", "Standard", "Messaggio", "Qualità"],
+    ["Parametro", "Range", "Messaggio", "Standard"],
     ["Spreading factor / banda", "SF8, 250 kHz", "SF12, 125 kHz", "SF7, 250 kHz"],
     ["Codec2", "1200 bit/s", "1200 bit/s", "3200 bit/s"],
     ["Uso", "voce in tempo reale", "lungo raggio, registra e invia", "voce in tempo reale, più fedele"],
-    ["Sensibilità rispetto allo Standard", "-", "circa +13 dB", "circa -2,5 dB"],
+    ["Sensibilità rispetto allo Range", "-", "circa +13 dB", "circa -2,5 dB"],
 ], [52*mm, 38*mm, 40*mm, W - 130*mm]))
 s.append(Spacer(1, 4))
 s.append(table([
@@ -206,7 +206,7 @@ s.append(table([
     ["Chip", "SX1278 (LILYGO LoRa32 T3 V1.6.1 e T-Beam V1.2)"],
 ], [52*mm, W - 52*mm]))
 s.append(Spacer(1, 4))
-s.append(P("Un simbolo dura 2<super>SF</super> / banda: 1,024 ms in Standard, 32,8 ms in Messaggio, 0,512 ms in Qualità. Una stazione ascolta <b>un profilo e una frequenza alla volta</b>: schede con profili diversi non si decodificano.", small))
+s.append(P("Un simbolo dura 2<super>SF</super> / banda: 1,024 ms in Range, 32,8 ms in Messaggio, 0,512 ms in Standard. Una stazione ascolta <b>un profilo e una frequenza alla volta</b>: schede con profili diversi non si decodificano.", small))
 
 s.append(P("2. Formato del pacchetto", h2))
 s.append(P("Quello che il chip trasmette come payload LoRa è composto così:", base))
@@ -222,7 +222,7 @@ s.append(Preformatted(
 "resto       payload", code))
 s.append(table([
     ["Campo", "Significato"],
-    ["Modo", "1 = voce Codec2 1200 bit/s (frame da 6 byte); 4 = voce Codec2 3200 bit/s (frame da 16 byte, 12 per pacchetto = 192 byte; profilo Qualità); 2 = prova di collegamento (frame noti); 3 = risposta alla prova (12 byte con il risultato); 7 = messaggio di testo (un solo pacchetto START+END con nominativo, da 1 a 150 caratteri ASCII senza graffe, trasmesso due volte)"],
+    ["Modo", "1 = voce Codec2 1200 bit/s (frame da 6 byte); 4 = voce Codec2 3200 bit/s (frame da 16 byte, 12 per pacchetto = 192 byte; profilo Standard); 2 = prova di collegamento (frame noti); 3 = risposta alla prova (12 byte con il risultato); 7 = messaggio di testo (un solo pacchetto START+END con nominativo, da 1 a 150 caratteri ASCII senza graffe, trasmesso due volte)"],
     ["Flag", "bit 0 START (primo pacchetto) - bit 1 END (ultimo dati, l'OVER) - bit 2 PARITY (pacchetto di parità) - bit 3 CALLSIGN (c'è il nominativo) - bit 4 NOFEC (trasmissione senza parità) - bit 5 POSITION (c'è la posizione, 7 byte: stato, latitudine e longitudine a 24 bit; solo in START, spenta di default) - bit 6 TOTAL (1 byte con i pacchetti totali del messaggio, solo in START) - bit 7 RELAYED (pacchetto ritrasmesso da un ripetitore, che non lo ripete di nuovo)"],
     ["Sessione", "numero casuale a 16 bit: identifica la trasmissione e permette di scartare i pacchetti di altre trasmissioni"],
     ["Sequenza", "0..127 (il turno più lungo, 30 s, ne usa circa 80); i pacchetti di parità occupano le posizioni 4, 9, 14... del flusso"],
@@ -231,7 +231,7 @@ s.append(table([
 
 _pd_h = P("Pacchetto dati", base.clone("pd", spaceBefore=8, fontName="Helvetica-Bold", keepWithNext=1))
 s.append(_pd_h)
-s.append(P("Il payload è formato da <b>12 frame Codec2 da 6 byte = 72 byte = 480 ms di voce</b> (nell'ultimo pacchetto possono essere meno, sempre multipli di 6). Nel modo 4 (Qualità) i frame sono da 16 byte: 12 frame = 192 byte. "
+s.append(P("Il payload è formato da <b>12 frame Codec2 da 6 byte = 72 byte = 480 ms di voce</b> (nell'ultimo pacchetto possono essere meno, sempre multipli di 6). Nel modo 4 (Standard) i frame sono da 16 byte: 12 frame = 192 byte. "
            "Dimensione totale: <b>77 byte</b> senza nominativo, circa <b>84 byte</b> con un nominativo di 6 caratteri (nel modo 4: 197 e circa 204 byte).", base))
 s.append(P("Pacchetto di parità", base.clone("pp", fontName="Helvetica-Bold", keepWithNext=1)))
 s.append(P("Segue ogni gruppo di 4 pacchetti dati. Il payload (3 + 72 byte, in tutto <b>80 byte</b>; 200 byte nel modo 4) è <font face='Courier'>[quanti pacchetti][XOR dei conteggi di frame][XOR dei flag][XOR dei dati]</font>. "
@@ -249,7 +249,7 @@ s.append(table([
     ["Aspetto", "Valore"],
     ["Durata massima di un turno", "30 secondi (750 frame, circa 80 pacchetti con la parità)"],
     ["Pausa tra due pacchetti", "80 ms (il ricevitore deve rileggere la radio prima del successivo)"],
-    ["Pre-buffer in ricezione", "25 frame (1 secondo) prima di iniziare l'ascolto in Standard e in Qualità; in Messaggio si ascolta a messaggio completo (o dopo 12 s di silenzio)"],
+    ["Pre-buffer in ricezione", "25 frame (1 secondo) prima di iniziare l'ascolto in Range e in Standard; in Messaggio si ascolta a messaggio completo (o dopo 12 s di silenzio)"],
     ["Compatibilità", "due schede devono avere la stessa <b>versione del protocollo</b> (oggi 2), lo stesso profilo e la stessa frequenza; i modi sconosciuti vengono scartati. Le schede con la prima beta (v0.1.0-beta.1) non capiscono i pacchetti con percentuale, posizione e modo 4"],
 ], [52*mm, W - 52*mm]))
 
@@ -257,7 +257,7 @@ def _ms(v):
     return ("%.1f" % v).replace(".", ",") + " ms"
 
 s.append(P("4. Tempi in aria (stima con la formula di Semtech)", h2))
-s.append(P("Profilo Standard (SF8, 250 kHz):", base.clone("pt", fontName="Helvetica-Bold", keepWithNext=1)))
+s.append(P("Profilo Range (SF8, 250 kHz):", base.clone("pt", fontName="Helvetica-Bold", keepWithNext=1)))
 s.append(table([
     ["Pacchetto", "Byte", "Simboli", "Durata"],
     ["START con nominativo di %d caratteri" % CS, str(B_START), str(T["start"][1]), _ms(T["start"][0])],
@@ -277,7 +277,7 @@ s.append(table([
       "%.0f%%" % (ARIA_30S[nome] / 300.0)] for (nome, sf, bw, fb, _bps) in PROFILI],
     [34*mm, 40*mm, 50*mm, W - 124*mm]))
 s.append(Spacer(1, 4))
-s.append(P("Standard e Qualità restano sotto il 50% del tempo reale della voce (la Qualità circa il 42%). Il Messaggio occupa molto più del tempo della voce (circa 9 volte): per questo non è in tempo reale, "
+s.append(P("Range e Standard restano sotto il 50% del tempo reale della voce (la Standard circa il 42%). Il Messaggio occupa molto più del tempo della voce (circa 9 volte): per questo non è in tempo reale, "
            "si registra prima e chi riceve lo ascolta a messaggio completo. Sono stime con la formula di Semtech, non misure.", base))
 
 s.append(P("5. Cosa non c'è", h2))

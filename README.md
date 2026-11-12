@@ -7,9 +7,9 @@ La voce è compressa con Codec2 e trasmessa con LoRa, con tre **profili** da sce
 
 | Profilo | Radio | Codec2 | Uso |
 |---|---|---|---|
-| **Standard** (S) | SF8, banda 250 kHz | 1200 bps | voce in tempo reale, come una conversazione |
+| **Standard** (S) | SF7, banda 250 kHz | 3200 bps | voce in tempo reale più naturale; è il profilo di base, quello del ripetitore e del nodo Internet |
+| **Range** (R) | SF8, banda 250 kHz | 1200 bps | voce in tempo reale con un po' più di portata (circa 2,5 dB teorici, non misurati) |
 | **Messaggio** (M) | SF12, banda 125 kHz | 1200 bps | lungo raggio: si registra un messaggio (fino a 15 s); chi riceve lo trova in una casella e lo ascolta premendo il PTT, con la percentuale sul display |
-| **Qualità** (Q) | SF7, banda 250 kHz | 3200 bps | voce in tempo reale più naturale, meno portata |
 
 Funzionamento in breve:
 
@@ -66,12 +66,12 @@ Aggiornato il 12/11/2026.
 | Parte | Stato |
 |---|---|
 | Formato pacchetti (protocollo v2), parità XOR, sessioni TX/RX, pausa tra i pacchetti | fatto, testato sul PC |
-| Voce a turni in Standard (Codec2 1200, SF8/BW250) | **provata sulle schede** (T3 e T-Beam); cause dei crepitii trovate e corrette |
+| Voce a turni in Range (ex Standard: Codec2 1200, SF8/BW250) | **provata sulle schede** (T3 e T-Beam); cause dei crepitii trovate e corrette |
 | Profilo **Messaggio** (SF12/BW125): registra e invia, riproduzione a messaggio completo, percentuale e suono "MSG" in Morse | **provato sulle schede** |
 | **Ripetitore:** la scheda RX ripete anche i testi e può avere un **altoparlante di monitor** per ascoltare la voce che riceve (`CFG SET MONITOR ON`) | scritto, provato sul PC; **da provare sul banco** |
 | **MeshCom** (11/11/2026): dal menu un'**escursione a tempo** sulle reti di testo radioamatoriali (433,175 MHz) per avvisare o fissare un QSO: testo con segnaposti (`%C`, `%M`, `%F`), destinatario scelto (gruppo, nominativo o tutti), ascolto delle risposte e rientro automatico alla voce ([docs/meshcom-testo.md](docs/meshcom-testo.md)); non sostituisce un nodo | **provato in aria** (T3 e nodo MeshCom, 11/11/2026): invio al gruppo, risposte dirette e di gruppo, rientro alla voce; conferma di ricezione vista dall'app |
 | **Casella dei messaggi** (11/11/2026): la voce non parte più da sola, si apre con il PTT breve e si cancella dopo l'ascolto; **messaggi di testo** da 150 caratteri ("SMS", busta sul display), cinque testi predefiniti impostabili da web e Wi-Fi, menu "Invia testo" | scritta e provata sul PC, **da provare su scheda** |
-| Profilo **Qualità** (Codec2 3200, SF7/BW250) | **provato sulle schede**: suona meglio del 1200; CPU misurata sulla scheda: codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms (25% e 33%) |
+| Profilo **Standard** (ex Qualità: Codec2 3200, SF7/BW250) | **provato sulle schede**: suona meglio del 1200; CPU misurata sulla scheda: codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms (25% e 33%) |
 | Menu a bordo (volume lungo, PTT, conferma; riavvio sul profilo scelto) e lettera S/M/Q sul display | **provato** |
 | Configurazione dal Wi-Fi della scheda (voce "Wi-Fi", pagina su 192.168.4.1, password salvata) | **provata** |
 | Volume con guadagno (passo 5 = 0 dB, fino a +15 dB) | **provato** all'aperto |
@@ -79,7 +79,7 @@ Aggiornato il 12/11/2026.
 | Impostazioni nella scheda e comandi `CFG` | fatti e provati; salvate in NVS |
 | Pagina web di installazione e configurazione (GitHub Pages, Web Serial) con menu delle versioni | **online** e provata |
 | Prova di collegamento (frame noti, confronto bit per bit) | fatta e **provata sulle schede** |
-| Ricezione con SDR (NESDR, GNU Radio): decodifica e ascolto in tempo reale, anche in Qualità | fatta e **provata** in Standard, in Messaggio e in Qualità (10/11/2026) |
+| Ricezione con SDR (NESDR, GNU Radio): decodifica e ascolto in tempo reale, anche in Standard | fatta e **provata** in Range, in Messaggio e in Standard (provata il 10/11/2026 con i vecchi nomi: Standard, Messaggio, Qualità) |
 | Misure sul campo, distanze lunghe, mezzi in movimento | **da fare** |
 | **Ripetitore con due T3** (RX e TX collegate con quattro fili): ripetizione della voce e del testo, messaggi vocali in coda, annuncio di occupato, identificativo periodico in testo e in Morse FM, comandi firmati del sysop ([docs/ripetitore.md](docs/ripetitore.md)) | scritto, **provato sul PC** e compilato da GitHub Actions; **mai provato sulle schede**: prima la prova a banco ([docs/banco-ripetitore.md](docs/banco-ripetitore.md)) |
 | Memorie, locatore Maidenhead | da fare ([roadmap](docs/roadmap.md)) |

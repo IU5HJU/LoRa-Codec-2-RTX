@@ -1,5 +1,7 @@
 # Roadmap e decisioni
 
+> **Nota del 12/11/2026 sui nomi dei profili.** Questo documento è stato scritto con i nomi di allora: *Standard* (Codec2 1200, SF8), *Messaggio* e *Qualità* (Codec2 3200, SF7). Da quel giorno si chiamano **Range** (1200, SF8, lettera R), **Messaggio** (M) e **Standard** (3200, SF7, lettera S). Le parti storiche non sono state riscritte.
+
 Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le decisioni dell'8 novembre sono più sotto).
 
 ## Stato al 10/11/2026

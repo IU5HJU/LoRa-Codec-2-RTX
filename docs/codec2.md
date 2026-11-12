@@ -8,12 +8,12 @@ Verifiche del punto "Codec2" della [roadmap](roadmap.md), fatte **sul PC con gli
 
 | Modo | Frame | Bit per frame | Byte per frame (interi) | Note |
 |---|---|---|---|---|
-| 3200 | 20 ms | 64 | 8 | il modo di M17, obiettivo della modalità Qualità |
-| 2400 | 20 ms | 48 | 6 | ripiego della Qualità |
+| 3200 | 20 ms | 64 | 8 | il modo di M17, obiettivo della modalità Standard |
+| 2400 | 20 ms | 48 | 6 | ripiego della Standard |
 | 1600 | 40 ms | 64 | 8 | |
 | 1400 | 40 ms | 56 | 7 | |
 | 1300 | 40 ms | 52 | 7 | |
-| **1200** | 40 ms | 48 | 6 | quello di oggi (Standard) |
+| **1200** | 40 ms | 48 | 6 | quello di oggi (Range) |
 | 700C | 40 ms | **28** | 4 | non è intero: in pacchetto serve l'impacchettamento a bit |
 | 450 | 40 ms | **18** | 3 | idem |
 
@@ -68,7 +68,7 @@ Con circa 238 KB di heap libero dopo l'avvio del Codec2 non è un problema.
 
 Con la stessa struttura di pacchetti di oggi (12 frame per pacchetto, parità 1 su 4, nominativo ogni 10 pacchetti), calcolato con la formula di Semtech come `messageAirtimeMs`:
 
-| Modo | Standard SF8/BW250 | Messaggio SF12/BW125 | Qualità SF7/BW250 | Pacchetto dati |
+| Modo | Range SF8/BW250 | Messaggio SF12/BW125 | Standard SF7/BW250 | Pacchetto dati |
 |---|---|---|---|---|
 | 3200 | 22,3 s (**74%**) | 580 s | **12,5 s (42%)** | 192 B |
 | 2400 | 17,4 s (58%) | 455 s | 9,9 s (33%) | 144 B |
@@ -76,7 +76,7 @@ Con la stessa struttura di pacchetti di oggi (12 frame per pacchetto, parità 1 
 | 700C | 7,3 s (24%) | **194 s** | 3,9 s (13%) | 42 B |
 | 450 | 5,8 s (19%) | **156 s** | 3,1 s (10%) | 27 B |
 
-- **Il 3200 sullo Standard (SF8) sfora il limite del 70%**: per questo la Qualità va su SF7/BW250, dove sta al 42% (come previsto dalla roadmap).
+- **Il 3200 sullo Range (SF8) sfora il limite del 70%**: per questo la Standard va su SF7/BW250, dove sta al 42% (come previsto dalla roadmap).
 - **Messaggio:** il 700C farebbe risparmiare il 28% del tempo in aria rispetto al 1200 (194 s contro 271 s), il 450 il 43% (156 s). Il Messaggio da 30 s di voce resta di minuti.
 - **Serve l'impacchettamento a bit.** I numeri del 700C e del 450 sono con i frame impacchettati (28 e 18 bit). A byte interi (4 e 3 byte per frame) il 700C va a 210 s e il 450 a 181 s: perderebbero circa la metà del vantaggio.
 
@@ -105,11 +105,11 @@ ffplay -nodisp -autoexit confronto/1200.wav
 - Ingresso: WAV PCM a 16 bit, mono, 8000 Hz (`--raw` per s16le grezzo). Altri formati: `ffmpeg -i in.wav -ar 8000 -ac 1 -sample_fmt s16 voce.wav`.
 - Opzioni: `--perdita N` butta via il N% dei frame a caso (frame a zero, come la ricezione quando un pacchetto non si recupera); `--grezzo` salta la normalizzazione (per sentire la differenza); `--bersaglio DBFS` cambia il livello (predefinito −24, come la scheda).
 - **Meglio un microfono un po' basso che alto** (provato il 10/11/2026): la normalizzazione recupera bene un livello basso, ma una registrazione che **satura** non si recupera più (il picco al massimo distorce la voce prima ancora del codec), e lo strumento la segnala come `ALTO`. Nel dubbio, abbassa il volume di ingresso.
-- **Cosa ascoltare:** per il **Messaggio** confronta 1200, 700C e 450 (si capiscono le parole? i nominativi? i numeri?); per la **Qualità** 3200, 2400 e 1200. Il microfono di un portatile resta più rumoroso dell'INMP441 della scheda: parla a circa 20 cm.
+- **Cosa ascoltare:** per il **Messaggio** confronta 1200, 700C e 450 (si capiscono le parole? i nominativi? i numeri?); per la **Standard** 3200, 2400 e 1200. Il microfono di un portatile resta più rumoroso dell'INMP441 della scheda: parla a circa 20 cm.
 - Lo strumento non è nei test di GitHub Actions per l'audio, ma la sua normalizzazione sì (`make test-py`).
 
 ## 6. Cosa resta da fare
 
-1. ~~Scegliere il codec del Messaggio~~: **deciso il 10/11/2026, resta il 1200** (il 450 farebbe risparmiare il 43% del tempo in aria, il 700C il 28%, ma il 1200 è già un compromesso accettabile e il loro suono è molto peggiore). Da ascoltare con una voce vera il **3200 e il 2400** per confermare la Qualità.
+1. ~~Scegliere il codec del Messaggio~~: **deciso il 10/11/2026, resta il 1200** (il 450 farebbe risparmiare il 43% del tempo in aria, il 700C il 28%, ma il 1200 è già un compromesso accettabile e il loro suono è molto peggiore). Da ascoltare con una voce vera il **3200 e il 2400** per confermare la Standard.
 2. **Cronometrare sulla scheda** codifica e decodifica dei modi scelti (stima: circa 50% e 31% per il 3200).
 3. ~~Impacchettamento a bit (28 e 18 bit per frame)~~: **non serve più**. Restano i **blocchi da 20 ms** del 3200 e del 2400, che hanno frame di 8 e 6 byte interi.

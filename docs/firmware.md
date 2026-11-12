@@ -13,7 +13,7 @@ I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 > solo per compilare o caricare il firmware via USB: l'USB alimenta il modulo radio, che senza
 > carico si può danneggiare. Prima l'antenna, poi il cavo USB.
 
-**Stato (10/11/2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam): voce a turni nei tre profili (Standard, Messaggio, Qualità), microfono e altoparlante, menu a bordo, configurazione dal Wi-Fi della scheda, volume con guadagno, posizione e GPS, impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da misurare:** distanze lunghe, mezzi in movimento. **CPU del Codec2 3200 misurata:** codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms ([codec2.md](codec2.md)).
+**Stato (10/11/2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam): voce a turni nei tre profili (con i nomi di allora: Standard, Messaggio, Qualità; dal 12/11/2026 Range, Messaggio, Standard), microfono e altoparlante, menu a bordo, configurazione dal Wi-Fi della scheda, volume con guadagno, posizione e GPS, impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da misurare:** distanze lunghe, mezzi in movimento. **CPU del Codec2 3200 misurata:** codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms ([codec2.md](codec2.md)).
 Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protocollo
 (`lib/voicecore/`) è testata sul PC. Il workflow `.github/workflows/build.yml` produce
 `web_factory.bin` e `ota_update.bin` come artefatti di ogni esecuzione.
@@ -140,8 +140,8 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | `CFG SET POWER 10` | `CFG OK power=10` | dBm, da 2 a 17 |
 | `CFG SET VOLUME 7` | `CFG OK volume=7` | volume iniziale dell'altoparlante: 0 muto, 1-10 in passi da 3 dB (10 = massimo); il pulsante su GPIO15 lo cambia poi a scheda accesa, ma allo spegnimento torna a questo valore **Dal 10/11/2026 il passo 5 è 0 dB (il vecchio massimo) e i passi 6-10 danno guadagno digitale fino a +15 dB** (il limitatore morbido tiene i picchi sotto il fondo scala); il passo 1 è -12 dB. I volumi salvati con la scala vecchia si convertono da soli (vecchio 10 → 5). |
 | `CFG SET FREQMSG 433.900` | `CFG OK freqmsg=433.900` | **frequenza del profilo Messaggio** (MHz, 430.000-440.000), come `FREQ`. **Può essere uguale** a `FREQ`: nessun controllo (nelle prove si usa spesso una frequenza nota). La scheda usa la frequenza del profilo scelto |
-| `CFG SET FREQQUAL 433.900` | `CFG OK freqqual=433.900` | **frequenza del profilo Qualità**, come `FREQMSG` (può essere uguale alle altre) |
-| `CFG SET PROFILE MSG` | `CFG OK profile=msg` | **profilo di trasmissione**: `STD` (Standard, voce in tempo reale, SF8/BW250) `QUA` (Qualità: Codec2 3200, SF7/BW250, voce in tempo reale, meno portata) oppure `MSG` (Messaggio, lungo raggio, SF12/BW125, registra e invia: [modo-messaggio.md](modo-messaggio.md)). Vale dal riavvio; le schede con profili diversi non si sentono |
+| `CFG SET FREQRANGE 433.900` | `CFG OK freqrange=433.900` | **frequenza del profilo Range** (0 = la stessa di `FREQ`), come `FREQMSG` (può essere uguale alle altre). Fino all'11/11/2026 il comando era `FREQQUAL` (profilo Qualità): ora `FREQ` è la frequenza dello Standard |
+| `CFG SET PROFILE MSG` | `CFG OK profile=msg` | **profilo di trasmissione**: `STD` (Standard: Codec2 3200, SF7/BW250, voce in tempo reale; è quello di base), `RNG` (Range: Codec2 1200, SF8/BW250, voce in tempo reale, un po' più di portata) oppure `MSG` (Messaggio, lungo raggio, SF12/BW125, registra e invia: [modo-messaggio.md](modo-messaggio.md)). `QUA` vale ancora come `STD`. **Attenzione al cambio di nomi (12/11/2026):** il vecchio "Standard" (1200) ora è il **Range**, e il nuovo Standard è il vecchio Qualità (3200): un firmware vecchio e uno nuovo con lo stesso nome non si sentono. Le impostazioni già salvate vengono convertite al primo avvio. Vale dal riavvio; le schede con profili diversi non si sentono |
 | *Pagina web* | | dal 10/11/2026 la pagina di configurazione ha una sezione **"Posizione (facoltativa)"** con la trasmissione della posizione (`POS`), la posizione fissa (`QTH`: latitudine e longitudine, si accetta anche la virgola, "Cancella" per toglierla) e il GPS (solo T-Beam). I campi si spengono con un firmware più vecchio che non li conosce; dopo il salvataggio la pagina rilegge i valori dalla scheda |
 | `CFG SET TEXT1 Arrivo tra 10 minuti` | `CFG OK text1=Arrivo tra 10 minuti` | **testi predefiniti da inviare** (`TEXT1`...`TEXT5`): messaggi di testo stile SMS, 1-150 caratteri ASCII, senza `{` e `}`, **il testo è il resto della riga** (può avere spazi). `NONE` svuota il posto. Valgono **subito**, senza riavvio (non cambiano `reboot=`). All'inizio ci sono cinque testi di esempio; il primo è `%C QRV su VoLoRa modo %M %F`. Nel testo valgono i **segnaposti** `%C` (il tuo nominativo), `%M` (la lettera del modo in uso: S, M, Q) e `%F` (la frequenza del profilo in uso), sostituiti all'invio ([meshcom-testo.md](meshcom-testo.md)). Si inviano dal menu a bordo, voce "Invia testo" ([modo-messaggio.md](modo-messaggio.md)) |
 | `CFG GET TEXT1` | `CFG TEXT1=Arrivo tra 10 minuti` | legge il testo 1-5 (vuoto: `CFG TEXT1=`). Un comando per testo: `CFG GET` non li contiene |
@@ -198,7 +198,7 @@ Senza cavo e senza PC con Chrome: tieni premuto il **volume** (circa 2 s) per ap
 
 ## Riquadro del profilo sul display
 
-In alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10x9 punti) indica il profilo in uso: **S** Standard, **M** Messaggio, **Q** Qualità. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per fargli posto.
+In alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10x9 punti) indica il profilo in uso: **S** Standard, **R** Range, **M** Messaggio. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per fargli posto.
 
 Se il telefono dice "nessun Internet" e la pagina non si apre: scegli di **restare collegato** a quella rete, **spegni i dati mobili** e apri a mano `http://192.168.4.1` (con `http://`, non `https://`). La seriale stampa righe `[wifi]` (client collegato, indirizzo assegnato, richiesta della pagina) per capire a che punto si ferma. La configurazione del Wi-Fi segue quella del Tracker LoRa APRS di Guzman (modo NULL, poi AP, `softAP(nome, password)` predefinito, nessun DNS) e usa lo stesso server asincrono (ESPAsyncWebServer + AsyncTCP, stesse versioni).
 
@@ -214,8 +214,8 @@ Studio e decisioni: [studio-ripetitore.md](studio-ripetitore.md). **Scritto, non
 
 ```
 CFG SET CALLSIGN IU5HJU       nominativo del ripetitore (con N0CALL la scheda TX non trasmette)
-CFG SET PROFILE STD           profilo ripetuto (STD, e in teoria QUA o MSG: il modo ripetuto e' quello del profilo)
-CFG SET FREQ 433.900          frequenza di INGRESSO (la usa la scheda RX; per MSG e QUA FREQMSG e FREQQUAL)
+CFG SET PROFILE STD           profilo ripetuto (STD, e in teoria RNG o MSG: il modo ripetuto e' quello del profilo)
+CFG SET FREQ 433.900          frequenza di INGRESSO (la usa la scheda RX; per MSG e RNG FREQMSG e FREQRANGE)
 CFG SET FREQOUT 434.400       frequenza di USCITA (la usa la scheda TX)
 CFG SET ROLE RPTRX            sulla scheda RX   (oppure RPTTX sulla scheda TX; OFF torna alla scheda normale)
 CFG REBOOT

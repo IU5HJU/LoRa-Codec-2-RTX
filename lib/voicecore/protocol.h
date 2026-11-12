@@ -11,7 +11,7 @@ constexpr uint8_t kProtocolVersion = 2;  // v2 (09/11/2026): flag kFlagPosition 
 
 // Modo Codec2 trasportato (nibble basso del primo byte dell'header).
 constexpr uint8_t kModeCodec2_1200 = 1;
-// Codec2 3200 bps (profilo Qualita'): 2 blocchi da 20 ms e 8 byte = un frame da 40 ms e 16 byte.
+// Codec2 3200 bps (profilo Standard, dal 12/11/2026; prima "Qualita'"): 2 blocchi da 20 ms e 8 byte = un frame da 40 ms e 16 byte.
 constexpr uint8_t kModeCodec2_3200 = 4;
 // Prova di collegamento: i frame sono una sequenza nota (non voce) che il ricevitore confronta bit per bit.
 constexpr uint8_t kModeTest = 2;
@@ -20,7 +20,7 @@ constexpr uint8_t kModeTestReport = 3;
 // Annuncio di "ripetitore occupato" (docs/studio-ripetitore.md): un solo pacchetto START|END con il nominativo del ripetitore e, come
 // payload, 2 byte (big-endian) con i secondi di blocco previsti; 0 = di nuovo libero. E' solo un'informazione: le stazioni la
 // mostrano sul display e non rifiutano il PTT. Il ripetitore lo manda con i parametri della voce prima di ritrasmettere un
-// messaggio lungo (che le stazioni in Standard e Qualita' non vedono con il CAD) e due volte, a distanza di kTextRepeatGapMs.
+// messaggio lungo (che le stazioni in Standard e Range non vedono con il CAD) e due volte, a distanza di kTextRepeatGapMs.
 constexpr uint8_t kModeBusy = 6;
 // Comando del sysop al ripetitore e risposta del ripetitore (sysop.h): un solo pacchetto START|END con il nominativo di chi manda,
 // payload di 15 byte (comando) o 18 byte (risposta), firmato con HMAC-SHA256 troncato a 8 byte.
@@ -99,7 +99,7 @@ constexpr uint32_t kMaxTurnMs = 30000;
 constexpr uint32_t kMaxTurnFrames = kMaxTurnMs / kFrameMs;
 // Limite di durata (TOT) di un messaggio nel profilo Messaggio: 15 s di voce (11/11/2026), come il massimo che il ripetitore
 // ripete (lib/voicecore/message_store.h). A 1200 bps sono circa 139 s in aria a SF12/BW125. Il tetto di kMaxTurnMs (30 s)
-// resta per lo Standard e la Qualita'.
+// resta per lo Standard e il Range.
 constexpr uint32_t kMessageMaxTurnMs = 15000;
 
 // Il nominativo e' ripetuto ogni N pacchetti (circa 5 s) per chi si

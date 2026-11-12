@@ -8,18 +8,18 @@
 // configurazione (Web Serial) ma usabile anche a mano:
 //
 //   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=2   (versione del firmware e del protocollo)
-//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=5 micfloor=-60 profile=std board=t3 reboot=0 test=0 pos=off qth=none gps=off role=off freqout=433.900
+//   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 freqrange=433.900 power=10 volume=5 micfloor=-60 profile=std board=t3 reboot=0 test=0 pos=off qth=none gps=off role=off freqout=433.900
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
-//   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000; frequenza del profilo Standard)
+//   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000; frequenza del profilo Standard, Codec2 3200)
 //   CFG SET FREQMSG 433.900      -> CFG OK freqmsg=433.900     (come FREQ, per il profilo Messaggio; puo' essere uguale a FREQ)
 //   CFG SET POWER 10             -> CFG OK power=10            (dBm, 2-17)
 //   CFG SET MICFLOOR -60         -> CFG OK micfloor=-60        (fondo del microfono in dBFS, da -80 a -36)
 //   CFG MIC MEASURE              -> misura il fondo per 3 s (stare in silenzio), poi: CFG MIC fondo=-61 min=-63 max=-58 frames=75
 //   CFG SET VOLUME 7             -> CFG OK volume=7            (0 = muto, 1-10 in passi da 3 dB; 5 = 0 dB, 6-10 = guadagno fino a +15 dB)
-//   CFG SET FREQQUAL 433.900     -> CFG OK freqqual=433.900    (come FREQ, per il profilo Qualita')
+//   CFG SET FREQRANGE 433.900    -> CFG OK freqrange=433.900   (come FREQ, per il profilo Range, Codec2 1200; se manca vale come FREQ)
 //   CFG SET ROLE RPTRX           -> CFG OK role=rptrx          (OFF = scheda normale, RPTRX/RPTTX = scheda RX/TX del ripetitore; vale dal riavvio)
 //   CFG SET FREQOUT 434.400      -> CFG OK freqout=434.400     (frequenza di uscita del ripetitore, usata dalla scheda TX)
-//   CFG SET PROFILE MSG          -> CFG OK profile=msg         (STD = Standard, MSG = Messaggio SF12/BW125, QUA = Qualita' 3200 SF7; vale dal riavvio)
+//   CFG SET PROFILE MSG          -> CFG OK profile=msg         (STD = Standard 3200 SF7, RNG = Range 1200 SF8, MSG = Messaggio SF12/BW125; QUA vale come STD; vale dal riavvio)
 //   CFG SET POS ON               -> CFG OK pos=on             (trasmette la posizione nel pacchetto START; di default OFF; serve il QTH o un GPS)
 //   CFG SET QTH 43.7696,11.2558  -> CFG OK qth=43.76960,11.25580   (posizione fissa in gradi decimali, lat,lon; NONE la cancella)
 //   CFG SET TEXT1 Arrivo tra 10 minuti -> CFG OK text1=Arrivo tra 10 minuti   (testi predefiniti da inviare, TEXT1..TEXT5; ASCII senza '{' e '}', 1-150
@@ -120,7 +120,7 @@ struct Settings {
   }
   char texts[kTextSlots][kMaxTextChars + 1];  // testi predefiniti; NON contano per "reboot" (valgono subito)
   char callsign[kMaxCallsign + 1] = {0};
-  uint32_t freqKhz = 0;     // frequenza del profilo Standard
+  uint32_t freqKhz = 0;     // frequenza del profilo Standard (Codec2 3200)
   uint32_t freqMsgKhz = 0;  // frequenza del profilo Messaggio: puo' essere uguale a quella dello Standard (mai bloccante)
   // Escursione sulle reti di testo (MeshCom, docs/meshcom-testo.md): frequenza, SSID, durata dell'ascolto e cinque destinatari tra
   // cui scegliere da menu (un gruppo numerico, un nominativo-SSID o "*" per tutti); un posto vuoto non si usa.
@@ -128,7 +128,7 @@ struct Settings {
   uint8_t mcSsid = 99;          // SSID del nominativo in rete (0 = nessuno), per esempio IU5HJU-99
   uint16_t mcWindowS = 300;     // secondi di ascolto dopo l'invio (e prima di tornare al profilo voce)
   char mcDests[kMcDestSlots][16];
-  uint32_t freqQualKhz = 0;  // frequenza del profilo Qualita' (0 = come lo Standard)
+  uint32_t freqRangeKhz = 0;  // frequenza del profilo Range (Codec2 1200; 0 = come lo Standard)
   uint8_t role = kRoleNormal;  // ruolo: normale o scheda RX/TX del ripetitore (vale dal riavvio)
   // Comandi del sysop al ripetitore (sysop.h): nominativo del sysop e chiave condivisa di 16 byte (mai mostrata da CFG GET); vale dal riavvio.
   char sysopCall[kMaxCallsign + 1] = {0};
@@ -173,19 +173,19 @@ struct Settings {
   }
 
   // Frequenza del profilo in uso (quella con cui lavora la radio).
-  uint32_t qualFreqKhz() const { return freqQualKhz ? freqQualKhz : freqKhz; }
+  uint32_t rangeFreqKhz() const { return freqRangeKhz ? freqRangeKhz : freqKhz; }
   // Frequenza di uscita del ripetitore: quella impostata, altrimenti quella del profilo.
   uint32_t outFreqKhz() const { return freqOutKhz ? freqOutKhz : profileFreqKhz(); }
   // Copia con la frequenza del profilo in uso sostituita da khz (la scheda TX del ripetitore la usa per la radio).
   Settings withProfileFreqKhz(uint32_t khz) const {
     Settings s = *this;
     if (profile == kProfileMessage) s.freqMsgKhz = khz;
-    else if (profile == kProfileQuality) s.freqQualKhz = khz;
+    else if (profile == kProfileRange) s.freqRangeKhz = khz;
     else s.freqKhz = khz;
     return s;
   }
   uint32_t profileFreqKhz() const {
-    return profile == kProfileMessage ? freqMsgKhz : profile == kProfileQuality ? qualFreqKhz() : freqKhz;
+    return profile == kProfileMessage ? freqMsgKhz : profile == kProfileRange ? rangeFreqKhz() : freqKhz;
   }
   // Nominativo-SSID usato nell'escursione MeshCom ("IU5HJU-99"); senza SSID se mcSsid e' 0. cap almeno 16.
   void mcCallsign(char* out, size_t cap) const {

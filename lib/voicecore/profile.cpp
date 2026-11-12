@@ -11,16 +11,17 @@ namespace {
 constexpr size_t kNever = static_cast<size_t>(kMaxPackets) * kFramesPerPacket;  // "non partire prima della fine"
 
 const Profile kProfiles[kProfileCount] = {
-    // Standard: i valori storici di protocol.h e user_config.h
-    {kProfileStandard, "std", "Standard", 8, 250.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, false, kPrebufferFrames, kPrebufferTimeoutMs,
+    // Range (fino al 12/11/2026 "Standard"): i valori storici di protocol.h e user_config.h, SF8/BW250 e Codec2 1200. Circa 2,5 dB in piu'
+    // di sensibilita' rispetto allo Standard (un gradino di SF: valore teorico di LoRa, non misurato qui), un pacchetto piu' lungo in aria.
+    {kProfileRange, "rng", "Range", 8, 250.0f, 5, 12, kModeCodec2_1200, kMaxTurnMs, false, kPrebufferFrames, kPrebufferTimeoutMs,
      kSessionTimeoutMs, 0, false},
-    // Messaggio: SF12/BW125 (+13 dB). Un pacchetto da 77 byte dura circa 3,4 s in aria: la ricezione aspetta la fine del
+    // Messaggio: SF12/BW125 (circa +13 dB rispetto allo Standard). Un pacchetto da 77 byte dura circa 3,4 s in aria: la ricezione aspetta la fine del
     // messaggio (o 12 s di silenzio) prima di riprodurlo. Limite di durata: 15 s di voce (11 novembre; prima 30 s, come lo
     // Standard), quanto il ripetitore ripete; a 1200 bps sono circa 139 s in aria.
     {kProfileMessage, "msg", "Messaggio", 12, 125.0f, 5, 12, kModeCodec2_1200, kMessageMaxTurnMs, true, kNever, 0x7FFFFFFFu, 12000, 0, false},
-    // Qualita': SF7/BW250 (circa -5 dB rispetto allo Standard) e Codec2 3200 (frame da 16 byte per 40 ms). 30 s di voce
-    // occupano circa 12,5 s in aria (42%). Pre-buffer come lo Standard.
-    {kProfileQuality, "qua", "Qualita'", 7, 250.0f, 5, 12, kModeCodec2_3200, kMaxTurnMs, false, kPrebufferFrames,
+    // Standard (dal 12/11/2026; fino ad allora "Qualita'"): SF7/BW250 e Codec2 3200 (frame da 16 byte per 40 ms). 30 s di voce
+    // occupano circa 12,5 s in aria (42%). Pre-buffer come il Range. E' il modo di base, quello da usare via ripetitore o nodo.
+    {kProfileStandard, "std", "Standard", 7, 250.0f, 5, 12, kModeCodec2_3200, kMaxTurnMs, false, kPrebufferFrames,
      kPrebufferTimeoutMs, kSessionTimeoutMs, 0, false},
 };
 
@@ -38,6 +39,12 @@ const Profile& profileFor(uint8_t id) { return id < kProfileCount ? kProfiles[id
 
 bool profileFromCode(const char* code, uint8_t& id) {
   if (!code) return false;
+  // "qua" era il nome del profilo a Codec2 3200, oggi "Standard": si accetta ancora, e vale lo stesso modo radio
+  if (tolower(static_cast<unsigned char>(code[0])) == 'q' && tolower(static_cast<unsigned char>(code[1])) == 'u' &&
+      tolower(static_cast<unsigned char>(code[2])) == 'a' && code[3] == 0) {
+    id = kProfileStandard;
+    return true;
+  }
   for (uint8_t i = 0; i < kProfileCount; i++) {
     const char* c = kProfiles[i].code;
     size_t k = 0;

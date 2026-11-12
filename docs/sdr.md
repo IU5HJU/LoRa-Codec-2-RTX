@@ -79,8 +79,8 @@ Il decodificatore accetta anche le righe che stampa `gr-lora_sdr` con `print_rx_
 tail -n0 -F cattura.txt | build/lcr_live | c2dec 1200 - - | aplay -q -t raw -f S16_LE -r 8000 -c 1
 ```
 
-- **Standard:** la voce si sente mentre la scheda trasmette, con un ritardo di circa **1-2 secondi** (il pre-buffer di 1 s più il tempo di demodulazione).
-- **Qualità (`--qualita`, SF7, Codec2 3200):** come lo Standard ma con `c2dec 3200`; lo script `ricevitore-live.sh` lo sceglie con la voce 3 e **ricompila sempre** `lcr_live` (un `lcr_live` vecchio, costruito prima del modo Qualità, scarta in silenzio i pacchetti a 3200).
+- **Range (Codec2 1200, SF8):** la voce si sente mentre la scheda trasmette, con un ritardo di circa **1-2 secondi** (il pre-buffer di 1 s più il tempo di demodulazione).
+- **Standard (`--qualita`, SF7, Codec2 3200):** come il Range ma con `c2dec 3200`; lo script `ricevitore-live.sh` lo sceglie con la voce 3 e **ricompila sempre** `lcr_live` (un `lcr_live` vecchio, costruito prima del modo Standard, scarta in silenzio i pacchetti a 3200).
 - **Messaggio (`--messaggio`, SF12):** come sulle schede, la riproduzione parte a messaggio completo; durante la ricezione si legge l'avanzamento.
 - **Cuscinetto contro gli "underrun" (10/11/2026):** `aplay` può stampare `underrun!!!` (un vuoto nell'audio) se per un attimo non riceve dati: con i frame consegnati esattamente a ritmo reale il suo buffer resta sempre quasi vuoto. `lcr_live` fa quindi uscire i primi 7 frame in blocco e poi uno ogni 40 ms, così l'audio ha **240 ms di margine** (`--anticipo MS`, 0 = ritmo reale esatto). L'audio parte prima, non dopo.
 - Si usa `aplay` e non `ffplay`: `ffplay` con dati che arrivano a rilento si blocca nel suo "probe" iniziale.

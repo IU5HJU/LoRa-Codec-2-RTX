@@ -126,11 +126,11 @@
 
       <label for="profile">Profilo di trasmissione</label>
       <select id="profile" disabled>
-        <option value="std">Standard: voce in tempo reale (SF8, 250 kHz)</option>
+        <option value="std">Standard: voce in tempo reale, più fedele (SF7, 250 kHz, Codec2 3200)</option>
+        <option value="rng">Range: un po' più di portata, meno fedele (SF8, 250 kHz, Codec2 1200)</option>
         <option value="msg">Messaggio: lungo raggio, registra e invia (SF12, 125 kHz)</option>
-        <option value="qua">Qualità: voce più fedele, meno portata (SF7, 250 kHz, Codec2 3200)</option>
       </select>
-      <p class="hint" id="profilehint"><strong>Standard</strong>: la voce di sempre, in tempo reale. <strong>Messaggio</strong>: tieni premuto il PTT e registra fino a 15 secondi (quanto ripete il ripetitore); un secondo dopo il rilascio la scheda trasmette il messaggio, molto più lentamente del parlato (circa 94 secondi in aria ogni 10 secondi di voce) e con circa 13 dB di sensibilità in più; chi riceve lo ascolta <strong>a ricezione conclusa</strong>. <strong>Qualità</strong>: voce in tempo reale con Codec2 3200 (più naturale, circa 5 dB di portata in meno dello Standard). <strong>Le schede con profili diversi non si sentono</strong>: usa lo stesso profilo (e la stessa frequenza) su tutte. Vale dal riavvio.</p>
+      <p class="hint" id="profilehint"><strong>Standard</strong>: voce in tempo reale con Codec2 3200, la più naturale: è il modo di base, quello da usare via ripetitore o nodo. <strong>Range</strong>: voce in tempo reale con Codec2 1200 (il vecchio &ldquo;Standard&rdquo; di prima del 12/11/2026), un po&rsquo; più di portata (circa 2,5 dB teorici in più) ma meno fedele. <strong>Messaggio</strong>: tieni premuto il PTT e registra fino a 15 secondi (quanto ripete il ripetitore); un secondo dopo il rilascio la scheda trasmette il messaggio, molto più lentamente del parlato (circa 94 secondi in aria ogni 10 secondi di voce) e con circa 13 dB di sensibilità in più; chi riceve lo ascolta <strong>a ricezione conclusa</strong>. <strong>Le schede con profili diversi non si sentono</strong>: usa lo stesso profilo (e la stessa frequenza) su tutte. Vale dal riavvio.</p>
 
       <label for="freq">Frequenza (MHz)</label>
       <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
@@ -139,9 +139,9 @@
       <label for="freqmsg">Frequenza del profilo Messaggio (MHz)</label>
       <input id="freqmsg" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
       <p class="hint" id="freqmsghint">La scheda usa la frequenza del profilo scelto. Le due frequenze <strong>possono essere uguali</strong> (nelle prove si usa spesso una frequenza nota): non c'è nessun obbligo di usarne di diverse. <button id="sameFreq" type="button" class="secondary" disabled>Usa quella dello Standard</button></p>
-      <label for="freqqual">Frequenza del profilo Qualità (MHz)</label>
-      <input id="freqqual" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
-      <p class="hint">Come sopra, per il profilo Qualità: può essere uguale alle altre.</p>
+      <label for="freqrange">Frequenza del profilo Range (MHz)</label>
+      <input id="freqrange" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
+      <p class="hint">Come sopra, per il profilo Range: può essere uguale alle altre.</p>
       <p class="hint" id="freqnote" hidden>Stessa frequenza per i due profili: va bene per le prove, ma <strong>non è un canale condiviso</strong>. Profili diversi non si decodificano a vicenda e il controllo "canale occupato" non vede un segnale dell'altro profilo.</p>
 
       <label for="power">Potenza (dBm)</label>
@@ -199,7 +199,7 @@
       <label for="mcdest3">Destinatario 3</label><input id="mcdest3" maxlength="15" autocomplete="off" placeholder="*" disabled>
       <label for="mcdest4">Destinatario 4</label><input id="mcdest4" maxlength="15" autocomplete="off" disabled>
       <label for="mcdest5">Destinatario 5</label><input id="mcdest5" maxlength="15" autocomplete="off" disabled>
-      <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S, M o Q), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo Q 433.900&rdquo;.</p>
+      <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S Standard, R Range, M Messaggio), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo S 433.900&rdquo;.</p>
 
       <h3>Ripetitore</h3>
       <p class="hint">Due schede possono fare da ripetitore: una <strong>RX</strong> ascolta la frequenza di ingresso (quella del profilo, qui sopra) e una <strong>TX</strong> ritrasmette sulla frequenza di uscita. Con un ruolo da ripetitore la scheda non funziona pi&ugrave; da stazione: dopo il riavvio mostra lo stato del ripetitore. <strong>Attenzione:</strong> una scheda in ruolo da ripetitore non ha il menu a bordo, quindi non apre pi&ugrave; la pagina interna: per tornare stazione scegli <em>Stazione normale</em> qui, con il cavo USB.</p>
@@ -417,7 +417,8 @@
   let lastFw = null, lastProto = '';   // firmware letto dalla scheda collegata (null = nessuna scheda)
   function refreshFwInfo() { if (lastFw !== null) $('fwinfo').textContent = fwDescription(lastFw, lastProto); }
   let profileSeen = false;   // l'ultimo CFG GET conteneva il profilo
-  let freqQualSeen = false;
+  let legacyFw = false;     // il firmware collegato e' precedente alla ridenominazione Standard/Range (12/11/2026)
+  let freqRangeSeen = false;
   let freqMsgSeen = false;   // l'ultimo CFG GET conteneva la frequenza del profilo Messaggio
   let posSeen = false, gpsSeen = false;   // l'ultimo CFG GET conteneva pos=/qth= e gps= (firmware piu' vecchi: no)
   let textSeen = false;      // la scheda risponde a CFG GET TEXTn (firmware piu' vecchi: no)
@@ -522,7 +523,7 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { profileSeen = false; freqMsgSeen = false; freqQualSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; roleSeen = false; }
+    if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; roleSeen = false; }
     $('idint').disabled = !on || !idintSeen;
     $('idmorse').disabled = !on || !idmorseSeen;
     updateRoleControls(on);
@@ -532,7 +533,7 @@
     updateSysopControls(on);
     $('freqmsg').disabled = !on || !freqMsgSeen;   // il firmware piu' vecchio ha una sola frequenza
     $('sameFreq').disabled = !on || !freqMsgSeen;
-    $('freqqual').disabled = !on || !freqQualSeen;
+    $('freqrange').disabled = !on || !freqRangeSeen;
     $('profile').disabled = !on || !profileSeen;   // il firmware piu' vecchio non ha i profili
   }
 
@@ -543,11 +544,15 @@
     if (line.startsWith('CFG callsign=')) {   // solo la risposta di CFG GET (le altre righe CFG possono contenere testi liberi)
       const m = {};
       for (const kv of line.slice(4).split(' ')) { const i = kv.indexOf('='); if (i > 0) m[kv.slice(0, i)] = kv.slice(i + 1); }
+      // Firmware precedente al 12/11/2026: li' "Standard" era il Codec2 1200 e c'era un profilo "Qualita'"; i nomi e le frequenze cambiano significato, quindi
+      // la pagina non salva per non confonderli (CFG GET di quel firmware ha freqqual= e non ha freqrange=).
+      legacyFw = m.freqqual !== undefined && m.freqrange === undefined;
+      if (legacyFw) setStatus('Questo firmware è precedente al 12/11/2026: i profili si chiamavano Standard (Codec2 1200) e Qualità (Codec2 3200). Aggiorna il firmware (passo 1 della pagina) prima di salvare le impostazioni da qui.', 'err');
       if (m.callsign) {
         $('callsign').value = m.callsign; $('freq').value = m.freq; $('power').value = m.power;
         if (m.volume !== undefined) $('volume').value = m.volume;
         if (m.freqmsg !== undefined) { $('freqmsg').value = m.freqmsg; freqMsgSeen = true; $('freqmsg').disabled = !port; $('sameFreq').disabled = !port; }
-        if (m.freqqual !== undefined) { $('freqqual').value = m.freqqual; freqQualSeen = true; $('freqqual').disabled = !port; }
+        if (m.freqrange !== undefined) { $('freqrange').value = m.freqrange; freqRangeSeen = true; $('freqrange').disabled = !port; }
         updateFreqNote();
         if (m.profile !== undefined) { $('profile').value = m.profile; profileSeen = true; $('profile').disabled = !port; }
         if (m.micfloor !== undefined) { $('micfloor').value = m.micfloor; lastFloor = Number(m.micfloor); }
@@ -641,7 +646,8 @@
     for (let i = 0; i < tries; i++) {
       try {
         await send('CFG GET', /^CFG callsign=/, patient ? 2500 : 3000);
-        setStatus('Impostazioni lette' + (lastBoard ? ' (scheda ' + lastBoard + ')' : '') + '.', 'ok');
+        if (legacyFw) setStatus('Questo firmware è precedente al 12/11/2026: i profili si chiamavano Standard (Codec2 1200) e Qualità (Codec2 3200). Aggiorna il firmware (passo 1 della pagina) prima di salvare le impostazioni da qui.', 'err');
+        else setStatus('Impostazioni lette' + (lastBoard ? ' (scheda ' + lastBoard + ')' : '') + '.', 'ok');
         try {
           const v = await send('CFG VERSION', /^CFG VERSION /, 2000);
           const m = /fw=(\S+)/.exec(v);
@@ -676,12 +682,12 @@
       const km = Math.round(parseFloat(fmsg) * 1000);
       if (km < LIMITS.freqMin || km > LIMITS.freqMax) return { err: 'La frequenza del profilo Messaggio deve essere tra 430.000 e 440.000 MHz.' };
     }
-    let fqua = null;
-    if (!$('freqqual').disabled) {
-      fqua = $('freqqual').value.trim();
-      if (!/^\d{3}(\.\d{1,3})?$/.test(fqua)) return { err: 'Frequenza del profilo Qualità non valida: usa il formato 433.900.' };
-      const kq = Math.round(parseFloat(fqua) * 1000);
-      if (kq < LIMITS.freqMin || kq > LIMITS.freqMax) return { err: 'La frequenza del profilo Qualità deve essere tra 430.000 e 440.000 MHz.' };
+    let frng = null;
+    if (!$('freqrange').disabled) {
+      frng = $('freqrange').value.trim();
+      if (!/^\d{3}(\.\d{1,3})?$/.test(frng)) return { err: 'Frequenza del profilo Range non valida: usa il formato 433.900.' };
+      const kq = Math.round(parseFloat(frng) * 1000);
+      if (kq < LIMITS.freqMin || kq > LIMITS.freqMax) return { err: 'La frequenza del profilo Range deve essere tra 430.000 e 440.000 MHz.' };
     }
     const pw = Number($('power').value);
     if (!Number.isInteger(pw) || pw < LIMITS.pwrMin || pw > LIMITS.pwrMax) return { err: 'La potenza deve essere un numero intero da 2 a 17 dBm.' };
@@ -690,7 +696,7 @@
     const fl = Number($('micfloor').value);
     if ($('micfloor').value === '' || !Number.isInteger(fl) || fl < -80 || fl > -36) return { err: 'Il fondo del microfono deve essere un intero da -80 a -36 dBFS.' };
     const prof = $('profile').value;
-    if (!$('profile').disabled && prof !== 'std' && prof !== 'msg' && prof !== 'qua') return { err: 'Profilo non valido.' };
+    if (!$('profile').disabled && prof !== 'std' && prof !== 'msg' && prof !== 'rng') return { err: 'Profilo non valido.' };
     let pos = null, qth = null, gps = null;
     if (!$('pos').disabled) pos = $('pos').value === 'on' ? 'on' : 'off';
     if (!$('qthlat').disabled) {
@@ -759,7 +765,7 @@
       if (sk !== '' && !/^[0-9a-fA-F]{32}$/.test(sk)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
       sysop = { call: sy, mode: $('sysopmode').value, key: sk };
     }
-    return { cs, freq: fm, fmsg, fqua, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
+    return { cs, freq: fm, fmsg, frng, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
   }
 
   // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
@@ -773,6 +779,7 @@
 
   async function save(ev) {
     ev.preventDefault();
+    if (legacyFw) { setStatus('Firmware precedente al 12/11/2026: aggiornalo prima di salvare le impostazioni da qui.', 'err'); return; }
     const v = validate();
     if (v.err) { setStatus(v.err, 'err'); return; }
     setStatus('Salvataggio…', '');
@@ -781,7 +788,7 @@
       replies.push(await send('CFG SET CALLSIGN ' + v.cs, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET FREQ ' + v.freq, /^CFG (OK|ERR)/));
       if (v.fmsg !== null) replies.push(await send('CFG SET FREQMSG ' + v.fmsg, /^CFG (OK|ERR)/));
-      if (v.fqua !== null) replies.push(await send('CFG SET FREQQUAL ' + v.fqua, /^CFG (OK|ERR)/));
+      if (v.frng !== null) replies.push(await send('CFG SET FREQRANGE ' + v.frng, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET POWER ' + v.pw, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET VOLUME ' + v.vol, /^CFG (OK|ERR)/));
       replies.push(await send('CFG SET MICFLOOR ' + v.fl, /^CFG (OK|ERR)/));

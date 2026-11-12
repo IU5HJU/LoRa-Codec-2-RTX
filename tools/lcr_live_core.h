@@ -33,7 +33,7 @@ class LiveRx {
   // Costa leadMs di ritardo in meno, non in piu': l'audio parte prima, non dopo. 0 = ritmo reale esatto.
   LiveRx(Sink& sink, bool message = false, bool acceptBadCrc = false, uint32_t leadMs = 240)
       : sink_(sink), acceptBad_(acceptBadCrc), lead_(leadMs) {
-    const Profile& p = profileFor(message ? kProfileMessage : kProfileStandard);
+    const Profile& p = profileFor(message ? kProfileMessage : kProfileRange);
     RxStream::Config rc;
     rc.prebufferFrames = p.rxPrebufferFrames;
     rc.prebufferTimeoutMs = p.rxPrebufferTimeoutMs;
@@ -74,7 +74,7 @@ class LiveRx {
       if (isTest_) lt_.begin(p.session);
       char b[96];
       const char* what = isTest_ ? "prova di collegamento"
-                                 : (p.mode == kModeCodec2_3200 ? "trasmissione Qualita' (Codec2 3200)" : "trasmissione (Codec2 1200)");
+                                 : (p.mode == kModeCodec2_3200 ? "trasmissione Standard (Codec2 3200)" : "trasmissione (Codec2 1200)");
       std::snprintf(b, sizeof(b), "inizio %s, sessione %u", what, p.session);
       info(b);
     }

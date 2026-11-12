@@ -25,7 +25,7 @@ class UiNotifier : public lcr::INotifier {
   // Profilo in uso: cambia i testi (messaggio) e il limite di durata mostrato.
   void setProfile(const lcr::Profile& p) {
     message_ = p.message;
-    badge_ = p.id == lcr::kProfileMessage ? 'M' : (p.id == lcr::kProfileQuality ? 'Q' : 'S');
+    badge_ = p.id == lcr::kProfileMessage ? 'M' : (p.id == lcr::kProfileRange ? 'R' : 'S');
     maxTurnSec_ = p.maxTurnMs / 1000;
   }
 
@@ -159,7 +159,7 @@ class UiNotifier : public lcr::INotifier {
   const lcr::ChoicePicker* choice_ = nullptr;
   char choiceTitle_[22] = {0};
   int meshSec_ = 0;              // secondi che restano all'escursione MeshCom
-  char badge_ = 'S';             // lettera del profilo in uso (S Standard, M Messaggio, Q Qualita'), nel riquadro in alto a destra
+  char badge_ = 'S';             // lettera del profilo in uso (S Standard, R Range, M Messaggio), nel riquadro in alto a destra
   uint32_t maxTurnSec_ = 30;     // durata massima di un turno o di un messaggio, secondi
   int txPct_ = 0;                // avanzamento dell'invio di un messaggio, 1-100 (0 = non noto)
   int rxPct_ = 0;                // avanzamento della ricezione di un messaggio, 1-100 (0 = non noto)

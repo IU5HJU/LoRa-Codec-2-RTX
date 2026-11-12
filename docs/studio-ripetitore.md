@@ -1,21 +1,23 @@
 # Studio di fattibilità: ripetitore LoRa con due schede
 
+> **Nota del 12/11/2026 sui nomi dei profili.** Lo studio è stato scritto quando i profili si chiamavano Standard (Codec2 1200, SF8), Messaggio e Qualità (Codec2 3200, SF7). I nomi nel testo sono stati aggiornati: **Range** (1200, SF8), **Messaggio** e **Standard** (3200, SF7). Le decisioni citate ("ripetitore Standard", "un solo profilo") erano per il 1200, cioè oggi il Range; il ripetitore ora usa di base lo Standard.
+
 Data: 10/11/2026. Stato: **studio, nessun codice scritto**. I numeri di tempo in aria sono calcolati con la formula di Semtech, non misurati. Premesse e decisioni già prese sul ripetitore: [roadmap.md](roadmap.md) ("Chi ripete cosa").
 
 ## Stato (10/11/2026)
 
-**Scelta l'opzione A** (due schede, un solo profilo: il Codec2 1200 Standard). **Fase 1 scritta e provata sul PC:** flag `RELAYED` (bit 7) nel protocollo e logica di decisione del ripetitore (`lib/voicecore/repeater.*`, test `tests/test_repeater.cpp`: flag, anelli, duplicati, filtro dei modi, durata della sessione e catena completa con un pacchetto perso e ricostruito dalla parità). **Fase 2, firmware delle due schede, scritta il 10/11/2026** (`src/repeater_node.*`, `lib/voicecore/repeater_link.*`, impostazioni `ROLE` e `FREQOUT`; seriale fra le schede con CRC e coda di trasmissione provate sul PC; il firmware delle schede compila solo su Actions): [firmware.md](firmware.md#ripetitore-a-due-schede-ruoli-rx-e-tx-10112026). **Ancora da fare:** prove sul banco, comandi del sysop (modo 5), identificazione periodica.
+**Scelta l'opzione A** (due schede, un solo profilo: il Codec2 1200 Range). **Fase 1 scritta e provata sul PC:** flag `RELAYED` (bit 7) nel protocollo e logica di decisione del ripetitore (`lib/voicecore/repeater.*`, test `tests/test_repeater.cpp`: flag, anelli, duplicati, filtro dei modi, durata della sessione e catena completa con un pacchetto perso e ricostruito dalla parità). **Fase 2, firmware delle due schede, scritta il 10/11/2026** (`src/repeater_node.*`, `lib/voicecore/repeater_link.*`, impostazioni `ROLE` e `FREQOUT`; seriale fra le schede con CRC e coda di trasmissione provate sul PC; il firmware delle schede compila solo su Actions): [firmware.md](firmware.md#ripetitore-a-due-schede-ruoli-rx-e-tx-10112026). **Ancora da fare:** prove sul banco, comandi del sysop (modo 5), identificazione periodica.
 
 ## Obiettivo
 
-Un ripetitore fatto da **due schede**: una sempre in **ricezione** (frequenza di ingresso) e una sempre in **trasmissione** (frequenza di uscita), che lavorano **nello stesso momento**. Il vincolo da superare: ripetere **qualsiasi modo** del progetto (Standard, Messaggio, Qualità), cosa che la roadmap dell'8/11/2026 escludeva per la Qualità ("solo collegamento diretto"). Qui si valuta se e come si può.
+Un ripetitore fatto da **due schede**: una sempre in **ricezione** (frequenza di ingresso) e una sempre in **trasmissione** (frequenza di uscita), che lavorano **nello stesso momento**. Il vincolo da superare: ripetere **qualsiasi modo** del progetto (Range, Messaggio, Standard), cosa che la roadmap dell'8/11/2026 escludeva per la Standard ("solo collegamento diretto"). Qui si valuta se e come si può.
 
 ## Architettura base (due schede)
 
 - **Scheda RX** (frequenza di ingresso) e **scheda TX** (frequenza di uscita), collegate da una **seriale a 3,3 V** con la massa in comune. Il ripetitore **non ha audio**: i pin di microfono e amplificatore sono liberi per la seriale.
 - **Ripetizione a livello di pacchetto**, senza decodificare la voce: la scheda RX riceve un pacchetto con CRC valido, controlla la **versione del protocollo**, lo passa alla scheda TX, che lo ritrasmette quasi identico. Un ripetitore che non guarda il contenuto **ripete anche i modi futuri**: l'unico requisito è il formato del pacchetto.
 - **Rigenerazione:** la RX può **recuperare i pacchetti persi con la parità** (la logica `RxStream` esiste già) e la TX ritrasmettere il pacchetto ricostruito. Ogni tratta ha così la sua correzione degli errori. La parità originale si ritrasmette com'è.
-- **Ritardo:** store-and-forward per pacchetto: la TX parte quando il pacchetto è arrivato intero, quindi il ritardo è **un pacchetto in aria** (circa 0,13 s in Standard, 0,16 s in Qualità a SF7) più il passaggio sulla seriale (pochi ms). Il pre-buffer di 1 s delle stazioni lo assorbe senza problemi.
+- **Ritardo:** store-and-forward per pacchetto: la TX parte quando il pacchetto è arrivato intero, quindi il ritardo è **un pacchetto in aria** (circa 0,13 s in Range, 0,16 s in Standard a SF7) più il passaggio sulla seriale (pochi ms). Il pre-buffer di 1 s delle stazioni lo assorbe senza problemi.
 - **Anello infinito:** serve un **flag "ripetuto"** nel campo delle bandiere (oggi i bit 0-6 sono in uso, il **bit 7 è libero**) e una **memoria degli ultimi pacchetti** (sessione e sequenza) per non ripetere due volte lo stesso. Le schede con il firmware vecchio scartano i pacchetti con bandiere sconosciute: non sentirebbero le copie ripetute (silenzio, nessun rumore).
 - **Identificazione:** il ripetitore deve trasmettere il **proprio nominativo** a intervalli (un pacchetto di tipo nuovo o il nominativo nei pacchetti ripetuti). Le regole esatte dipendono dalla verifica normativa.
 
@@ -25,16 +27,16 @@ Il **modo** (campo del pacchetto: 1200, 3200, prova, messaggio) e i **parametri 
 
 | Profilo | SF / banda | Codec2 |
 |---|---|---|
-| Standard | SF8 / 250 kHz | 1200 |
+| Range | SF8 / 250 kHz | 1200 |
 | Messaggio | SF12 / 125 kHz | 1200 |
-| Qualità | SF7 / 250 kHz | 3200 |
+| Standard | SF7 / 250 kHz | 3200 |
 
 Una SX127x **demodula un solo SF e una sola banda alla volta**. Non ascolta tre profili insieme (solo i chip da gateway a 8 canali lo fanno, e non sono sulle nostre schede). Quindi con due schede un ripetitore ripete **tutto ciò che viaggia con una sola configurazione radio**. Le strade:
 
 | Opzione | Schede | Cosa ripete | Pro | Contro |
 |---|---|---|---|---|
 | **A. Un profilo alla volta** | 2 | tutti i modi di **quel** profilo; il profilo si sceglie nelle impostazioni | semplice, senza cambiare la radio delle stazioni | gli altri profili non sono ripetuti |
-| **B. Canale ripetitore "universale"** a SF7 / 250 kHz | 2 | **tutti i modi**: voce 1200, Qualità 3200, prove e messaggi (come pacchetti normali) | un solo canale, un solo RX e un solo TX | le stazioni parlano al ripetitore con SF7 (circa -2,5 dB rispetto a SF8; il Messaggio perde il guadagno di SF12 su quel tratto); serve un modo "ripetitore" nel firmware delle stazioni |
+| **B. Canale ripetitore "universale"** a SF7 / 250 kHz | 2 | **tutti i modi**: voce 1200, Standard 3200, prove e messaggi (come pacchetti normali) | un solo canale, un solo RX e un solo TX | le stazioni parlano al ripetitore con SF7 (circa -2,5 dB rispetto a SF8; il Messaggio perde il guadagno di SF12 su quel tratto); serve un modo "ripetitore" nel firmware delle stazioni |
 | **C. Multi-profilo** | 4 o più | tutti i profili **con i propri parametri**: tre schede RX (SF8, SF7, SF12/125) sulla stessa frequenza di ingresso e una o due schede TX | nessuna rinuncia per le stazioni | costo, un solo TX con SF12 resta occupato 3,4 s a pacchetto e ritarda la voce in tempo reale |
 | **D. Scansione degli SF con CAD** | 2 | in teoria tutti i profili con una scheda RX | poche schede | il preambolo di 12 simboli dura solo 6 ms a SF7: la scansione dei tre SF lo perderebbe; richiede preambolo più lungo e non è provata: **solo ricerca** |
 
@@ -45,8 +47,8 @@ Una SX127x **demodula un solo SF e una sola banda alla volta**. Non ascolta tre 
 | 1200 | 19% / 40% | 33% / 54% | 61% / 82% |
 | 3200 | **41% / 62%** | 73% / **94%** | 131% / 152% |
 
-- **A SF7 reggono tutti i modi** (la Qualità al 62%).
-- **A SF8 la Qualità è al 94%** con le pause: non regge con margine. Un canale universale a SF8 non va bene.
+- **A SF7 reggono tutti i modi** (la Standard al 62%).
+- **A SF8 la Standard è al 94%** con le pause: non regge con margine. Un canale universale a SF8 non va bene.
 - Un **messaggio** (registrato) trasmesso a SF7 occupa circa 12,5 s per 30 s di voce: nessun problema.
 
 ## Separazione fisica
@@ -77,7 +79,7 @@ Il ripetitore è una **stazione automatica**: l'autorizzazione dei ripetitori vi
 
 ## Variante: ripetitore del solo modo 1200 con i comandi (idea del 10/11/2026)
 
-La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitore Standard"): ripete **solo il modo 1 (Codec2 1200)** e **consuma** i pacchetti di comando indirizzati a lui. Le **bandiere e i campi liberi** del protocollo (versione 2) permettono di aggiungere i comandi **senza cambiare versione**:
+La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitore Range"): ripete **solo il modo 1 (Codec2 1200)** e **consuma** i pacchetti di comando indirizzati a lui. Le **bandiere e i campi liberi** del protocollo (versione 2) permettono di aggiungere i comandi **senza cambiare versione**:
 
 | Dove | Libero | Note |
 |---|---|---|
@@ -140,9 +142,9 @@ La variante più semplice, in linea con la decisione dell'8 novembre ("ripetitor
 Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa durata se ne serve un altro in ricezione. Conviene un **limite di durata per i messaggi ripetuti** (per esempio 10-15 s di voce, circa 1,5-2,3 minuti), da decidere.
 
 **Occupazione e segnale di "canale occupato" (cosa serve davvero):**
-- **Gli utenti in Standard o in Qualità (SF8 e SF7) non vedono con il CAD una trasmissione SF12**: il rilevamento del preambolo funziona solo con lo stesso SF. Perciò, **prima** di una ritrasmissione lunga, la TX manda un **breve pacchetto di annuncio** con i parametri dello Standard (nuovo modo, per esempio il **6**: "ripetitore occupato per N secondi") e un altro a fine servizio. Le stazioni lo mostrano sul display e rifiutano il PTT per il tempo indicato. **I modi 5-14 sono ancora liberi** (il 5 è già previsto per i comandi del sysop).
+- **Gli utenti in Range o in Standard (SF8 e SF7) non vedono con il CAD una trasmissione SF12**: il rilevamento del preambolo funziona solo con lo stesso SF. Perciò, **prima** di una ritrasmissione lunga, la TX manda un **breve pacchetto di annuncio** con i parametri dello Range (nuovo modo, per esempio il **6**: "ripetitore occupato per N secondi") e un altro a fine servizio. Le stazioni lo mostrano sul display e rifiutano il PTT per il tempo indicato. **I modi 5-14 sono ancora liberi** (il 5 è già previsto per i comandi del sysop).
 - Gli utenti **in Messaggio** (SF12) sull'uscita ricevono la ritrasmissione stessa e quindi hanno già il PTT rifiutato come per ogni ricezione.
-- **La ricezione dei messaggi** (SF12 sulla frequenza di ingresso) la fa la TX **nei tempi in cui è libera**. Mentre la TX riceve un messaggio, **la voce in tempo reale non si può ritrasmettere**. Due regole possibili: (a) **vince il messaggio**: la voce in arrivo mentre si ascolta un messaggio non si ritrasmette (utenti Standard senza segnale di occupato: meno bello); (b) **vince la voce**: se arriva voce, la ricezione del messaggio si interrompe e i pacchetti persi si recuperano con la parità finché possibile. Da scegliere.
+- **La ricezione dei messaggi** (SF12 sulla frequenza di ingresso) la fa la TX **nei tempi in cui è libera**. Mentre la TX riceve un messaggio, **la voce in tempo reale non si può ritrasmettere**. Due regole possibili: (a) **vince il messaggio**: la voce in arrivo mentre si ascolta un messaggio non si ritrasmette (utenti Range senza segnale di occupato: meno bello); (b) **vince la voce**: se arriva voce, la ricezione del messaggio si interrompe e i pacchetti persi si recuperano con la parità finché possibile. Da scegliere.
 - **Un utente che trasmette un messaggio mentre il ripetitore è occupato lo perde**: la TX non ascolta. Gli utenti nel raggio dell'uscita lo sanno perché sentono la ritrasmissione; gli altri no.
 
 **Alternativa senza conflitti: una terza scheda** dedicata alla ricezione dei messaggi (SF12 in ingresso) che li passa alla TX come la RX fa per la voce. Costa una scheda in più ma la voce non perde mai pacchetti per colpa dei messaggi; la TX resta occupata solo mentre ritrasmette. Un ripetitore con **due schede sole** funziona con la regola (a) o (b).
@@ -163,7 +165,7 @@ Un messaggio di 30 s tiene il ripetitore occupato **4,5 minuti**, e la stessa du
 1. **Durata massima: 15 s di voce** per messaggio ripetuto (**dall'11/11/2026 è anche il TOT del profilo Messaggio**: quello che si registra è sempre ripetibile) (circa 139 s in aria a SF12/125 kHz). Il pacchetto `START` dichiara già il numero totale di pacchetti (`TOTAL`): la TX sa subito se un messaggio supera il limite e, in quel caso, **non lo memorizza né lo ripete** (nessuna ripetizione parziale).
 2. **Priorità alla voce.** La TX **memorizza** i messaggi ricevuti e li **ritrasmette appena il ripetitore è libero**. La voce in arrivo dalla scheda RX ha sempre la precedenza.
 3. **Frequenza:** i messaggi usano la **frequenza di trasmissione del ripetitore** (la frequenza di uscita), con il profilo radio del Messaggio (SF12, banda 125 kHz). **Confermato il 11/11/2026**: le stazioni in Messaggio trasmettono e ascoltano sull'uscita del ripetitore (in simplex), e la TX, quando è libera, ascolta lì; la voce in tempo reale ha invece ingresso e uscita separati.
-4. **Annuncio di "occupato" non bloccante** (modo nuovo, per esempio il 6): prima di ritrasmettere un messaggio la TX manda, con i parametri dello Standard, un pacchetto con il **tempo di blocco** (ricavato dal messaggio stesso: ha tutti i pacchetti memorizzati, quindi il tempo in aria è esatto). Le radio **lo mostrano sul display ma non rifiutano il PTT**: una stazione può **forzare la voce** e la TX interrompe il messaggio e **ritenta appena possibile**.
+4. **Annuncio di "occupato" non bloccante** (modo nuovo, per esempio il 6): prima di ritrasmettere un messaggio la TX manda, con i parametri dello Range, un pacchetto con il **tempo di blocco** (ricavato dal messaggio stesso: ha tutti i pacchetti memorizzati, quindi il tempo in aria è esatto). Le radio **lo mostrano sul display ma non rifiutano il PTT**: una stazione può **forzare la voce** e la TX interrompe il messaggio e **ritenta appena possibile**.
 
 **Cosa regge:** la TX non ritrasmette mai insieme voce e messaggio, il blocco è solo informativo, e la voce non aspetta mai un messaggio. La memorizzazione e la ripetizione usano la logica della parità già provata.
 

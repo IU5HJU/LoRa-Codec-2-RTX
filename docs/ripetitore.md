@@ -8,7 +8,7 @@ Pagina di riepilogo di tutto quello che il ripetitore fa e di come si collega. I
 - **Due T3 V1.6.1 normali, già cablate come stazioni** (microfono, altoparlante, pulsanti restano come sono). Due T-Beam sarebbero uno spreco: il ripetitore è solo T3 e il firmware rifiuta il ruolo sulla T-Beam.
 - **Scheda RX:** ascolta la frequenza di **ingresso** (quella del profilo), decide cosa ripetere e lo manda alla TX. Non trasmette mai.
 - **Scheda TX:** ritrasmette sulla frequenza di **uscita** (`FREQOUT`), ascolta i messaggi quando è libera, manda identificativo, annunci e risposte del sysop.
-- **Un solo profilo ripetuto** per ripetitore (di base Standard, SF8/250 kHz), più il Messaggio sulla frequenza di uscita per i messaggi.
+- **Un solo profilo ripetuto** per ripetitore (di base Standard, Codec2 3200, SF7/250 kHz), più il Messaggio sulla frequenza di uscita per i messaggi.
 
 ## Collegamento: quattro fili
 5V, GND e la seriale incrociata (115200 baud, 3,3 V): **RX.IO2 → TX.S_VP (IO36)** e **TX.IO2 → RX.S_VP**. Sono pin che il cablaggio normale non usa, quindi l'altoparlante di monitor e il pulsante del volume si collegano alla RX come su una scheda normale. microSD sempre tolta. Alimentazione e pin sono **da verificare sul banco**. Schema: ![Collegamenti del ripetitore](images/collegamenti-ripetitore.png) ([firmware.md](firmware.md), [pinout.md](pinout.md)).

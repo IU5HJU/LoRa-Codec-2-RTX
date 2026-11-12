@@ -1,7 +1,8 @@
 // Profili di trasmissione: parametri radio e comportamento di una modalita'.
 //
-//   Standard   voce in tempo reale, SF8/BW250, Codec2 1200 (la modalita' di sempre)
-//   Qualita'   voce in tempo reale a Codec2 3200, SF7/BW250: piu' fedele, meno portata.
+//   Standard   voce in tempo reale a Codec2 3200, SF7/BW250: piu' fedele, il modo di base (via ripetitore o nodo). Dal 12/11/2026;
+//              fino ad allora si chiamava "Qualita'" e "Standard" era il Codec2 1200.
+//   Range      voce in tempo reale a Codec2 1200, SF8/BW250 (il vecchio "Standard"): un po' piu' di portata, meno fedelta'.
 //   Messaggio  lungo raggio: SF12/BW125. Si registra un messaggio, lo si trasmette piu' lentamente del parlato e chi
 //              riceve lo memorizza e lo riproduce a ricezione conclusa.
 //
@@ -16,11 +17,11 @@
 
 namespace lcr {
 
-enum ProfileId : uint8_t { kProfileStandard = 0, kProfileMessage = 1, kProfileQuality = 2, kProfileCount = 3 };
+enum ProfileId : uint8_t { kProfileRange = 0, kProfileMessage = 1, kProfileStandard = 2, kProfileCount = 3 };
 
 struct Profile {
   uint8_t id;
-  const char* code;  // nome usato da CFG: "std", "msg", "qua"
+  const char* code;  // nome usato da CFG: "std", "rng", "msg" ("qua" vale ancora, come "std")
   const char* name;  // nome per esteso
   // Radio
   uint8_t sf;
@@ -47,7 +48,7 @@ const Profile& meshcomProfile();
 
 // id sconosciuto: profilo Standard.
 const Profile& profileFor(uint8_t id);
-// "std" / "msg" / "qua" (maiuscole o minuscole). false se il nome non esiste.
+// "std" / "rng" / "msg" (maiuscole o minuscole; "qua", il vecchio nome del Codec2 3200, vale "std"). false se il nome non esiste.
 bool profileFromCode(const char* code, uint8_t& id);
 
 // Durata in aria di un pacchetto di 'bytes' byte (formula di Semtech per SX127x: intestazione LoRa esplicita, CRC attivo,

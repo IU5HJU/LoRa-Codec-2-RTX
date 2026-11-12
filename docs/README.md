@@ -4,7 +4,7 @@
 |---|---|
 | [guida-rapida.md](guida-rapida.md) | **Da dove iniziare**: dalla scheda alla prima prova, in sei passi |
 | [firmware.md](firmware.md) | Installazione (Linux, Windows, pagina web), comandi `CFG` sulla seriale, licenze, primo avvio |
-| [protocollo.md](protocollo.md) | Pacchetti, parità XOR, pausa tra i pacchetti, modo 4 (Codec2 3200, Qualità), modi 2 e 3 (prova di collegamento) |
+| [protocollo.md](protocollo.md) | Pacchetti, parità XOR, pausa tra i pacchetti, modo 4 (Codec2 3200, Standard), modi 2 e 3 (prova di collegamento) |
 | [prova-collegamento.md](prova-collegamento.md) | Prova radio con frame noti, tre clic sul PTT, risposta automatica |
 | [formato-pacchetto.pdf](formato-pacchetto.pdf) | Formato del pacchetto radio in 3 pagine, da girare a chi lo chiede (sintesi di [protocollo.md](protocollo.md)) |
 | [note-rilascio/](note-rilascio/v0.1.0-beta.2.md) | Note di rilascio di ogni versione ([beta.1](note-rilascio/v0.1.0-beta.1.md), [beta.2](note-rilascio/v0.1.0-beta.2.md)), da incollare nella release su GitHub |

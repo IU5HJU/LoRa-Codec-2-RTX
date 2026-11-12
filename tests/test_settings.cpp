@@ -397,7 +397,7 @@ void testGpsSetting() {
 void testGet() {
   Fixture f;
   CHECK(f.run("CFG GET") == ConsoleResult::Ok);
-  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 freqqual=433.900 power=10 volume=5 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off role=off freqout=433.900") == 0);
+  CHECK(strcmp(f.reply, "CFG callsign=N0CALL freq=433.900 freqmsg=433.900 freqrange=433.900 power=10 volume=5 micfloor=-60 profile=std board=T3 reboot=0 test=0 pos=off qth=none gps=off role=off freqout=433.900") == 0);
   CHECK(f.run("  cfg   get \r\n") == ConsoleResult::Ok);  // maiuscole, spazi e fine riga indifferenti
   CHECK(strncmp(f.reply, "CFG callsign=N0CALL", 19) == 0);
   CHECK(f.run("CFG GET extra") == ConsoleResult::Error);
@@ -521,7 +521,7 @@ void testFreqMsg() {
   m.freqMsgKhz = 434200;
   m.profile = kProfileMessage;
   CHECK(m.profileFreqKhz() == 434200 && m.freqMhz() > 434.19f && m.freqMhz() < 434.21f);
-  m.profile = kProfileStandard;
+  m.profile = kProfileRange;
   CHECK(m.profileFreqKhz() == 433900);
 }
 
@@ -531,14 +531,16 @@ void testProfile() {
   CHECK(f.run("CFG SET PROFILE MSG") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK profile=msg") == 0);
   CHECK(f.st.data.profile == kProfileMessage);
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "profile=msg") && strstr(f.reply, "reboot=1"));  // vale dal riavvio
-  CHECK(f.run("cfg set profile std") == ConsoleResult::Ok && f.st.data.profile == kProfileStandard);
-  CHECK(f.run("CFG SET PROFILE QUA") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK profile=qua") == 0);
-  CHECK(f.st.data.profile == kProfileQuality);
-  CHECK(f.run("CFG SET FREQQUAL 434.250") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK freqqual=434.250") == 0);
-  CHECK(f.st.data.profileFreqKhz() == 434250 && f.st.data.freqKhz == 433900);
-  CHECK(f.run("CFG SET FREQQUAL 500.000") == ConsoleResult::Error);
-  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "freqqual=434.250"));
-  f.run("CFG SET FREQQUAL 433.900");
+  CHECK(f.run("cfg set profile std") == ConsoleResult::Ok && f.st.data.profile == kProfileStandard && strcmp(f.reply, "CFG OK profile=std") == 0);
+  CHECK(f.run("CFG SET PROFILE RNG") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK profile=rng") == 0 && f.st.data.profile == kProfileRange);
+  CHECK(f.run("CFG SET PROFILE QUA") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK profile=std") == 0 && f.st.data.profile == kProfileStandard);  // vecchio nome del 3200
+  f.run("CFG SET PROFILE RNG");
+  CHECK(f.run("CFG SET FREQRANGE 434.250") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK freqrange=434.250") == 0);
+  CHECK(f.st.data.profileFreqKhz() == 434250 && f.st.data.freqKhz == 433900);  // il Range ha la sua frequenza, lo Standard resta
+  CHECK(f.run("CFG SET FREQRANGE 500.000") == ConsoleResult::Error);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "freqrange=434.250"));
+  CHECK(f.run("CFG SET FREQQUAL 434.250") == ConsoleResult::Error);  // non esiste piu': il Codec2 3200 si imposta con FREQ
+  f.run("CFG SET FREQRANGE 433.900");
   f.run("CFG SET PROFILE STD");
   CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "reboot=0"));
   const char* bad[] = {"CFG SET PROFILE", "CFG SET PROFILE XYZ", "CFG SET PROFILE MESSAGGIO", "CFG SET PROFILE 1"};

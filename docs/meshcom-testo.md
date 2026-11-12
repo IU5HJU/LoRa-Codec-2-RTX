@@ -60,7 +60,7 @@ Sono i cinque testi predefiniti (gli stessi di "Invia testo": [firmware.md](firm
 | Segnaposto | Diventa |
 |---|---|
 | `%C` | il tuo nominativo (`IU5HJU`) |
-| `%M` | la lettera del modo del profilo voce in uso: `S` Standard, `M` Messaggio, `Q` Qualità |
+| `%M` | la lettera del modo del profilo voce in uso: `S` Range, `R` Range, `M` Messaggio |
 | `%F` | la frequenza del profilo voce, in MHz (`433.900`) |
 | `%%` | il segno `%` |
 

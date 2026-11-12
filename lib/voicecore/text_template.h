@@ -1,6 +1,6 @@
 // Segnaposti nei testi da inviare, sostituiti al momento dell'invio:
 //   %C   il tuo nominativo (IU5HJU)
-//   %M   la lettera del modo del profilo voce in uso: S Standard, M Messaggio, Q Qualita'
+//   %M   la lettera del modo del profilo voce in uso: S Standard (Codec2 3200), R Range (Codec2 1200), M Messaggio
 //   %F   la frequenza del profilo voce in MHz (433.900)
 //   %%   il segno %
 // Per esempio "%C QRV su VoLora modo %M %F" diventa "IU5HJU QRV su VoLora modo Q 433.900". Un altro carattere dopo % resta com'e'.

@@ -22,10 +22,10 @@ button.sec{background:#e5e7eb;color:#14181f}
 <form id="f" autocomplete="off">
 <label for="callsign">Nominativo</label><input id="callsign" maxlength="8" required>
 <label for="profile">Profilo</label>
-<select id="profile"><option value="std">Standard</option><option value="msg">Messaggio</option><option value="qua">Qualità</option></select>
+<select id="profile"><option value="std">Standard (Codec2 3200)</option><option value="rng">Range (Codec2 1200)</option><option value="msg">Messaggio</option></select>
 <label for="freq">Frequenza Standard (MHz)</label><input id="freq" inputmode="decimal" required>
 <label for="freqmsg">Frequenza Messaggio (MHz)</label><input id="freqmsg" inputmode="decimal" required>
-<label for="freqqual">Frequenza Qualità (MHz)</label><input id="freqqual" inputmode="decimal" required>
+<label for="freqrange">Frequenza Range (MHz)</label><input id="freqrange" inputmode="decimal" required>
 <p class="hint">Da 430.000 a 440.000. Le frequenze possono essere uguali.</p>
 <label for="power">Potenza (dBm)</label><input id="power" type="number" min="2" max="17" required>
 <label for="volume">Volume (0-10)</label><input id="volume" type="number" min="0" max="10" required>
@@ -73,7 +73,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <div id="sysopbox" hidden><h2>Comandi Sysop</h2><p class="hint">L'elenco che compare sulla scheda al posto dei testi predefiniti.</p><ol id="sysoplist"><li>STATO</li><li>SPEGNI</li><li>SPEGNI 15 MIN</li><li>SPEGNI 60 MIN</li><li>RIACCENDI</li><li>RIAVVIA</li><li>IDENTIFICA</li><li>POTENZA 17 dBm</li><li>POTENZA 14 dBm</li><li>POTENZA 10 dBm</li></ol></div>
 <div id="textsbox">
 <h2>Testi predefiniti (SMS)</h2>
-<p class="hint">Segnaposti: %C il tuo nominativo, %M il modo del profilo voce (S, M, Q), %F la sua frequenza. Fino a 5 testi da 150 caratteri al massimo (solo ASCII, senza accenti e senza le parentesi graffe), da inviare dal menu della scheda: <strong>Invia testo</strong>. Lascia vuoto un posto per non usarlo. Valgono subito.</p>
+<p class="hint">Segnaposti: %C il tuo nominativo, %M il modo del profilo voce (S Standard, R Range, M Messaggio), %F la sua frequenza. Fino a 5 testi da 150 caratteri al massimo (solo ASCII, senza accenti e senza le parentesi graffe), da inviare dal menu della scheda: <strong>Invia testo</strong>. Lascia vuoto un posto per non usarlo. Valgono subito.</p>
 <label for="text1">Testo 1</label><input id="text1" maxlength="150">
 <label for="text2">Testo 2</label><input id="text2" maxlength="150">
 <label for="text3">Testo 3</label><input id="text3" maxlength="150">
@@ -90,7 +90,7 @@ function st(t,c){const e=$('st');e.textContent=t;e.className=c||'';}
 async function cmd(l){const r=await fetch('/cfg?c='+encodeURIComponent(l));return (await r.text()).trim();}
 function parse(t){const m={};for(const kv of t.replace(/^CFG /,'').split(' ')){const i=kv.indexOf('=');if(i>0)m[kv.slice(0,i)]=kv.slice(i+1);}return m;}
 let board='';
-function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';for(const o of $('role').options)if(o.value==='rptrx'||o.value==='rpttx')o.disabled=board==='tbeam';$('rolenote').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqqual','power','volume','micfloor','pos','qth','gps','role','freqout'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
+function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';for(const o of $('role').options)if(o.value==='rptrx'||o.value==='rpttx')o.disabled=board==='tbeam';$('rolenote').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqrange','power','volume','micfloor','pos','qth','gps','role','freqout'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
 function roleShow(){const r=$('role').value;$('rxbox').hidden=r!=='rptrx';$('txbox').hidden=r!=='rpttx';$('nodebox').hidden=r!=='node';}
 $('role').addEventListener('change',roleShow);
 async function loadRole(){try{const r=await cmd('CFG GET MONITOR');if(r.startsWith('CFG MONITOR='))$('monitor').value=r.slice(12)==='on'?'on':'off';}catch(e){}roleShow();}
@@ -102,10 +102,10 @@ async function loadSysop(){try{const r=await cmd('CFG GET SYSOP');if(r.startsWit
 async function load(){try{const t=await cmd('CFG GET');if(!t.startsWith('CFG '))throw new Error(t);fill(parse(t));await loadSysop();await loadIdint();await loadRole();for(let i=1;i<=5;i++){const r=await cmd('CFG GET TEXT'+i);$('text'+i).value=r.startsWith('CFG TEXT'+i+'=')?r.slice(('CFG TEXT'+i+'=').length):'';}try{const r=await cmd('CFG GET MC');if(r.startsWith('CFG MC ')){const m=parse(r.slice(7));$('mcfreq').value=m.freqmc||'';$('mcssid').value=m.ssid||'';$('mcwindow').value=m.window||'';for(let i=1;i<=5;i++){const d=await cmd('CFG GET MCDEST'+i);$('mcdest'+i).value=d.startsWith('CFG MCDEST'+i+'=')?d.slice(('CFG MCDEST'+i+'=').length):'';}}}catch(e){}st('Valori letti dalla scheda.','ok');}catch(e){st('Lettura non riuscita: '+e.message,'err');}}
 $('f').addEventListener('submit',async ev=>{
   ev.preventDefault();st('Salvataggio…','');
-  const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqqual:$('freqqual').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none',role:$('role').value};
+  const want={callsign:$('callsign').value.trim().toUpperCase(),profile:$('profile').value,freq:$('freq').value.trim(),freqmsg:$('freqmsg').value.trim(),freqrange:$('freqrange').value.trim(),power:$('power').value,volume:$('volume').value,micfloor:$('micfloor').value,pos:$('pos').value,qth:$('qth').value.trim()||'none',role:$('role').value};
   if(board==='tbeam')want.gps=$('gps').value;
   if(want.role==='rpttx'){const fo=$('freqout').value.trim();const k=Math.round(parseFloat(fo)*1000);if(!/^\d{3}(\.\d{1,3})?$/.test(fo)||!(k>=430000&&k<=440000)){st('La frequenza di uscita deve essere tra 430.000 e 440.000 MHz.','err');return;}want.freqout=fo;}   // la T3 non ha il GPS: il comando non si manda
-  const keys={callsign:'CALLSIGN',freq:'FREQ',freqmsg:'FREQMSG',freqqual:'FREQQUAL',power:'POWER',volume:'VOLUME',micfloor:'MICFLOOR',profile:'PROFILE',pos:'POS',qth:'QTH',gps:'GPS',role:'ROLE',freqout:'FREQOUT'};  // il GPS e' in want solo sulla T-Beam
+  const keys={callsign:'CALLSIGN',freq:'FREQ',freqmsg:'FREQMSG',freqrange:'FREQRANGE',power:'POWER',volume:'VOLUME',micfloor:'MICFLOOR',profile:'PROFILE',pos:'POS',qth:'QTH',gps:'GPS',role:'ROLE',freqout:'FREQOUT'};  // il GPS e' in want solo sulla T-Beam
   const texts=[];for(let i=1;i<=5;i++){const v=$('text'+i).value.trim();if(v!==''&&!/^[\x20-\x7A\x7C\x7E]+$/.test(v)){st('Il testo '+i+' ha caratteri non ammessi: solo ASCII, senza accenti.','err');return;}texts.push(v);}
   try{
     for(const k of Object.keys(keys)){if(want[k]===undefined)continue;const r=await cmd('CFG SET '+keys[k]+' '+want[k]);if(!r.startsWith('CFG OK')){st('Rifiutato ('+keys[k]+'): '+r,'err');return;}}
