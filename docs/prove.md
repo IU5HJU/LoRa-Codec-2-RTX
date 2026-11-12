@@ -306,3 +306,8 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Router riacceso:** entrambi i nodi tornano da soli a `Nodo ... ok`, con gli stessi contatori (nessun pacchetto perso). L'operatore riferisce che entro **30 secondi al massimo** tutto è tornato a posto.
 - Nelle fotografie scattate subito dopo il ritorno la riga Wi-Fi dice ancora `connessione...` pur con il collegamento `ok`; secondo l'operatore, entro 30 secondi tutto è a posto. Non sono state registrate le righe della seriale.
 - Esito: **superata** (la prova "router spento per un minuto" della tabella di [banco-nodo.md](banco-nodo.md)).
+
+### 12/11/2026, casa, IU5HJU (nodo Internet: riavvio di un nodo)
+
+- Riavviato il nodo T-Beam (tasto RST) lasciando acceso il nodo T3, firmware `808bc07`.
+- Esito: il collegamento torna `ok` da solo, senza interventi sull'altro nodo, in circa **10 secondi** (tempo riferito dall'operatore). Prova "riavvia un nodo" della tabella di [banco-nodo.md](banco-nodo.md): **superata**. Contatori non annotati.

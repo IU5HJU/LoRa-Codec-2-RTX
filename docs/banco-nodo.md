@@ -52,7 +52,7 @@ e la T3 (con `NODEID 1`, `PEERID 2`, `PEER <IP del PC>:5400`) deve **trasmettere
 ## Esito della prova del 12/11/2026
 Dettagli in [prove.md](prove.md). In sintesi: con un `PEER` sbagliato il collegamento non sale; con la chiave diversa non sale e `firma errata` cresce di circa 15 ogni 30 secondi; con le impostazioni giuste compare `collegamento con l'altro nodo attivo`. Memoria libera all'avvio circa 146 KB, heap stabile intorno a 140,7 KB con il collegamento attivo.
 
-Il 12/11/2026 sono poi riusciti, con due stazioni, il **testo nei due sensi** (con "via RPT" sulla stazione ricevente) e la **voce intelligibile con `persi 0`**, con un ritardo misurato a mano di **1,4 s** da una stazione all'altra. Anche la prova del router spento è superata (ripartenza da sola entro 30 secondi). Restano il riavvio di un nodo, la conversazione lunga e la trasmissione di una stazione mentre il nodo trasmette.
+Il 12/11/2026 sono poi riusciti, con due stazioni, il **testo nei due sensi** (con "via RPT" sulla stazione ricevente) e la **voce intelligibile con `persi 0`**, con un ritardo misurato a mano di **1,4 s** da una stazione all'altra. Anche la prova del router spento è superata (ripartenza da sola entro 30 secondi). Anche il riavvio di un nodo è superato (collegamento di nuovo `ok` in circa 10 secondi). Restano la conversazione lunga e la trasmissione di una stazione mentre il nodo trasmette.
 
 ## Cosa mandarmi
 Le righe `[nodo]` dell'avvio (con la memoria libera), le righe ogni 30 s dopo una prova con traffico, l'esito di ogni prova della tabella e, se qualcosa non va, il display e **dove** (rete, radio, firma).
