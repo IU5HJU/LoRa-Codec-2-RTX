@@ -33,7 +33,7 @@
 //   CFG SET SYSOP IU5HJU         -> CFG OK sysop=IU5HJU        (nominativo del sysop: il solo che puo' comandare il ripetitore; NONE lo toglie; vale dal riavvio)
 //   CFG SET SYSOPKEY <32 cifre esadecimali> -> CFG OK sysopkey=set  (chiave condivisa di 16 byte per firmare i comandi; NONE la toglie; mai mostrata)
 //   CFG SET SYSOPMODE ON         -> CFG OK sysopmode=on        (modo Sysop: nel menu "Comandi Sysop" al posto di "Invia testo"; OFF lo spegne; vale dal riavvio)
-//   CFG SET SHIFT 0|+10000|-10000 -> CFG OK shift=+10000   (stazione: si ascolta su FREQ e si trasmette su FREQ + shift, per operare via ripetitore; 0 = simplex;
+//   CFG SET SHIFT -10000..+10000 -> CFG OK shift=+7600       (stazione: si ascolta su FREQ e si trasmette su FREQ + shift, per operare via ripetitore; 0 = simplex;
 //                                                          la frequenza spostata deve restare in 430-440 MHz; CFG GET SHIFT; vale dal riavvio)
 //   CFG SET IDINT 10             -> CFG OK idint=10            (ripetitore e nodo: ogni quanti minuti, da 1 a 10, la scheda TX manda l'identificativo; di base 10; vale dal riavvio)
 //   CFG SET IDMORSE ON           -> CFG OK idmorse=on          (ripetitore e nodo: dopo l'identificativo in testo anche il Morse in FM, per chi non ha le schede LoRa; di base ON; vale dal riavvio)
@@ -75,7 +75,7 @@ constexpr uint32_t kMinFreqKhz = 430000;  // banda dei 70 cm, IARU Regione 1: 43
 constexpr uint32_t kMaxFreqKhz = 440000;
 // Shift per operare via ripetitore (solo stazione normale): la stazione ascolta su FREQ (l'uscita del ripetitore) e trasmette su FREQ + shift
 // (l'ingresso). Valori ammessi: 0 (di base: simplex), +10000 e -10000 kHz (+-10 MHz). La frequenza spostata deve restare in 430-440 MHz.
-constexpr int32_t kShiftKhz = 10000;
+constexpr int32_t kMaxShiftKhz = 10000;  // lo shift e' libero da -10000 a +10000 kHz (da 0 a 10 MHz, in avanti o indietro), a passi di 1 kHz
 constexpr size_t kMaxPeerHost = 63;  // lunghezza massima del nome o indirizzo dell'altro nodo / del reflector
 constexpr int kMinIdIntervalMin = 1;
 constexpr int kMaxIdIntervalMin = 10;
@@ -134,7 +134,7 @@ struct Settings {
   uint8_t mcSsid = 99;          // SSID del nominativo in rete (0 = nessuno), per esempio IU5HJU-99
   uint16_t mcWindowS = 300;     // secondi di ascolto dopo l'invio (e prima di tornare al profilo voce)
   char mcDests[kMcDestSlots][16];
-  int32_t shiftKhz = 0;       // shift in trasmissione, in kHz: 0, +10000 o -10000 (vale dal riavvio; ignorato dai ruoli ripetitore e nodo)
+  int32_t shiftKhz = 0;       // shift in trasmissione, in kHz, da -10000 a +10000 (vale dal riavvio; ignorato dai ruoli ripetitore e nodo)
   uint32_t freqRangeKhz = 0;  // frequenza del profilo Range (Codec2 1200; 0 = come lo Standard)
   uint8_t role = kRoleNormal;  // ruolo: normale o scheda RX/TX del ripetitore (vale dal riavvio)
   // Comandi del sysop al ripetitore (sysop.h): nominativo del sysop e chiave condivisa di 16 byte (mai mostrata da CFG GET); vale dal riavvio.

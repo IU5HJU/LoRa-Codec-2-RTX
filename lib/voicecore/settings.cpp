@@ -110,10 +110,10 @@ static bool validMcDests(const Settings& s) {
   return true;
 }
 
-// Lo shift e' 0, +10000 o -10000 kHz e, se c'e', porta in banda (430-440 MHz) tutte le frequenze dei profili.
+// Lo shift e' libero da -10000 a +10000 kHz (da 0 a 10 MHz, in positivo o negativo, come l'offset di un ripetitore sulle radio) e, se c'e', porta in banda (430-440 MHz) tutte le frequenze dei profili.
 static bool validShift(const Settings& s) {
   if (s.shiftKhz == 0) return true;
-  if (s.shiftKhz != kShiftKhz && s.shiftKhz != -kShiftKhz) return false;
+  if (s.shiftKhz > kMaxShiftKhz || s.shiftKhz < -kMaxShiftKhz) return false;
   const int64_t f[3] = {s.freqKhz, s.freqMsgKhz, s.rangeFreqKhz()};
   for (int64_t v : f) {
     const int64_t t = v + s.shiftKhz;
@@ -648,7 +648,7 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     }
     snprintf(shown, sizeof(shown), "idmorse=%s", next.idMorse ? "on" : "off");
   } else if (equalsIgnoreCase(key, "SHIFT")) {
-    // "0", "+10000", "-10000" (anche "10000"): parseInt() si ferma a 4 cifre e non vuole il segno +
+    // un numero di kHz con o senza segno, da -10000 a +10000 ("0", "+7600", "-5000", anche "10000"): parseInt() si ferma a 4 cifre e non vuole il segno +
     int v = 0;
     const char* d = value;
     const bool neg = *d == '-';
@@ -658,8 +658,8 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
     for (; isdigit(static_cast<unsigned char>(d[nd])) && nd < 6; nd++) acc = acc * 10 + (d[nd] - '0');
     const bool okNum = nd > 0 && d[nd] == 0;
     v = neg ? -acc : acc;
-    if (!okNum || (v != 0 && v != kShiftKhz && v != -kShiftKhz)) {
-      say(reply, cap, "CFG ERR shift %s", "in kHz: 0, +10000 oppure -10000");
+    if (!okNum || v > kMaxShiftKhz || v < -kMaxShiftKhz) {
+      say(reply, cap, "CFG ERR shift %s", "in kHz, da -10000 a +10000 (0 = nessuno)");
       return ConsoleResult::Error;
     }
     next.shiftKhz = v;

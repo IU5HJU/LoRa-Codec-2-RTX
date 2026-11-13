@@ -19,7 +19,7 @@
     noNode: false,        // firmware senza impostazioni di rete (piu' vecchio): CFG GET NODE sconosciuto
     node: { ssid: 'none', pass: 'none', ip: 'none', port: 5400, listen: 5400, id: 0, peerid: 0, key: 'none', keyHex: '' },
     noShift: false,       // firmware senza shift (piu' vecchio): CFG GET SHIFT e CFG SET SHIFT sconosciuti
-    shift: 0,             // shift in trasmissione, kHz: 0, +10000 o -10000
+    shift: 0,             // shift in trasmissione, kHz, da -10000 a +10000
     noIdint: false,       // firmware senza identificativo periodico (piu' vecchio)
     idint: '10',
     noSysop: false,       // firmware senza modo Sysop (piu' vecchio): CFG GET SYSOP e CFG SET SYSOP* sconosciuti
@@ -91,7 +91,7 @@
       const sm = /^CFG\s+SET\s+SHIFT\s+([+-]?\d+)$/i.exec(line.trim());
       if (sm) {
         const v = parseInt(sm[1], 10);
-        if (v !== 0 && v !== 10000 && v !== -10000) return out('CFG ERR shift in kHz: 0, +10000 oppure -10000');
+        if (Math.abs(v) > 10000) return out('CFG ERR shift in kHz, da -10000 a +10000 (0 = nessuno)');
         const f = Math.round(parseFloat(st.cfg.freq) * 1000);
         if (v !== 0 && (f + v < 430000 || f + v > 440000)) return out('CFG ERR shift la frequenza di trasmissione uscirebbe da 430-440 MHz');
         st.shift = v; return out('CFG OK shift=' + (v > 0 ? '+' : '') + v);

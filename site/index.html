@@ -202,9 +202,11 @@
       <p class="hint">Da 430.000 a 440.000. Il valore predefinito è un segnaposto: scegli il canale con il band plan IARU Regione 1 / ARI. Le stazioni che si ascoltano devono usare la stessa frequenza.</p>
 
       <div id="shiftbox" data-modes="off">
-        <label for="shift">Shift per operare via ripetitore</label>
-        <select id="shift" disabled><option value="0">Nessuno (simplex, di base)</option><option value="10000">+10 MHz: trasmetto sulla frequenza + 10 MHz</option><option value="-10000">&minus;10 MHz: trasmetto sulla frequenza &minus; 10 MHz</option></select>
-        <p class="hint" id="shifthint">Per usare un ripetitore la scheda <strong>ascolta</strong> sulla frequenza qui sopra (l'uscita del ripetitore) e <strong>trasmette</strong> sulla frequenza + lo shift (l'ingresso). Di base 0: tutto come prima, ascolto e trasmissione sulla stessa frequenza. La frequenza di trasmissione deve restare tra 430.000 e 440.000 MHz (anche per le frequenze degli altri profili): altrimenti la scheda rifiuta lo shift. Vale dal riavvio; sul display e in seriale (<code>Via ripetitore: ...</code>) si vede la frequenza di trasmissione. Non vale per i ruoli ripetitore e nodo n&eacute; durante l'escursione MeshCom.</p>
+        <label for="shiftdir">Shift per operare via ripetitore: direzione</label>
+        <select id="shiftdir" disabled><option value="0">Nessuno (simplex, di base)</option><option value="+">+ (trasmetto sopra la frequenza di ascolto)</option><option value="-">&minus; (trasmetto sotto la frequenza di ascolto)</option></select>
+        <label for="shiftmhz">Shift: scostamento (MHz, da 0 a 10)</label>
+        <input id="shiftmhz" inputmode="decimal" autocomplete="off" placeholder="per esempio 7.600" disabled>
+        <p class="hint" id="shifthint">Come l'offset di un ripetitore su una radio: una <strong>direzione</strong> (+ o &minus;) e uno <strong>scostamento libero da 0 a 10 MHz</strong>, a passi di 1 kHz (per esempio 7.600). La scheda <strong>ascolta</strong> sulla frequenza qui sopra (l'uscita del ripetitore) e <strong>trasmette</strong> sulla frequenza + o &minus; lo scostamento (l'ingresso). Con &laquo;Nessuno&raquo; tutto come prima, ascolto e trasmissione sulla stessa frequenza. La frequenza di trasmissione deve restare tra 430.000 e 440.000 MHz (anche per le frequenze degli altri profili): altrimenti la scheda rifiuta lo shift. Vale dal riavvio; sul display e in seriale (<code>Via ripetitore: ...</code>) si vede la frequenza di trasmissione. Non vale per i ruoli ripetitore e nodo n&eacute; durante l'escursione MeshCom.</p>
       </div>
       <details class="falsi" id="otherfreq" data-modes="off rptrx rpttx">
       <summary>Frequenze degli altri profili (Range e Messaggio)</summary>
@@ -537,10 +539,25 @@
     try {
       const r = await send('CFG GET SHIFT', /^CFG SHIFT=/, 2500);
       const v = parseInt(r.slice(10), 10);
-      $('shift').value = v > 0 ? '10000' : (v < 0 ? '-10000' : '0');
+      setShiftFields(v);
       shiftSeen = true;
     } catch (e) { shiftSeen = false; }
-    $('shift').disabled = !port || !shiftSeen;
+    $('shiftdir').disabled = $('shiftmhz').disabled = !port || !shiftSeen;
+  }
+  // Lo shift sulla scheda e' un numero di kHz con segno (da -10000 a +10000); nella pagina sono una direzione e uno scostamento in MHz.
+  function setShiftFields(khz) {
+    if (!khz) { $('shiftdir').value = '0'; $('shiftmhz').value = ''; return; }
+    $('shiftdir').value = khz > 0 ? '+' : '-';
+    $('shiftmhz').value = (Math.abs(khz) / 1000).toFixed(3);
+  }
+  // kHz con segno come testo ("0", "+7600", "-5000"), oppure { err } se lo scostamento non va bene.
+  function shiftFromFields() {
+    const dir = $('shiftdir').value;
+    if (dir === '0') return { khz: '0' };
+    const t = $('shiftmhz').value.trim().replace(',', '.');
+    if (!/^\d{1,2}(\.\d{1,3})?$/.test(t) || +t > 10) return { err: 'Lo scostamento dello shift deve essere un numero da 0 a 10 MHz (al massimo tre decimali, per esempio 7.600).' };
+    const k = Math.round(+t * 1000);
+    return { khz: k === 0 ? '0' : (dir === '-' ? '-' : '+') + k };
   }
   let nodeSeen = false;      // la scheda risponde a CFG GET NODE (rete: firmware piu' vecchi, no)
   let nodeKeyIsSet = false, wifiPassIsSet = false;
@@ -623,7 +640,7 @@
     if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; shiftSeen = false; nodeSeen = false; roleSeen = false; roleShow(); }
     $('idint').disabled = !on || !idintSeen;
     for (const id of NET_IDS) $(id).disabled = !on || !nodeSeen;
-    $('shift').disabled = !on || !shiftSeen;
+    $('shiftdir').disabled = $('shiftmhz').disabled = !on || !shiftSeen;
     $('idmorse').disabled = !on || !idmorseSeen;
     updateRoleControls(on);
     updatePosControls(on);
@@ -866,7 +883,12 @@
       if (sk !== '' && !/^[0-9a-fA-F]{32}$/.test(sk)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
       sysop = { call: sy, mode: $('sysopmode').value, key: sk };
     }
-    const shift = $('shift').disabled ? null : $('shift').value;
+    let shift = null;
+    if (!$('shiftdir').disabled) {
+      const sf = shiftFromFields();
+      if (sf.err) return { err: sf.err };
+      shift = sf.khz;
+    }
     // Rete (solo nodo e RX del ripetitore): senza nodo/RX non si tocca niente
     let net = null;
     if (!$('wifissid').disabled && (role === 'node' || role === 'rptrx')) {
