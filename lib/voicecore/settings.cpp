@@ -52,6 +52,29 @@ static bool printableAscii(const char* t, size_t maxLen) {
 }
 
 // "a.b.c.d" con quattro numeri da 0 a 255
+bool isValidHostName(const char* s) {
+  if (!s) return false;
+  const size_t n = strnlen(s, kMaxPeerHost + 2);
+  if (n == 0 || n > kMaxPeerHost) return false;
+  bool letter = false;
+  size_t label = 0;
+  for (size_t i = 0; i < n; i++) {
+    const char c = s[i];
+    if (c == '.') {
+      if (label == 0 || s[i - 1] == '-') return false;
+      label = 0;
+      continue;
+    }
+    if (isalpha(static_cast<unsigned char>(c))) letter = true;
+    else if (!isdigit(static_cast<unsigned char>(c)) && c != '-') return false;
+    if (c == '-' && label == 0) return false;
+    if (++label > 63) return false;
+  }
+  return label > 0 && s[n - 1] != '-' && letter;
+}
+
+bool isValidPeerHost(const char* s) { return isValidIpv4(s) || isValidHostName(s); }
+
 bool isValidIpv4(const char* s) {
   if (!s || !s[0]) return false;
   int parts = 0;
@@ -76,8 +99,8 @@ bool isValidIpv4(const char* s) {
 }
 
 static bool validNode(const Settings& s) {
-  return printableAscii(s.wifiSsid, 32) && printableAscii(s.wifiPass, 64) && (s.peerIp[0] == 0 || isValidIpv4(s.peerIp)) &&
-         strnlen(s.peerIp, 16) < 16 && s.peerPort >= 1 && s.nodePort >= 1;
+  return printableAscii(s.wifiSsid, 32) && printableAscii(s.wifiPass, 64) && (s.peerIp[0] == 0 || isValidPeerHost(s.peerIp)) &&
+         strnlen(s.peerIp, kMaxPeerHost + 1) <= kMaxPeerHost && s.peerPort >= 1 && s.nodePort >= 1;
 }
 
 static bool validMcDests(const Settings& s) {
@@ -406,7 +429,7 @@ ConsoleResult SettingsConsole::versionInfo(char* reply, size_t cap) {
 
 ConsoleResult SettingsConsole::set(const char* key, const char* value, char* reply, size_t cap) {
   Settings next = stored_;
-  char shown[40];
+  char shown[kMaxPeerHost + 24];  // la riga "peer=nome:porta" e la piu' lunga
 
   if (equalsIgnoreCase(key, "CALLSIGN")) {
     char up[kMaxCallsign + 2];
@@ -542,14 +565,14 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       next.peerPort = 5400;
       snprintf(shown, sizeof(shown), "peer=none");
     } else {
-      char ip[16] = {0};
-      const char* colon = strchr(value, ':');
+      char ip[kMaxPeerHost + 1] = {0};
+      const char* colon = strrchr(value, ':');
       const size_t il = colon ? static_cast<size_t>(colon - value) : strlen(value);
       int port = 5400;
       bool ok = il > 0 && il < sizeof(ip);
       if (ok) {
         memcpy(ip, value, il);
-        ok = isValidIpv4(ip);
+        ok = isValidPeerHost(ip);
       }
       if (ok && colon) {
         const char* q = colon + 1;
@@ -562,7 +585,7 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
         ok = ok && port >= 1 && port <= 65535;
       }
       if (!ok) {
-        say(reply, cap, "CFG ERR peer %s", "usa indirizzo:porta, per esempio 192.168.1.51:5400 (oppure NONE)");
+        say(reply, cap, "CFG ERR peer %s", "usa indirizzo o nome e porta, per esempio 192.168.1.51:5400 o reflector.example.org:5400 (oppure NONE)");
         return ConsoleResult::Error;
       }
       strncpy(next.peerIp, ip, sizeof(next.peerIp) - 1);

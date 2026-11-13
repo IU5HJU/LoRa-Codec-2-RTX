@@ -14,8 +14,10 @@
 #include "radio_lora.h"
 #include "repeater.h"
 #include "repeater_link.h"
+#include "repeater_uplink.h"
 #include "rx_monitor.h"
 #include "message_store.h"
+#include "net_udp.h"
 #include "node_core.h"
 #include "settings_nvs.h"
 #include "sysop.h"
@@ -116,6 +118,27 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
   Serial.printf("[ripetitore] RX: ingresso %.3f MHz, profilo %s, modo ripetuto %u e testo%s\n", static_cast<double>(settings.freqMhz()), prof.name,
                 static_cast<unsigned>(prof.codecMode), monitor ? ", monitor audio acceso" : "");
 
+  // Collegamento in rete (reflector, docs/studio-reflector.md): solo se ci sono rete Wi-Fi, reflector, id e chiave; altrimenti il ripetitore e' solo in radio.
+  // Si collega lui al reflector (nessuna porta aperta sul router): un solo socket per ricevere e spedire, il nome del reflector si risolve da solo.
+  const bool netOn = settings.wifiSsid[0] && settings.peerIp[0] && settings.nodeId != 0 && settings.nodeKeySet;
+  static NetUdp net;
+  lcr::RepeaterUplink* uplink = nullptr;
+  uint32_t lastNetLogMs = 0;
+  if (netOn) {
+    WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(settings.wifiSsid, settings.wifiPass[0] ? settings.wifiPass : nullptr);
+    net.begin(settings.nodePort, settings.peerIp, settings.peerPort);
+    lcr::NodeLink::Config lc;
+    lc.nodeId = settings.nodeId;
+    lc.peerId = settings.peerId;
+    memcpy(lc.key, settings.nodeKey, sizeof(lc.key));
+    uplink = new lcr::RepeaterUplink(net, lc, esp_random(), []() -> uint32_t { return esp_random(); }, prof.codecMode);
+    Serial.printf("[ripetitore] RX: in rete con \"%s\", reflector %s:%u (id %lu), il mio id %lu\n", settings.wifiSsid, settings.peerIp, static_cast<unsigned>(settings.peerPort),
+                  static_cast<unsigned long>(settings.peerId), static_cast<unsigned long>(settings.nodeId));
+  }
+
   for (;;) {
     const uint32_t now = millis();
 
@@ -154,15 +177,41 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
         lcr::Packet out;
         const lcr::Repeater::Verdict v = rep.onPacket(p, now, out);
         if (v == lcr::Repeater::Verdict::Forward) {
+          // con la rete: la voce locale passa solo se non sta parlando il reflector, e va anche al reflector
+          const bool toTx = uplink ? uplink->fromRadio(out, now) : true;
           uint8_t wire[lcr::kMaxWireBytes];
-          const size_t m = lcr::encodePacket(out, wire, sizeof(wire));
+          const size_t m = toTx ? lcr::encodePacket(out, wire, sizeof(wire)) : 0;
           if (m > 0) {
             sendFrame(lcr::kLinkPacket, wire, m);
             sent++;
+          } else {
+            discarded++;
           }
         } else {
           discarded++;
         }
+      }
+    }
+
+    // 1a. rete: i pacchetti del reflector vanno alla TX per essere trasmessi sull'uscita
+    if (uplink) {
+      uplink->tick(now);
+      const bool netUp = uplink->linkUp(now);
+      net.setLinkUp(netUp);
+      uint8_t dg[lcr::kNodeMaxDatagram];
+      size_t dgLen = 0;
+      for (int guard = 0; guard < 8 && net.receive(dg, sizeof(dg), dgLen); guard++) {
+        uint8_t wire[lcr::kMaxWireBytes];
+        size_t wl = 0;
+        if (uplink->onDatagram(dg, dgLen, now, wire, sizeof(wire), wl)) sendFrame(lcr::kLinkPacket, wire, wl);
+      }
+      if (now - lastNetLogMs >= 30000) {  // una riga ogni 30 s per le prove
+        lastNetLogMs = now;
+        const lcr::RepeaterUplink::Stats& us = uplink->stats();
+        Serial.printf("[ripetitore] rete %s: radio->rete %lu, rete->TX %lu, voce locale bloccata %lu, voce di rete bloccata %lu, persi (collegamento giu') %lu, non validi %lu, heap %u\n",
+                      netUp ? "ok" : "NON COLLEGATA", static_cast<unsigned long>(us.toNet), static_cast<unsigned long>(us.fromNet), static_cast<unsigned long>(us.localBlocked),
+                      static_cast<unsigned long>(us.netBlocked), static_cast<unsigned long>(us.droppedLinkDown), static_cast<unsigned long>(us.netBad),
+                      static_cast<unsigned>(ESP.getFreeHeap()));
       }
     }
 
@@ -204,7 +253,9 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       else snprintf(l1, sizeof(l1), "RIPETITORE  RX");
       snprintf(l2, sizeof(l2), "In %.3f MHz %s", static_cast<double>(settings.freqMhz()), prof.code);
       snprintf(l3, sizeof(l3), "Ric %lu  Rip %lu", static_cast<unsigned long>(received), static_cast<unsigned long>(sent));
-      if (mon) snprintf(l4, sizeof(l4), "Scarti %lu  Vol %d/10", static_cast<unsigned long>(discarded), audio->volumeStep());
+      if (uplink) snprintf(l4, sizeof(l4), "Rete %s %lu/%lu", uplink->linkUp(now) ? "ok" : "NO", static_cast<unsigned long>(uplink->stats().toNet),
+                           static_cast<unsigned long>(uplink->stats().fromNet));
+      else if (mon) snprintf(l4, sizeof(l4), "Scarti %lu  Vol %d/10", static_cast<unsigned long>(discarded), audio->volumeStep());
       else snprintf(l4, sizeof(l4), "Scarti %lu  Altri %lu", static_cast<unsigned long>(discarded), static_cast<unsigned long>(badPackets));
       const bool linkOk = lastStatusMs != 0 && now - lastStatusMs < kLinkDeadMs;
       snprintf(l5, sizeof(l5), "TX %s coda %u", linkOk ? "ok" : "NON RISPONDE", static_cast<unsigned>(txQueue));
@@ -323,61 +374,6 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
 
 // ---- Nodo su Wi-Fi (ruolo NODE, docs/studio-nodo-internet.md): una T3 con la radio e un collegamento UDP firmato con un altro nodo ----
 
-struct Dgram {
-  uint16_t len;
-  uint8_t data[lcr::kNodeMaxDatagram];
-};
-
-QueueHandle_t gNetRx = nullptr;  // datagrammi dalla rete, letti dal task e consumati dal ciclo principale
-
-// Il task legge il socket di continuo (il ciclo principale puo' restare bloccato per la durata di un pacchetto in radio) e mette i
-// datagrammi in una coda; e' il solo a toccare il socket di ricezione, che apre e richiude da solo al ritorno e alla perdita del Wi-Fi.
-void netRxTask(void* arg) {
-  const uint16_t port = static_cast<uint16_t>(reinterpret_cast<uintptr_t>(arg));
-  WiFiUDP udp;
-  bool open = false;
-  for (;;) {
-    const bool up = WiFi.status() == WL_CONNECTED;
-    if (up && !open) open = udp.begin(port) != 0;
-    if (!up && open) {
-      udp.stop();
-      open = false;
-    }
-    int n = open ? udp.parsePacket() : 0;
-    if (n > 0) {
-      Dgram d;
-      if (static_cast<size_t>(n) <= sizeof(d.data)) {
-        d.len = static_cast<uint16_t>(udp.read(d.data, sizeof(d.data)));
-        if (d.len > 0) xQueueSend(gNetRx, &d, 0);  // coda piena: il datagramma si perde (UDP)
-      } else {
-        udp.flush();
-      }
-    } else {
-      vTaskDelay(pdMS_TO_TICKS(2));
-    }
-  }
-}
-
-class UdpNet : public lcr::INodeNet {
- public:
-  void setPeer(const IPAddress& ip, uint16_t port) {
-    ip_ = ip;
-    port_ = port;
-  }
-  void sendDatagram(const uint8_t* data, size_t len) override {
-    if (WiFi.status() != WL_CONNECTED) return;
-    if (udp_.beginPacket(ip_, port_)) {
-      udp_.write(data, len);
-      udp_.endPacket();
-    }
-  }
-
- private:
-  WiFiUDP udp_;  // solo per spedire (il socket di ricezione e' quello del task)
-  IPAddress ip_;
-  uint16_t port_ = 0;
-};
-
 // Finche' mancano dei parametri il nodo non parte: mostra cosa manca e lascia la console USB per impostarli.
 [[noreturn]] void nodeNotReady(UiNotifier& ui, CfgHandler handler, const char* what) {
   UsbConsole usb(handler);
@@ -399,19 +395,14 @@ class UdpNet : public lcr::INodeNet {
   RadioLora radio;
   if (!radio.begin(settings)) stopWithError(ui, "radio", radio.lastError());
   const bool mayTransmit = !lcr::isPlaceholderCallsign(settings.callsign);
-  IPAddress peerIp;
-  peerIp.fromString(settings.peerIp);
 
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);  // niente risparmio energetico: aggiungerebbe ritardo
   WiFi.setAutoReconnect(true);
   WiFi.begin(settings.wifiSsid, settings.wifiPass[0] ? settings.wifiPass : nullptr);
 
-  gNetRx = xQueueCreate(16, sizeof(Dgram));
-  xTaskCreatePinnedToCore(netRxTask, "netrx", 4096, reinterpret_cast<void*>(static_cast<uintptr_t>(settings.nodePort)), 2, nullptr, 0);
-
-  static UdpNet net;
-  net.setPeer(peerIp, settings.peerPort);
+  static NetUdp net;
+  net.begin(settings.nodePort, settings.peerIp, settings.peerPort);  // peerIp: indirizzo o nome (il reflector); un solo socket per ricevere e spedire
   lcr::NodeLink::Config lc;
   lc.nodeId = settings.nodeId;
   lc.peerId = settings.peerId;
@@ -430,15 +421,17 @@ class UdpNet : public lcr::INodeNet {
 
   uint32_t lastDispMs = 0, lastLogMs = 0;
   bool wasUp = false, wasWifi = false;
-  Dgram d;
+  uint8_t dgram[lcr::kNodeMaxDatagram];
+  size_t dgramLen = 0;
   for (;;) {
     const uint32_t now = millis();
     int guard = 8;
-    while (guard-- > 0 && xQueueReceive(gNetRx, &d, 0) == pdTRUE) core.onDatagram(d.data, d.len, now);
+    while (guard-- > 0 && net.receive(dgram, sizeof(dgram), dgramLen)) core.onDatagram(dgram, dgramLen, now);
     core.tick(now, mayTransmit);
 
     const bool wifi = WiFi.status() == WL_CONNECTED;
     const bool up = core.linkUp(now);
+    net.setLinkUp(up);
     if (wifi != wasWifi) Serial.printf("[nodo] Wi-Fi %s\n", wifi ? WiFi.localIP().toString().c_str() : "perso");
     if (up != wasUp) Serial.printf("[nodo] collegamento con l'altro nodo %s\n", up ? "attivo" : "giu'");
     wasWifi = wifi;

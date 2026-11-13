@@ -150,8 +150,28 @@ static void testNodeSettings() {
   CHECK(f.run("CFG SET PEER 192.168.1.51:5401") == ConsoleResult::Ok && strcmp(f.st.data.peerIp, "192.168.1.51") == 0 && f.st.data.peerPort == 5401 && strcmp(f.reply, "CFG OK peer=192.168.1.51:5401") == 0);
   CHECK(f.run("CFG SET PEER 10.0.0.2") == ConsoleResult::Ok && f.st.data.peerPort == 5400);
   CHECK(f.run("CFG SET PEER 300.1.1.1") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3.4:0") == ConsoleResult::Error);
-  CHECK(f.run("CFG SET PEER 1.2.3.4:70000") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3.4:") == ConsoleResult::Error && f.run("CFG SET PEER ciao") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET PEER 1.2.3.4:70000") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3.4:") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3.4.5") == ConsoleResult::Error);
   CHECK(strcmp(f.st.data.peerIp, "10.0.0.2") == 0);
+  // un nome al posto dell'indirizzo (il reflector): lettere, cifre, "-" e ".", con o senza porta
+  CHECK(f.run("CFG SET PEER reflector.example.org:5401") == ConsoleResult::Ok && strcmp(f.st.data.peerIp, "reflector.example.org") == 0 && f.st.data.peerPort == 5401);
+  CHECK(strcmp(f.reply, "CFG OK peer=reflector.example.org:5401") == 0);
+  CHECK(f.run("CFG SET PEER Mio-Reflector.it") == ConsoleResult::Ok && f.st.data.peerPort == 5400 && strcmp(f.st.data.peerIp, "Mio-Reflector.it") == 0);
+  CHECK(f.run("CFG SET PEER ciao") == ConsoleResult::Ok);  // un nome senza punti (della rete di casa)
+  CHECK(f.run("CFG SET PEER -x.org") == ConsoleResult::Error && f.run("CFG SET PEER x-.org") == ConsoleResult::Error && f.run("CFG SET PEER a..org") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET PEER a_b.org") == ConsoleResult::Error && f.run("CFG SET PEER .org") == ConsoleResult::Error && f.run("CFG SET PEER org.") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET PEER a b.org") == ConsoleResult::Error && f.run("CFG SET PEER 300.300.300.300") == ConsoleResult::Error && f.run("CFG SET PEER 1.2.3.4.5") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET PEER a.org:abc") == ConsoleResult::Error && f.run("CFG SET PEER a.org:70000") == ConsoleResult::Error);
+  {
+    std::string longName(kMaxPeerHost - 1, 'a');  // 63 caratteri con il punto: ammesso; con un carattere in piu': no
+    longName.insert(32, ".");
+    CHECK(f.run(("CFG SET PEER " + longName).c_str()) == ConsoleResult::Ok && strcmp(f.st.data.peerIp, longName.c_str()) == 0);
+    CHECK(f.run(("CFG SET PEER " + longName + "b").c_str()) == ConsoleResult::Error);
+    CHECK(strstr(f.reply, "CFG ERR") == f.reply);
+    CHECK(f.run(("CFG SET PEER " + longName + ":5400").c_str()) == ConsoleResult::Ok && strstr(f.reply, ("peer=" + longName + ":5400").c_str()) != nullptr);
+  }
+  CHECK(isValidHostName("reflector.example.org") && isValidHostName("a") && isValidHostName("a-b.c") && !isValidHostName("") && !isValidHostName("123.456") &&
+        !isValidHostName("1.2.3.4") && !isValidHostName(nullptr) && isValidPeerHost("1.2.3.4") && isValidPeerHost("x.it") && !isValidPeerHost("1.2.3"));
+  CHECK(f.run("CFG SET PEER 10.0.0.2") == ConsoleResult::Ok && strcmp(f.st.data.peerIp, "10.0.0.2") == 0);
   CHECK(f.run("CFG SET NODEPORT 5555") == ConsoleResult::Ok && f.st.data.nodePort == 5555 && f.run("CFG SET NODEPORT 0") == ConsoleResult::Error);
   CHECK(f.run("CFG SET NODEID 1") == ConsoleResult::Ok && f.st.data.nodeId == 1 && f.run("CFG SET NODEID 0") == ConsoleResult::Error && f.run("CFG SET NODEID x") == ConsoleResult::Error);
   CHECK(f.run("CFG SET PEERID 2") == ConsoleResult::Ok && f.st.data.peerId == 2 && f.run("CFG SET PEERID 0") == ConsoleResult::Ok && f.st.data.peerId == 0);

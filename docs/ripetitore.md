@@ -42,6 +42,9 @@ Dalla **pagina di configurazione** (quella interna della scheda o il sito con il
 | **Sicurezza** | una trasmissione continua oltre 60 s di voce (180 s di messaggio) spegne la TX per 5 minuti | [studio-ripetitore.md](studio-ripetitore.md) |
 | **Monitor audio** | la RX fa ascoltare la voce che riceve all'altoparlante (per il sysop in postazione); i display di RX e TX mostrano lo stato del collegamento e i contatori | [firmware.md](firmware.md) |
 
+## In rete, con il reflector (13/11/2026, provato sul PC)
+La scheda **RX** si può collegare a un reflector ([reflector.md](reflector.md)) con le stesse impostazioni del nodo (`WIFISSID`, `WIFIPASS`, `PEER` anche come nome, `PEERID`, `NODEID`, `NODEKEY`): quello che la RX ripete va anche al reflector e i pacchetti del reflector passano per la seriale alla TX, che li trasmette sull'uscita. **Nessuna porta aperta sul router.** Chi parla per primo (radio o rete) tiene l'uscita; il testo passa sempre. Senza queste impostazioni il ripetitore resta solo in radio.
+
 ## Cosa non è provato, cosa manca
 - **Tutto è provato solo sul PC** (suite di test, pagine web) e compilato dalla CI. Mai in aria, mai su due schede collegate.
 - **Da verificare sul banco:** i pin della seriale (IO2 e S_VP/IO36) e l'alimentazione a quattro fili; il cambio dei parametri radio fra voce e messaggi; il passaggio LoRa → FSK → LoRa del Morse; i valori del Morse (tono, deviazione, velocità, salita) con il firmware di prova `CFG RADIOTEST`.

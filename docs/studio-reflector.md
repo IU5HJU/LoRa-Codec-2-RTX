@@ -1,6 +1,6 @@
 # Studio: il reflector VoLoRa (preso da quello YSF)
 
-13/11/2026. Scopo: un **reflector** a cui si collegano **nodi e ripetitori** VoLoRa e che porta i pacchetti radio da uno a tutti gli altri, **senza aprire porte sul router** di chi si collega. Parte dall'esame del reflector YSF (System Fusion) di G4KLX. Stato: **studio e progetto**; il codice del reflector (`lib/voicecore/reflector_core.*`, `tools/vlreflector.cpp`) è descritto sotto.
+13/11/2026. Scopo: un **reflector** a cui si collegano **nodi e ripetitori** VoLoRa e che porta i pacchetti radio da uno a tutti gli altri, **senza aprire porte sul router** di chi si collega. Parte dall'esame del reflector YSF (System Fusion) di G4KLX. Stato: **fatto sul PC** (passi 1-4 sotto); come si usa è in [reflector.md](reflector.md).
 
 ## Come funziona il reflector YSF (letto dal sorgente)
 
@@ -40,7 +40,7 @@ Le impostazioni sono quelle del nodo: `WIFISSID`, `WIFIPASS`, `PEER`, `PEERID`, 
 ## Passi
 
 1. Questo studio.
-2. **Il reflector** (`lib/voicecore/reflector_core.*`, provato sul PC con client finti) e il programma per il server `tools/vlreflector.cpp` (`make vlreflector`), con una prova con veri socket UDP dove i client non hanno nessuna porta nota.
-3. Il **nome del reflector al posto dell'indirizzo** nelle impostazioni (`PEER`) e nel nodo.
-4. Il **ripetitore in rete** (scheda RX).
+2. **Fatto:** il reflector (`lib/voicecore/reflector_core.*`, provato sul PC con client finti) e il programma per il server `tools/vlreflector.cpp` (`make vlreflector`), con una prova con veri socket UDP dove i client non hanno nessuna porta nota.
+3. **Fatto:** il **nome del reflector al posto dell'indirizzo** nelle impostazioni (`PEER`) e nel nodo.
+4. **Fatto:** il **ripetitore in rete** (scheda RX, `lib/voicecore/repeater_uplink.*`, `src/net_udp.*`). Per il nodo e per il ripetitore un solo socket serve a ricevere e a spedire: con il reflector la risposta torna all'indirizzo e alla porta messi dal NAT, e un socket di spedizione diverso da quello di ricezione non la riceverebbe mai.
 5. Più avanti: canali (saloni), identificativo del reflector, ponti verso SvxLink e YSF ([studio-collegamento-internet.md](studio-collegamento-internet.md)).

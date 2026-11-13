@@ -76,6 +76,7 @@ constexpr uint32_t kMaxFreqKhz = 440000;
 // Shift per operare via ripetitore (solo stazione normale): la stazione ascolta su FREQ (l'uscita del ripetitore) e trasmette su FREQ + shift
 // (l'ingresso). Valori ammessi: 0 (di base: simplex), +10000 e -10000 kHz (+-10 MHz). La frequenza spostata deve restare in 430-440 MHz.
 constexpr int32_t kShiftKhz = 10000;
+constexpr size_t kMaxPeerHost = 63;  // lunghezza massima del nome o indirizzo dell'altro nodo / del reflector
 constexpr int kMinIdIntervalMin = 1;
 constexpr int kMaxIdIntervalMin = 10;
 constexpr int kMinPowerDbm = 2;   // limiti dell'SX1278 senza PA_BOOST
@@ -148,7 +149,7 @@ struct Settings {
   // Nodo su Wi-Fi (ruolo NODE, docs/studio-nodo-internet.md): rete, indirizzo dell'altro nodo, id e chiave condivisa; valgono dal riavvio.
   char wifiSsid[33] = {0};
   char wifiPass[65] = {0};
-  char peerIp[16] = {0};       // indirizzo IPv4 dell'altro nodo, "" = non impostato
+  char peerIp[kMaxPeerHost + 1] = {0};  // l'altro nodo o il reflector: indirizzo IPv4 oppure nome (reflector.example.org), "" = non impostato
   uint16_t peerPort = 5400;
   uint16_t nodePort = 5400;    // porta UDP su cui si ascolta
   uint32_t nodeId = 0;         // 0 = non impostato
@@ -211,6 +212,10 @@ inline bool operator!=(const Settings& a, const Settings& b) { return !(a == b);
 bool isValidMcDest(const char* d);
 // "a.b.c.d" con quattro numeri da 0 a 255 (indirizzo dell'altro nodo).
 bool isValidIpv4(const char* s);
+// Nome di un computer in rete: lettere, cifre, "-" e "." (etichette non vuote, che non iniziano ne' finiscono con "-"), da 1 a kMaxPeerHost caratteri,
+// con almeno una lettera (cosi' "300.1.1.1" non passa per un nome). Un indirizzo IPv4 valido e' valido anche per isValidPeerHost.
+bool isValidHostName(const char* s);
+bool isValidPeerHost(const char* s);
 
 // true se nominativo, frequenza, potenza e volume sono nei limiti.
 bool isValidSettings(const Settings& s);
