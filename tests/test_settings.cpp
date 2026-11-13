@@ -707,6 +707,13 @@ void testVersion() {
   CHECK(f.run("CFG VERSION") == ConsoleResult::Ok && strcmp(f.reply, "CFG VERSION fw=v0.1.0-3-gabc1234 board=T3 proto=2") == 0);
   CHECK(f.run("cfg version") == ConsoleResult::Ok);
   CHECK(f.run("CFG VERSION x") == ConsoleResult::Error);
+  {  // T-Beam con il modulo SX1262: il chip compare in coda, la scheda resta "tbeam"
+    Settings a = kDefaults;
+    FakeStorage st2;
+    SettingsConsole c(a, kDefaults, st2, "tbeam", "v1", "SX1262");
+    char r[120];
+    CHECK(c.handleLine("CFG VERSION", r, sizeof(r)) == ConsoleResult::Ok && strcmp(r, "CFG VERSION fw=v1 board=tbeam proto=2 radio=SX1262") == 0);
+  }
   FakeStorage st2;
   Settings a = kDefaults;
   SettingsConsole d(a, kDefaults, st2, "tbeam");  // senza versione: "dev"

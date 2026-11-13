@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Assembla il sito statico (pagina di installazione e configurazione) in una cartella.
 #   tools/make_site.sh <cartella-artefatti> <cartella-uscita> <versione> <commit> [<cartella-release>]
-# <cartella-artefatti> contiene firmware-t3-v161/ e firmware-tbeam-v12/ (come li scarica actions/download-artifact),
+# <cartella-artefatti> contiene firmware-t3-v161/, firmware-tbeam-v12/ e firmware-tbeam-v12-sx1262/ (come li scarica actions/download-artifact),
 # ognuna con web_factory.bin e ota_update.bin: e' il build corrente.
 # <cartella-release> (facoltativa) contiene una sottocartella per ogni release gia' pubblicata (nome = tag, per esempio
 # v0.1.0-beta.1) con i suoi *-web_factory.bin, piu' index.json di `gh release list --json tagName,publishedAt`:
@@ -64,7 +64,7 @@ manifest() {
 EOF
 }
 
-for pair in "t3:firmware-t3-v161" "tbeam:firmware-tbeam-v12"; do
+for pair in "t3:firmware-t3-v161" "tbeam:firmware-tbeam-v12" "tbeam1262:firmware-tbeam-v12-sx1262"; do
   board=${pair%%:*}
   art=${pair#*:}
   test -f "$in/$art/web_factory.bin" || { echo "manca $in/$art/web_factory.bin" >&2; exit 1; }
@@ -95,6 +95,19 @@ done
 
 python3 "$here/tools/site_versions.py" --current-id "$cur_id" --current-version "$version" --current-commit "$commit" \
   ${releases:+--releases-dir "$releases"} ${releases:+--index "$releases/index.json"} --out "$out/versions.json"
+
+# Per ogni versione le schede che hanno davvero il firmware (le release uscite prima di una scheda nuova non lo hanno): la pagina non
+# propone la versione per una scheda che non c'e'
+python3 - "$out" <<'PY'
+import json, os, sys
+out = sys.argv[1]
+p = os.path.join(out, "versions.json")
+v = json.load(open(p))
+for e in v["versions"]:
+    d = os.path.join(out, "firmware", e["id"])
+    e["boards"] = sorted(b for b in os.listdir(d) if os.path.isfile(os.path.join(d, b, "manifest.json"))) if os.path.isdir(d) else []
+json.dump(v, open(p, "w"), indent=2, ensure_ascii=False)
+PY
 
 cat > "$out/version.json" <<EOF
 { "version": "$version", "commit": "$commit" }

@@ -40,7 +40,11 @@
 SET_LOOP_TASK_STACK_SIZE(32 * 1024);
 
 #if defined(BOARD_TBEAM_V12)
+#if defined(RADIO_SX1262)
+static const char* const kBoardName = "T-Beam V1.2 SX1262";  // stessa scheda col modulo LoRa SX1262: il nome breve resta "tbeam" (GPS, niente ripetitore)
+#else
 static const char* const kBoardName = "T-Beam V1.2";
+#endif
 static const char* const kBoardShort = "tbeam";
 #else
 static const char* const kBoardName = "LoRa32 T3 V1.6.1";
@@ -115,7 +119,7 @@ void setup() {
   // Impostazioni dell'operatore: salvate nella scheda, altrimenti quelle di user_config.h.
   const lcr::Settings defaults = compileTimeSettings();
   settings = lcr::loadSettings(settingsStorage, defaults);
-  console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort, LCR_VERSION);
+  console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort, LCR_VERSION, RadioLora::chipName());
   ui.setSettings(settings);
   ui.setProfile(lcr::profileFor(settings.profile));
   ui.setOwnPosition(settings.qth());
@@ -201,7 +205,7 @@ void setup() {
   Serial.printf("[avvio] audio ok, heap libero %u byte\n", static_cast<unsigned>(ESP.getFreeHeap()));
 
   ui.showMessage("RADIO");
-  Serial.println("[avvio] radio SX127x...");
+  Serial.printf("[avvio] radio %s...\n", RadioLora::chipName());
   if (!radio.begin(settings)) fatal("radio", radio.lastError());
   Serial.println("[avvio] radio ok");
 
@@ -212,7 +216,7 @@ void setup() {
   // Escursione MeshCom (solo testo): nominativo-SSID, identificatore hardware del frame (T-Beam con AXP2101 = 12,
   // LoRa32 T3 = 3: tabella delle schede della rete) e ID casuale a 32 bit per ogni testo
   settings.mcCallsign(cfg.mcCall, sizeof(cfg.mcCall));
-  cfg.mcHw = strcmp(kBoardShort, "tbeam") == 0 ? 12 : 3;
+  cfg.mcHw = strcmp(kBoardShort, "tbeam") == 0 ? 12 : 3;  // anche per la variante SX1262: stessa scheda (identificativo da verificare con la tabella della rete)
   cfg.newMsgId = newMsgId;
   cfg.meshLog = meshLog;
   if (settings.sysopKeySet) cfg.sysopKey = settings.sysopKey;  // stazione del sysop: verifica le risposte dei ripetitori

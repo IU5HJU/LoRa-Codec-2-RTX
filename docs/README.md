@@ -4,6 +4,7 @@
 |---|---|
 | [guida-rapida.md](guida-rapida.md) | **Da dove iniziare**: dalla scheda alla prima prova, in sei passi |
 | [firmware.md](firmware.md) | Installazione (Linux, Windows, pagina web), comandi `CFG` sulla seriale, licenze, primo avvio |
+| [tbeam-sx1262.md](tbeam-sx1262.md) | La T-Beam V1.2 con radio **SX1262** (non SX1278): differenze, cosa è cambiato nel firmware, cosa provare |
 | [protocollo.md](protocollo.md) | Pacchetti, parità XOR, pausa tra i pacchetti, modo 4 (Codec2 3200, Standard), modi 2 e 3 (prova di collegamento) |
 | [prova-collegamento.md](prova-collegamento.md) | Prova radio con frame noti, tre clic sul PTT, risposta automatica |
 | [formato-pacchetto.pdf](formato-pacchetto.pdf) | Formato del pacchetto radio in 3 pagine, da girare a chi lo chiede (sintesi di [protocollo.md](protocollo.md)) |

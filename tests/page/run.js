@@ -221,6 +221,29 @@ async function scenario(name, fn, opts = {}) {
     check('la stabile e\' descritta come tale', labels.find((l) => l.includes('v1.0.0')).includes('stabile'));
     check('spiegazione della stabile', (await p.textContent('#fwverhint')).includes('consigliata'));
   });
+  // T-Beam con SX1262: il firmware c'e' solo nello sviluppo (le release uscite prima non lo hanno): scegliendo quella scheda la pagina
+  // passa a una versione che esiste, e non propone l'installazione se non ce n'e' nessuna
+  const BETA_NB = Object.assign({}, BETA, { boards: ['t3', 'tbeam'] });
+  const DEV_NB = Object.assign({}, DEV, { boards: ['t3', 'tbeam', 'tbeam1262'] });
+  versionsData = { default: BETA.id, versions: [BETA_NB, DEV_NB] };
+  await scenario('menu delle versioni: scheda senza firmware nelle release vecchie', async (p) => {
+    await until(p, () => !document.getElementById('fwverbox').hidden);
+    check('proposta la beta per la T3', (await p.inputValue('#fwver')) === 'v0.1.0-beta.1');
+    await p.selectOption('#board', 'tbeam1262');
+    check('T-Beam SX1262: passa allo sviluppo, che ha il firmware', (await p.inputValue('#fwver')) === 'dev' && (await p.getAttribute('#installer', 'manifest')) === 'firmware/dev/tbeam1262/manifest.json' && await p.isVisible('#installer'));
+    await p.selectOption('#fwver', 'v0.1.0-beta.1');
+    check('scelta a mano una release senza quella scheda: si torna a una che c\'\u00e8', (await p.inputValue('#fwver')) === 'dev');
+    await p.selectOption('#board', 'tbeam');
+    check('con la T-Beam SX1278 la release c\'\u00e8', await p.isVisible('#installer'));
+  });
+  versionsData = { default: BETA.id, versions: [Object.assign({}, BETA, { boards: ['t3'] }), Object.assign({}, DEV, { boards: ['t3'] })] };
+  await scenario('menu delle versioni: nessuna versione per la scheda, niente pulsante', async (p) => {
+    await until(p, () => !document.getElementById('fwverbox').hidden);
+    await p.selectOption('#board', 'tbeam1262');
+    check('pulsante di installazione nascosto e spiegazione', await p.isHidden('#installer') && (await p.textContent('#fwverhint')).includes('nessuna versione'), await p.textContent('#fwverhint'));
+    await p.selectOption('#board', 't3');
+    check('tornando alla T3 il pulsante riappare', await p.isVisible('#installer'));
+  });
   versionsData = null;
   await scenario('menu delle versioni: senza versions.json resta il comportamento di prima', async (p) => {
     await sleep(300);

@@ -19,12 +19,27 @@ void IRAM_ATTR RadioLora::onPacketIsr() {
   }
 }
 
+// Cambio di frequenza dentro la banda 430-440 MHz. SX1262: senza ricalibrare l'immagine a ogni cambio (RadioLib lo farebbe per salti di piu'
+// di qualche MHz, cioe' a ogni trasmissione con lo shift di 10 MHz): la calibrazione fatta all'avvio vale per tutta la banda 430-440.
+int RadioLora::setFreq(float mhz) {
+#if defined(RADIO_SX1262)
+  return radio_->setFrequency(mhz, true);
+#else
+  return radio_->setFrequency(mhz);
+#endif
+}
+
 bool RadioLora::begin(const lcr::Settings& settings) {
   settings_ = settings;
   txShiftKhz_ = settings.role == lcr::kRoleNormal ? settings.shiftKhz : 0;  // lo shift vale solo per la stazione normale
   SPI.begin(pins::kRadioSclk, pins::kRadioMiso, pins::kRadioMosi, pins::kRadioCs);
+#if defined(RADIO_SX1262)
+  // SX1262: l'interrupt e' DIO1, e c'e' il pin BUSY (RadioLib lo aspetta tra un comando e l'altro)
+  module_ = new Module(pins::kRadioCs, pins::kRadioDio1, pins::kRadioRst, pins::kRadioBusy, SPI);
+#else
   module_ = new Module(pins::kRadioCs, pins::kRadioDio0, pins::kRadioRst, pins::kRadioDio1, SPI);
-  radio_ = new SX1278(module_);
+#endif
+  radio_ = new RadioChip(module_);
 
   return initLora();
 }
@@ -34,8 +49,13 @@ bool RadioLora::begin(const lcr::Settings& settings) {
 bool RadioLora::initLora() {
   const lcr::Profile& prof = lcr::profileFor(settings_.profile);
   // La sync word e' quella del profilo (0 = LCR_SYNC_WORD): l'escursione MeshCom usa quella della rete a pacchetto (0x2B)
+  // SX1262: stessa sync word logica (RadioLib 7.5.0 mappa 0x4C su 0x44C4, compatibile con l'SX1278) e TCXO sul DIO3
   int state = radio_->begin(settings_.freqMhz(), prof.bwKhz, prof.sf, prof.cr, prof.syncWord ? prof.syncWord : LCR_SYNC_WORD,
-                            static_cast<int8_t>(settings_.powerDbm), prof.preambleSymbols);
+                            static_cast<int8_t>(settings_.powerDbm), prof.preambleSymbols
+#if defined(RADIO_SX1262)
+                            , LCR_TCXO_VOLTAGE
+#endif
+  );
   if (state != RADIOLIB_ERR_NONE) {
     lastError_ = state;
     return false;
@@ -50,7 +70,13 @@ bool RadioLora::initLora() {
 
 bool RadioLora::fskBegin(float mhz, float kbps, float devKhz, int ramp, int shape) {
   // preambolo 0, nessuna parola di sincronismo, nessun CRC: il pacchetto e' solo il suo contenuto
+#if defined(RADIO_SX1262)
+  // SX1262: la banda di ricezione deve essere una di quelle ammesse (117,3 e' la piu' vicina ai 125 kHz dell'SX1278) e l'ultimo parametro
+  // e' la tensione del TCXO, non l'OOK come sull'SX1278
+  int state = radio_->beginFSK(mhz, kbps, devKhz, 117.3f, static_cast<int8_t>(settings_.powerDbm), 0, LCR_TCXO_VOLTAGE);
+#else
   int state = radio_->beginFSK(mhz, kbps, devKhz, 125.0f, static_cast<int8_t>(settings_.powerDbm), 0, false);
+#endif
   if (state == RADIOLIB_ERR_NONE) {
     uint8_t unused = 0;
     state = radio_->setSyncWord(&unused, 0);
@@ -59,9 +85,13 @@ bool RadioLora::fskBegin(float mhz, float kbps, float devKhz, int ramp, int shap
   if (state == RADIOLIB_ERR_NONE && shape != 0) {
     state = radio_->setDataShaping(shape == 3 ? RADIOLIB_SHAPING_0_3 : (shape == 5 ? RADIOLIB_SHAPING_0_5 : RADIOLIB_SHAPING_1_0));
   }
+#if !defined(RADIO_SX1262)
   if (state == RADIOLIB_ERR_NONE && ramp >= 0) {  // salita della potenza: 4 bit bassi di PaRamp (da verificare sul datasheet: 0 = la piu' lenta)
     state = module_->SPIsetRegValue(RADIOLIB_SX127X_REG_PA_RAMP, static_cast<uint8_t>(ramp), 3, 0);
   }
+#else
+  (void)ramp;  // l'SX1262 ha una salita fissa (200 us, RadioLib): il parametro non c'e'
+#endif
   if (state != RADIOLIB_ERR_NONE) lastError_ = state;
   return state == RADIOLIB_ERR_NONE;
 }
@@ -89,7 +119,7 @@ void RadioLora::fskEnd() {
 // soli l'ottimizzazione per le basse velocita'). Il CRC e l'intestazione esplicita restano come da begin().
 bool RadioLora::applyParams(const lcr::Profile& prof, float mhz) {
   radio_->standby();
-  int state = radio_->setFrequency(mhz);
+  int state = setFreq(mhz);
   if (state == RADIOLIB_ERR_NONE) rxMhz_ = mhz;
   if (state == RADIOLIB_ERR_NONE) state = radio_->setBandwidth(prof.bwKhz);
   if (state == RADIOLIB_ERR_NONE) state = radio_->setSpreadingFactor(prof.sf);
@@ -129,7 +159,8 @@ void RadioLora::startReceive() {
 bool RadioLora::channelBusy() {
   if (rxFlag_) return true;  // un pacchetto e' appena arrivato: non e' il momento di trasmettere
   const int r = radio_->scanChannel();  // CAD
-  const bool busy = (r == RADIOLIB_PREAMBLE_DETECTED);
+  // SX1278: RADIOLIB_PREAMBLE_DETECTED; SX1262: RADIOLIB_LORA_DETECTED (RadioLib 7.5.0, SX126x::getChannelScanResult)
+  const bool busy = (r == RADIOLIB_PREAMBLE_DETECTED) || (r == RADIOLIB_LORA_DETECTED);
   startReceive();  // il CAD lascia la radio in standby
   return busy;
 }
@@ -139,10 +170,10 @@ bool RadioLora::send(const uint8_t* data, size_t len) {
   const bool shifted = txShiftKhz_ != 0 && !meshcomOn_;
   if (shifted) {
     radio_->standby();
-    const int fs = radio_->setFrequency(rxMhz_ + static_cast<float>(txShiftKhz_) / 1000.0f);
+    const int fs = setFreq(rxMhz_ + static_cast<float>(txShiftKhz_) / 1000.0f);
     if (fs != RADIOLIB_ERR_NONE) {  // frequenza non accettata: non si trasmette sul canale sbagliato
       lastError_ = fs;
-      radio_->setFrequency(rxMhz_);
+      setFreq(rxMhz_);
       startReceive();
       return false;
     }
@@ -152,7 +183,7 @@ bool RadioLora::send(const uint8_t* data, size_t len) {
   txActive_ = false;
   if (state != RADIOLIB_ERR_NONE) lastError_ = state;
   if (shifted) {
-    const int fr = radio_->setFrequency(rxMhz_);
+    const int fr = setFreq(rxMhz_);
     if (fr != RADIOLIB_ERR_NONE) lastError_ = fr;
   }
   // Dopo la TX la radio e' in standby: si torna in ascolto.

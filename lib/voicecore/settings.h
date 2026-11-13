@@ -7,7 +7,7 @@
 // La console e' un protocollo a righe sulla seriale, pensato per la pagina web di
 // configurazione (Web Serial) ma usabile anche a mano:
 //
-//   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=2   (versione del firmware e del protocollo)
+//   CFG VERSION                  -> CFG VERSION fw=v0.1.0-beta.1 board=t3 proto=2   (versione del firmware e del protocollo; sulla T-Beam con SX1262 in coda radio=SX1262)
 //   CFG GET                      -> CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 freqrange=433.900 power=10 volume=5 micfloor=-60 profile=std board=t3 reboot=0 test=0 pos=off qth=none gps=off role=off freqout=433.900
 //   CFG SET CALLSIGN IU5HJU      -> CFG OK callsign=IU5HJU     (oppure CFG ERR callsign <motivo>)
 //   CFG SET FREQ 433.900         -> CFG OK freq=433.900        (MHz, 430.000-440.000; frequenza del profilo Standard, Codec2 3200; le frequenze di Range e Messaggio che erano uguali la seguono)
@@ -249,7 +249,7 @@ class SettingsConsole {
   // active: valori in uso (letti all'avvio). board: nome breve per CFG GET.
   // version: versione del firmware (git describe), mostrata da CFG VERSION.
   SettingsConsole(const Settings& active, const Settings& defaults, ISettingsStorage& storage, const char* board,
-                  const char* version = "dev");
+                  const char* version = "dev", const char* radio = "");
 
   // Elabora una riga (senza il fine riga). In reply scrive la risposta, senza fine riga.
   ConsoleResult handleLine(const char* line, char* reply, size_t cap);
@@ -286,6 +286,7 @@ class SettingsConsole {
   Settings stored_;
   ISettingsStorage& storage_;
   const char* board_;
+  const char* radio_;  // chip radio ("SX1278", "SX1262"), vuoto = non indicato
   const char* version_;
 };
 

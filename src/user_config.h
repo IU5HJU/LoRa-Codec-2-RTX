@@ -21,6 +21,13 @@
 // Parita' XOR (1 pacchetto ogni 4): consigliata.
 #define LCR_FEC 1
 
+// SX1262 (T-Beam con modulo LILYGO LoRa32 SX1262, -DRADIO_SX1262): tensione del TCXO pilotato dal pin DIO3 del chip, in volt (0 = nessun TCXO,
+// quarzo normale). 1,6 V e' il valore predefinito di RadioLib e quello dell'esempio ufficiale LILYGO per questa scheda: da verificare sulla
+// scheda vera (se la radio non parte con l'errore -706 o simile, provare 0). Si cambia con -DLCR_TCXO_VOLTAGE=...
+#ifndef LCR_TCXO_VOLTAGE
+#define LCR_TCXO_VOLTAGE 1.6f
+#endif
+
 // Parametri radio (SX1278, 433 MHz). SF, banda, coding rate e preambolo ora vengono dal PROFILO (lib/voicecore/profile.cpp);
 // qui restano la frequenza, la potenza e la sync word.
 // ATTENZIONE: la frequenza e' un SEGNAPOSTO, da scegliere con il band plan

@@ -254,8 +254,8 @@ void formatQth(char* out, size_t cap, int32_t latE7, int32_t lonE7) {
 }  // namespace
 
 SettingsConsole::SettingsConsole(const Settings& active, const Settings& defaults, ISettingsStorage& storage,
-                                 const char* board, const char* version)
-    : active_(active), defaults_(defaults), stored_(active), storage_(storage), board_(board ? board : ""), version_(version ? version : "") {}
+                                 const char* board, const char* version, const char* radio)
+    : active_(active), defaults_(defaults), stored_(active), storage_(storage), board_(board ? board : ""), radio_(radio ? radio : ""), version_(version ? version : "") {}
 
 ConsoleResult SettingsConsole::handleLine(const char* line, char* reply, size_t cap) {
   if (reply && cap > 0) reply[0] = 0;
@@ -423,7 +423,10 @@ ConsoleResult SettingsConsole::get(char* reply, size_t cap) {
 }
 
 ConsoleResult SettingsConsole::versionInfo(char* reply, size_t cap) {
-  if (reply && cap > 0) snprintf(reply, cap, "CFG VERSION fw=%s board=%s proto=%d", version_, board_, static_cast<int>(kProtocolVersion));
+  if (reply && cap > 0) {
+    if (radio_[0]) snprintf(reply, cap, "CFG VERSION fw=%s board=%s proto=%d radio=%s", version_, board_, static_cast<int>(kProtocolVersion), radio_);
+    else snprintf(reply, cap, "CFG VERSION fw=%s board=%s proto=%d", version_, board_, static_cast<int>(kProtocolVersion));
+  }
   return ConsoleResult::Ok;
 }
 

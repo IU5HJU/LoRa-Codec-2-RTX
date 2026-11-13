@@ -87,7 +87,8 @@
     <label for="board">Scheda</label>
     <select id="board">
       <option value="t3">LILYGO LoRa32 T3 V1.6.1</option>
-      <option value="tbeam">LILYGO T-Beam V1.2 (AXP2101)</option>
+      <option value="tbeam">LILYGO T-Beam V1.2 (AXP2101) con radio SX1278</option>
+      <option value="tbeam1262">LILYGO T-Beam V1.2 (AXP2101) con radio SX1262</option>
     </select>
     <div id="fwverbox" hidden>
       <label for="fwver">Versione del firmware</label>
@@ -391,13 +392,28 @@
     const id = versions && $('fwver').value ? $('fwver').value : null;
     return id ? 'firmware/' + id + '/' + $('board').value + '/manifest.json' : 'firmware/' + $('board').value + '/manifest.json';
   }
+  // Una scheda aggiunta dopo una release (per esempio la T-Beam con SX1262) non ha il firmware nelle versioni uscite prima: se la
+  // versione scelta non c'e' per questa scheda si passa alla prima che c'e' (la consigliata, altrimenti lo sviluppo).
+  function boardHasVersion(e, board) { return !Array.isArray(e.boards) || e.boards.includes(board); }
+  function ensureBoardVersion() {
+    if (!versions) return true;
+    const board = $('board').value;
+    const cur = versions.versions.find(x => x.id === $('fwver').value);
+    if (cur && boardHasVersion(cur, board)) return true;
+    const dflt = versions.versions.find(x => x.id === versions.default && boardHasVersion(x, board));
+    const any = dflt || versions.versions.find(x => boardHasVersion(x, board));
+    if (any) { $('fwver').value = any.id; return true; }
+    return false;
+  }
   function applyVersion() {
+    const have = ensureBoardVersion();
+    $('installer').hidden = !have;   // nessuna versione per questa scheda: niente pulsante di installazione
     $('installer').setAttribute('manifest', manifestPath());
     if (!versions) return;
     const e = versions.versions.find(x => x.id === $('fwver').value);
     if (!e) return;
     published = { version: e.version, commit: e.commit };
-    $('fwverhint').textContent = KIND_TEXT[e.kind] || '';
+    $('fwverhint').textContent = have ? (KIND_TEXT[e.kind] || '') : 'Per questa scheda non c\'è ancora nessuna versione pubblicata.';
     $('ver').textContent = 'Versione: ' + e.version + (e.commit ? ' (' + String(e.commit).slice(0, 7) + ')' : '') + (e.date ? ', pubblicata il ' + e.date.split('-').reverse().join('/') : '') + versionKind(e.version);
     const rel = e.kind !== 'dev';
     $('relnotes').hidden = !rel;
@@ -432,7 +448,7 @@
     applyVersion();
   }).catch(() => {});
 
-  $('board').addEventListener('change', () => { $('installer').setAttribute('manifest', manifestPath()); });
+  $('board').addEventListener('change', applyVersion);
   $('fwver').addEventListener('change', applyVersion);
 
   // ---- Configurazione via Web Serial (comandi CFG, vedi docs/firmware.md) ----

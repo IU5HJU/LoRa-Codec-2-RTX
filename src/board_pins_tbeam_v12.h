@@ -11,7 +11,9 @@
 
 namespace pins_tbeam_v12 {
 
-// --- Radio SX127x (stessi pin della T3) ---
+// --- Radio: SX127x (stessi pin della T3) oppure SX1262 (variante -DRADIO_SX1262, stessa scheda con un altro modulo LoRa) ---
+// Pin uguali nei due casi (documentazione ufficiale LILYGO, utilities.h / esempio TBeam_AXP2101/SX1262_PingPong): cambia il significato
+// di due: con l'SX1278 GPIO26 e' DIO0 (interrupt) e GPIO32 e' DIO2; con l'SX1262 l'interrupt e' DIO1 (GPIO33), GPIO32 e' BUSY e GPIO26 non si usa.
 constexpr int kRadioSclk = 5;
 constexpr int kRadioMiso = 19;
 constexpr int kRadioMosi = 27;
@@ -20,6 +22,7 @@ constexpr int kRadioDio0 = 26;
 constexpr int kRadioRst = 23;
 constexpr int kRadioDio1 = 33;
 constexpr int kRadioDio2 = 32;
+constexpr int kRadioBusy = kRadioDio2;  // SX1262: BUSY (stesso pin del DIO2 dell'SX1278)
 
 // --- Bus I2C condiviso: OLED opzionale (0x3C) e AXP2101 (0x34) ---
 constexpr int kOledSda = 21;

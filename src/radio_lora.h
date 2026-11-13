@@ -1,4 +1,4 @@
-// Adattatore radio: SX1278 (433 MHz) con RadioLib, implementa lcr::IRadio.
+// Adattatore radio: SX1278 (433 MHz) oppure, con -DRADIO_SX1262, SX1262 (T-Beam con quel modulo) con RadioLib; implementa lcr::IRadio.
 // Solo per ESP32 (Arduino): non e' compilato nei test sul PC.
 #pragma once
 
@@ -7,6 +7,12 @@
 
 #include "interfaces.h"
 #include "settings.h"
+
+#if defined(RADIO_SX1262)
+using RadioChip = SX1262;
+#else
+using RadioChip = SX1278;
+#endif
 
 class RadioLora : public lcr::IRadio {
  public:
@@ -33,6 +39,14 @@ class RadioLora : public lcr::IRadio {
   bool fskSend(uint8_t pattern, uint16_t bytes) override;
   void fskEnd() override;
 
+  // Nome del chip radio (per la riga di avvio e CFG VERSION).
+  static const char* chipName() {
+#if defined(RADIO_SX1262)
+    return "SX1262";
+#else
+    return "SX1278";
+#endif
+  }
   float lastRssi() const { return lastRssi_; }
   bool hasSnr() const override { return true; }
   float lastSnr() const override { return lastSnr_; }
@@ -57,9 +71,10 @@ class RadioLora : public lcr::IRadio {
   static volatile uint32_t rxIsrCount_;
 
   bool applyParams(const lcr::Profile& prof, float mhz);
+  int setFreq(float mhz);
   bool initLora();  // begin() LoRa con i parametri del profilo in uso + CRC, intestazione esplicita, interrupt e ascolto
-  SX1278* radio_ = nullptr;
-  Module* module_ = nullptr;  // lo stesso modulo di radio_ (getMod() e' protetto): serve per scrivere il registro PaRamp
+  RadioChip* radio_ = nullptr;
+  Module* module_ = nullptr;  // lo stesso modulo di radio_ (getMod() e' protetto): serve per scrivere il registro PaRamp (solo SX1278)
   float rxMhz_ = 0;         // frequenza di ascolto attuale (quella con cui lavora la radio, per tornarci dopo una trasmissione spostata)
   int32_t txShiftKhz_ = 0;  // shift in trasmissione (solo stazione normale e profilo voce: spento durante l'escursione MeshCom)
   bool meshcomOn_ = false;

@@ -6,6 +6,7 @@ Schede supportate (un ambiente PlatformIO e un artefatto di Actions ciascuna):
 |---|---|---|---|
 | LILYGO LoRa32 T3 V1.6.1 | `lora32` | `firmware-t3-v161` | **provata** (tre profili, menu, Wi-Fi di configurazione, volume; 10/11/2026) |
 | LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | `firmware-tbeam-v12` | **provata** (avvio anche a batteria, AXP2101, radio, tasto IO38 come PTT, batteria sull'OLED, GPS con fix, trasmissione tra T3 e T-Beam nei tre profili; 10/11/2026) |
+| LILYGO T-Beam V1.2 (AXP2101) con radio **SX1262** | `tbeam` (`pio run -e tbeam1262`) | `firmware-tbeam-v12-sx1262` | **scritta, non provata** (13/11/2026): è la stessa scheda col modulo LoRa SX1262; differenze e prove da fare in [tbeam-sx1262.md](tbeam-sx1262.md) |
 
 I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 

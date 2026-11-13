@@ -101,7 +101,7 @@ class Sito(unittest.TestCase):
 
     def run_site(self, version, with_releases=True):
         import subprocess
-        for art in ("firmware-t3-v161", "firmware-tbeam-v12"):
+        for art in ("firmware-t3-v161", "firmware-tbeam-v12", "firmware-tbeam-v12-sx1262"):
             self.put("art/%s/web_factory.bin" % art, self.image(b"corrente-" + art.encode()))
             self.put("art/%s/ota_update.bin" % art)
         args = [os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "make_site.sh"),
@@ -129,6 +129,12 @@ class Sito(unittest.TestCase):
         self.assertEqual(rb(os.path.join(out, "firmware/v0.1.0-beta.0/tbeam/web_factory.bin")), self.image(b"tb-v0.1.0-beta.0"))
         self.assertEqual(rb(os.path.join(out, "firmware/dev/t3/web_factory.bin")), self.image(b"corrente-firmware-t3-v161"))
         self.assertFalse(os.path.exists(os.path.join(out, "firmware/v0.0.9")))
+        # T-Beam con SX1262: c'e' solo nel build corrente; le release uscite prima non lo hanno e il menu lo sa (campo "boards")
+        self.assertEqual(rb(os.path.join(out, "firmware/dev/tbeam1262/web_factory.bin")), self.image(b"corrente-firmware-tbeam-v12-sx1262"))
+        self.assertFalse(os.path.exists(os.path.join(out, "firmware/v0.1.0-beta.1/tbeam1262")))
+        by_id = {e["id"]: e for e in v["versions"]}
+        self.assertEqual(by_id["dev"]["boards"], ["t3", "tbeam", "tbeam1262"])
+        self.assertEqual(by_id["v0.1.0-beta.1"]["boards"], ["t3", "tbeam"])
         m = load(os.path.join(out, "firmware/v0.1.0-beta.1/t3/manifest.json"))
         self.assertEqual(m["version"], "v0.1.0-beta.1")
         # Il flasher scrive quattro pezzi, non l'immagine intera: la partizione delle impostazioni (nvs, da 0x9000 a 0xDFFF) non si tocca
