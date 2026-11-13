@@ -117,19 +117,36 @@ void TxScheduler::startMorse(uint32_t nowMs) {
     return;
   }
   morseIdx_ = 0;
+  morseStage_ = 0;
   morseNextMs_ = nowMs;
   state_ = State::Morse;
 }
 
 void TxScheduler::morseStep(uint32_t nowMs) {
   if (static_cast<int32_t>(nowMs - morseNextMs_) < 0) return;
+  auto carrier = [&](uint32_t ms) {
+    return sendCarrierMs(radio_, ms, morseKbps_, [&](uint32_t air) { if (control_) control_->noteTx(nowMs, air, false); });
+  };
+  if (morseStage_ == 0) {  // portante pura prima del primo tono: apre lo squelch
+    morseStage_ = 1;
+    if (!carrier(kMorseLeadMs)) endMorse(true);
+    else morseNextMs_ = nowMs;
+    return;
+  }
   if (morseIdx_ >= morseN_) {
+    if (morseStage_ == 1) {  // coda di portante, poi si chiude
+      morseStage_ = 2;
+      if (!carrier(kMorseTailMs)) endMorse(true);
+      else morseNextMs_ = nowMs;
+      return;
+    }
     endMorse(false);
     return;
   }
   const MorseBurst& b = morseBursts_[morseIdx_++];
-  if (!b.tone) {
-    morseNextMs_ = nowMs + b.ms;
+  if (!b.tone) {  // pausa: la portante continua
+    if (!carrier(b.ms)) endMorse(true);
+    else morseNextMs_ = nowMs;
     return;
   }
   if (!radio_.fskSend(radioTestPattern(morseReq_), b.bytes)) {

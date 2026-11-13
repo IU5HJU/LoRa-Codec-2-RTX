@@ -565,12 +565,21 @@ static void testMorseId() {
   MorseBurst plan[160];
   size_t tones = 0;
   const size_t n = planMorseBursts(rq, plan, 160, nullptr);
+  // la portante non si spegne mai: prima del primo tono e nelle pause ci sono pacchetti 0xFF, i toni sono 0xAA nell'ordine del piano
+  std::vector<decltype(r.radio.fskBursts[0])> toneBursts;
+  size_t carriers = 0;
+  for (const auto& fb : r.radio.fskBursts) {
+    if (fb.pattern == 0xAA) toneBursts.push_back(fb);
+    else if (fb.pattern == 0xFF) carriers++;
+  }
+  CHECK(!r.radio.fskBursts.empty() && r.radio.fskBursts[0].pattern == 0xFF && r.radio.fskBursts.back().pattern == 0xFF);
+  CHECK(carriers + toneBursts.size() == r.radio.fskBursts.size() && carriers > 5);
   for (size_t i = 0; i < n; i++) {
     if (!plan[i].tone) continue;
-    CHECK(tones < r.radio.fskBursts.size() && r.radio.fskBursts[tones].pattern == 0xAA && r.radio.fskBursts[tones].bytes == plan[i].bytes);
+    CHECK(tones < toneBursts.size() && toneBursts[tones].bytes == plan[i].bytes);
     tones++;
   }
-  CHECK(tones == r.radio.fskBursts.size() && tones > 10);
+  CHECK(tones == toneBursts.size() && tones > 10);
   // dopo il Morse si torna ad ascoltare i messaggi (parametri del Messaggio)
   r.run(5000);
   CHECK(r.sch->state() == TxScheduler::State::Listen && r.radio.curId == kProfileMessage);

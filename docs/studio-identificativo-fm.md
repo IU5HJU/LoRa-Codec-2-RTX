@@ -80,3 +80,15 @@ Quando hai i numeri, tarare i parametri (tono, deviazione, rampa, wpm) e decider
 
 Dopo il testo dell'identificativo periodico (e con IDENTIFICA del sysop) il ripetitore manda il nominativo in **Morse con tono in FM stretta**: 15 parole al minuto, 700 Hz, deviazione ±2,5 kHz, `CFG SET IDMORSE ON` (di base acceso). Provato sul PC con un'altra radio finta (`test_tx_scheduler`: piano dei pacchetti, durata, interruzione dalla voce, TX spenta, radio che non va in FSK); **parametri e comportamento della radio vera sono da misurare** con il firmware di prova qui sopra, sulla T3 TX con N0CALL tolto solo a banco e a potenza minima. Il CW puro resta solo nella prova. Se le misure dicono che tono o deviazione vanno cambiati, sono tre costanti nel firmware.
 
+
+## Prova del 13/11/2026 sul nodo e correzione: portante continua
+
+Prima prova su scheda con un ricevitore FM: l'identificativo si ascolta bene, ma la **portante non è continua**: ogni punto e ogni linea era un pacchetto a sé e nelle pause la radio restava spenta, quindi il ricevitore sentiva la portante comparire **un attimo prima del tono** (lo squelch si apre a ogni elemento) e spegnersi in ogni pausa.
+
+Correzione (nodo e ripetitore, stesso codice di trasmissione):
+- **Portante iniziale** di 500 ms (pacchetto a tutti 1, senza modulazione) prima del primo tono: lo squelch del ricevitore si apre prima del Morse.
+- **Nelle pause fra i toni la portante continua** (stessi pacchetti a tutti 1, durata uguale alla pausa del Morse) invece di spegnere la radio. Fra un pacchetto e il successivo il chip si rimette in trasmissione: la portante cade solo per quell'istante (da misurare).
+- **Coda** di 250 ms dopo l'ultimo tono, poi si torna a LoRa.
+- La radio rimane in trasmissione per tutto l'identificativo (circa 0,75 s in più): la durata conta nel limite di occupazione del canale come i toni.
+
+Da verificare sul banco: (1) se il ricevitore non sente più la portante comparire e sparire; (2) se nei passaggi fra tono e pausa si sente un colpo: la portante pura è spostata di +deviazione rispetto alla frequenza media del tono (con ±2,5 kHz sono 2,5 kHz di scalino). Se il colpo disturba, i rimedi sono una deviazione più bassa o il filtro gaussiano; (3) l'eventuale "tick" fra due pacchetti consecutivi.

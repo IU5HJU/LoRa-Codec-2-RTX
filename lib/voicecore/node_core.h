@@ -97,6 +97,7 @@ class NodeCore {
   MorseBurst morseBursts_[160];
   size_t morseN_ = 0;
   size_t morseIdx_ = 0;
+  uint8_t morseStage_ = 0;  // 0 portante iniziale, 1 elementi del Morse, 2 coda
   uint32_t morseNextMs_ = 0;
   float morseKbps_ = 1.4f;
 };

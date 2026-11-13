@@ -51,6 +51,25 @@ inline uint8_t radioTestPattern(const RadioTestRequest& r) {
 // Durata in aria di un pacchetto di 'bytes' byte a 'kbps', in millisecondi.
 float burstAirMs(uint16_t bytes, float kbps);
 
+// Morse in FM: la portante resta accesa per tutto l'identificativo. Prima del primo tono una portante pura apre lo squelch dei
+// ricevitori (kMorseLeadMs), nelle pause fra i toni la portante continua (non si spegne la radio), alla fine una coda (kMorseTailMs).
+constexpr uint32_t kMorseLeadMs = 500;
+constexpr uint32_t kMorseTailMs = 250;
+
+// Trasmette 'ms' millisecondi di portante pura (pacchetti 0xFF da al massimo 255 byte, uno dopo l'altro). 'onSent(ms)' dopo ogni pacchetto.
+// false se la radio rifiuta un pacchetto.
+template <class Radio, class OnSent>
+bool sendCarrierMs(Radio& radio, uint32_t ms, float kbps, OnSent onSent) {
+  long left = static_cast<long>(static_cast<double>(ms) * kbps / 8.0 + 0.5);
+  while (left > 0) {
+    const uint16_t n = static_cast<uint16_t>(left > 255 ? 255 : left);
+    if (!radio.fskSend(0xFF, n)) return false;
+    onSent(static_cast<uint32_t>(static_cast<float>(n) * 8.0f / kbps + 0.5f));
+    left -= n;
+  }
+  return true;
+}
+
 struct MorseBurst {
   bool tone;       // true: pacchetto da trasmettere, false: pausa
   uint32_t ms;     // durata voluta

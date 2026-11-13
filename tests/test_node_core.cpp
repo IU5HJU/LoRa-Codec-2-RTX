@@ -430,7 +430,7 @@ static void testMorseId() {
   CHECK(std::fabs(r.b.radio.fskMhz - 433.9f) < 1e-3 && std::fabs(r.b.radio.fskDev - 2.5f) < 1e-4);
   r.run(20000);
   CHECK(!r.b.core->morseActive() && !r.b.radio.inFsk && r.b.radio.fskEnds == 1 && r.b.core->stats().morseIds == 1);
-  CHECK(r.b.radio.fskBursts.size() > 10 && r.b.radio.fskBursts[0].pattern == 0xAA);
+  CHECK(r.b.radio.fskBursts.size() > 10 && r.b.radio.fskBursts[0].pattern == 0xFF && r.b.radio.fskBursts.back().pattern == 0xFF);
   // al periodo successivo ancora, una volta sola
   r.run(60000);
   CHECK(r.b.radio.fskBegins == 2 && r.b.radio.fskEnds == 2 && r.b.air.sent[0] == 2);
