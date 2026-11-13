@@ -44,6 +44,10 @@ struct NodeConfig {
   uint32_t extraGapMs = 0;
   // Chiave del sysop (16 byte) se questa scheda e' la sua stazione: serve a verificare le risposte dei ripetitori. nullptr = non attiva.
   const uint8_t* sysopKey = nullptr;
+  // Prova di potenza (link_test.h): con la prova accesa il PTT non trasmette il test lungo ma la prova dalla potenza massima alla minima.
+  // Spenta di base (i test del PC usano la prova lunga); il firmware la accende. sweepRestoreDbm: potenza da rimettere alla fine.
+  bool sweepOnTestPtt = false;
+  int sweepMaxDbm = 17, sweepMinDbm = 2, sweepRestoreDbm = 10;
 };
 
 class VoiceNode {
@@ -154,6 +158,7 @@ class VoiceNode {
   void sweepTick(uint32_t nowMs);
   void sweepRecord(uint32_t nowMs, bool answered, const TestReport& r);
   void sweepFinish(bool aborted);
+  void sendSweepSummary(uint32_t nowMs);
   uint16_t makeSessionId();
 
   NodeConfig cfg_;
@@ -219,6 +224,16 @@ class VoiceNode {
   PowerSweep sweep_;
   uint32_t sweepAtMs_ = 0, sweepGapStartMs_ = 0;
   uint8_t sweepBusy_ = 0;
+  uint8_t summaryBusy_ = 0;
+  uint32_t lastSweepNowMs_ = 0;  // ultimo istante visto da sweepTick/sweepRecord (per programmare il riepilogo)
+  bool summaryPending_ = false;
+  uint8_t summaryCopies_ = 0;
+  uint32_t summaryAtMs_ = 0;
+  uint16_t summarySession_ = 0;       // sessione dell'ultima prova trasmessa (per la copia sul riepilogo)
+  uint16_t lastSummaryRx_ = 0;
+  bool haveSummaryRx_ = false;
+  uint8_t summaryBuf_[kSweepSummaryHeader + PowerSweep::kMaxSteps + kFrameBytes] = {0};
+  size_t summaryLen_ = 0;
   uint32_t testFrameLimit_ = kTestFrames;
   // Escursione sulla rete di testo in corso
   bool guest_ = false;

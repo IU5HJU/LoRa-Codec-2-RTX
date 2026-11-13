@@ -855,15 +855,11 @@ ConsoleResult SettingsConsole::test(const char* value, char* reply, size_t cap) 
   } else if (equalsIgnoreCase(value, "CODEC")) {
     say(reply, cap, "CFG OK codec: parla per 3 secondi dopo il bip, poi ascolta quattro volte (senza e con Codec2, poi a ritmo di ricezione)");
     return ConsoleResult::CodecTest;
-  } else if (equalsIgnoreCase(value, "SWEEP")) {
-    testMode_ = true;  // la prova di potenza e' una serie di prove di collegamento: serve la prova accesa
-    say(reply, cap, "CFG OK sweep: prova di potenza dalla massima alla minima, circa un minuto; l'altra scheda deve avere la prova accesa (CFG TEST ON). Un PTT la ferma");
-    return ConsoleResult::PowerSweep;
   } else if (equalsIgnoreCase(value, "AUDIO")) {
     say(reply, cap, "CFG OK audio prova in corso: ascolta i toni due volte, senza e con la radio (circa 10 secondi)");
     return ConsoleResult::AudioTest;
   } else {
-    say(reply, cap, "CFG ERR test usa ON, OFF, SWEEP, AUDIO oppure CODEC");
+    say(reply, cap, "CFG ERR test usa ON, OFF, AUDIO oppure CODEC");
     return ConsoleResult::Error;
   }
   say(reply, cap, testMode_ ? "CFG OK test=on" : "CFG OK test=off");

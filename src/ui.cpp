@@ -466,6 +466,7 @@ void UiNotifier::powerSweepStep(const lcr::PowerSweep::Step& s, size_t index) {
 
 void UiNotifier::powerSweepDone(const lcr::PowerSweep& sweep, bool aborted) {
   sweepRunning_ = false;
+  sweepFromRemote_ = false;
   sweepAborted_ = aborted;
   sweepMinPerfect_ = sweep.minPerfectDbm();
   sweepMinAnswered_ = sweep.minAnsweredDbm();
@@ -487,10 +488,36 @@ void UiNotifier::powerSweepDone(const lcr::PowerSweep& sweep, bool aborted) {
   }
 }
 
+// L'esito della prova di potenza visto dall'altra scheda, che ha trasmesso: lo mostriamo anche qui.
+void UiNotifier::powerSweepSummary(const char* callsign, const lcr::SweepSummary& s) {
+  sweepRunning_ = false;
+  sweepFromRemote_ = true;
+  sweepAborted_ = false;
+  sweepMinPerfect_ = s.minPerfectDbm;
+  sweepMinAnswered_ = s.minAnsweredDbm;
+  sweepSteps_ = s.n;
+  strncpy(sweepCall_, callsign ? callsign : "", lcr::kMaxCallsign);
+  sweepCall_[lcr::kMaxCallsign] = 0;
+  sweepShown_ = true;
+  sweepUntilMs_ = millis() + 30000;
+  dirty_ = true;
+  testShown_ = false;
+  Serial.printf("PROVA POTENZA esito da %s: %u passi dal massimo %d dBm; frame tutti intatti fino a %d dBm%s; risposta ancora a %d dBm%s\n", sweepCall_[0] ? sweepCall_ : "-",
+                s.n, s.firstDbm, s.minPerfectDbm, s.minPerfectDbm < 0 ? " (nessuna)" : "", s.minAnsweredDbm, s.minAnsweredDbm < 0 ? " (mai)" : "");
+  if (s.minPerfectDbm >= 0) {
+    audio_.beep(1000, 60);
+    audio_.beep(1400, 60);
+  } else {
+    audio_.beep(300, 200);
+  }
+}
+
 void UiNotifier::drawSweep() {
   display_.setTextSize(1);
   display_.setCursor(0, 16);
-  display_.print(sweepRunning_ ? "PROVA DI POTENZA" : (sweepAborted_ ? "POTENZA: interrotta" : "POTENZA: finita"));
+  if (sweepRunning_) display_.print("PROVA DI POTENZA");
+  else if (sweepFromRemote_) display_.printf("POTENZA da %s", sweepCall_[0] ? sweepCall_ : "-");
+  else display_.print(sweepAborted_ ? "POTENZA: interrotta" : "POTENZA: finita");
   display_.setTextSize(2);
   display_.setCursor(0, 28);
   if (sweepRunning_) {

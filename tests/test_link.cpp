@@ -8,6 +8,8 @@
 
 using namespace lcr;
 
+static bool g_sweepPtt = false;  // le stazioni nuove lanciano la prova di potenza dal PTT (come il firmware)
+
 static uint16_t nextSession() {
   static uint16_t s = 500;
   return s++;
@@ -20,6 +22,8 @@ struct Station {
     NodeConfig c;
     strcpy(c.callsign, cs);
     c.newSessionId = nextSession;
+    c.sweepOnTestPtt = g_sweepPtt;
+    c.sweepRestoreDbm = 12;
     return c;
   }
   fake::Radio radio;
@@ -297,6 +301,88 @@ static void testSweepEndToEnd() {
   CHECK(s.b.note.reports.back().r.framesOut == kTestFrames);
 }
 
+static void testSweepSummaryCodec() {
+  PowerSweep w;
+  w.begin(17, 2, 10);
+  TestReport ok;
+  ok.framesOk = ok.framesOut = kSweepFrames;
+  TestReport half = ok;
+  half.framesOk = kSweepFrames / 2;
+  w.record(true, ok);
+  w.record(true, ok);
+  w.record(true, half);
+  w.record(false, TestReport());
+  w.record(false, TestReport());
+  uint8_t b[40];
+  const size_t n = encodeSweepSummary(w, b, sizeof(b));
+  CHECK(n == 12 && n % kFrameBytes == 0 && b[0] == 0x85);  // mai confondibile con il report normale (primo byte 0 o 1)
+  SweepSummary s;
+  CHECK(decodeSweepSummary(b, n, s) && s.n == 5 && s.firstDbm == 17 && s.minPerfectDbm == 16 && s.minAnsweredDbm == 15);
+  CHECK(s.percent[0] == 100 && s.percent[2] == 49 && s.percent[3] == kSweepNone && s.percent[4] == kSweepNone);
+  CHECK(!decodeSweepSummary(b, n - 1, s) && !decodeSweepSummary(b, 3, s) && sweepSummaryBytes(11) == 18 && sweepSummaryBytes(24) == 30);
+  b[0] = 5;  // senza il bit alto non e' un riepilogo
+  CHECK(!decodeSweepSummary(b, n, s));
+  // il report normale non e' preso per un riepilogo
+  uint8_t rep[kTestReportBytes];
+  encodeTestReport(ok, rep);
+  CHECK(!(rep[0] & 0x80) && !decodeSweepSummary(rep, kTestReportBytes, s));
+  PowerSweep e;
+  e.begin(17, 2, 10);
+  CHECK(encodeSweepSummary(e, b, sizeof(b)) == 0);  // nessun passo: niente da mandare
+}
+
+// Dal PTT, con la prova accesa su entrambe: parte la prova di potenza, e alla fine ENTRAMBE le schede hanno l'esito.
+static void testSweepFromPtt() {
+  g_sweepPtt = true;
+  Sim s;
+  s.a.node.setTestMode(true);
+  s.b.node.setTestMode(true);
+  s.air.drop = [&](int from, int idx) {
+    (void)idx;
+    if (from != 0) return false;
+    return !s.a.radio.powers.empty() && s.a.radio.powers.back() < 9;  // sotto 9 dBm non si sente piu' niente
+  };
+  s.run(100);
+  s.a.node.pttPressed(s.clock);
+  s.run(400);
+  s.a.node.pttReleased(s.clock);  // il rilascio non interrompe la prova
+  s.run(300);
+  CHECK(s.a.node.powerSweepActive() && s.a.note.sweepStarts == 1);
+  s.run(150000);
+  CHECK(!s.a.node.powerSweepActive() && s.a.note.sweepDone == 1 && !s.a.note.sweepAborted);
+  CHECK(s.a.note.sweepMinPerfect == 9 && s.a.note.sweepMinAnswered == 9);
+  CHECK(s.a.radio.powers.back() == 12);  // potenza di prima
+  // B mostra lo stesso esito, arrivato da A
+  CHECK(s.b.note.summaries.size() == 1 && s.b.note.summaryCall == "IU5HJU");
+  CHECK(s.b.note.summaries[0].minPerfectDbm == 9 && s.b.note.summaries[0].minAnsweredDbm == 9 && s.b.note.summaries[0].firstDbm == 17);
+  CHECK(s.b.note.summaries[0].n == s.a.note.sweepSteps.size());
+  CHECK(s.a.note.summaries.empty());  // A non riceve il proprio riepilogo
+  // senza la prova accesa su B il riepilogo non si mostra
+  Sim t;
+  t.a.node.setTestMode(true);
+  t.b.node.setTestMode(true);
+  t.run(100);
+  t.a.node.pttPressed(t.clock);
+  t.run(300);
+  t.b.node.setTestMode(false);
+  t.run(150000);
+  CHECK(t.a.note.sweepDone == 1 && t.b.note.summaries.empty());
+  // un secondo PTT ferma la prova in corso
+  Sim u;
+  u.a.node.setTestMode(true);
+  u.b.node.setTestMode(true);
+  u.run(100);
+  u.a.node.pttPressed(u.clock);
+  u.run(5000);
+  u.a.node.pttReleased(u.clock);
+  CHECK(u.a.node.powerSweepActive());
+  u.a.node.pttPressed(u.clock);
+  CHECK(!u.a.node.powerSweepActive() && u.a.note.sweepAborted && u.a.radio.powers.back() == 12);
+  u.a.node.pttReleased(u.clock);
+  u.run(10000);
+  g_sweepPtt = false;
+}
+
 static void testSweepRefusedAndAborted() {
   Sim s;
   s.run(100);
@@ -340,6 +426,8 @@ int main() {
   testOnlyOwnReply();
   testSweepLogic();
   testSweepEndToEnd();
+  testSweepSummaryCodec();
+  testSweepFromPtt();
   testSweepRefusedAndAborted();
   TEST_MAIN_END();
 }

@@ -118,9 +118,9 @@ class UiNotifier : public lcr::INotifier {
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
   void powerSweepStep(const lcr::PowerSweep::Step& s, size_t index) override;
   void powerSweepDone(const lcr::PowerSweep& sweep, bool aborted) override;
-  // La prova di potenza e' partita (CFG TEST SWEEP): lo schermo la segue finche' non finisce.
-  void setSweepRunning(int firstDbm) {
+  void powerSweepStarted(int firstDbm) override {
     sweepRunning_ = true;
+    sweepFromRemote_ = false;
     sweepShown_ = true;
     sweepUntilMs_ = 0;
     sweepDbm_ = firstDbm;
@@ -128,6 +128,7 @@ class UiNotifier : public lcr::INotifier {
     sweepIndex_ = 0;
     dirty_ = true;
   }
+  void powerSweepSummary(const char* callsign, const lcr::SweepSummary& s) override;
 
   // Forza il ridisegno dello schermo (dopo una schermata temporanea).
   void refresh() { dirty_ = true; }
@@ -199,6 +200,9 @@ class UiNotifier : public lcr::INotifier {
   bool sweepRunning_ = false;     // prova di potenza in corso
   bool sweepShown_ = false;       // schermata della prova di potenza (in corso o con l'esito)
   bool sweepAborted_ = false;
+  bool sweepFromRemote_ = false;  // l'esito arriva dall'altra scheda (era lei a trasmettere)
+  char sweepCall_[lcr::kMaxCallsign + 1] = {0};
+  int sweepSteps_ = 0;
   uint32_t sweepUntilMs_ = 0;
   int sweepDbm_ = 0, sweepPct_ = -1, sweepIndex_ = 0, sweepMinPerfect_ = -1, sweepMinAnswered_ = -1;
   bool testShown_ = false;        // schermata con l'esito della prova

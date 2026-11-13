@@ -148,6 +148,12 @@ class INotifier {
     (void)r;
   }
   // Prova di potenza (link_test.h, PowerSweep): ogni passo concluso e l'esito finale (minimi in dBm, -1 = nessuno).
+  virtual void powerSweepStarted(int firstDbm) { (void)firstDbm; }
+  // L'altra scheda (che trasmetteva la prova di potenza) manda il suo esito: lo mostriamo anche qui.
+  virtual void powerSweepSummary(const char* callsign, const SweepSummary& s) {
+    (void)callsign;
+    (void)s;
+  }
   virtual void powerSweepStep(const PowerSweep::Step& s, size_t index) {
     (void)s;
     (void)index;

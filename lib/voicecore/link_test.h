@@ -106,4 +106,20 @@ class PowerSweep {
   bool active_ = false;
 };
 
+// Esito della prova di potenza visto da chi ha trasmesso, mandato all'altra scheda perche' lo mostri anche lei (pacchetto kModeTestReport
+// con il primo byte >= 0x80: la risposta normale di 12 byte comincia sempre con 0 o 1). Un byte per passo: percentuale di frame intatti, 255 = nessuna risposta.
+constexpr uint8_t kSweepNone = 255;
+struct SweepSummary {
+  uint8_t n = 0;
+  int8_t firstDbm = 0;
+  int8_t minPerfectDbm = -1;   // -1: nessuna potenza
+  int8_t minAnsweredDbm = -1;  // -1: mai
+  uint8_t percent[PowerSweep::kMaxSteps] = {0};
+};
+constexpr size_t kSweepSummaryHeader = 4;
+// Il payload e' un multiplo di kFrameBytes (come ogni pacchetto di prova, vedi decodePacket): in coda byte a zero.
+inline size_t sweepSummaryBytes(size_t steps) { return ((kSweepSummaryHeader + steps + kFrameBytes - 1) / kFrameBytes) * kFrameBytes; }
+size_t encodeSweepSummary(const PowerSweep& w, uint8_t* out, size_t cap);  // 0 se non entra
+bool decodeSweepSummary(const uint8_t* in, size_t len, SweepSummary& s);
+
 }  // namespace lcr

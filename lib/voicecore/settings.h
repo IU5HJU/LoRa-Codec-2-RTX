@@ -51,7 +51,6 @@
 //   CFG SET MCSSID 99            -> CFG OK mcssid=99           (SSID del tuo nominativo in rete, 0-99; 0 = nessuno)
 //   CFG GET MC                   -> CFG MC freqmc=433.175 ssid=99 window=300
 //   CFG SET GPS ON               -> CFG OK gps=on             (accende il GPS della T-Beam; di default OFF; vale dal riavvio; sulle altre schede errore)
-//   CFG TEST SWEEP               -> CFG OK sweep ...           (prova di potenza: accende la prova e trasmette a potenza decrescente; vedi docs/prova-collegamento.md)
 //   CFG TEST ON                  -> CFG OK test=on             (prova di collegamento, solo fino al riavvio; OFF la spegne)
 //   CFG TEST AUDIO               -> suona 500, 1000 e 2000 Hz e misura il microfono: CFG AUDIO f=500 base=-90.1 tone=-52.3 ... CFG AUDIO fine
 //   CFG RESET                    -> CFG OK reset               (torna ai valori compilati)
@@ -242,7 +241,6 @@ enum class ConsoleResult {
   MicMeasure,  // risposta pronta; il chiamante deve misurare il fondo per 3 s e stampare il risultato
   CodecTest,   // risposta pronta; il chiamante deve registrare 3 s e riprodurli senza e con Codec2
   RadioTest,   // risposta pronta; il chiamante deve fare la prova radio del Morse (radioTestRequest(), docs/studio-identificativo-fm.md)
-  PowerSweep,  // risposta pronta; il chiamante deve avviare la prova di potenza (VoiceNode::startPowerSweep): la prova di collegamento e' gia' accesa
   AudioTest,   // risposta pronta; il chiamante deve suonare i toni di prova e stampare i livelli del microfono
 };
 

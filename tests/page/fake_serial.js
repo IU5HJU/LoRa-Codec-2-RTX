@@ -200,8 +200,6 @@
       later(() => out(get()));
     } else if (cmd === 'TEST' && (t[2] === 'ON' || t[2] === 'OFF')) {
       st.test = t[2] === 'ON'; out('CFG OK test=' + (st.test ? 'on' : 'off'));
-    } else if (cmd === 'TEST' && t[2] === 'SWEEP') {
-      st.test = true; out('CFG OK sweep: prova di potenza dalla massima alla minima, circa un minuto; l\'altra scheda deve avere la prova accesa (CFG TEST ON). Un PTT la ferma');
     } else if (cmd === 'TEST' && t[2] === 'AUDIO') {
       out('CFG OK audio prova in corso: ascolta i toni due volte, senza e con la radio (circa 10 secondi)');
       // Fase 1: toni senza radio; fase 2 (se st.rf e' un oggetto): stessi toni con la radio; st.rf stringa = salto.

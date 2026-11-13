@@ -238,6 +238,14 @@ class Notifier : public lcr::INotifier {
     sweepMinPerfect = sw.minPerfectDbm();
     sweepMinAnswered = sw.minAnsweredDbm();
   }
+  void powerSweepSummary(const char* cs, const lcr::SweepSummary& s) override {
+    summaries.push_back(s);
+    summaryCall = cs;
+  }
+  void powerSweepStarted(int) override { sweepStarts++; }
+  std::vector<lcr::SweepSummary> summaries;
+  std::string summaryCall;
+  int sweepStarts = 0;
   std::vector<lcr::PowerSweep::Step> sweepSteps;
   int sweepDone = 0, sweepMinPerfect = -2, sweepMinAnswered = -2;
   bool sweepAborted = false;

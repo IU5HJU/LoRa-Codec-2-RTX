@@ -91,6 +91,11 @@ void VoiceNode::beginPtt(uint32_t nowMs) {
     notify_.pttDenied(DenyReason::ChannelBusy);
     return;
   }
+  if (testMode_ && cfg_.sweepOnTestPtt && !prof_.message) {  // prova accesa: il PTT lancia la prova di potenza
+    stopMic();
+    startPowerSweep(nowMs, cfg_.sweepMaxDbm, cfg_.sweepMinDbm, cfg_.sweepRestoreDbm);
+    return;
+  }
   startTx(nowMs);
 }
 
@@ -211,6 +216,7 @@ void VoiceNode::pttReleased(uint32_t nowMs) {
     lastClickMs_ = nowMs;
     return;
   }
+  if (sweepPhase_ != SweepPhase::None) return;  // il rilascio non interrompe la prova di potenza (si ferma con un altro PTT)
   if (recPhase_ == RecPhase::Recording) {
     finishRecording(nowMs, false);
     return;
@@ -242,6 +248,7 @@ void VoiceNode::tick(uint32_t nowMs) {
     rxTick(nowMs);
     if (replyPending_ && state_ == State::Idle && static_cast<int32_t>(nowMs - replyAtMs_) >= 0) sendTestReply(nowMs);
     sweepTick(nowMs);
+    if (summaryPending_ && state_ == State::Idle && sweepPhase_ == SweepPhase::None && static_cast<int32_t>(nowMs - summaryAtMs_) >= 0) sendSweepSummary(nowMs);
   }
 }
 
@@ -345,6 +352,16 @@ void VoiceNode::rxTick(uint32_t nowMs) {
     Packet p;
     if (!decodePacket(buf, n, p)) continue;
     if (p.mode == kModeTestReport) {
+      // Esito della prova di potenza mandato da chi ha trasmesso (primo byte >= 0x80): lo mostriamo anche qui, una volta sola
+      SweepSummary sm;
+      if (p.payloadLen > 0 && (p.payload[0] & 0x80)) {
+        if (testMode_ && decodeSweepSummary(p.payload, p.payloadLen, sm) && !(haveSummaryRx_ && lastSummaryRx_ == p.session)) {
+          haveSummaryRx_ = true;
+          lastSummaryRx_ = p.session;
+          notify_.powerSweepSummary(p.callsign, sm);
+        }
+        continue;
+      }
       // Risposta alla prova trasmessa da qui: 12 byte con il risultato misurato dall'altra stazione.
       TestReport r;
       if (lastTestValid_ && p.session == lastTestSession_ && p.payloadLen == kTestReportBytes &&
@@ -1020,11 +1037,16 @@ bool VoiceNode::startPowerSweep(uint32_t nowMs, int maxDbm, int minDbm, int rest
   sweepPhase_ = SweepPhase::Gap;
   sweepAtMs_ = sweepGapStartMs_ = nowMs;
   sweepBusy_ = 0;
+  summaryPending_ = false;
+  summaryBusy_ = 0;
+  lastSweepNowMs_ = nowMs;
+  notify_.powerSweepStarted(maxDbm);
   return true;
 }
 
 // Un passo alla volta: Gap (attesa e canale libero) -> Tx (prova breve alla potenza del passo) -> Wait (risposta dell'altra scheda, o scadenza).
 void VoiceNode::sweepTick(uint32_t nowMs) {
+  lastSweepNowMs_ = nowMs;
   if (sweepPhase_ == SweepPhase::None) return;
   if (!testMode_ || guest_) {  // prova spenta o escursione in corso: si ferma
     sweepFinish(true);
@@ -1060,6 +1082,7 @@ void VoiceNode::sweepTick(uint32_t nowMs) {
 }
 
 void VoiceNode::sweepRecord(uint32_t nowMs, bool answered, const TestReport& r) {
+  lastSweepNowMs_ = nowMs;
   const size_t idx = sweep_.steps();
   const bool more = sweep_.record(answered, r);
   if (idx < sweep_.steps()) notify_.powerSweepStep(sweep_.step(idx), idx);
@@ -1077,6 +1100,38 @@ void VoiceNode::sweepFinish(bool aborted) {
   sweep_.stop();
   radio_.setPower(sweep_.restoreDbm());
   notify_.powerSweepDone(sweep_, aborted);
+  // L'esito va anche all'altra scheda (alla potenza normale), due volte: lo mostra sul suo display
+  summaryLen_ = encodeSweepSummary(sweep_, summaryBuf_, sizeof(summaryBuf_));
+  if (summaryLen_ > 0 && !isPlaceholderCallsign(cfg_.callsign)) {
+    summaryPending_ = true;
+    summaryCopies_ = 2;
+    summaryAtMs_ = lastSweepNowMs_ + kTestReplyDelayMs;
+    summarySession_ = lastTestSession_;
+  }
+}
+
+void VoiceNode::sendSweepSummary(uint32_t nowMs) {
+  if (radio_.channelBusy() || summaryCopies_ == 0) {
+    if (summaryCopies_ == 0 || ++summaryBusy_ >= 10) summaryPending_ = false;
+    summaryAtMs_ = nowMs + 300;
+    return;
+  }
+  Packet p;
+  p.mode = kModeTestReport;
+  p.session = summarySession_;
+  p.seq = 0;
+  p.flags = kFlagStart | kFlagEnd;
+  memcpy(p.callsign, cfg_.callsign, strnlen(cfg_.callsign, kMaxCallsign));
+  p.payloadLen = static_cast<uint8_t>(summaryLen_);
+  memcpy(p.payload, summaryBuf_, summaryLen_);
+  uint8_t buf[kMaxWireBytes];
+  const size_t n = encodePacket(p, buf, sizeof(buf));
+  if (n) {
+    radio_.send(buf, n);
+    radio_.startReceive();
+  }
+  if (--summaryCopies_ == 0) summaryPending_ = false;
+  summaryAtMs_ = nowMs + 600;
 }
 
 }  // namespace lcr

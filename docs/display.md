@@ -47,7 +47,7 @@ Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 | 12 | Errore all'avvio | "ERRORE" e il nome del blocco: `radio`, `audio I2S`, `Codec2`, `nominativo non valido` |
 | 13 | Batteria sotto 3,40 V | il testo `(Batt=x.xxV)` va in negativo (sfondo pieno) |
 | 14 | Batteria assente (T-Beam senza cella) | `(Batt=--)` (sulla T3 la tensione si mostra sempre) |
-| 15 | A riposo con la prova di collegamento attiva | "PROVA ON", "PTT = invia la prova" |
+| 15 | A riposo con la prova di collegamento attiva | "PROVA ON", "PTT = invia la prova" (con la prova di potenza: la lancia) |
 | 16 | PTT premuto con la prova attiva | "TX" e nominativo, "Prova 5/12 s" |
 | 17 | Fine di una prova ricevuta | "PROVA 100%", "Ricevuta da" e nominativo, frame ok/persi/danneggiati, pacchetti recuperati, RSSI e SNR medi. Resta 15 s |
 | 18 | Come la 17 ma con perdite | percentuale più bassa; le righe stanno nei 21 caratteri anche nel caso peggiore (RSSI -120 dBm, SNR -15 dB) |

@@ -690,10 +690,6 @@ async function scenario(name, fn, opts = {}) {
     await until(p, () => document.getElementById('testState').textContent.includes('spenta'));
     check('CFG TEST OFF inviato', (await cmds(p)).includes('CFG TEST OFF'));
     check('l\'indicazione dei tre clic e\' nella pagina', (await p.textContent('#config')).includes('tre pressioni veloci del PTT'));
-    check('prova di potenza: bottone attivo con la scheda collegata', !(await p.isDisabled('#testSweep')));
-    await p.click('#testSweep');
-    await until(p, () => document.getElementById('testState').textContent.includes('prova di potenza'));
-    check('CFG TEST SWEEP inviato e stato mostrato', (await cmds(p)).includes('CFG TEST SWEEP') && /Prova di potenza avviata/.test(await p.textContent('#status')), await p.textContent('#status'));
   });
 
   await scenario('verifica audio: microfono che sente', async (p) => {

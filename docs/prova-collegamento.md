@@ -50,20 +50,21 @@ per misurare la portata tieni premuto il PTT fino in fondo (12 s) e cerca "ok 30
 
 ## Prova di potenza (potenza minima)
 
-14/11/2026. Serve a rispondere a "con quanta potenza si sentono ancora le due schede?". La scheda che la avvia ripete la prova di collegamento **dalla potenza massima (17 dBm) alla minima (2 dBm), un dBm alla volta**; a ogni passo trasmette una prova breve (75 frame, 3 secondi) e **aspetta la risposta** dell'altra scheda, che arriva come per la prova normale. Poi passa al dBm successivo. Alla fine la potenza torna a quella impostata.
+14/11/2026. Dal firmware di questa data **la prova di collegamento è la prova di potenza**: cerca la potenza minima con cui due schede si sentono, per tutta la gamma della scheda, da sola. (La prova lunga da 12 secondi descritta sopra è ancora nel codice e nei test, ma non è più quella che parte dal PTT.)
 
-**Come si fa:**
-1. Sull'**altra scheda** accendi la prova (`CFG TEST ON`, il pulsante *Attiva la prova* della pagina, o tre clic sul PTT): serve perché risponda.
-2. Sulla scheda che misura (nominativo vero, non N0CALL, profilo Standard o Range): `CFG TEST SWEEP` oppure il pulsante *Avvia la prova di potenza* della pagina di configurazione. La prova di collegamento si accende da sola.
-3. Il display mostra la potenza in corso (`POT. 14 dBm`) e il passo; sul registro seriale una riga per passo, per esempio `PROVA POTENZA 11 dBm: risposta, frame ok 100%, RSSI -97 dBm, SNR 8 dB` oppure `... nessuna risposta`. Un PTT la ferma.
-4. **Esito** (display e registro): la **potenza minima con tutti i frame intatti** (contando dalla massima senza interruzioni) e la **potenza minima a cui l'altra scheda risponde ancora**. Come margine conviene lavorare qualche dBm sopra il primo valore.
+**Come si fa, su due schede:**
+1. Su **entrambe** accendi la prova come sempre: **tre pressioni brevi del PTT** (due bip acuti, "PROVA ATTIVA"), `CFG TEST ON` o il pulsante della pagina.
+2. Su **una** delle due, con il nominativo vero (non N0CALL) e in profilo Standard o Range, **premi il PTT** (basta una pressione, non serve tenerlo). Parte la prova di potenza. Un altro PTT la ferma.
+3. La scheda che trasmette ripete la prova **dalla potenza massima (17 dBm) alla minima (2 dBm), un dBm alla volta**: a ogni passo una prova breve (75 frame, 3 secondi) e **attesa della risposta** dell'altra scheda. Sul display si vede la potenza in corso (`PROVA DI POTENZA`, `14 dBm`, passo e se l'altra ha risposto); sul registro seriale una riga per passo, per esempio `PROVA POTENZA 11 dBm: risposta, frame ok 100%, RSSI -97 dBm, SNR 8 dB` oppure `... nessuna risposta`.
+4. Alla fine, **su entrambe le schede** il display mostra l'esito per 30 secondi: **`MIN 9 dBm`** (la potenza minima con tutti i frame intatti, contando dalla massima senza interruzioni) e **`sente fino a 7 dBm`** (la potenza minima a cui l'altra ha ancora risposto con almeno un frame). Su quella che ha ricevuto compare `POTENZA da <nominativo>`. Se nemmeno alla massima potenza i frame sono tutti intatti si legge `NON PULITA`, se non risponde nessuno `NESSUNA`. Stessa cosa sul registro (`PROVA POTENZA finita ...` e `PROVA POTENZA esito da ...`), con i bip acuti se c'è un minimo pulito, un bip grave altrimenti. Poi la potenza torna a quella impostata.
 
-**Dettagli e limiti:**
-- Si ferma da sola dopo **due passi di fila senza risposta** (non ha senso scendere ancora): una prova completa dura da circa 20 secondi (collegamento debole) a un minuto e mezzo. Se già alla potenza massima non risponde nessuno, finisce dopo due passi: controlla che sull'altra scheda la prova sia accesa.
-- Si misura **solo il verso da questa scheda all'altra**: la risposta dell'altra scheda parte alla **sua** potenza normale. Per l'altro verso si ripete la prova a parti invertite.
-- La risposta passa dall'altra scheda: se è la risposta a non arrivare (non la prova), il passo vale "nessuna risposta" anche se la prova era arrivata. Per questo l'altra scheda mostra comunque il suo esito di ogni passo.
-- Sull'altra scheda i passi si vedono come prove di 75 frame (`Parz.75/300`): è normale, sono prove brevi.
-- Non è disponibile nel profilo Messaggio (il tempo in aria sarebbe troppo lungo).
+Come margine conviene lavorare qualche dBm sopra il minimo trovato.
+
+**Come funziona dentro:**
+- Si ferma da sola dopo **due passi di fila senza risposta**: dura da circa 20 secondi (collegamento debole) a un minuto e mezzo. Se già alla potenza massima non risponde nessuno, finisce dopo due passi: controlla che sull'altra scheda la prova sia accesa.
+- L'**altra scheda** risponde a ogni passo come per la prova normale (alla sua potenza di sempre) e per tutto il tempo mostra la schermata di ogni prova breve ("Parz. 75/300": è normale, sono prove da 3 secondi). Alla fine, chi ha trasmesso le **manda l'esito** (due copie, nello stesso pacchetto di risposta, modo 3, con il primo byte maggiore o uguale a 0x80: la risposta normale comincia sempre con 0 o 1). Così lo vedono tutte e due. Se quel pacchetto si perde, l'altra scheda ha comunque le schermate dei singoli passi.
+- Si misura **il verso da chi trasmette verso l'altra scheda**: la risposta dell'altra parte alla **sua** potenza normale. Per l'altro verso si ripete la prova a parti invertite.
+- Non c'è nel profilo Messaggio (il tempo in aria sarebbe troppo lungo).
 - **Da misurare sul campo:** quanto la potenza impostata (`setOutputPower` del SX1278) corrisponda davvero alla potenza in antenna a ogni dBm. La prova dà la potenza *impostata*, non misurata.
 
 ## Limiti

@@ -141,4 +141,28 @@ int PowerSweep::minAnsweredDbm() const {
   return best;
 }
 
+size_t encodeSweepSummary(const PowerSweep& w, uint8_t* out, size_t cap) {
+  const size_t n = w.steps() < PowerSweep::kMaxSteps ? w.steps() : PowerSweep::kMaxSteps;
+  if (n == 0 || cap < sweepSummaryBytes(n)) return 0;
+  memset(out, 0, sweepSummaryBytes(n));
+  out[0] = static_cast<uint8_t>(0x80 | n);
+  out[1] = static_cast<uint8_t>(w.step(0).dbm);
+  out[2] = static_cast<uint8_t>(static_cast<int8_t>(w.minPerfectDbm()));
+  out[3] = static_cast<uint8_t>(static_cast<int8_t>(w.minAnsweredDbm()));
+  for (size_t i = 0; i < n; i++) out[kSweepSummaryHeader + i] = w.step(i).answered ? w.step(i).percent : kSweepNone;
+  return sweepSummaryBytes(n);
+}
+
+bool decodeSweepSummary(const uint8_t* in, size_t len, SweepSummary& s) {
+  if (!in || len < kSweepSummaryHeader + 1 || !(in[0] & 0x80)) return false;
+  const size_t n = in[0] & 0x7F;
+  if (n == 0 || n > PowerSweep::kMaxSteps || len != sweepSummaryBytes(n)) return false;
+  s.n = static_cast<uint8_t>(n);
+  s.firstDbm = static_cast<int8_t>(in[1]);
+  s.minPerfectDbm = static_cast<int8_t>(in[2]);
+  s.minAnsweredDbm = static_cast<int8_t>(in[3]);
+  for (size_t i = 0; i < n; i++) s.percent[i] = in[kSweepSummaryHeader + i];
+  return true;
+}
+
 }  // namespace lcr
