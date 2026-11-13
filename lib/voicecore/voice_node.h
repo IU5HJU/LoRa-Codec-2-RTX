@@ -110,6 +110,14 @@ class VoiceNode {
   bool meshcomActive() const { return guest_; }
   uint32_t meshcomRemainingMs(uint32_t nowMs) const;
 
+  // Prova di potenza (link_test.h, PowerSweep): con la prova di collegamento attiva trasmette prove brevi a potenza decrescente da maxDbm a
+  // minDbm, aspettando ogni volta la risposta dell'altra scheda; alla fine (o con un PTT) la potenza torna a restoreDbm. false se non si puo'
+  // (prova non attiva, nominativo N0CALL, profilo Messaggio, scheda non a riposo).
+  bool startPowerSweep(uint32_t nowMs, int maxDbm, int minDbm, int restoreDbm);
+  void stopPowerSweep() { if (sweepPhase_ != SweepPhase::None) sweepFinish(true); }
+  bool powerSweepActive() const { return sweepPhase_ != SweepPhase::None; }
+  const PowerSweep& powerSweep() const { return sweep_; }
+
   State state() const { return state_; }
   const RxStream& rx() const { return rx_; }
 
@@ -143,6 +151,9 @@ class VoiceNode {
   void playTick(uint32_t nowMs);
   void finishTestRx(uint32_t nowMs);
   void sendTestReply(uint32_t nowMs);
+  void sweepTick(uint32_t nowMs);
+  void sweepRecord(uint32_t nowMs, bool answered, const TestReport& r);
+  void sweepFinish(bool aborted);
   uint16_t makeSessionId();
 
   NodeConfig cfg_;
@@ -202,6 +213,13 @@ class VoiceNode {
   uint16_t replySession_ = 0;
   TestReport replyReport_;
   uint16_t notifiedSession_ = 0;
+  // Prova di potenza
+  enum class SweepPhase { None, Gap, Tx, Wait };
+  SweepPhase sweepPhase_ = SweepPhase::None;
+  PowerSweep sweep_;
+  uint32_t sweepAtMs_ = 0, sweepGapStartMs_ = 0;
+  uint8_t sweepBusy_ = 0;
+  uint32_t testFrameLimit_ = kTestFrames;
   // Escursione sulla rete di testo in corso
   bool guest_ = false;
   uint32_t guestUntilMs_ = 0;

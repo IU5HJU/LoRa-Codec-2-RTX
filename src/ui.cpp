@@ -210,6 +210,11 @@ void UiNotifier::rxEnded(const char* callsign, uint32_t lostFrames, uint32_t rec
 }
 
 void UiNotifier::linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) {
+  if (sweepRunning_) {  // nella prova di potenza il passo e' segnalato da powerSweepStep, senza una schermata e un bip per ogni risposta
+    Serial.printf("PROVA risposta da %s: ok %u/%u, RSSI %d dBm, SNR %s%d dB\n", callsign && callsign[0] ? callsign : "-", r.framesOk, static_cast<unsigned>(lcr::kSweepFrames),
+                  r.rssiDbm, r.snrValid ? "" : "n.d. ", r.snrValid ? r.snrDb : 0);
+    return;
+  }
   testFromRemote_ = fromRemote;
   strncpy(testCall_, callsign ? callsign : "", lcr::kMaxCallsign);
   testCall_[lcr::kMaxCallsign] = 0;
@@ -446,6 +451,74 @@ void UiNotifier::testModeChanged(bool on) {
   }
 }
 
+// Un passo della prova di potenza: riga per il registro (docs/prove.md) e schermo.
+void UiNotifier::powerSweepStep(const lcr::PowerSweep::Step& s, size_t index) {
+  if (s.answered) {
+    Serial.printf("PROVA POTENZA %d dBm: risposta, frame ok %u%%, RSSI %d dBm, SNR %s%d dB\n", s.dbm, s.percent, s.rssiDbm, s.snrValid ? "" : "n.d. ", s.snrValid ? s.snrDb : 0);
+  } else {
+    Serial.printf("PROVA POTENZA %d dBm: nessuna risposta\n", s.dbm);
+  }
+  sweepDbm_ = s.dbm;
+  sweepPct_ = s.answered ? s.percent : 0;
+  sweepIndex_ = static_cast<int>(index) + 1;
+  dirty_ = true;
+}
+
+void UiNotifier::powerSweepDone(const lcr::PowerSweep& sweep, bool aborted) {
+  sweepRunning_ = false;
+  sweepAborted_ = aborted;
+  sweepMinPerfect_ = sweep.minPerfectDbm();
+  sweepMinAnswered_ = sweep.minAnsweredDbm();
+  sweepShown_ = true;
+  sweepUntilMs_ = millis() + 30000;
+  dirty_ = true;
+  char perfect[24], answered[24];
+  if (sweepMinPerfect_ >= 0) snprintf(perfect, sizeof(perfect), "%d dBm", sweepMinPerfect_);
+  else snprintf(perfect, sizeof(perfect), "nessuna potenza");
+  if (sweepMinAnswered_ >= 0) snprintf(answered, sizeof(answered), "%d dBm", sweepMinAnswered_);
+  else snprintf(answered, sizeof(answered), "mai");
+  Serial.printf("PROVA POTENZA %s: %u passi; frame tutti intatti fino a: %s; risposta ancora a: %s; potenza rimessa a %d dBm\n", aborted ? "INTERROTTA" : "finita",
+                static_cast<unsigned>(sweep.steps()), perfect, answered, sweep.restoreDbm());
+  if (!aborted && sweepMinPerfect_ >= 0) {
+    audio_.beep(1000, 60);
+    audio_.beep(1400, 60);
+  } else {
+    audio_.beep(300, 200);
+  }
+}
+
+void UiNotifier::drawSweep() {
+  display_.setTextSize(1);
+  display_.setCursor(0, 16);
+  display_.print(sweepRunning_ ? "PROVA DI POTENZA" : (sweepAborted_ ? "POTENZA: interrotta" : "POTENZA: finita"));
+  display_.setTextSize(2);
+  display_.setCursor(0, 28);
+  if (sweepRunning_) {
+    display_.printf("%d dBm", sweepDbm_);
+  } else if (sweepMinPerfect_ >= 0) {
+    display_.printf("MIN %d dBm", sweepMinPerfect_);
+  } else {
+    display_.print(sweepMinAnswered_ >= 0 ? "NON PULITA" : "NESSUNA");
+  }
+  display_.setTextSize(1);
+  display_.setCursor(0, 47);
+  if (sweepRunning_) {
+    if (sweepPct_ < 0) display_.print("passo 1...");
+    else display_.printf("passo %d: %s", sweepIndex_, sweepPct_ > 0 ? "risposta" : "nessuna risp.");
+    display_.setCursor(0, 56);
+    display_.print("PTT = ferma");
+  } else {
+    display_.printf("sente fino a %d dBm", sweepMinAnswered_);  // max 21 caratteri
+    if (sweepMinAnswered_ < 0) {
+      display_.setCursor(0, 47);
+      display_.print("nessuna risposta");
+    }
+    display_.setCursor(0, 56);
+    display_.print("(frame 100% a MIN)");
+  }
+  display_.display();
+}
+
 void UiNotifier::drawTestReport() {
   const lcr::TestReport& r = testRep_;
   display_.setTextSize(2);
@@ -517,6 +590,10 @@ void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeSte
     testShown_ = false;
     dirty_ = true;
   }
+  if (sweepShown_ && !sweepRunning_ && nowMs > sweepUntilMs_) {
+    sweepShown_ = false;
+    dirty_ = true;
+  }
   if (notice_ && nowMs > noticeUntilMs_) {
     notice_ = nullptr;
     dirty_ = true;
@@ -561,6 +638,10 @@ void UiNotifier::draw(uint32_t nowMs) {
     return;
   }
 
+  if (sweepShown_ && (sweepRunning_ || state_ == lcr::VoiceNode::State::Idle)) {
+    drawSweep();
+    return;
+  }
   if (testShown_ && state_ == lcr::VoiceNode::State::Idle) {
     drawTestReport();
     return;

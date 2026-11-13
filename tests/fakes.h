@@ -231,6 +231,16 @@ class Notifier : public lcr::INotifier {
     lcr::TestReport r;
   };
   std::vector<Rep> reports;
+  void powerSweepStep(const lcr::PowerSweep::Step& s, size_t) override { sweepSteps.push_back(s); }
+  void powerSweepDone(const lcr::PowerSweep& sw, bool aborted) override {
+    sweepDone++;
+    sweepAborted = aborted;
+    sweepMinPerfect = sw.minPerfectDbm();
+    sweepMinAnswered = sw.minAnsweredDbm();
+  }
+  std::vector<lcr::PowerSweep::Step> sweepSteps;
+  int sweepDone = 0, sweepMinPerfect = -2, sweepMinAnswered = -2;
+  bool sweepAborted = false;
   int txStarts = 0, txEnds = 0, denied = 0, rxStarts = 0, rxEnds = 0;
   bool limitHit = false;
   lcr::DenyReason lastDeny = lcr::DenyReason::Receiving;

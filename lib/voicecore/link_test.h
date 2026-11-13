@@ -64,4 +64,46 @@ class LinkTestRx {
   uint32_t packets_ = 0, snrPackets_ = 0;
 };
 
+// Prova di potenza: la stessa prova di collegamento ripetuta a potenza decrescente, dalla massima alla minima, per trovare la potenza
+// minima con cui le due schede si sentono. Ogni passo e' una prova breve (kSweepFrames frame); l'altra scheda risponde con l'esito (a
+// potenza normale: e' la sua, non quella in prova). Un passo senza risposta vale 0%. Si ferma da solo dopo due passi di fila senza risposta.
+constexpr uint32_t kSweepFrames = 75;      // 3 s di frame per passo
+constexpr uint32_t kSweepGapMs = 800;      // pausa fra la risposta e il passo successivo
+constexpr uint32_t kSweepWaitExtraMs = 3000;  // attesa della risposta dopo l'ultimo pacchetto, oltre al tempo di chiusura della ricezione
+
+class PowerSweep {
+ public:
+  static constexpr size_t kMaxSteps = 24;
+  struct Step {
+    int8_t dbm = 0;
+    bool answered = false;  // l'altra scheda ha risposto
+    uint8_t percent = 0;    // frame arrivati intatti sui frame inviati (0 senza risposta)
+    int8_t rssiDbm = 0;
+    int8_t snrDb = 0;
+    bool snrValid = false;
+  };
+
+  void begin(int maxDbm, int minDbm, int restoreDbm, uint32_t frames = kSweepFrames);
+  bool active() const { return active_; }
+  int currentDbm() const { return cur_; }
+  int restoreDbm() const { return restore_; }
+  uint32_t frames() const { return frames_; }
+  // Registra l'esito del passo in corso (answered = false: nessuna risposta) e passa al successivo. false: la prova e' finita.
+  bool record(bool answered, const TestReport& r);
+  void stop() { active_ = false; }
+  size_t steps() const { return n_; }
+  const Step& step(size_t i) const { return steps_[i]; }
+  // Potenza minima a cui tutti i frame arrivano intatti, a partire dalla massima senza interruzioni (-1: nemmeno alla massima).
+  int minPerfectDbm() const;
+  // Potenza minima a cui l'altra scheda ha ancora risposto con almeno un frame (-1: mai).
+  int minAnsweredDbm() const;
+
+ private:
+  Step steps_[kMaxSteps];
+  size_t n_ = 0;
+  int cur_ = 0, min_ = 0, restore_ = 0;
+  uint32_t frames_ = kSweepFrames;
+  bool active_ = false;
+};
+
 }  // namespace lcr

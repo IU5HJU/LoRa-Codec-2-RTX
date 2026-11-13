@@ -116,6 +116,18 @@ class UiNotifier : public lcr::INotifier {
   void sysopReply(const char* callsign, const lcr::SysopReply& r) override;
   void recPhaseChanged(int phase) override { recPhase_ = phase; dirty_ = true; }
   void linkTestReport(bool fromRemote, const char* callsign, const lcr::TestReport& r) override;
+  void powerSweepStep(const lcr::PowerSweep::Step& s, size_t index) override;
+  void powerSweepDone(const lcr::PowerSweep& sweep, bool aborted) override;
+  // La prova di potenza e' partita (CFG TEST SWEEP): lo schermo la segue finche' non finisce.
+  void setSweepRunning(int firstDbm) {
+    sweepRunning_ = true;
+    sweepShown_ = true;
+    sweepUntilMs_ = 0;
+    sweepDbm_ = firstDbm;
+    sweepPct_ = -1;
+    sweepIndex_ = 0;
+    dirty_ = true;
+  }
 
   // Forza il ridisegno dello schermo (dopo una schermata temporanea).
   void refresh() { dirty_ = true; }
@@ -129,6 +141,7 @@ class UiNotifier : public lcr::INotifier {
  private:
   void draw(uint32_t nowMs);
   void drawTestReport();
+  void drawSweep();
   void drawMenu();
   void drawProfileBadge();
   void drawIncoming();
@@ -183,6 +196,11 @@ class UiNotifier : public lcr::INotifier {
   bool lastVia_ = false;     // l'ultima ricevuta e' passata da un ripetitore
   bool lastBeacon_ = false;  // l'ultima ricevuta e' l'identificativo di un ripetitore
   bool testMode_ = false;
+  bool sweepRunning_ = false;     // prova di potenza in corso
+  bool sweepShown_ = false;       // schermata della prova di potenza (in corso o con l'esito)
+  bool sweepAborted_ = false;
+  uint32_t sweepUntilMs_ = 0;
+  int sweepDbm_ = 0, sweepPct_ = -1, sweepIndex_ = 0, sweepMinPerfect_ = -1, sweepMinAnswered_ = -1;
   bool testShown_ = false;        // schermata con l'esito della prova
   uint32_t testUntilMs_ = 0;
   bool testFromRemote_ = false;

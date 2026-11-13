@@ -318,6 +318,9 @@
     <button id="testOn" type="button" class="secondary" disabled>Attiva la prova</button>
     <button id="testOff" type="button" class="secondary" disabled>Disattiva la prova</button>
     <span id="testState" class="muted"></span>
+    <h3>Prova di potenza</h3>
+    <p class="muted">Trova la <strong>potenza minima</strong> con cui due schede si sentono: la scheda ripete la prova di collegamento (3 secondi ciascuna) <strong>dalla potenza massima alla minima</strong>, un dBm alla volta, e l'altra scheda risponde ogni volta con l'esito. Serve la prova accesa <strong>anche sull'altra scheda</strong> (<em>Attiva la prova</em> o tre clic sul PTT) e il tuo nominativo. Dura da qualche decina di secondi a un minuto e mezzo; si ferma da sola quando l'altra scheda non risponde più, o con un PTT. L'esito (potenza minima con tutti i frame intatti, e fin dove l'altra scheda risponde ancora) è sul display e nel registro; poi la potenza torna quella impostata. Nel profilo Messaggio non c'è. Come margine di sicurezza conviene lavorare qualche dBm sopra il minimo trovato.</p>
+    <button id="testSweep" type="button" class="secondary" disabled>Avvia la prova di potenza</button>
     <div id="logtools">
       <button id="logCopy" type="button" class="secondary">Copia il registro</button>
       <button id="logSave" type="button" class="secondary">Salva su file</button>
@@ -619,7 +622,7 @@
   function setConnected(on) {
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
-    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
+    for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'testSweep', 'hwMic', 'hwTones']) $(id).disabled = !on;
     if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; shiftSeen = false; nodeSeen = false; roleSeen = false; roleShow(); }
     $('idint').disabled = !on || !idintSeen;
     for (const id of NET_IDS) $(id).disabled = !on || !nodeSeen;
@@ -1241,6 +1244,13 @@
   }
   $('testOn').addEventListener('click', () => setTest(true));
   $('testOff').addEventListener('click', () => setTest(false));
+  $('testSweep').addEventListener('click', async () => {
+    try {
+      await send('CFG TEST SWEEP', /^CFG (OK|ERR)/);
+      $('testState').textContent = 'Prova ATTIVA, prova di potenza in corso';
+      setStatus('Prova di potenza avviata: segui l\'esito sul display e nel registro. Serve la prova accesa anche sull\'altra scheda.', 'ok');
+    } catch (e) { setStatus('Errore: ' + e.message, 'err'); }
+  });
   roleShow();
   if (!supported) $('connect').disabled = true;
 })();

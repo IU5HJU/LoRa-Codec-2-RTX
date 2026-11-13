@@ -147,6 +147,15 @@ class INotifier {
     (void)callsign;
     (void)r;
   }
+  // Prova di potenza (link_test.h, PowerSweep): ogni passo concluso e l'esito finale (minimi in dBm, -1 = nessuno).
+  virtual void powerSweepStep(const PowerSweep::Step& s, size_t index) {
+    (void)s;
+    (void)index;
+  }
+  virtual void powerSweepDone(const PowerSweep& sweep, bool aborted) {
+    (void)sweep;
+    (void)aborted;
+  }
 };
 
 }  // namespace lcr

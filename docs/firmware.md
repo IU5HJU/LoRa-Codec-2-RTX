@@ -158,6 +158,7 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | `CFG MIC MEASURE` | `CFG OK mic misura in corso...`, dopo 3 s `CFG MIC fondo=-61 min=-63 max=-58 frames=75` | misura il fondo (stare in silenzio): `fondo` è il livello sotto cui sta il 90% dei campioni. Non salva da solo: lo fa la pagina con `CFG SET MICFLOOR` |
 | `CFG TEST AUDIO` | `CFG OK audio prova in corso...`, poi `CFG AUDIO f=500 base=-90.1 tone=-52.3` (e 1000, 2000 Hz) e `CFG AUDIO fine` | suona tre toni a volume basso e fisso e misura il microfono alla frequenza del tono ([verifica-hardware-audio.md](verifica-hardware-audio.md)); blocca la scheda per circa 3,5 s |
 | `CFG TEST ON` / `CFG TEST OFF` | `CFG OK test=on` | prova di collegamento ([prova-collegamento.md](prova-collegamento.md)), attivabile anche con tre clic veloci sul PTT; non viene salvata, all'accensione è sempre spenta |
+| `CFG TEST SWEEP` | `CFG OK sweep: ...` | prova di potenza ([prova-collegamento.md](prova-collegamento.md)): accende la prova di collegamento e la ripete dalla potenza massima alla minima, trovando la potenza minima con cui l'altra scheda (con la prova accesa) risponde; esito su display e registro, un PTT la ferma |
 | `CFG RESET` | `CFG OK reset` | cancella i valori salvati e torna a quelli di `user_config.h` |
 | `CFG REBOOT` | `CFG OK reboot` | riavvia la scheda |
 

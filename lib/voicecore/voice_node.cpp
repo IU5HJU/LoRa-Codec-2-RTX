@@ -32,6 +32,10 @@ uint16_t VoiceNode::makeSessionId() {
 }
 
 void VoiceNode::pttPressed(uint32_t nowMs) {
+  if (sweepPhase_ != SweepPhase::None) {  // un PTT ferma la prova di potenza (e rimette la potenza di prima)
+    sweepFinish(true);
+    return;
+  }
   if (state_ == State::Transmitting) {
     notify_.pttDenied(DenyReason::Transmitting);
     return;
@@ -105,6 +109,7 @@ void VoiceNode::startTx(uint32_t nowMs) {
   recCount_ = recSent_ = 0;
   txTotal_ = txSent_ = 0;
   testFramesSent_ = 0;
+  testFrameLimit_ = sweepPhase_ != SweepPhase::None ? sweep_.frames() : kTestFrames;
   nextTestFrameMs_ = nowMs;
   if (txTest_) {
     lastTestSession_ = sid;
@@ -236,6 +241,7 @@ void VoiceNode::tick(uint32_t nowMs) {
     if (meshActive()) meshAckTick(nowMs);
     rxTick(nowMs);
     if (replyPending_ && state_ == State::Idle && static_cast<int32_t>(nowMs - replyAtMs_) >= 0) sendTestReply(nowMs);
+    sweepTick(nowMs);
   }
 }
 
@@ -273,7 +279,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
     recTick(nowMs);
   } else if (!releasing_ && txTest_) {
     // Prova: un frame noto ogni 40 ms, come se arrivasse dal codec, fino a kTestFrames.
-    for (int guard = 0; guard < 8 && !releasing_ && testFramesSent_ < kTestFrames &&
+    for (int guard = 0; guard < 8 && !releasing_ && testFramesSent_ < testFrameLimit_ &&
                         static_cast<int32_t>(nowMs - nextTestFrameMs_) >= 0;
          guard++) {
       uint8_t frame[kFrameBytes];
@@ -285,7 +291,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
       testFramesSent_++;
       nextTestFrameMs_ += kFrameMs;
     }
-    if (!releasing_ && testFramesSent_ >= kTestFrames) finishCapture(false);
+    if (!releasing_ && testFramesSent_ >= testFrameLimit_) finishCapture(false);
   } else if (!releasing_) {
     int16_t pcm[kFrameSamples];
     uint8_t frame[kMaxFrameBytes];
@@ -345,6 +351,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
           decodeTestReport(p.payload, p.payloadLen, r)) {
         lastTestValid_ = false;  // una sola risposta per prova
         notify_.linkTestReport(true, p.callsign, r);
+        if (sweepPhase_ == SweepPhase::Wait) sweepRecord(nowMs, true, r);
       }
       continue;
     }
@@ -1001,6 +1008,75 @@ void VoiceNode::sendTestReply(uint32_t nowMs) {
     radio_.send(buf, n);
     radio_.startReceive();
   }
+}
+
+bool VoiceNode::startPowerSweep(uint32_t nowMs, int maxDbm, int minDbm, int restoreDbm) {
+  if (sweepPhase_ != SweepPhase::None || !testMode_ || prof_.message || guest_ || state_ != State::Idle || replyPending_ || maxDbm < minDbm) return false;
+  if (isPlaceholderCallsign(cfg_.callsign)) {
+    notify_.pttDenied(DenyReason::NoCallsign);
+    return false;
+  }
+  sweep_.begin(maxDbm, minDbm, restoreDbm);
+  sweepPhase_ = SweepPhase::Gap;
+  sweepAtMs_ = sweepGapStartMs_ = nowMs;
+  sweepBusy_ = 0;
+  return true;
+}
+
+// Un passo alla volta: Gap (attesa e canale libero) -> Tx (prova breve alla potenza del passo) -> Wait (risposta dell'altra scheda, o scadenza).
+void VoiceNode::sweepTick(uint32_t nowMs) {
+  if (sweepPhase_ == SweepPhase::None) return;
+  if (!testMode_ || guest_) {  // prova spenta o escursione in corso: si ferma
+    sweepFinish(true);
+    return;
+  }
+  switch (sweepPhase_) {
+    case SweepPhase::Gap:
+      if (static_cast<int32_t>(nowMs - sweepAtMs_) < 0) return;
+      if (state_ != State::Idle) {  // qualcuno trasmette: si aspetta, ma non per sempre
+        if (nowMs - sweepGapStartMs_ > 20000) sweepFinish(true);
+        return;
+      }
+      if (radio_.channelBusy()) {
+        if (++sweepBusy_ >= 25) sweepFinish(true);
+        sweepAtMs_ = nowMs + 200;
+        return;
+      }
+      sweepBusy_ = 0;
+      radio_.setPower(sweep_.currentDbm());
+      sweepPhase_ = SweepPhase::Tx;  // prima di startTx: il numero di frame e' quello breve
+      startTx(nowMs);
+      break;
+    case SweepPhase::Tx:  // si arriva qui a riposo: la prova e' stata inviata tutta
+      sweepPhase_ = SweepPhase::Wait;
+      sweepAtMs_ = nowMs + prof_.rxSessionTimeoutMs + kSweepWaitExtraMs;
+      break;
+    case SweepPhase::Wait:
+      if (static_cast<int32_t>(nowMs - sweepAtMs_) >= 0) sweepRecord(nowMs, false, TestReport());
+      break;
+    default:
+      break;
+  }
+}
+
+void VoiceNode::sweepRecord(uint32_t nowMs, bool answered, const TestReport& r) {
+  const size_t idx = sweep_.steps();
+  const bool more = sweep_.record(answered, r);
+  if (idx < sweep_.steps()) notify_.powerSweepStep(sweep_.step(idx), idx);
+  if (more) {
+    sweepPhase_ = SweepPhase::Gap;
+    sweepAtMs_ = nowMs + kSweepGapMs;
+    sweepGapStartMs_ = nowMs;
+  } else {
+    sweepFinish(false);
+  }
+}
+
+void VoiceNode::sweepFinish(bool aborted) {
+  sweepPhase_ = SweepPhase::None;
+  sweep_.stop();
+  radio_.setPower(sweep_.restoreDbm());
+  notify_.powerSweepDone(sweep_, aborted);
 }
 
 }  // namespace lcr

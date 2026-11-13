@@ -646,11 +646,20 @@ static void serviceConsole() {
       if (r != lcr::ConsoleResult::NotCommand) Serial.println(reply);
       if (r == lcr::ConsoleResult::MicMeasure) audio.startMeasure(3000);
       if (r == lcr::ConsoleResult::AudioTest) runAudioTest();
+      const bool wantSweep = r == lcr::ConsoleResult::PowerSweep;
       if (r == lcr::ConsoleResult::RadioTest) runRadioTest(console->radioTestRequest());
       if (r == lcr::ConsoleResult::CodecTest) runCodecTest();
       audio.setMicFloor(console->stored().micFloorDb);  // il fondo si applica subito (CFG SET MICFLOOR)
       node->setTestMode(console->testMode());  // prova di collegamento: non salvata, spenta all'avvio
       node->setRecordMode(console->recordMode());  // registra e poi trasmetti: non salvato, spento all'avvio
+      if (wantSweep) {  // prova di potenza: dalla massima alla minima, poi la potenza torna quella in uso
+        if (node->startPowerSweep(millis(), lcr::kMaxPowerDbm, lcr::kMinPowerDbm, settings.powerDbm)) {
+          ui.setSweepRunning(lcr::kMaxPowerDbm);
+          Serial.printf("[prova] prova di potenza da %d a %d dBm (potenza di prima: %d)\n", lcr::kMaxPowerDbm, lcr::kMinPowerDbm, settings.powerDbm);
+        } else {
+          Serial.println("CFG ERR sweep non puo' partire: serve un nominativo vero (non N0CALL), non il profilo Messaggio, scheda a riposo");
+        }
+      }
       if (r == lcr::ConsoleResult::Reboot) {
         Serial.flush();
         delay(100);

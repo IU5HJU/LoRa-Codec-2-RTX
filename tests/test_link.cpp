@@ -217,6 +217,116 @@ static void testOnlyOwnReply() {
   CHECK(s.a.note.reports.size() == 1);
 }
 
+// ---- Prova di potenza ----
+static void testSweepLogic() {
+  PowerSweep w;
+  w.begin(17, 2, 10);
+  TestReport ok;
+  ok.framesOk = ok.framesOut = kSweepFrames;
+  CHECK(w.active() && w.currentDbm() == 17 && w.restoreDbm() == 10);
+  // 17..12 perfetti, 11 al 80%, 10 al 20%, poi niente: due passi muti di fila fermano la prova
+  int dbm = 17;
+  for (; dbm >= 12; dbm--) {
+    CHECK(w.currentDbm() == dbm && w.record(true, ok));
+  }
+  TestReport r80 = ok;
+  r80.framesOk = static_cast<uint16_t>(kSweepFrames * 8 / 10);
+  CHECK(w.currentDbm() == 11 && w.record(true, r80));
+  TestReport r20 = ok;
+  r20.framesOk = static_cast<uint16_t>(kSweepFrames / 5);
+  CHECK(w.currentDbm() == 10 && w.record(true, r20));
+  CHECK(w.currentDbm() == 9 && w.record(false, TestReport()));
+  CHECK(w.currentDbm() == 8 && !w.record(false, TestReport()) && !w.active());
+  CHECK(w.steps() == 10 && w.step(6).percent == 80 && w.step(7).percent == 20 && !w.step(8).answered && !w.step(9).answered);
+  CHECK(w.minPerfectDbm() == 12);   // dalla massima senza interruzioni
+  CHECK(w.minAnsweredDbm() == 10);  // l'ultima che ha ancora risposto
+  // fino al minimo se risponde sempre
+  PowerSweep v;
+  v.begin(5, 2, 5);
+  while (v.active()) v.record(true, ok);
+  CHECK(v.steps() == 4 && v.minPerfectDbm() == 2 && v.minAnsweredDbm() == 2);
+  // mai risposta: due passi e fine, nessun minimo
+  PowerSweep z;
+  z.begin(17, 2, 17);
+  z.record(false, TestReport());
+  CHECK(!z.record(false, TestReport()) && z.steps() == 2 && z.minPerfectDbm() == -1 && z.minAnsweredDbm() == -1);
+  // un buco in mezzo non conta per il minimo "pulito"
+  PowerSweep h;
+  h.begin(6, 2, 6);
+  h.record(true, ok);
+  h.record(true, r80);
+  h.record(true, ok);
+  CHECK(h.minPerfectDbm() == 6);
+}
+
+// La prova di potenza fra due stazioni: sotto 9 dBm l'altra scheda non sente piu' niente (un'antenna lontana), a 9-10 dBm perde dei pacchetti.
+static void testSweepEndToEnd() {
+  Sim s;
+  s.a.node.setTestMode(true);
+  s.b.node.setTestMode(true);
+  s.air.drop = [&](int from, int idx) {
+    (void)idx;
+    if (from != 0) return false;  // le risposte di B tornano sempre
+    const int p = s.a.radio.powers.empty() ? 17 : s.a.radio.powers.back();
+    if (p < 9) return true;
+    if (p < 11) return idx % 3 == 1;  // un pacchetto su tre
+    return false;
+  };
+  s.run(100);
+  CHECK(!s.a.node.powerSweepActive());
+  CHECK(s.a.node.startPowerSweep(s.clock, 14, 2, 12));
+  CHECK(s.a.node.powerSweepActive());
+  s.run(120000);
+  CHECK(!s.a.node.powerSweepActive() && s.a.note.sweepDone == 1 && !s.a.note.sweepAborted);
+  // 14, 13, 12, 11 perfetti; 10 e 9 con dei buchi; 8 e 7 muti: la prova si ferma a 7
+  const auto& st = s.a.note.sweepSteps;
+  CHECK(st.size() == 8);
+  for (size_t i = 0; i < st.size() && i < 4; i++) CHECK(st[i].answered && st[i].percent == 100 && st[i].dbm == 14 - static_cast<int>(i));
+  CHECK(st.size() > 5 && st[4].dbm == 10 && st[4].answered && st[4].percent < 100 && st[4].percent > 0);
+  CHECK(st.size() > 7 && !st[6].answered && !st[7].answered && st[7].dbm == 7);
+  CHECK(s.a.note.sweepMinPerfect == 11 && s.a.note.sweepMinAnswered == 9);
+  // la potenza torna a quella di prima, e ogni passo l'ha impostata
+  CHECK(!s.a.radio.powers.empty() && s.a.radio.powers.back() == 12);
+  CHECK(s.a.radio.powers.size() == st.size() + 1 && s.a.radio.powers[0] == 14 && s.a.radio.powers[3] == 11);
+  // l'altra scheda ha ricevuto una prova per passo
+  CHECK(s.b.note.reports.size() >= 6);
+  // dopo la prova si puo' rifare una prova normale, di 12 s
+  s.a.node.setTestMode(true);
+  s.a.node.pttPressed(s.clock);
+  s.run(16000);
+  CHECK(s.b.note.reports.back().r.framesOut == kTestFrames);
+}
+
+static void testSweepRefusedAndAborted() {
+  Sim s;
+  s.run(100);
+  CHECK(!s.a.node.startPowerSweep(s.clock, 17, 2, 10));  // prova non attiva
+  s.a.node.setTestMode(true);
+  s.b.node.setTestMode(true);
+  CHECK(s.a.node.startPowerSweep(s.clock, 17, 2, 10));
+  CHECK(!s.a.node.startPowerSweep(s.clock, 17, 2, 10));  // gia' in corso
+  s.run(2000);
+  CHECK(s.a.node.powerSweepActive());
+  s.a.node.pttPressed(s.clock);  // un PTT ferma tutto e rimette la potenza
+  CHECK(!s.a.node.powerSweepActive() && s.a.note.sweepDone == 1 && s.a.note.sweepAborted);
+  CHECK(s.a.radio.powers.back() == 10);
+  // spegnere la prova ferma la prova di potenza
+  Sim t;
+  t.a.node.setTestMode(true);
+  t.b.node.setTestMode(true);
+  CHECK(t.a.node.startPowerSweep(t.clock, 17, 2, 9));
+  t.run(500);
+  t.a.node.setTestMode(false);
+  t.run(5000);  // la prova in corso finisce di trasmettere, poi la prova di potenza si ferma
+  CHECK(!t.a.node.powerSweepActive() && t.a.note.sweepAborted && t.a.radio.powers.back() == 9);
+  // senza nessuno dall'altra parte: due passi e fine, nessun minimo
+  Sim u;
+  u.a.node.setTestMode(true);
+  CHECK(u.a.node.startPowerSweep(u.clock, 17, 2, 17));
+  u.run(60000);
+  CHECK(u.a.note.sweepSteps.size() == 2 && u.a.note.sweepMinPerfect == -1 && u.a.note.sweepMinAnswered == -1 && !u.a.node.powerSweepActive());
+}
+
 int main() {
   testPattern();
   testReportCodec();
@@ -228,5 +338,8 @@ int main() {
   testReleaseEarly();
   testVoiceUnaffected();
   testOnlyOwnReply();
+  testSweepLogic();
+  testSweepEndToEnd();
+  testSweepRefusedAndAborted();
   TEST_MAIN_END();
 }

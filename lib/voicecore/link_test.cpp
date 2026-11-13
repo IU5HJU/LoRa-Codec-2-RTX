@@ -92,4 +92,53 @@ TestReport LinkTestRx::report(uint8_t recoveredPackets) const {
   return r;
 }
 
+void PowerSweep::begin(int maxDbm, int minDbm, int restoreDbm, uint32_t frames) {
+  *this = PowerSweep();
+  cur_ = maxDbm;
+  min_ = minDbm;
+  restore_ = restoreDbm;
+  frames_ = frames > 0 ? frames : kSweepFrames;
+  active_ = maxDbm >= minDbm;
+}
+
+bool PowerSweep::record(bool answered, const TestReport& r) {
+  if (!active_) return false;
+  if (n_ < kMaxSteps) {
+    Step& s = steps_[n_++];
+    s.dbm = static_cast<int8_t>(cur_);
+    s.answered = answered;
+    if (answered) {
+      const uint32_t p = (100u * r.framesOk + frames_ / 2u) / frames_;
+      s.percent = static_cast<uint8_t>(p > 100 ? 100 : p);
+      s.rssiDbm = clampInt8(r.rssiDbm);
+      s.snrDb = clampInt8(r.snrDb);
+      s.snrValid = r.snrValid;
+    }
+  }
+  const bool twoSilent = n_ >= 2 && !steps_[n_ - 1].answered && !steps_[n_ - 2].answered;
+  if (cur_ - 1 < min_ || twoSilent || n_ >= kMaxSteps) {
+    active_ = false;
+    return false;
+  }
+  cur_--;
+  return true;
+}
+
+int PowerSweep::minPerfectDbm() const {
+  int best = -1;
+  for (size_t i = 0; i < n_; i++) {
+    if (!steps_[i].answered || steps_[i].percent < 100) break;
+    best = steps_[i].dbm;
+  }
+  return best;
+}
+
+int PowerSweep::minAnsweredDbm() const {
+  int best = -1;
+  for (size_t i = 0; i < n_; i++) {
+    if (steps_[i].answered && steps_[i].percent > 0) best = steps_[i].dbm;
+  }
+  return best;
+}
+
 }  // namespace lcr
