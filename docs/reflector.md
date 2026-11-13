@@ -53,7 +53,7 @@ build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mod
   [Install]
   WantedBy=multi-user.target
   ```
-  poi `sudo systemctl daemon-reload && sudo systemctl restart vlreflector`. Aggiornare il programma: `cd ~/VoLoRa && git pull && make vlreflector && sudo cp build/vlreflector /opt/vlreflector/ && sudo systemctl restart vlreflector`.
+  poi `sudo systemctl daemon-reload && sudo systemctl restart vlreflector`. **Aggiornare il programma** con un solo comando: `~/VoLoRa/tools/aggiorna-reflector.sh` (scarica, ricompila, ferma il servizio, copia il programma e lo riavvia: da fermo, perché un programma in uso non si può sovrascrivere).
 
 ## La pagina di amministrazione
 
@@ -64,7 +64,7 @@ Con `--web 8080` il reflector serve una pagina (senza librerie esterne) con:
 - **Registra un nodo**: vedi sotto.
 
 Sicurezza:
-- Di base ascolta **solo su `127.0.0.1`**: dal portatile di casa la raggiungi con un tunnel ssh, `ssh -L 8080:127.0.0.1:8080 IU5HJU@192.168.1.76`, e apri `http://127.0.0.1:8080/`. Con `--web-bind 0.0.0.0` è raggiungibile da tutta la rete locale.
+- Di base ascolta **solo su `127.0.0.1`**: dal portatile di casa la raggiungi con un tunnel ssh, `ssh -L 8080:127.0.0.1:8080 IU5HJU@192.168.1.76`, e apri `http://127.0.0.1:8080/`. Con `--web-bind 0.0.0.0` è raggiungibile da tutta la rete locale (`http://indirizzo-del-server:8080/` da qualsiasi PC o telefono di casa; **non inoltrare questa porta nel router**).
 - I dati e le azioni vogliono il **token di amministrazione**: il file `admin.token` accanto al file dei client (creato la prima volta, permessi riservati; lo leggi con `sudo cat /var/lib/vlreflector/admin.token`), che la pagina chiede all'ingresso e tiene solo nella scheda del browser. Dopo 10 tentativi sbagliati in un minuto si blocca per un po'.
 - È HTTP semplice: **non metterla su Internet** senza un HTTPS davanti (per esempio un proxy con un certificato). La porta UDP dei nodi, invece, è l'unica da aprire.
 

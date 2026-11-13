@@ -14,6 +14,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 system-ui, sans-serif; }
   main { max-width:900px; margin:0 auto; padding:16px; }
+  .tw { overflow-x:auto; }
   h1 { font-size:1.4rem; margin:.2em 0 .6em; }
   h2 { font-size:1.05rem; margin:0 0 .6em; }
   section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin:0 0 14px; }
@@ -37,6 +38,14 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
   .msg.warn { color:var(--warn); border-color:var(--warn); }
   .msg.ok { color:var(--ok); border-color:var(--ok); }
   #login { display:none; }
+  /* telefono: meno colonne, il resto resta nel riquadro */
+  @media (max-width: 640px) {
+    main { padding:10px; }
+    section { padding:10px; }
+    th, td { padding:6px 4px; }
+    #clients td:nth-child(5), #clients td:nth-child(6), thead th:nth-child(5), thead th:nth-child(6) { display:none; }
+    #recent td:nth-child(5) { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -59,19 +68,19 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
 
     <section>
       <h2>Collegati</h2>
-      <table>
+      <div class="tw"><table>
         <thead><tr><th>Nominativo</th><th>Id</th><th>Stato</th><th>Ultimo segnale</th><th>Pacchetti in/out</th><th>Indirizzo</th><th></th></tr></thead>
         <tbody id="clients"></tbody>
-      </table>
+      </table></div>
       <p class="muted" id="clientsEmpty" hidden>Nessun nodo in elenco.</p>
     </section>
 
     <section>
       <h2>Ultime trasmissioni</h2>
-      <table>
+      <div class="tw"><table>
         <thead><tr><th>Quando</th><th>Nominativo</th><th>Da</th><th>Durata</th><th>Pacchetti</th></tr></thead>
         <tbody id="recent"></tbody>
-      </table>
+      </table></div>
       <p class="muted" id="recentEmpty">Ancora nessuna.</p>
     </section>
 
