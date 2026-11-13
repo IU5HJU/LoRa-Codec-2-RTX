@@ -531,17 +531,25 @@ void UiNotifier::drawSweep() {
   display_.setCursor(0, 47);
   if (sweepRunning_) {
     if (sweepPct_ < 0) display_.print("passo 1...");
-    else display_.printf("passo %d: %s", sweepIndex_, sweepPct_ > 0 ? "risposta" : "nessuna risp.");
+    else display_.printf("passo %d: %s", sweepIndex_, sweepPct_ > 0 ? "risposta" : "nessuna");  // al massimo 21 caratteri
     display_.setCursor(0, 56);
     display_.print("PTT = ferma");
   } else {
-    display_.printf("sente fino a %d dBm", sweepMinAnswered_);  // max 21 caratteri
-    if (sweepMinAnswered_ < 0) {
-      display_.setCursor(0, 47);
-      display_.print("nessuna risposta");
+    // Due righe sotto il titolo, ognuna una sola volta e al massimo 21 caratteri (128 px): un solo caso per volta, niente sovrapposizioni.
+    char l1[24], l2[24];
+    if (sweepMinPerfect_ >= 0) {
+      snprintf(l1, sizeof(l1), "sente fino a %d dBm", sweepMinAnswered_);
+      snprintf(l2, sizeof(l2), "(frame 100%% a MIN)");
+    } else if (sweepMinAnswered_ >= 0) {
+      snprintf(l1, sizeof(l1), "risponde a %d dBm", sweepMinAnswered_);
+      snprintf(l2, sizeof(l2), "ma con frame persi");
+    } else {
+      snprintf(l1, sizeof(l1), "nessuna risposta");
+      snprintf(l2, sizeof(l2), "l'altra e' in prova?");
     }
+    display_.print(l1);
     display_.setCursor(0, 56);
-    display_.print("(frame 100% a MIN)");
+    display_.print(l2);
   }
   display_.display();
 }

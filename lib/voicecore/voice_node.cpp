@@ -53,8 +53,13 @@ void VoiceNode::pttPressed(uint32_t nowMs) {
   // A riposo la pressione e' un clic oppure l'inizio di una trasmissione: lo si capisce da quanto dura.
   if (clickCount_ > 0 && nowMs - lastClickMs_ > kPttClickGapMs) clickCount_ = 0;
   if (clickCount_ >= 2 && !prof_.message && !meshActive()) {
-    // Terzo clic veloce: attiva o disattiva la prova di collegamento, senza trasmettere.
+    // Terzo clic veloce: attiva o disattiva la prova di collegamento, senza trasmettere. Senza un nominativo vero (N0CALL) la prova non
+    // si accende: partecipare vuol dire rispondere e trasmettere, e senza nominativo non si trasmette (spegnerla si puo' sempre).
     clickCount_ = 0;
+    if (!testMode_ && isPlaceholderCallsign(cfg_.callsign)) {
+      notify_.pttDenied(DenyReason::NoCallsign);
+      return;
+    }
     testMode_ = !testMode_;
     notify_.testModeChanged(testMode_);
     return;

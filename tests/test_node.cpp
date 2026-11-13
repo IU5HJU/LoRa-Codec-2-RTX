@@ -161,7 +161,7 @@ static void testShortTapDoesNotTransmit() {
 }
 
 static void testClicksWorkWithoutCallsign() {
-  // La prova si attiva anche con N0CALL (si riceve e si misura, ma non si trasmette).
+  // Con N0CALL la prova NON si accende (partecipare vuol dire rispondere, cioe' trasmettere): tre clic danno il rifiuto "imposta il nominativo".
   fake::Air air;
   uint32_t clock = 0;
   Station n0(air, 0, "N0CALL", clock);
@@ -173,9 +173,10 @@ static void testClicksWorkWithoutCallsign() {
     step(150);
   }
   n0.node.pttPressed(clock);
-  CHECK(n0.node.testMode());
+  CHECK(!n0.node.testMode() && n0.note.denied == 1 && n0.note.lastDeny == DenyReason::NoCallsign);
   n0.node.pttReleased(clock);
-  CHECK(n0.note.denied == 0);
+  n0.node.setTestMode(true);  // nemmeno dalla seriale o dalla pagina
+  CHECK(!n0.node.testMode() && air.sent[0] == 0);
 }
 
 static void testLongPressAfterClicks() {

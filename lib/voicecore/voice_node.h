@@ -71,7 +71,7 @@ class VoiceNode {
   // Prova di collegamento (non persistente): con la prova attiva il PTT trasmette frame di prova
   // invece della voce, e dopo aver ricevuto una prova la scheda risponde con il risultato.
   // Nel profilo Messaggio la prova di collegamento non c'e' (12 s di frame a SF12 sarebbero circa 17 minuti in aria).
-  void setTestMode(bool on) { testMode_ = on && !prof_.message && !guest_; }
+  void setTestMode(bool on) { testMode_ = on && !prof_.message && !guest_ && !isPlaceholderCallsign(cfg_.callsign); }  // senza nominativo la prova non si accende: non si trasmette
   bool testMode() const { return testMode_; }
 
   // Modo "registra e poi trasmetti" (prova, non persistente): il PTT registra il messaggio senza trasmettere; dopo il

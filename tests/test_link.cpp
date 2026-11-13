@@ -285,6 +285,23 @@ static void testSweepFromPtt() {
   u.run(10000);
 }
 
+// Una scheda senza nominativo (N0CALL) non partecipa alla prova di potenza: non si accende e non trasmette mai, nemmeno risposte.
+static void testNoCallsignNeverTransmits() {
+  fake::Air air;
+  uint32_t clock = 0;
+  Station a(air, 0, "IU5HJU", clock), n0(air, 1, "N0CALL", clock);
+  a.node.setTestMode(true);
+  n0.node.setTestMode(true);
+  CHECK(a.node.testMode() && !n0.node.testMode());
+  for (uint32_t t = 0; t < 200; t += 10, clock += 10) { a.node.tick(clock); n0.node.tick(clock); }
+  CHECK(a.node.startPowerSweep(clock, 17, 2, 12));
+  for (uint32_t t = 0; t < 60000; t += 10, clock += 10) { a.node.tick(clock); n0.node.tick(clock); }
+  CHECK(air.sent[1] == 0);                                          // la scheda senza nominativo non ha trasmesso niente
+  CHECK(a.note.sweepDone == 1 && a.note.sweepSteps.size() == 2);    // chi trasmette: nessuna risposta, si ferma dopo due passi
+  CHECK(a.note.sweepMinPerfect == -1 && a.note.sweepMinAnswered == -1);
+  CHECK(n0.note.summaries.empty());                                 // e non mostra l'esito
+}
+
 static void testSweepRefusedAndAborted() {
   Sim s;
   s.run(100);
@@ -325,6 +342,7 @@ int main() {
   testSweepEndToEnd();
   testSweepSummaryCodec();
   testSweepFromPtt();
+  testNoCallsignNeverTransmits();
   testSweepRefusedAndAborted();
   TEST_MAIN_END();
 }

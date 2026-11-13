@@ -27,7 +27,7 @@ Dal 14/11/2026 la prova di collegamento **è la prova di potenza** (la vecchia p
 ## Tre clic sul PTT
 
 Una pressione del PTT più breve di **0,3 s** è un "clic" e non trasmette: la trasmissione parte solo se il PTT resta premuto oltre 0,3 s (il microfono è comunque bufferizzato dalla pressione, quindi non si perde l'inizio della frase;
-il nominativo parte con 0,3 s di ritardo). Tre clic, ciascuno entro 0,5 s dal precedente, attivano o disattivano la prova. Funziona anche con N0CALL (si riceve e si misura, ma non si risponde). Con una scheda che sta ricevendo i clic sono ignorati.
+il nominativo parte con 0,3 s di ritardo). Tre clic, ciascuno entro 0,5 s dal precedente, attivano o disattivano la prova. **Con N0CALL (nessun nominativo) la prova non si accende**, né con i tre clic (compare l'avviso "IMPOSTA NOMINATIVO") né da seriale o pagina: partecipare vuol dire rispondere, cioè trasmettere, e senza nominativo non si trasmette. Una scheda senza nominativo non risponde mai alla prova; chi trasmette vede "nessuna risposta". Con una scheda che sta ricevendo i clic sono ignorati.
 Una terza pressione subito dopo due clic è sempre il terzo clic, anche se tenuta premuta: per trasmettere dopo due clic basta aspettare mezzo secondo.
 
 ## Come leggere l'esito
