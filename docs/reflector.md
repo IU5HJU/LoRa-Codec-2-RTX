@@ -10,6 +10,7 @@ Un reflector è un programma su un server che fa da centro-stella: **nodi e ripe
 make vlreflector
 build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mode 4] [--status-every 300]
                   [--web 8080 [--web-bind 127.0.0.1] [--admin-token-file FILE] [--public-name nome:5400]]
+                  [--public-web 8081 [--public-bind 0.0.0.0]]
 ```
 
 - `--id`: l'identificativo con cui si presenta il reflector (di base 1000): è il `PEERID` dei client.
@@ -68,6 +69,15 @@ Sicurezza:
 - Di base ascolta **solo su `127.0.0.1`**: dal portatile di casa la raggiungi con un tunnel ssh, `ssh -L 8080:127.0.0.1:8080 IU5HJU@192.168.1.76`, e apri `http://127.0.0.1:8080/`. Con `--web-bind 0.0.0.0` è raggiungibile da tutta la rete locale (`http://indirizzo-del-server:8080/` da qualsiasi PC o telefono di casa; **non inoltrare questa porta nel router**).
 - I dati e le azioni vogliono il **token di amministrazione**: il file `admin.token` accanto al file dei client (creato la prima volta, permessi riservati; lo leggi con `sudo cat /var/lib/vlreflector/admin.token`), che la pagina chiede all'ingresso e tiene solo nella scheda del browser. Dopo 10 tentativi sbagliati in un minuto si blocca per un po'.
 - È HTTP semplice: **non metterla su Internet** senza un HTTPS davanti (per esempio un proxy con un certificato). La porta UDP dei nodi, invece, è l'unica da aprire.
+
+## La pagina pubblica (per i colleghi)
+
+Come per le altre reti, chiunque può guardare chi è collegato e chi trasmette. `--public-web 8081` apre una **seconda porta** (di base su tutti gli indirizzi, `--public-bind` per cambiare) con una pagina ridotta, **di sola lettura**:
+- **In trasmissione adesso** (nominativo e durata), **stazioni collegate** (nominativo, nome del nodo, secondi dall'ultimo contatto) e **ultime 10 trasmissioni**, aggiornate ogni 3 secondi;
+- **non c'è** nessun token, nessuna chiave, nessun indirizzo IP, nessun id dei nodi, nessun contatore, nessun comando: l'unico indirizzo oltre alla pagina è `/status.json` con gli stessi dati, e tutto il resto risponde 404 (anche con il token di amministrazione) e solo GET è accettato;
+- le stazioni **registrate ma non collegate non compaiono**: si vede solo chi è collegato in questo momento, così un collega controlla se il suo nodo è davvero collegato.
+
+Per attivarla sul server si aggiunge `--public-web 8081` all'`ExecStart` del servizio (`sudo systemctl edit --full vlreflector`, poi `sudo systemctl daemon-reload && sudo systemctl restart vlreflector`) e si **inoltra nel router la porta TCP 8081** verso il server (la sola porta della pagina pubblica: **mai la 8080 di amministrazione**). L'indirizzo da dare ai colleghi è `http://iu5hju.ddns.net:8081/`. È HTTP semplice: i dati sono già pubblici per natura (nominativi radioamatori), ma se si vuole HTTPS basta metterci davanti un proxy come nginx o Caddy.
 
 ## Registrare un nuovo nodo (procedura)
 

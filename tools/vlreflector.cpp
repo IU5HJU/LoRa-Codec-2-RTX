@@ -5,6 +5,7 @@
 //   make vlreflector
 //   build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mode 4] [--status-every 300] [--duration SECONDI]
 //                     [--web 8080 [--web-bind 127.0.0.1] [--admin-token-file FILE] [--public-name nome:5400]]
+//                     [--public-web 8081 [--public-bind 0.0.0.0]]
 //
 // File dei client (una riga per client; righe vuote e # si ignorano):   <id> <chiave: 32 cifre esadecimali> <nome (il nominativo)>
 // Si ricarica senza fermare il reflector con un segnale SIGHUP (systemctl reload) o dalla pagina di amministrazione.
@@ -36,6 +37,7 @@
 #include "reflector_config.h"
 #include "reflector_core.h"
 #include "vlreflector_page.h"
+#include "vlreflector_public.h"
 
 using namespace lcr;
 
@@ -208,6 +210,43 @@ struct Admin {
     return o.str();
   }
 
+  // Stato per la pagina pubblica: solo i nominativi delle stazioni collegate e chi trasmette. Niente id, indirizzi, chiavi, contatori.
+  std::string publicStatusJson(uint32_t now) const {
+    std::ostringstream o;
+    o << "{\"reflector\":{\"name\":\"" << jsonEscape(publicName) << "\",\"mode\":\"" << (voiceMode == 4 ? "standard" : "range") << "\",\"uptimeS\":" << (now - startMs) / 1000
+      << "},";
+    const ReflectorCore::Talk t = core->currentTalk(now);
+    if (t.active && core->talker(now) != 0) o << "\"talking\":{\"callsign\":\"" << jsonEscape(t.callsign) << "\",\"durationS\":" << (t.lastMs - t.startMs) / 1000 << "},";
+    else o << "\"talking\":null,";
+    o << "\"clients\":[";
+    bool first = true;
+    for (const auto& c : core->clients(now)) {
+      if (!c.up) continue;  // chi e' registrato ma non collegato non si pubblica
+      const int ei = findEntryById(entries, c.id);
+      o << (first ? "" : ",") << "{\"call\":\"" << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].name : c.name) << "\",\"label\":\""
+        << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].label : "") << "\",\"seenS\":" << (now - c.lastSeenMs) / 1000 << "}";
+      first = false;
+    }
+    o << "],\"recent\":[";
+    first = true;
+    int n = 0;
+    for (const auto& r : core->recentTalks()) {
+      if (n++ >= 10) break;
+      o << (first ? "" : ",") << "{\"callsign\":\"" << jsonEscape(r.callsign) << "\",\"agoS\":" << (now - r.lastMs) / 1000 << ",\"durationS\":" << (r.lastMs - r.startMs) / 1000 << "}";
+      first = false;
+    }
+    o << "]}";
+    return o.str();
+  }
+  // La porta pubblica risponde solo a GET della pagina e di /status.json: nessun altro indirizzo, nessun comando.
+  std::string handlePublic(const HttpRequest& req, uint32_t now) const {
+    if (req.method != "GET") return fail(405, "metodo non ammesso");
+    const char* csp = "Content-Security-Policy: default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-ancestors 'none'\r\nCache-Control: no-store\r\n";
+    if (req.path == "/" || req.path == "/index.html") return httpResponse(200, "text/html; charset=utf-8", kPublicPage, csp);
+    if (req.path == "/status.json") return httpResponse(200, "application/json; charset=utf-8", publicStatusJson(now), "Cache-Control: no-store\r\n");
+    return fail(404, "non trovato");
+  }
+
   static std::string json(const std::string& body) { return httpResponse(200, "application/json; charset=utf-8", body); }
   static std::string fail(int status, const std::string& msg) {
     return httpResponse(status, "application/json; charset=utf-8", "{\"ok\":false,\"error\":\"" + jsonEscape(msg) + "\"}");
@@ -335,6 +374,23 @@ struct Admin {
   }
 };
 
+static int listenTcp(const std::string& bindAddr, int port, const char* what) {
+  const int fd = socket(AF_INET, SOCK_STREAM, 0);
+  int one = 1;
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+  sockaddr_in wa;
+  memset(&wa, 0, sizeof(wa));
+  wa.sin_family = AF_INET;
+  wa.sin_port = htons(static_cast<uint16_t>(port));
+  if (inet_pton(AF_INET, bindAddr.c_str(), &wa.sin_addr) != 1 || bind(fd, reinterpret_cast<sockaddr*>(&wa), sizeof(wa)) != 0 || listen(fd, 8) != 0) {
+    perror(what);
+    close(fd);
+    return -1;
+  }
+  fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+  return fd;
+}
+
 struct Conn {
   int fd;
   std::string in;
@@ -357,8 +413,8 @@ static void sendAll(int fd, const std::string& data) {
 int main(int argc, char** argv) {
   Admin adm;
   std::string tokenFile;
-  int duration = 0, statusEvery = 300, webPort = 0;
-  std::string webBind = "127.0.0.1";
+  int duration = 0, statusEvery = 300, webPort = 0, pubPort = 0;
+  std::string webBind = "127.0.0.1", pubBind = "0.0.0.0";
   for (int i = 1; i < argc; i++) {
     const std::string a = argv[i];
     auto next = [&]() -> const char* { return i + 1 < argc ? argv[++i] : ""; };
@@ -370,6 +426,8 @@ int main(int argc, char** argv) {
     else if (a == "--duration") duration = atoi(next());
     else if (a == "--web") webPort = atoi(next());
     else if (a == "--web-bind") webBind = next();
+    else if (a == "--public-web") pubPort = atoi(next());
+    else if (a == "--public-bind") pubBind = next();
     else if (a == "--admin-token-file") tokenFile = next();
     else if (a == "--public-name") adm.publicName = next();
     else {
@@ -377,8 +435,8 @@ int main(int argc, char** argv) {
       return 2;
     }
   }
-  if (adm.configPath.empty() || adm.reflectorId == 0 || (adm.voiceMode != 1 && adm.voiceMode != 4) || adm.port < 1 || adm.port > 65535 || webPort < 0 || webPort > 65535) {
-    fprintf(stderr, "servono --config FILE; --id diverso da 0, --voice-mode 1 o 4, --port 1-65535, --web 0-65535\n");
+  if (adm.configPath.empty() || adm.reflectorId == 0 || (adm.voiceMode != 1 && adm.voiceMode != 4) || adm.port < 1 || adm.port > 65535 || webPort < 0 || webPort > 65535 || pubPort < 0 || pubPort > 65535) {
+    fprintf(stderr, "servono --config FILE; --id diverso da 0, --voice-mode 1 o 4, --port 1-65535, --web 0-65535, --public-web 0-65535\n");
     return 2;
   }
   srand(static_cast<unsigned>(time(nullptr)) ^ static_cast<unsigned>(getpid()));
@@ -424,18 +482,18 @@ int main(int argc, char** argv) {
       }
     }
     adm.token = t;
-    webListen = socket(AF_INET, SOCK_STREAM, 0);
-    int one = 1;
-    setsockopt(webListen, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-    sockaddr_in wa;
-    memset(&wa, 0, sizeof(wa));
-    wa.sin_family = AF_INET;
-    wa.sin_port = htons(static_cast<uint16_t>(webPort));
-    if (inet_pton(AF_INET, webBind.c_str(), &wa.sin_addr) != 1 || bind(webListen, reinterpret_cast<sockaddr*>(&wa), sizeof(wa)) != 0 || listen(webListen, 8) != 0) {
-      perror("pagina di amministrazione (bind)");
-      return 1;
+    webListen = listenTcp(webBind, webPort, "pagina di amministrazione (bind)");
+    if (webListen < 0) return 1;
+  }
+  // Pagina pubblica: solo stazioni collegate e chi trasmette, nessun comando e nessun token
+  int pubListen = -1;
+  if (pubPort > 0) {
+    if (pubPort == webPort) {
+      fprintf(stderr, "--public-web e --web devono usare porte diverse\n");
+      return 2;
     }
-    fcntl(webListen, F_SETFL, fcntl(webListen, F_GETFL, 0) | O_NONBLOCK);
+    pubListen = listenTcp(pubBind, pubPort, "pagina pubblica (bind)");
+    if (pubListen < 0) return 1;
   }
 
   net.sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -459,8 +517,20 @@ int main(int argc, char** argv) {
     snprintf(b, sizeof(b), "pagina di amministrazione su http://%s:%d/ (token in %s)", webBind.c_str(), webPort, tokenFile.c_str());
     logLine(b);
   }
+  if (pubListen >= 0) {
+    snprintf(b, sizeof(b), "pagina pubblica su http://%s:%d/ (solo stazioni collegate e chi trasmette)", pubBind.c_str(), pubPort);
+    logLine(b);
+  }
 
-  std::vector<Conn> conns;
+  // Le due porte web: l'amministrazione (con token) e la pagina pubblica (di sola lettura)
+  struct Listener {
+    int fd;
+    bool pub;
+    std::vector<Conn> conns;
+  };
+  std::vector<Listener> listeners;
+  if (webListen >= 0) listeners.push_back({webListen, false, {}});
+  if (pubListen >= 0) listeners.push_back({pubListen, true, {}});
   uint32_t lastStatus = adm.startMs;
   while (!g_stop) {
     const uint32_t t0 = nowMs();
@@ -473,8 +543,10 @@ int main(int argc, char** argv) {
     }
     std::vector<pollfd> fds;
     fds.push_back({net.sock, POLLIN, 0});
-    if (webListen >= 0) fds.push_back({webListen, POLLIN, 0});
-    for (const auto& c : conns) fds.push_back({c.fd, POLLIN, 0});
+    for (const auto& l : listeners) {
+      fds.push_back({l.fd, POLLIN, 0});
+      for (const auto& c : l.conns) fds.push_back({c.fd, POLLIN, 0});
+    }
     poll(fds.data(), fds.size(), 20);
 
     if (fds[0].revents & POLLIN) {
@@ -488,26 +560,30 @@ int main(int argc, char** argv) {
         core.onDatagram(ep, buf, static_cast<size_t>(k), nowMs());
       }
     }
-    if (webListen >= 0) {
-      if (fds[1].revents & POLLIN) {
+    size_t fi = 1;
+    for (auto& l : listeners) {
+      const pollfd& lp = fds[fi++];
+      const size_t before = l.conns.size();  // le connessioni gia' in elenco hanno il loro pollfd, quelle nuove no
+      std::vector<pollfd> mine(fds.begin() + static_cast<long>(fi), fds.begin() + static_cast<long>(fi + before));
+      fi += before;
+      if (lp.revents & POLLIN) {
         for (int guard = 0; guard < 8; guard++) {
-          const int cfd = accept(webListen, nullptr, nullptr);
+          const int cfd = accept(l.fd, nullptr, nullptr);
           if (cfd < 0) break;
-          if (conns.size() >= 16) {
+          if (l.conns.size() >= 16) {
             close(cfd);
             continue;
           }
           fcntl(cfd, F_SETFL, fcntl(cfd, F_GETFL, 0) | O_NONBLOCK);
-          conns.push_back({cfd, "", nowMs()});
+          l.conns.push_back({cfd, "", nowMs()});
         }
       }
       // le connessioni: quelle pronte si leggono, e si chiude chi ha finito o e' troppo lento
       std::vector<Conn> keep;
-      for (size_t i = 0; i < conns.size(); i++) {
-        Conn c = conns[i];
-        const pollfd& p = fds[2 + i];
+      for (size_t i = 0; i < l.conns.size(); i++) {
+        Conn c = l.conns[i];
         bool done = false;
-        if (p.revents & (POLLIN | POLLHUP | POLLERR)) {
+        if (i < before && (mine[i].revents & (POLLIN | POLLHUP | POLLERR))) {
           char buf[2048];
           const ssize_t k = recv(c.fd, buf, sizeof(buf), 0);
           if (k <= 0) {
@@ -517,7 +593,7 @@ int main(int argc, char** argv) {
             HttpRequest req;
             const HttpParse pr = parseHttpRequest(c.in, req);
             if (pr == HttpParse::Ok) {
-              sendAll(c.fd, adm.handle(req, nowMs()));
+              sendAll(c.fd, l.pub ? adm.handlePublic(req, nowMs()) : adm.handle(req, nowMs()));
               done = true;
             } else if (pr == HttpParse::Bad) {
               sendAll(c.fd, httpResponse(400, "text/plain", "richiesta non valida"));
@@ -532,7 +608,7 @@ int main(int argc, char** argv) {
         if (done) close(c.fd);
         else keep.push_back(c);
       }
-      conns = keep;
+      l.conns = keep;
     }
     const uint32_t t = nowMs();
     core.tick(t);

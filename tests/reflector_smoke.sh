@@ -8,6 +8,7 @@ D=$(mktemp -d)
 trap 'kill $(jobs -p) 2>/dev/null; rm -rf "$D"' EXIT
 PORT=$((20000 + RANDOM % 20000))
 WEB=$((PORT + 1))
+PUB=$((PORT + 2))
 cat > "$D/ref.conf" <<EOF
 2 000102030405060708090a0b0c0d0e0f nodoA
 3 101112131415161718191a1b1c1d1e1f nodoB
@@ -17,7 +18,7 @@ ok() { echo "ok    $1"; }
 ko() { echo "FALLITO $1"; fail=1; }
 check() { if grep -q -- "$2" "$1"; then ok "$3"; else ko "$3"; fi; }
 
-build/vlreflector --config "$D/ref.conf" --port $PORT --id 1000 --voice-mode 1 --web $WEB --public-name prova.example:$PORT --duration 60 > "$D/ref.out" 2>&1 &
+build/vlreflector --config "$D/ref.conf" --port $PORT --id 1000 --voice-mode 1 --web $WEB --public-web $PUB --public-bind 127.0.0.1 --public-name prova.example:$PORT --duration 60 > "$D/ref.out" 2>&1 &
 REF=$!
 sleep 0.7
 TOKEN=$(tr -d '\n' < "$D/admin.token")
@@ -40,10 +41,21 @@ NODEA=$!
 sleep 3.5
 S=$(api "http://127.0.0.1:$WEB/api/status")
 echo "$S" | grep -q '"talking":{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: chi trasmette adesso (IZ5IOF, dal nodoA)" || ko "chi trasmette non compare"
+# pagina pubblica: la pagina e il suo stato, senza token e senza niente di riservato
+P="http://127.0.0.1:$PUB"
+PS=$(curl -s -m 5 $P/status.json)
+echo "$PS" | grep -q '"talking":{"callsign":"IZ5IOF"' && ok "pubblica: chi trasmette adesso" || ko "pubblica: chi trasmette ($PS)"
 wait $NODEA
 S=$(api "http://127.0.0.1:$WEB/api/status")
 echo "$S" | grep -q '"name":"nodoA","call":"nodoA","label":"","up":true' && echo "$S" | grep -q '"name":"nodoB","call":"nodoB","label":"","up":true' && ok "stato: i due nodi collegati" || ko "nodi non collegati nello stato"
 echo "$S" | grep -q '"recent":\[{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: la trasmissione finita e' fra le ultime" || ko "storico vuoto"
+PS=$(curl -s -m 5 $P/status.json)
+curl -s -m 5 $P/ | grep -q "Stazioni collegate" && ok "pubblica: la pagina si apre senza token" || ko "pubblica: la pagina non si apre"
+echo "$PS" | grep -q '"call":"nodoA","label":"","seenS":' && echo "$PS" | grep -q '"call":"nodoB"' && ok "pubblica: le due stazioni collegate" || ko "pubblica: stazioni ($PS)"
+echo "$PS" | grep -q '"recent":\[{"callsign":"IZ5IOF"' && ok "pubblica: ultime trasmissioni" || ko "pubblica: ultime ($PS)"
+echo "$PS" | grep -qE 'endpoint|key|127\.0\.0\.1|"id"|"in"|"out"|stats|badSignature|unknown' && ko "pubblica: compare qualcosa di riservato ($PS)" || ok "pubblica: niente indirizzi, id, chiavi o contatori"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' $P/api/status)" = "404" ] && [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: $TOKEN" $P/api/status)" = "404" ] && ok "pubblica: i comandi di amministrazione non esistono (404, anche con il token)" || ko "pubblica: /api raggiungibile"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST -d call=ABC $P/api/register)" = "405" ] && [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST -d x=1 $P/)" = "405" ] && ok "pubblica: solo GET (POST: 405), nessuna registrazione" || ko "pubblica: accetta richieste di scrittura"
 wait $NODEB  # l'uscita di vlnode si scrive alla fine
 check "$D/b.out" 'testo "Prova via reflector"' "B riceve il testo di A"
 check "$D/b.out" "modo 1 sessione .* flags C9 IZ5IOF (ripetuto)" "B riceve l'inizio della voce di A, con il flag di ripetuto"
