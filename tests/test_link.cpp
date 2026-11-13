@@ -8,8 +8,6 @@
 
 using namespace lcr;
 
-static bool g_sweepPtt = false;  // le stazioni nuove lanciano la prova di potenza dal PTT (come il firmware)
-
 static uint16_t nextSession() {
   static uint16_t s = 500;
   return s++;
@@ -22,7 +20,6 @@ struct Station {
     NodeConfig c;
     strcpy(c.callsign, cs);
     c.newSessionId = nextSession;
-    c.sweepOnTestPtt = g_sweepPtt;
     c.sweepRestoreDbm = 12;
     return c;
   }
@@ -60,8 +57,8 @@ static void testPattern() {
   CHECK(memcmp(f1, f4, kFrameBytes) != 0);  // e con la sessione
   // tutti i frame di una prova sono distinti
   bool distinct = true;
-  uint8_t prev[kTestFrames][kFrameBytes];
-  for (uint32_t i = 0; i < kTestFrames; i++) {
+  uint8_t prev[300][kFrameBytes];
+  for (uint32_t i = 0; i < 300; i++) {
     testFramePattern(1234, i, prev[i]);
     for (uint32_t j = 0; j < i; j++)
       if (memcmp(prev[i], prev[j], kFrameBytes) == 0) distinct = false;
@@ -119,80 +116,6 @@ static void testRxAccumulator() {
   CHECK(r.framesOut == 10 && r.framesOk == 8 && r.framesBad == 1 && r.framesLost == 1 && r.recovered == 2);
 }
 
-// La prova completa tra due stazioni, con la risposta automatica.
-static void testEndToEnd() {
-  Sim s;
-  s.a.node.setTestMode(true);
-  s.b.node.setTestMode(true);
-  s.run(100);
-  s.a.node.pttPressed(s.clock);
-  s.run(16000);  // 12 s di prova + riproduzione e risposta
-  CHECK(s.a.node.state() == VoiceNode::State::Idle);
-  CHECK(s.b.node.state() == VoiceNode::State::Idle);
-  CHECK(s.a.mic.produced() == 0);  // il microfono non serve
-  CHECK(s.b.spk.played.empty());   // niente audio: i frame di prova non sono voce
-
-  // Misura locale su B.
-  CHECK(s.b.note.reports.size() == 1);
-  const auto& lb = s.b.note.reports[0];
-  CHECK(!lb.fromRemote && lb.callsign == "IU5HJU");
-  CHECK(lb.r.framesOut == kTestFrames && lb.r.framesOk == kTestFrames && lb.r.framesBad == 0 && lb.r.framesLost == 0);
-  CHECK(lb.r.perfect() && lb.r.percentOk() == 100);
-  CHECK(s.b.note.rxEnds == 0);  // non e' una ricezione di voce
-
-  // Risposta arrivata ad A, con lo stesso risultato e il nominativo di B.
-  CHECK(s.a.note.reports.size() == 1);
-  const auto& ra = s.a.note.reports[0];
-  CHECK(ra.fromRemote && ra.callsign == "IZ5ABC");
-  CHECK(ra.r.framesOk == kTestFrames && ra.r.perfect());
-}
-
-static void testNoReplyWhenTestOff() {
-  Sim s;
-  s.a.node.setTestMode(true);  // solo A ha la prova attiva
-  s.run(100);
-  s.a.node.pttPressed(s.clock);
-  s.run(16000);
-  CHECK(s.b.note.reports.size() == 1 && s.b.note.reports[0].r.perfect());  // B misura comunque
-  CHECK(s.b.spk.played.empty());                                           // e non suona rumore
-  CHECK(s.a.note.reports.empty());                                         // ma non risponde
-  CHECK(s.air.sent[1] == 0);
-}
-
-static void testLossesAreCounted() {
-  Sim s;
-  s.a.node.setTestMode(true);
-  s.b.node.setTestMode(true);
-  // Pacchetto 2 (un dato) perso: la parita' lo recupera. Pacchetti 6 e 7 persi nello stesso gruppo: 24 frame persi.
-  s.air.drop = [](int from, int idx) { return from == 0 && (idx == 2 || idx == 6 || idx == 7); };
-  s.run(100);
-  s.a.node.pttPressed(s.clock);
-  s.run(16000);
-  CHECK(s.b.note.reports.size() == 1);
-  const TestReport& r = s.b.note.reports[0].r;
-  CHECK(r.framesBad == 0);                 // quello che arriva e' intatto
-  CHECK(r.framesLost == 24);               // due pacchetti da 12 frame non recuperabili
-  CHECK(r.framesOk == kTestFrames - 24);
-  CHECK(r.recovered >= 1);
-  CHECK(!r.perfect());
-  CHECK(s.a.note.reports.size() == 1 && s.a.note.reports[0].r.framesLost == 24);  // lo stesso risultato torna ad A
-}
-
-static void testReleaseEarly() {
-  Sim s;
-  s.a.node.setTestMode(true);
-  s.run(100);
-  s.a.node.pttPressed(s.clock);
-  s.run(3000);
-  s.a.node.pttReleased(s.clock);  // rilascio anticipato
-  s.run(8000);
-  CHECK(s.a.node.state() == VoiceNode::State::Idle);
-  CHECK(s.b.note.reports.size() == 1);
-  CHECK(s.b.note.reports[0].r.framesBad == 0 && s.b.note.reports[0].r.framesLost == 0);
-  CHECK(s.b.note.reports[0].r.framesOut > 0 && s.b.note.reports[0].r.framesOut < kTestFrames);
-  CHECK(s.b.note.reports[0].r.clean() && !s.b.note.reports[0].r.complete() && s.b.note.reports[0].r.percentOk() == 100);
-}
-
 static void testVoiceUnaffected() {
   // Senza prova attiva il PTT trasmette voce come sempre e B la riproduce.
   Sim s;
@@ -205,20 +128,6 @@ static void testVoiceUnaffected() {
   CHECK(!s.b.spk.played.empty());
   CHECK(s.b.note.reports.empty());
   CHECK(s.b.note.rxEnds == 1);
-}
-
-static void testOnlyOwnReply() {
-  // Una risposta con un'altra sessione si ignora.
-  Sim s;
-  s.a.node.setTestMode(true);
-  s.b.node.setTestMode(true);
-  s.run(100);
-  s.a.node.pttPressed(s.clock);
-  s.run(16000);
-  CHECK(s.a.note.reports.size() == 1);
-  // Nessuna seconda risposta anche dopo altro tempo.
-  s.run(5000);
-  CHECK(s.a.note.reports.size() == 1);
 }
 
 // ---- Prova di potenza ----
@@ -294,11 +203,6 @@ static void testSweepEndToEnd() {
   CHECK(s.a.radio.powers.size() == st.size() + 1 && s.a.radio.powers[0] == 14 && s.a.radio.powers[3] == 11);
   // l'altra scheda ha ricevuto una prova per passo
   CHECK(s.b.note.reports.size() >= 6);
-  // dopo la prova si puo' rifare una prova normale, di 12 s
-  s.a.node.setTestMode(true);
-  s.a.node.pttPressed(s.clock);
-  s.run(16000);
-  CHECK(s.b.note.reports.back().r.framesOut == kTestFrames);
 }
 
 static void testSweepSummaryCodec() {
@@ -333,7 +237,6 @@ static void testSweepSummaryCodec() {
 
 // Dal PTT, con la prova accesa su entrambe: parte la prova di potenza, e alla fine ENTRAMBE le schede hanno l'esito.
 static void testSweepFromPtt() {
-  g_sweepPtt = true;
   Sim s;
   s.a.node.setTestMode(true);
   s.b.node.setTestMode(true);
@@ -380,7 +283,6 @@ static void testSweepFromPtt() {
   CHECK(!u.a.node.powerSweepActive() && u.a.note.sweepAborted && u.a.radio.powers.back() == 12);
   u.a.node.pttReleased(u.clock);
   u.run(10000);
-  g_sweepPtt = false;
 }
 
 static void testSweepRefusedAndAborted() {
@@ -418,12 +320,7 @@ int main() {
   testReportCodec();
   testPartial();
   testRxAccumulator();
-  testEndToEnd();
-  testNoReplyWhenTestOff();
-  testLossesAreCounted();
-  testReleaseEarly();
   testVoiceUnaffected();
-  testOnlyOwnReply();
   testSweepLogic();
   testSweepEndToEnd();
   testSweepSummaryCodec();

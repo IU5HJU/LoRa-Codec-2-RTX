@@ -16,6 +16,9 @@
 
 namespace lcr {
 
+// Una prova di collegamento (un passo della prova di potenza): 75 frame = 3 s.
+constexpr uint32_t kSweepFrames = 75;
+
 // Frame numero 'index' della prova nella sessione 'session' (kFrameBytes byte).
 void testFramePattern(uint16_t session, uint32_t index, uint8_t* out);
 
@@ -32,9 +35,9 @@ struct TestReport {
   // Percentuale di frame ok sui frame consegnati (0 se non ne e' arrivato nessuno), 0-100.
   // Una prova interrotta dal PTT dopo pochi frame perfetti vale quindi 100%, ma non e' "completa".
   int percentOk() const;
-  // Prova arrivata fino in fondo (kTestFrames frame). Se manca la coda non si sa se il PTT e' stato
+  // Prova arrivata fino in fondo (kSweepFrames frame). Se manca la coda non si sa se il PTT e' stato
   // rilasciato prima o se sono andati persi gli ultimi pacchetti: per questo si segnala "parziale".
-  bool complete() const { return framesOut >= kTestFrames; }
+  bool complete() const { return framesOut >= kSweepFrames; }
   // Nessun frame perso o danneggiato tra quelli consegnati.
   bool clean() const { return framesOut > 0 && framesBad == 0 && framesLost == 0; }
   // "Collegamento buono": prova completa e pulita.
@@ -67,7 +70,6 @@ class LinkTestRx {
 // Prova di potenza: la stessa prova di collegamento ripetuta a potenza decrescente, dalla massima alla minima, per trovare la potenza
 // minima con cui le due schede si sentono. Ogni passo e' una prova breve (kSweepFrames frame); l'altra scheda risponde con l'esito (a
 // potenza normale: e' la sua, non quella in prova). Un passo senza risposta vale 0%. Si ferma da solo dopo due passi di fila senza risposta.
-constexpr uint32_t kSweepFrames = 75;      // 3 s di frame per passo
 constexpr uint32_t kSweepGapMs = 800;      // pausa fra la risposta e il passo successivo
 constexpr uint32_t kSweepWaitExtraMs = 3000;  // attesa della risposta dopo l'ultimo pacchetto, oltre al tempo di chiusura della ricezione
 

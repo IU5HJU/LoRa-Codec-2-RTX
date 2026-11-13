@@ -44,9 +44,8 @@ struct NodeConfig {
   uint32_t extraGapMs = 0;
   // Chiave del sysop (16 byte) se questa scheda e' la sua stazione: serve a verificare le risposte dei ripetitori. nullptr = non attiva.
   const uint8_t* sysopKey = nullptr;
-  // Prova di potenza (link_test.h): con la prova accesa il PTT non trasmette il test lungo ma la prova dalla potenza massima alla minima.
-  // Spenta di base (i test del PC usano la prova lunga); il firmware la accende. sweepRestoreDbm: potenza da rimettere alla fine.
-  bool sweepOnTestPtt = false;
+  // Prova di potenza (link_test.h): con la prova accesa il PTT lancia la prova dalla potenza massima alla minima.
+  // sweepRestoreDbm: potenza da rimettere alla fine.
   int sweepMaxDbm = 17, sweepMinDbm = 2, sweepRestoreDbm = 10;
 };
 
@@ -234,7 +233,7 @@ class VoiceNode {
   bool haveSummaryRx_ = false;
   uint8_t summaryBuf_[kSweepSummaryHeader + PowerSweep::kMaxSteps + kFrameBytes] = {0};
   size_t summaryLen_ = 0;
-  uint32_t testFrameLimit_ = kTestFrames;
+
   // Escursione sulla rete di testo in corso
   bool guest_ = false;
   uint32_t guestUntilMs_ = 0;

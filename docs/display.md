@@ -48,7 +48,7 @@ Vol 7/10   (Batt=4.12V)       ultima riga: volume a sinistra, batteria a destra
 | 13 | Batteria sotto 3,40 V | il testo `(Batt=x.xxV)` va in negativo (sfondo pieno) |
 | 14 | Batteria assente (T-Beam senza cella) | `(Batt=--)` (sulla T3 la tensione si mostra sempre) |
 | 15 | A riposo con la prova di collegamento attiva | "PROVA ON", "PTT = invia la prova" (con la prova di potenza: la lancia) |
-| 16 | PTT premuto con la prova attiva | "TX" e nominativo, "Prova 5/12 s" |
+| 16 | PTT premuto con la prova attiva (prova di potenza in corso, su chi trasmette) | "PROVA DI POTENZA", la potenza in corso ("14 dBm"), "passo N: risposta" o "nessuna risp.", "PTT = ferma" |
 | 17 | Fine di una prova ricevuta | "PROVA 100%", "Ricevuta da" e nominativo, frame ok/persi/danneggiati, pacchetti recuperati, RSSI e SNR medi. Resta 15 s |
 | 18 | Come la 17 ma con perdite | percentuale più bassa; le righe stanno nei 21 caratteri anche nel caso peggiore (RSSI -120 dBm, SNR -15 dB) |
 | 19 | Risposta alla prova trasmessa da qui | come la 17 con "Risposta" e il nominativo dell'altra stazione |
@@ -80,7 +80,7 @@ Formato `(Batt=4.12V)`, come nel firmware LoRa APRS iGate di Guzman. Larghezza f
 
 ## Note
 
-- Il "12" di "Prova 5/12 s" è la durata fissa della prova (300 frame).
+- Fine della prova di potenza (su entrambe le schede, 30 s): "MIN 9 dBm" (potenza minima con tutti i frame intatti), "sente fino a 7 dBm"; su chi ha ricevuto in alto "POTENZA da" e il nominativo; "NON PULITA" / "NESSUNA" se non c'è un minimo pulito.
 - Il "30" di "Trasmissione 12/30 s" e di "LIMITE 30 s" oggi è fisso. Quando il TOT diventerà un'impostazione
   (vedi [roadmap](roadmap.md)) seguirà il valore scelto.
 - A testo grande (12 pixel per carattere) entrano **10 caratteri** sui 128 pixel: le righe grandi più lunghe passano al testo piccolo. `tools/render_display.py` segnala e rifiuta ogni testo che andrebbe a capo.

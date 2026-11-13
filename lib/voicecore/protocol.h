@@ -79,9 +79,6 @@ constexpr size_t kMaxCallsign = 8;
 constexpr size_t kMaxPackets = 128;
 constexpr size_t kTxSeqLimit = 120;
 
-// Durata della prova di collegamento: 300 frame = 12 s, circa 25 pacchetti dati piu' la parita'.
-constexpr uint32_t kTestFrames = 300;
-
 // Pulsante PTT: una pressione piu' breve di kPttClickMaxMs e' un "clic" e non trasmette; la trasmissione parte
 // solo se il PTT resta premuto per questo tempo (il microfono e' comunque bufferizzato dalla pressione).
 // Tre clic, ognuno entro kPttClickGapMs dal precedente, attivano o disattivano la prova di collegamento.

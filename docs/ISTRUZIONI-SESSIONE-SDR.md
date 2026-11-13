@@ -33,7 +33,7 @@ La documentazione completa è in **`docs/sdr.md`** del repository: leggila per p
 2. Nella cartella del progetto: `git pull`, poi `make lcr_decode`.
 3. `conda activate lora`, poi `python -c "from gnuradio import lora_sdr; print('lora_sdr ok')"`.
 4. Ricezione a vuoto: `python3 tools/sdr/lora_rx.py --freq 433.9e6 --duration 20` (non deve dare errori; senza trasmissioni non stampa pacchetti).
-5. Prova reale: una scheda con **nominativo vero** e antenna collegata attiva la **prova di collegamento** (tre clic veloci sul PTT, poi tiene premuto il PTT 12 secondi). Con `lora_rx.py` in ascolto a ~1 m, poi `build/lcr_decode cattura.txt`: deve comparire `PROVA DI COLLEGAMENTO ... ok 300/300`.
+5. Prova reale: una scheda con **nominativo vero** e antenna collegata attiva la **prova di collegamento** (tre clic veloci sul PTT, poi preme il PTT: dal 14/11/2026 parte la prova di potenza a passi di 75 frame; prima era una prova unica da 12 secondi). Con `lora_rx.py` in ascolto a ~1 m, poi `build/lcr_decode cattura.txt`: deve comparire `PROVA DI COLLEGAMENTO ... ok 75/75` per ogni passo (`ok 300/300` con il firmware di prima).
 6. Se funziona: trasmissione di **voce** e decodifica con `c2dec 1200` e `ffmpeg` fino a un WAV.
 7. Annotare i risultati (guadagno usato, distanza, deriva in frequenza `--ppm`) in `docs/prove.md`, con data in formato **GG/MM/AAAA**.
 

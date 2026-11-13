@@ -556,7 +556,7 @@ void UiNotifier::drawTestReport() {
   if (r.complete()) {
     display_.printf("%s %s", testFromRemote_ ? "Risposta" : "Ricevuta da", testCall_[0] ? testCall_ : "-");
   } else {
-    display_.printf("Parz.%u/%u %s", r.framesOut, static_cast<unsigned>(lcr::kTestFrames), testCall_[0] ? testCall_ : "-");
+    display_.printf("Parz.%u/%u %s", r.framesOut, static_cast<unsigned>(lcr::kSweepFrames), testCall_[0] ? testCall_ : "-");
   }
   display_.setCursor(0, 47);
   display_.printf("ok %u pers %u dan %u", r.framesOk, r.framesLost, r.framesBad);  // max 21 caratteri

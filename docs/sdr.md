@@ -89,8 +89,8 @@ tail -n0 -F cattura.txt | build/lcr_live | c2dec 1200 - - | aplay -q -t raw -f S
 
 ## 4. Controllo di una scheda
 
-1. Sulla scheda attiva la prova di collegamento (tre clic sul PTT) e tieni premuto il PTT per i 12 secondi.
-2. Con `lora_rx.py` in ascolto, a fine prova ferma con `Ctrl+C` e lancia `build/lcr_decode cattura.txt`: deve comparire `PROVA DI COLLEGAMENTO ... ok 300/300 (100%)`.
+1. Sulla scheda attiva la prova di collegamento (tre clic sul PTT) e premi il PTT: dal 14/11/2026 parte la prova di potenza, con più prove brevi da 75 frame a potenza decrescente (con firmware precedente: una prova da 300 frame, PTT tenuto premuto 12 secondi).
+2. Con `lora_rx.py` in ascolto, a fine prova ferma con `Ctrl+C` e lancia `build/lcr_decode cattura.txt`: deve comparire `PROVA DI COLLEGAMENTO ... ok 75/75 (100%)` per ogni passo ricevuto (`ok 300/300` con il firmware precedente al 14/11/2026).
 3. Se la prova e' perfetta per la scheda ricevente ma l'SDR perde pacchetti, il problema e' dell'SDR (sensibilita', guadagno, deriva in frequenza), non del collegamento.
 
 ## Se qualcosa non va

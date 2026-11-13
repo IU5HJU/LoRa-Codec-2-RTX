@@ -91,7 +91,7 @@ void VoiceNode::beginPtt(uint32_t nowMs) {
     notify_.pttDenied(DenyReason::ChannelBusy);
     return;
   }
-  if (testMode_ && cfg_.sweepOnTestPtt && !prof_.message) {  // prova accesa: il PTT lancia la prova di potenza
+  if (testMode_) {  // prova accesa: il PTT lancia la prova di potenza (non c'e' piu' un'altra prova)
     stopMic();
     startPowerSweep(nowMs, cfg_.sweepMaxDbm, cfg_.sweepMinDbm, cfg_.sweepRestoreDbm);
     return;
@@ -109,12 +109,11 @@ void VoiceNode::stopMic() {
 void VoiceNode::startTx(uint32_t nowMs) {
   clearBusy();
   const uint16_t sid = makeSessionId();
-  txTest_ = testMode_;
+  txTest_ = sweepPhase_ != SweepPhase::None;  // si trasmette una prova solo dentro la prova di potenza
   const bool rec = recMode_ && !testMode_;
   recCount_ = recSent_ = 0;
   txTotal_ = txSent_ = 0;
   testFramesSent_ = 0;
-  testFrameLimit_ = sweepPhase_ != SweepPhase::None ? sweep_.frames() : kTestFrames;
   nextTestFrameMs_ = nowMs;
   if (txTest_) {
     lastTestSession_ = sid;
@@ -285,8 +284,8 @@ void VoiceNode::txTick(uint32_t nowMs) {
   if (recPhase_ == RecPhase::Sending) {
     recTick(nowMs);
   } else if (!releasing_ && txTest_) {
-    // Prova: un frame noto ogni 40 ms, come se arrivasse dal codec, fino a kTestFrames.
-    for (int guard = 0; guard < 8 && !releasing_ && testFramesSent_ < testFrameLimit_ &&
+    // Passo della prova di potenza: un frame noto ogni 40 ms, come se arrivasse dal codec, fino a sweep_.frames().
+    for (int guard = 0; guard < 8 && !releasing_ && testFramesSent_ < sweep_.frames() &&
                         static_cast<int32_t>(nowMs - nextTestFrameMs_) >= 0;
          guard++) {
       uint8_t frame[kFrameBytes];
@@ -298,7 +297,7 @@ void VoiceNode::txTick(uint32_t nowMs) {
       testFramesSent_++;
       nextTestFrameMs_ += kFrameMs;
     }
-    if (!releasing_ && testFramesSent_ >= testFrameLimit_) finishCapture(false);
+    if (!releasing_ && testFramesSent_ >= sweep_.frames()) finishCapture(false);
   } else if (!releasing_) {
     int16_t pcm[kFrameSamples];
     uint8_t frame[kMaxFrameBytes];

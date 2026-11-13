@@ -219,7 +219,6 @@ void setup() {
   cfg.profile = settings.profile;
   cfg.sendPosition = settings.posTx;  // spenta di default; la posizione fissa e' il QTH (CFG SET QTH)
   cfg.position = settings.qth();
-  cfg.sweepOnTestPtt = true;  // con la prova attiva il PTT lancia la prova di potenza (dalla massima alla minima)
   cfg.sweepMaxDbm = lcr::kMaxPowerDbm;
   cfg.sweepMinDbm = lcr::kMinPowerDbm;
   cfg.sweepRestoreDbm = settings.powerDbm;

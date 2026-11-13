@@ -75,8 +75,8 @@ un pacchetto quando è occupato (misurato sulla T3); con l'altoparlante sarà di
 ## Prova di collegamento (modi 2 e 3)
 
 Nel modo 2 i frame non sono voce ma una sequenza pseudocasuale determinata da (sessione, numero del frame): il ricevitore la rigenera e la confronta bit per bit, senza riprodurre audio.
-Una prova dura 300 frame (12 s) con gli stessi pacchetti e la stessa parità della voce. Con la prova attiva anche sul ricevitore, questo risponde dopo circa 0,7 s con un solo pacchetto di modo 3
-(`START`+`END`, nominativo, stessa sessione) che porta 12 byte: frame consegnati, ok, danneggiati, persi, pacchetti recuperati, RSSI e SNR medi. Un ricevitore con una versione precedente scarta i pacchetti di modo sconosciuto.
+Una prova dura 75 frame (3 s, un passo della prova di potenza; fino al 13/11/2026 la prova era di 300 frame, 12 s) con gli stessi pacchetti e la stessa parità della voce. Con la prova attiva anche sul ricevitore, questo risponde dopo circa 0,7 s con un solo pacchetto di modo 3
+(`START`+`END`, nominativo, stessa sessione) che porta 12 byte: frame consegnati, ok, danneggiati, persi, pacchetti recuperati, RSSI e SNR medi. Alla fine della prova di potenza chi ha trasmesso manda l'esito a chi ha ricevuto con lo stesso modo 3 (`START`+`END`), con il primo byte del payload maggiore o uguale a 0x80 (un byte per passo, in multipli di 6 byte); la risposta normale comincia sempre con 0 o 1. Un ricevitore con una versione precedente scarta i pacchetti di modo sconosciuto.
 Dettagli in [prova-collegamento.md](prova-collegamento.md).
 
 ## Modo 4: Codec2 3200 bps (profilo Standard)

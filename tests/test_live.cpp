@@ -261,7 +261,7 @@ void testTestSession() {
     }
   };
   drain();
-  for (uint32_t i = 0; i < kTestFrames; i++) {
+  for (uint32_t i = 0; i < 300; i++) {
     uint8_t f[kFrameBytes];
     testFramePattern(77, i, f);
     tx.pushFrame(f);
