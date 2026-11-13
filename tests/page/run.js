@@ -1021,6 +1021,21 @@ async function scenario(name, fn, opts = {}) {
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
     await until(p, () => /Impostazioni lette/.test(document.getElementById('status').textContent), null, 20000);
     check('un reflector privato resta com\'e\' dopo il salvataggio', (await p.inputValue('#peer')) === 'mio.reflector.it:5500' && (await p.inputValue('#peerid')) === '77');
+    // piu' nodi dello stesso nominativo: il nome del nodo li distingue, ognuno ha la sua chiave e la sua storia
+    await p.fill('#callsign', 'IZ5IOF'); await p.fill('#nodeid', '');
+    await p.fill('#nodelabel', 'casa');
+    await p.click('#genNodeKey');
+    const kc = await p.inputValue('#nodekey');
+    line = await p.textContent('#regline');
+    check('con il nome del nodo: la riga lo comprende', line.includes('Nome del nodo: casa') && line.includes('ID  ' + kc + '  IZ5IOF casa') && /^[0-9a-f]{32}$/.test(kc), line);
+    check('"casa" e\' un nodo nuovo: nessun avviso di chiave precedente', !/già generato/.test(await p.textContent('#nodekeyhint')), await p.textContent('#nodekeyhint'));
+    await p.fill('#nodelabel', 'mare'); await p.click('#genNodeKey');
+    const km = await p.inputValue('#nodekey');
+    check('altro nodo dello stesso nominativo: un\'altra chiave', /^[0-9a-f]{32}$/.test(km) && km !== kc && !/già generato/.test(await p.textContent('#nodekeyhint')));
+    await p.fill('#nodelabel', 'casa'); await p.click('#genNodeKey');
+    check('di nuovo "casa": avvisa della precedente', /IZ5IOF casa avevi già generato una chiave/.test(await p.textContent('#nodekeyhint')), await p.textContent('#nodekeyhint'));
+    await p.fill('#nodelabel', 'a b'); await p.click('#genNodeKey');
+    check('nome del nodo non valido: nessuna chiave', /nome del nodo/.test(await p.textContent('#status')) && (await p.inputValue('#nodekey')) === '');
     check('nessun errore JavaScript', p.errors.length === 0);
   });
 

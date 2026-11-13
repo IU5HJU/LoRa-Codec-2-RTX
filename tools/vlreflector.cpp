@@ -146,11 +146,11 @@ struct Admin {
     for (const auto& n : next) {
       const int i = findEntryById(entries, n.id);
       if (i < 0) {
-        core->addClient(n.id, n.key, n.name.c_str());
+        core->addClient(n.id, n.key, n.display().c_str());
         continue;
       }
       if (memcmp(entries[static_cast<size_t>(i)].key, n.key, kNodeKeyBytes) != 0) core->setClientKey(n.id, n.key);
-      if (entries[static_cast<size_t>(i)].name != n.name) core->setClientName(n.id, n.name.c_str());
+      if (entries[static_cast<size_t>(i)].display() != n.display()) core->setClientName(n.id, n.display().c_str());
     }
     entries = next;
   }
@@ -189,7 +189,9 @@ struct Admin {
     bool first = true;
     for (const auto& c : core->clients(now)) {
       const long seen = (c.haveEndpoint || c.lastSeenMs != 0) ? static_cast<long>(now - c.lastSeenMs) : -1;
-      o << (first ? "" : ",") << "{\"id\":" << c.id << ",\"name\":\"" << jsonEscape(c.name) << "\",\"up\":" << (c.up ? "true" : "false") << ",\"seenMs\":" << seen
+      const int ei = findEntryById(entries, c.id);
+      o << (first ? "" : ",") << "{\"id\":" << c.id << ",\"name\":\"" << jsonEscape(c.name) << "\",\"call\":\"" << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].name : c.name)
+        << "\",\"label\":\"" << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].label : "") << "\",\"up\":" << (c.up ? "true" : "false") << ",\"seenMs\":" << seen
         << ",\"in\":" << c.packetsIn << ",\"out\":" << c.packetsOut << ",\"endpoint\":\"" << (c.haveEndpoint ? jsonEscape(epText(c.endpoint)) : "") << "\"}";
       first = false;
     }
@@ -239,51 +241,72 @@ struct Admin {
       if (req.method != "GET") return fail(405, "metodo non ammesso");
       std::string call = formParam(req.query, "call");
       for (auto& c : call) c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
-      const int i = findEntryByName(entries, call);
+      const std::vector<int> idx = findEntriesByName(entries, call);
       std::ostringstream o;
-      o << "{\"registered\":" << (i >= 0 ? "true" : "false") << ",\"id\":" << (i >= 0 ? entries[static_cast<size_t>(i)].id : 0)
-        << ",\"nextId\":" << nextFreeClientId(entries, reflectorId) << ",\"up\":";
-      bool up = false;
-      if (i >= 0) {
-        for (const auto& c : core->clients(now)) {
-          if (c.id == entries[static_cast<size_t>(i)].id) up = c.up;
+      o << "{\"call\":\"" << jsonEscape(call) << "\",\"registered\":" << (idx.empty() ? "false" : "true") << ",\"nextId\":" << nextFreeClientId(entries, reflectorId) << ",\"nodes\":[";
+      const std::vector<ReflectorCore::ClientInfo> infos = core->clients(now);
+      bool first = true;
+      for (int k : idx) {
+        const ReflectorEntry& e = entries[static_cast<size_t>(k)];
+        bool up = false;
+        for (const auto& c : infos) {
+          if (c.id == e.id) up = c.up;
         }
+        o << (first ? "" : ",") << "{\"id\":" << e.id << ",\"label\":\"" << jsonEscape(e.label) << "\",\"up\":" << (up ? "true" : "false") << "}";
+        first = false;
       }
-      o << (up ? "true" : "false") << "}";
+      o << "]}";
       return json(o.str());
     }
     if (req.path == "/api/register") {
       if (req.method != "POST") return fail(405, "metodo non ammesso");
-      std::string call = formParam(req.body, "call"), keyText = formParam(req.body, "key");
+      std::string call = formParam(req.body, "call"), keyText = formParam(req.body, "key"), label = formParam(req.body, "label"), replaceText = formParam(req.body, "replace");
       for (auto& c : call) c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
       if (!isValidCallsign(call.c_str())) return fail(400, "nominativo non valido (lettere, cifre e /, massimo 8 caratteri)");
+      if (!label.empty() && !isValidClientLabel(label)) return fail(400, "il nome del nodo puo' avere lettere, cifre, - _ . (massimo 16 caratteri)");
+      std::vector<ReflectorEntry> next = entries;
+      // Un nominativo puo' avere piu' nodi (casa, mare, hotspot): ognuno con il suo id e la sua chiave. Si aggiunge un nodo nuovo, oppure (replace=id) si
+      // cambia la chiave di uno che c'e' gia'.
+      int ri = -1;
+      if (!replaceText.empty()) {
+        char* end = nullptr;
+        const unsigned long rid = strtoul(replaceText.c_str(), &end, 10);
+        ri = *end == 0 ? findEntryById(next, static_cast<uint32_t>(rid)) : -1;
+        if (ri < 0) return fail(404, "il nodo da sostituire non e' in elenco");
+        if (findEntryByName(std::vector<ReflectorEntry>(1, next[static_cast<size_t>(ri)]), call) != 0) return fail(400, "quel nodo appartiene a un altro nominativo");
+      } else if (findEntryByNameLabel(next, call, label) >= 0) {
+        return fail(409, call + (label.empty() ? "" : " " + label) + " e' gia' registrato: scegli un altro nome per il nodo, oppure sostituisci la sua chiave");
+      }
       ReflectorEntry e;
       bool generated = false;
       if (keyText.empty()) {
-        if (!randomBytes(e.key, kNodeKeyBytes)) return fail(500, "non riesco a generare una chiave");
+        for (int t = 0; t < 8; t++) {
+          if (!randomBytes(e.key, kNodeKeyBytes)) return fail(500, "non riesco a generare una chiave");
+          if (findEntryByKey(next, e.key, ri) < 0) break;
+        }
         generated = true;
       } else if (!parseKeyHex(keyText, e.key)) {
         return fail(400, "la chiave deve avere 32 cifre esadecimali");
       }
-      std::vector<ReflectorEntry> next = entries;
-      const int i = findEntryByName(next, call);
-      const bool replaced = i >= 0;
+      const int dup = findEntryByKey(next, e.key, ri);
+      if (dup >= 0) return fail(409, "questa chiave e' gia' usata dal nodo " + next[static_cast<size_t>(dup)].display() + ": ogni nodo ha la sua");
+      const bool replaced = ri >= 0;
       if (replaced) {
-        memcpy(next[static_cast<size_t>(i)].key, e.key, kNodeKeyBytes);
-        e.id = next[static_cast<size_t>(i)].id;
-        next[static_cast<size_t>(i)].name = call;
+        memcpy(next[static_cast<size_t>(ri)].key, e.key, kNodeKeyBytes);
+        e.id = next[static_cast<size_t>(ri)].id;
+        e.label = next[static_cast<size_t>(ri)].label;  // l'etichetta resta quella del nodo
       } else {
         e.id = nextFreeClientId(next, reflectorId);
         e.name = call;
+        e.label = label;
         next.push_back(e);
       }
       std::string err;
       if (!save(next, err)) return fail(500, err);
-      char b[96];
-      snprintf(b, sizeof(b), "registrato %s (id %u)%s", call.c_str(), static_cast<unsigned>(e.id), replaced ? ": chiave sostituita" : "");
-      logLine(b);
+      const std::string shown = next[static_cast<size_t>(findEntryById(next, e.id))].display();
+      logLine("registrato " + shown + " (id " + std::to_string(e.id) + ")" + (replaced ? ": chiave sostituita" : ""));
       std::ostringstream o;
-      o << "{\"ok\":true,\"id\":" << e.id << ",\"call\":\"" << jsonEscape(call) << "\",\"replaced\":" << (replaced ? "true" : "false");
+      o << "{\"ok\":true,\"id\":" << e.id << ",\"call\":\"" << jsonEscape(call) << "\",\"label\":\"" << jsonEscape(e.label) << "\",\"replaced\":" << (replaced ? "true" : "false");
       if (generated) o << ",\"key\":\"" << keyToHex(e.key) << "\"";
       o << "}";
       return json(o.str());

@@ -28,7 +28,7 @@ int main() {
   CHECK(!parseReflectorConfig(std::string("2 ") + "00112233" + " a\n", 1000, v, err) && err.find("32 cifre") != std::string::npos);
   CHECK(!parseReflectorConfig(std::string("2 ") + "zz0102030405060708090a0b0c0d0e0f" + " a\n", 1000, v, err));
   CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + "\n", 1000, v, err) && err.find("nome") != std::string::npos);
-  CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " a b\n", 1000, v, err));  // una parola sola
+  CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " a b c\n", 1000, v, err));  // dopo la chiave: il nome e al massimo l'etichetta
   CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " a\n2 " + kK2 + " b\n", 1000, v, err) && err.find("ripetuto") != std::string::npos);
   CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " IZ5IOF\n3 " + kK2 + " iz5iof\n", 1000, v, err));  // lo stesso nominativo, maiuscole indifferenti
   CHECK(!parseReflectorConfig(std::string("99999999999 ") + kK1 + " a\n", 1000, v, err));
@@ -51,5 +51,28 @@ int main() {
   CHECK(nextFreeClientId(g, 1000) == 4);  // un buco si riempie
   CHECK(nextFreeClientId(g, 4) == 6);     // l'id del reflector si salta
   CHECK(findEntryByName(g, "N3") == 1 && findEntryByName(g, "x") == -1 && findEntryById(g, 5) == 2 && findEntryById(g, 9) == -1);
+  // piu' nodi dello stesso nominativo, ciascuno con la sua chiave e un'etichetta
+  const std::string multi = std::string("2 ") + kK1 + " IZ5IOF casa\n3 " + kK2 + " IZ5IOF mare\n4 00112233445566778899aabbccddeeff iz5iof hotspot\n5 aabbccddeeff00112233445566778899 IU5HJU\n";
+  CHECK(parseReflectorConfig(multi, 1000, v, err) && v.size() == 4 && v[0].label == "casa" && v[2].name == "iz5iof" && v[3].label.empty());
+  CHECK(v[0].display() == "IZ5IOF casa" && v[3].display() == "IU5HJU");
+  CHECK(findEntriesByName(v, "IZ5IOF").size() == 3 && findEntriesByName(v, "iu5hju").size() == 1 && findEntriesByName(v, "X").empty());
+  CHECK(findEntryByNameLabel(v, "iz5iof", "MARE") == 1 && findEntryByNameLabel(v, "IZ5IOF", "") == -1 && findEntryByNameLabel(v, "IU5HJU", "") == 3);
+  const std::string multiText = formatReflectorConfig(v);
+  CHECK(multiText.find("IZ5IOF casa") != std::string::npos && multiText.find("IU5HJU\n") != std::string::npos);
+  std::vector<ReflectorEntry> back;
+  CHECK(parseReflectorConfig(multiText, 1000, back, err) && back.size() == 4 && back[1].label == "mare" && back[3].label.empty());
+  // la stessa coppia nominativo + etichetta non puo' ripetersi; senza etichetta nemmeno
+  CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " IZ5IOF casa\n3 " + kK2 + " iz5iof CASA\n", 1000, v, err) && err.find("riga 2") != std::string::npos);
+  // una chiave non si usa due volte, nemmeno per nominativi diversi
+  CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " IZ5IOF casa\n3 " + kK1 + " IZ5IOF mare\n", 1000, v, err) && err.find("chiave") != std::string::npos && err.find("riga 2") != std::string::npos);
+  CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " AA\n3 " + "000102030405060708090A0B0C0D0E0F" + " BB\n", 1000, v, err));  // maiuscole indifferenti nella chiave
+  // etichetta non valida o parole di troppo
+  CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " IZ5IOF ca$a\n", 1000, v, err));
+  CHECK(!parseReflectorConfig(std::string("2 ") + kK1 + " IZ5IOF casa altro\n", 1000, v, err));
+  CHECK(isValidClientLabel("casa") && isValidClientLabel("mare-2") && isValidClientLabel("hot_spot.1") && !isValidClientLabel("") && !isValidClientLabel("a b") &&
+        !isValidClientLabel(std::string(17, 'a')) && isValidClientLabel(std::string(16, 'a')) && !isValidClientLabel("a/b"));
+  // chi usa una chiave
+  uint8_t kk[kNodeKeyBytes];
+  CHECK(parseReflectorConfig(multi, 1000, v, err) && parseKeyHex(kK2, kk) && findEntryByKey(v, kk) == 1 && findEntryByKey(v, kk, 1) == -1);
   TEST_MAIN_END();
 }

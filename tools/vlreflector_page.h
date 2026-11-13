@@ -27,7 +27,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
   #now { display:flex; align-items:center; gap:12px; min-height:3.2em; }
   #now .big { font-size:1.6rem; font-weight:700; }
   #now.live .big { color:var(--live); }
-  input { font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); width:100%; }
+  input, select { font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); width:100%; }
   label { display:block; margin:.7em 0 .2em; font-weight:600; }
   button { font:inherit; padding:8px 14px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; margin:.5em .4em 0 0; }
   button.secondary { background:transparent; color:var(--accent); }
@@ -86,9 +86,13 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
 
     <section>
       <h2>Registra un nodo</h2>
-      <p class="muted">Il collega genera la chiave dalla pagina di configurazione della sua scheda e te la manda (su un canale privato) con il suo nominativo. Scrivili qui: l'id lo assegna il reflector. Se il nominativo è già registrato, la chiave nuova <strong>sostituisce</strong> la vecchia e il nodo si ricollega con quella nuova.</p>
+      <p class="muted">Il collega genera la chiave dalla pagina di configurazione della sua scheda e te la manda (su un canale privato) con il suo nominativo e, se ne ha più d'uno, il nome del nodo. Scrivili qui: l'id lo assegna il reflector. Un nominativo può avere <strong>più nodi</strong> (casa, mare, hotspot): ognuno ha il suo id e la sua chiave, e una chiave non si può usare due volte.</p>
       <label for="call">Nominativo</label>
       <input id="call" maxlength="8" autocomplete="off" placeholder="IZ5IOF">
+      <label for="label">Nome del nodo (facoltativo: casa, mare, hotspot…)</label>
+      <input id="label" maxlength="16" autocomplete="off" placeholder="casa">
+      <label for="target">Cosa fare</label>
+      <select id="target"><option value="">Aggiungere un nodo nuovo</option></select>
       <label for="key">Chiave (32 cifre esadecimali) — vuota: la genera il reflector</label>
       <input id="key" maxlength="32" autocomplete="off" spellcheck="false" placeholder="vuota = ne genero una nuova">
       <div>
@@ -154,24 +158,42 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
     const c = normCall();
     if (!/^[A-Z0-9\/]{1,8}$/.test(c)) { show($('regMsg'), 'Nominativo non valido: lettere, cifre e "/", massimo 8 caratteri.', 'err'); return null; }
     const r = await api('/api/lookup?call=' + encodeURIComponent(c));
-    if (r.registered) show($('regMsg'), c + ' è già registrato (id ' + r.id + ', ' + (r.up ? 'collegato adesso' : 'non collegato') + '): registrando di nuovo la chiave nuova sostituisce la vecchia.', 'warn');
-    else show($('regMsg'), c + ' non è ancora registrato: avrà il prossimo id libero (' + r.nextId + ').', 'ok');
+    const sel = $('target'), keep = sel.value;
+    sel.innerHTML = '';
+    const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Aggiungere un nodo nuovo'; sel.appendChild(o0);
+    for (const n of r.nodes) {
+      const o = document.createElement('option'); o.value = String(n.id);
+      o.textContent = 'Sostituire la chiave del nodo id ' + n.id + (n.label ? ' (' + n.label + ')' : '') + (n.up ? ' — collegato adesso' : '');
+      sel.appendChild(o);
+    }
+    if ([...sel.options].some((o) => o.value === keep)) sel.value = keep;
+    if (r.nodes.length) {
+      const l = r.nodes.map((n) => 'id ' + n.id + (n.label ? ' ' + n.label : '') + (n.up ? ' (collegato)' : '')).join(', ');
+      show($('regMsg'), c + ' ha già ' + r.nodes.length + (r.nodes.length === 1 ? ' nodo: ' : ' nodi: ') + l + '. Aggiungendone uno nuovo ha il prossimo id libero (' + r.nextId + ') e va chiamato in modo diverso; per cambiare la chiave di uno esistente scegli "Sostituire" qui sotto.', 'warn');
+    } else {
+      show($('regMsg'), c + ' non è ancora registrato: il nodo nuovo avrà il prossimo id libero (' + r.nextId + ').', 'ok');
+    }
     return r;
   }
   $('checkBtn').addEventListener('click', check);
+  $('call').addEventListener('change', () => { check().catch(() => {}); });
   $('regBtn').addEventListener('click', async () => {
     $('regOut').hidden = true; $('copyBtn').hidden = true;
-    const c = normCall(), k = $('key').value.trim();
+    const c = normCall(), k = $('key').value.trim(), label = $('label').value.trim();
     const r0 = await check(); if (!r0) return;
     if (k !== '' && !/^[0-9a-fA-F]{32}$/.test(k)) { show($('regMsg'), 'La chiave deve avere 32 cifre esadecimali (oppure lasciala vuota).', 'err'); return; }
-    if (r0.registered && !confirm(c + ' è già registrato: sostituire la chiave?')) return;
-    const r = await api('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'call=' + encodeURIComponent(c) + '&key=' + encodeURIComponent(k) });
+    const replace = $('target').value;
+    if (replace && !confirm('Sostituire la chiave del nodo id ' + replace + '? Il nodo si stacca finché non usa la chiave nuova.')) return;
+    const body = 'call=' + encodeURIComponent(c) + '&key=' + encodeURIComponent(k) + '&label=' + encodeURIComponent(label) + (replace ? '&replace=' + encodeURIComponent(replace) : '');
+    const r = await api('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
     if (!r.ok) { show($('regMsg'), r.error || 'Errore.', 'err'); return; }
-    show($('regMsg'), (r.replaced ? 'Chiave sostituita per ' : 'Registrato ') + r.call + ' (id ' + r.id + '). Il nodo può collegarsi.', 'ok');
+    const who = r.call + (r.label ? ' ' + r.label : '');
+    show($('regMsg'), (r.replaced ? 'Chiave sostituita per ' : 'Registrato ') + who + ' (id ' + r.id + '). Il nodo può collegarsi.', 'ok');
     const lines = ['Reflector: ' + (info.publicName || '(indirizzo del reflector):' + info.port), 'Id del reflector: ' + info.id, 'Id del nodo: ' + r.id, 'Nominativo: ' + r.call];
+    if (r.label) lines.push('Nome del nodo: ' + r.label);
     lines.push(r.key ? 'Chiave: ' + r.key + '   (da dare al collega su un canale privato)' : 'Chiave: quella che mi hai mandato');
     $('regOut').hidden = false; $('regOut').textContent = lines.join('\n'); $('copyBtn').hidden = false;
-    if (r.key) $('key').value = ''; else $('key').value = '';
+    $('key').value = ''; $('target').value = '';
     refresh();
   });
   $('copyBtn').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('regOut').textContent); show($('regMsg'), 'Copiato.', 'ok'); } catch (e) { show($('regMsg'), 'Copia non riuscita: seleziona il testo a mano.', 'err'); } });

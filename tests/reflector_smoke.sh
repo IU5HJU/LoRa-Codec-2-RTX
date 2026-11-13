@@ -29,7 +29,7 @@ curl -s -m 5 "http://127.0.0.1:$WEB/" | grep -q "Reflector VoLoRa" && ok "la pag
 [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:$WEB/api/status)" = "401" ] && ok "senza token i dati non si vedono (401)" || ko "i dati si vedono senza token"
 [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H 'X-Token: sbagliato' http://127.0.0.1:$WEB/api/status)" = "401" ] && ok "con un token sbagliato nemmeno (401)" || ko "token sbagliato accettato"
 [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: $TOKEN" http://127.0.0.1:$WEB/api/nonesiste)" = "404" ] && ok "indirizzo sconosciuto: 404" || ko "404 mancante"
-api "http://127.0.0.1:$WEB/api/status" | grep -q '"clients":\[{"id":2,"name":"nodoA","up":false' && ok "stato: i due client in elenco, non collegati" || ko "stato iniziale"
+api "http://127.0.0.1:$WEB/api/status" | grep -q '"clients":\[{"id":2,"name":"nodoA","call":"nodoA","label":"","up":false' && ok "stato: i due client in elenco, non collegati" || ko "stato iniziale"
 
 # i nodi
 build/vlnode --id 3 --peer-id 1000 --key 101112131415161718191a1b1c1d1e1f --listen 0 --peer localhost:$PORT --duration 22 > "$D/b.out" 2>&1 &
@@ -42,7 +42,7 @@ S=$(api "http://127.0.0.1:$WEB/api/status")
 echo "$S" | grep -q '"talking":{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: chi trasmette adesso (IZ5IOF, dal nodoA)" || ko "chi trasmette non compare"
 wait $NODEA
 S=$(api "http://127.0.0.1:$WEB/api/status")
-echo "$S" | grep -q '"name":"nodoA","up":true' && echo "$S" | grep -q '"name":"nodoB","up":true' && ok "stato: i due nodi collegati" || ko "nodi non collegati nello stato"
+echo "$S" | grep -q '"name":"nodoA","call":"nodoA","label":"","up":true' && echo "$S" | grep -q '"name":"nodoB","call":"nodoB","label":"","up":true' && ok "stato: i due nodi collegati" || ko "nodi non collegati nello stato"
 echo "$S" | grep -q '"recent":\[{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: la trasmissione finita e' fra le ultime" || ko "storico vuoto"
 wait $NODEB  # l'uscita di vlnode si scrive alla fine
 check "$D/b.out" 'testo "Prova via reflector"' "B riceve il testo di A"
@@ -52,26 +52,44 @@ n=$(grep -c "^\[pacchetto\] modo 1 " "$D/b.out")
 grep -q "pacchetto" "$D/a.out" && ko "A riceve indietro i suoi pacchetti" || ok "A non riceve indietro i suoi pacchetti"
 
 # registrazione di un nodo nuovo, con la chiave generata dal reflector
-api "http://127.0.0.1:$WEB/api/lookup?call=iz5iof" | grep -q '"registered":false,"id":0,"nextId":4' && ok "il nominativo nuovo non e' registrato, prossimo id 4" || ko "lookup nominativo nuovo"
+api "http://127.0.0.1:$WEB/api/lookup?call=iz5iof" | grep -q '"registered":false.*"nextId":4,"nodes":\[\]' && ok "il nominativo nuovo non e' registrato, prossimo id 4" || ko "lookup nominativo nuovo"
 R=$(api -X POST -d "call=iz5iof" "http://127.0.0.1:$WEB/api/register")
-echo "$R" | grep -q '"ok":true,"id":4,"call":"IZ5IOF","replaced":false,"key":"' && ok "registrato IZ5IOF con id 4 e chiave generata" || ko "registrazione: $R"
+echo "$R" | grep -q '"ok":true,"id":4,"call":"IZ5IOF","label":"","replaced":false,"key":"' && ok "registrato IZ5IOF con id 4 e chiave generata" || ko "registrazione: $R"
 KEY=$(echo "$R" | sed -n 's/.*"key":"\([0-9a-f]\{32\}\)".*/\1/p')
-grep -q "^4 .* IZ5IOF" "$D/ref.conf" && ok "il file dei client e' aggiornato" || ko "file non aggiornato"
+grep -q "^4 .* IZ5IOF$" "$D/ref.conf" && ok "il file dei client e' aggiornato" || ko "file non aggiornato"
 [ "$(stat -c %a "$D/ref.conf")" = "600" ] && ok "il file dei client ha permessi riservati (600)" || ko "permessi del file"
 build/vlnode --id 4 --peer-id 1000 --key "$KEY" --listen 0 --peer localhost:$PORT --duration 6 > "$D/c.out" 2>&1
 check "$D/c.out" "collegamento ATTIVO" "il nodo registrato con la chiave generata si collega, senza riavviare il reflector"
-# di nuovo lo stesso nominativo: la chiave si sostituisce, la vecchia non vale piu'
-api "http://127.0.0.1:$WEB/api/lookup?call=IZ5IOF" | grep -q '"registered":true,"id":4' && ok "il nominativo ora risulta registrato (id 4)" || ko "lookup nominativo registrato"
+api "http://127.0.0.1:$WEB/api/lookup?call=IZ5IOF" | grep -q '"registered":true.*"nodes":\[{"id":4,"label":""' && ok "il nominativo ora risulta registrato (id 4)" || ko "lookup nominativo registrato"
+# lo stesso nominativo senza etichetta: e' gia' registrato, bisogna dare un altro nome al nodo o sostituire la chiave
+api -X POST -d "call=IZ5IOF" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false.*gia. registrato' && ok "stesso nominativo senza nome del nodo: rifiutato (c'e' gia')" || ko "doppione accettato"
+# sostituire la chiave del nodo esistente
 NEWKEY=00112233445566778899aabbccddeeff
-R=$(api -X POST -d "call=IZ5IOF&key=$NEWKEY" "http://127.0.0.1:$WEB/api/register")
-echo "$R" | grep -q '"ok":true,"id":4,"call":"IZ5IOF","replaced":true' && ok "stesso nominativo: chiave sostituita, stesso id" || ko "sostituzione: $R"
+R=$(api -X POST -d "call=IZ5IOF&key=$NEWKEY&replace=4" "http://127.0.0.1:$WEB/api/register")
+echo "$R" | grep -q '"ok":true,"id":4,"call":"IZ5IOF","label":"","replaced":true' && ok "chiave sostituita, stesso id" || ko "sostituzione: $R"
 build/vlnode --id 4 --peer-id 1000 --key "$KEY" --listen 0 --peer localhost:$PORT --duration 5 > "$D/c2.out" 2>&1
 grep -q "collegamento ATTIVO" "$D/c2.out" && ko "la chiave vecchia si collega ancora" || ok "la chiave vecchia non si collega piu'"
-build/vlnode --id 4 --peer-id 1000 --key "$NEWKEY" --listen 0 --peer localhost:$PORT --duration 6 > "$D/c3.out" 2>&1
-check "$D/c3.out" "collegamento ATTIVO" "la chiave nuova si collega"
+# piu' nodi per lo stesso nominativo: ognuno col suo id e la sua chiave
+R=$(api -X POST -d "call=IZ5IOF&label=mare" "http://127.0.0.1:$WEB/api/register")
+echo "$R" | grep -q '"ok":true,"id":5,"call":"IZ5IOF","label":"mare","replaced":false,"key":"' && ok "secondo nodo dello stesso nominativo: id 5, etichetta mare, chiave sua" || ko "secondo nodo: $R"
+KEY5=$(echo "$R" | sed -n 's/.*"key":"\([0-9a-f]\{32\}\)".*/\1/p')
+[ "$KEY5" != "$NEWKEY" ] && [ -n "$KEY5" ] && ok "la chiave del secondo nodo e' diversa" || ko "chiave uguale"
+grep -q "^5 .* IZ5IOF mare$" "$D/ref.conf" && ok "il file ha la riga con l'etichetta" || ko "riga con etichetta mancante"
+api -X POST -d "call=IZ5IOF&label=MARE" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false' && ok "la stessa etichetta due volte: rifiutata" || ko "etichetta ripetuta accettata"
+api -X POST -d "call=IZ5IOF&label=hotspot&key=$NEWKEY" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false.*chiave e. gia. usata' && ok "una chiave gia' usata non si usa per un altro nodo" || ko "chiave ripetuta accettata"
+api -X POST -d "call=IW0XYZ&replace=4" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false.*altro nominativo' && ok "non si sostituisce la chiave di un nodo di un altro nominativo" || ko "sostituzione fra nominativi"
+build/vlnode --id 4 --peer-id 1000 --key "$NEWKEY" --listen 0 --peer localhost:$PORT --duration 9 > "$D/c3.out" 2>&1 &
+N4=$!
+build/vlnode --id 5 --peer-id 1000 --key "$KEY5" --listen 0 --peer localhost:$PORT --duration 9 > "$D/c4.out" 2>&1 &
+N5=$!
+sleep 6
+S=$(api "http://127.0.0.1:$WEB/api/status")
+echo "$S" | grep -q '"id":4,"name":"IZ5IOF","call":"IZ5IOF","label":"","up":true' && echo "$S" | grep -q '"id":5,"name":"IZ5IOF mare","call":"IZ5IOF","label":"mare","up":true' && ok "i due nodi dello stesso nominativo sono collegati insieme" || ko "due nodi insieme: $S"
+wait $N4 $N5
 # errori
 api -X POST -d "call=BAD CALL!" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false' && ok "nominativo non valido rifiutato" || ko "nominativo non valido accettato"
 api -X POST -d "call=IW0XYZ&key=abc" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false' && ok "chiave non valida rifiutata" || ko "chiave non valida accettata"
+api -X POST -d "call=IW0XYZ&label=a%20b" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false' && ok "nome del nodo non valido rifiutato" || ko "etichetta non valida accettata"
 [ "$(api -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$WEB/api/register")" = "405" ] && ok "register con GET: 405" || ko "405 mancante"
 # togliere un client
 api -X POST -d "id=3" "http://127.0.0.1:$WEB/api/remove" | grep -q '"ok":true' && ok "client tolto" || ko "client non tolto"
@@ -85,5 +103,5 @@ echo "x non valida" >> "$D/ref.conf"
 kill -HUP $REF; sleep 1
 api "http://127.0.0.1:$WEB/api/status" | grep -q '"name":"MANO"' && ok "file con un errore: resta l'elenco di prima" || ko "elenco perso dopo un file sbagliato"
 check "$D/ref.out" "ricaricamento non riuscito" "l'errore e' scritto nel registro"
-check "$D/ref.out" "client IZ5IOF collegato" "il registro scrive i collegamenti"
+check "$D/ref.out" "client IZ5IOF mare collegato" "il registro scrive i collegamenti (con il nome del nodo)"
 exit $fail

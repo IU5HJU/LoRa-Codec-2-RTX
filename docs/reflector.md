@@ -18,11 +18,12 @@ build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mod
 - `--web PORTA`: la **pagina di amministrazione** (vedi sotto); `--public-name`: il nome e la porta che compaiono nelle istruzioni da dare ai colleghi.
 - Il file dei client ha **una riga per client** (righe vuote e che iniziano con `#` si ignorano). Lo scrive anche la pagina di amministrazione, quindi il programma deve poterlo modificare:
   ```
-  # id  chiave (32 cifre esadecimali)       nome (nominativo)
-  2     000102030405060708090a0b0c0d0e0f    IZ5IOF
-  3     101112131415161718191a1b1c1d1e1f    ripetitore-rx
+  # id  chiave (32 cifre esadecimali)       nominativo [nome del nodo]
+  2     000102030405060708090a0b0c0d0e0f    IZ5IOF casa
+  3     101112131415161718191a1b1c1d1e1f    IZ5IOF mare
+  4     aabbccddeeff00112233445566778899    ripetitore-rx
   ```
-  Ogni client ha **la sua chiave** (`openssl rand -hex 16`) e il suo id (diverso da 0 e dall'id del reflector). Un nominativo ha una sola riga.
+  Ogni client ha **il suo id** (diverso da 0 e dall'id del reflector) e **la sua chiave** (`openssl rand -hex 16`): una chiave **non si può usare due volte**. Un radioamatore può avere **più nodi** (un hotspot, un nodo a casa e uno al mare): stesso nominativo su più righe, ognuna con il suo id e la sua chiave, e un **nome del nodo** facoltativo (una parola) per distinguerli. La stessa coppia nominativo + nome non può ripetersi.
 - **Ricaricare il file senza fermare il reflector** (nessuno si stacca): `sudo systemctl reload vlreflector` (segnale `SIGHUP`). Se nel file c'è un errore il reflector lo scrive nel registro e **resta con l'elenco di prima**.
 - **Firewall del server:** aprire solo la porta UDP scelta in ingresso (e **non** la porta della pagina di amministrazione). Il reflector non risponde a chi non conosce un id e una chiave in elenco (nessuna amplificazione).
 - **Come servizio** (`systemd`), con il file dei client in una cartella che il servizio può scrivere (`/var/lib/vlreflector/`):
@@ -72,9 +73,9 @@ Sicurezza:
 
 La chiave è un segreto condiviso fra il nodo e il reflector, e nasce **dal collega, sulla sua scheda**:
 
-1. **Il collega** apre la [pagina di configurazione](https://iu5hju.github.io/VoLoRa/), sceglie *Nodo Internet*, scrive il suo **nominativo** e nel riquadro "Rete e reflector" preme **"Genera una chiave nuova per il mio nominativo"**. La pagina propone già il reflector di base (nome, porta e id 1000): chi ha un reflector suo, anche privato, li cambia. La chiave è casuale (non si può ricavare dal nominativo, che è pubblico) e **nuova a ogni pressione**; la pagina ricorda soltanto la data dell'ultima generata per quel nominativo, e avvisa che la nuova sostituisce la vecchia.
+1. **Il collega** apre la [pagina di configurazione](https://iu5hju.github.io/VoLoRa/), sceglie *Nodo Internet*, scrive il suo **nominativo** e nel riquadro "Rete e reflector" (con un **nome del nodo** facoltativo se ha più nodi: casa, mare, hotspot) preme **"Genera una chiave nuova per il mio nominativo"**. La pagina propone già il reflector di base (nome, porta e id 1000): chi ha un reflector suo, anche privato, li cambia. La chiave è casuale (non si può ricavare dal nominativo, che è pubblico) e **nuova a ogni pressione**; la pagina ricorda soltanto la data dell'ultima generata per quel nominativo (e nome del nodo), e avvisa che la nuova sostituisce la vecchia.
 2. **La pagina gli mostra la riga da mandare** (nominativo, chiave, e la riga per il file) con il pulsante *Copia*: la manda al sysop **su un canale privato**.
-3. **Il sysop** apre la pagina di amministrazione, scrive il nominativo e incolla la chiave in *Registra un nodo*. *Controlla il nominativo* dice se è già registrato (in quel caso la chiave nuova **sostituisce** la vecchia, con lo stesso id, e il nodo vecchio si stacca) o qual è il prossimo id libero. *Registra* scrive il file e **il nodo può collegarsi subito**, senza riavvii. Se il collega non ha ancora una chiave, il sysop lascia il campo vuoto: il reflector ne genera una e la mostra una volta sola, da dare al collega.
+3. **Il sysop** apre la pagina di amministrazione, scrive il nominativo (e il nome del nodo, se ce ne sono più d'uno) e incolla la chiave in *Registra un nodo*. *Controlla il nominativo* elenca i nodi che quel nominativo ha già (id, nome, se è collegato) e qual è il prossimo id libero. In *Cosa fare* si sceglie **"Aggiungere un nodo nuovo"** (id nuovo, da chiamare in modo diverso dagli altri) oppure **"Sostituire la chiave del nodo id N"** (stesso id, e quel nodo si stacca finché non usa la chiave nuova: serve se il collega ha perso la chiave o ne ha fatta una nuova). *Registra* scrive il file e **il nodo può collegarsi subito**, senza riavvii. Una chiave già usata da un altro nodo viene rifiutata. Se il collega non ha ancora una chiave, il sysop lascia il campo vuoto: il reflector ne genera una e la mostra una volta sola, da dare al collega.
 4. **Il sysop** dice al collega l'**id** assegnato (e conferma l'indirizzo del reflector): il collega lo scrive in *Id di questa scheda*, salva, e la scheda si collega.
 
 Il collegamento si vede subito nella pagina del sysop ("Collegati") e nel registro (`journalctl -u vlreflector -f`).

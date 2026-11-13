@@ -152,6 +152,9 @@
         <label for="nodeid">Id di questa scheda (NODEID)</label>
         <input id="nodeid" type="number" min="1" max="4294967295" step="1" placeholder="2" disabled>
         <p class="hint">L'id e la chiave di questa scheda sono la sua riga nel file del reflector.</p>
+        <label for="nodelabel">Nome di questo nodo (facoltativo: casa, mare, hotspot…)</label>
+        <input id="nodelabel" maxlength="16" autocomplete="off" placeholder="casa" disabled>
+        <p class="hint">Se hai più nodi con lo stesso nominativo, ognuno ha il suo <strong>id</strong> e la sua <strong>chiave</strong> (una chiave non si usa due volte): il nome serve solo al sysop per distinguerli. Non viene salvato sulla scheda.</p>
         <label for="nodekey">Chiave (32 cifre esadecimali)</label>
         <input id="nodekey" maxlength="32" autocomplete="off" spellcheck="false" placeholder="vuota = non cambiarla" disabled>
         <button id="genNodeKey" type="button" class="secondary" disabled>Genera una chiave nuova per il mio nominativo</button>
@@ -540,7 +543,7 @@
   let nodeKeyIsSet = false, wifiPassIsSet = false;
   // Il reflector di base: compare nei campi se la scheda non ne ha uno; chi vuole un reflector suo (anche privato) lo cambia
   const DEFAULT_REFLECTOR = 'iu5hju.ddns.net:5400', DEFAULT_REFLECTOR_ID = '1000';
-  const NET_IDS = ['wifissid', 'wifipass', 'peer', 'peerid', 'nodeid', 'nodekey', 'genNodeKey', 'nodeport'];
+  const NET_IDS = ['wifissid', 'wifipass', 'peer', 'peerid', 'nodeid', 'nodekey', 'genNodeKey', 'nodeport', 'nodelabel'];
   async function readNode() {
     try {
       const r = await send('CFG GET NODE', /^CFG NODE /, 2500);
@@ -1001,21 +1004,24 @@
     crypto.getRandomValues(b);
     const key = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
     $('nodekey').value = key;
+    const label = $('nodelabel').value.trim();
+    if (label !== '' && !/^[A-Za-z0-9_.-]{1,16}$/.test(label)) { setStatus('Il nome del nodo può avere lettere, cifre, - _ . (massimo 16 caratteri).', 'err'); $('nodekey').value = ''; return; }
+    const who = label ? cs + ' ' + label : cs;
     let notes = [];
     let prev = null;
-    try { prev = (JSON.parse(localStorage.getItem('vlr-keys') || '{}'))[cs] || null; } catch (e) { prev = null; }
-    if (prev) notes.push('Per ' + cs + ' avevi già generato una chiave il ' + prev + ': quella nuova la sostituisce quando il sysop la registra.');
+    try { prev = (JSON.parse(localStorage.getItem('vlr-keys') || '{}'))[who] || null; } catch (e) { prev = null; }
+    if (prev) notes.push('Per ' + who + ' avevi già generato una chiave il ' + prev + ': quella nuova la sostituisce quando il sysop la registra.');
     if (nodeKeyIsSet) notes.push('La scheda ha già una chiave: salvando, la nuova prende il suo posto.');
     try {
       const all = JSON.parse(localStorage.getItem('vlr-keys') || '{}');
       const d = new Date();
-      all[cs] = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      all[who] = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
       localStorage.setItem('vlr-keys', JSON.stringify(all));
     } catch (e) { /* senza memoria del browser: nessun avviso */ }
     const id = $('nodeid').value.trim();
-    $('regline').textContent = 'Nominativo: ' + cs + '\nChiave: ' + key + '\nRiga per il file del reflector: ' + (id || 'ID') + '  ' + key + '  ' + cs;
+    $('regline').textContent = 'Nominativo: ' + cs + (label ? '\nNome del nodo: ' + label : '') + '\nChiave: ' + key + '\nRiga per il file del reflector: ' + (id || 'ID') + '  ' + key + '  ' + cs + (label ? ' ' + label : '');
     $('regbox').hidden = false;
-    $('nodekeyhint').textContent = 'Chiave generata per ' + cs + '. Copiala adesso (dopo il salvataggio non si rilegge) e mandala al sysop. ' + notes.join(' ');
+    $('nodekeyhint').textContent = 'Chiave generata per ' + who + '. Copiala adesso (dopo il salvataggio non si rilegge) e mandala al sysop. ' + notes.join(' ');
   });
   $('copyRegLine').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText($('regline').textContent); setStatus('Copiato: mandalo al sysop del reflector su un canale privato.', 'ok'); }

@@ -39,6 +39,15 @@ std::string keyToHex(const uint8_t key[kNodeKeyBytes]) {
   return s;
 }
 
+bool isValidClientLabel(const std::string& s) {
+  if (s.empty() || s.size() > kMaxClientLabel) return false;
+  for (char c : s) {
+    const unsigned char u = static_cast<unsigned char>(c);
+    if (!(isalnum(u) || c == '-' || c == '_' || c == '.')) return false;
+  }
+  return true;
+}
+
 static bool sameNameCI(const std::string& a, const std::string& b) {
   if (a.size() != b.size()) return false;
   for (size_t i = 0; i < a.size(); i++) {
@@ -50,6 +59,28 @@ static bool sameNameCI(const std::string& a, const std::string& b) {
 int findEntryByName(const std::vector<ReflectorEntry>& entries, const std::string& name) {
   for (size_t i = 0; i < entries.size(); i++) {
     if (sameNameCI(entries[i].name, name)) return static_cast<int>(i);
+  }
+  return -1;
+}
+
+std::vector<int> findEntriesByName(const std::vector<ReflectorEntry>& entries, const std::string& name) {
+  std::vector<int> v;
+  for (size_t i = 0; i < entries.size(); i++) {
+    if (sameNameCI(entries[i].name, name)) v.push_back(static_cast<int>(i));
+  }
+  return v;
+}
+
+int findEntryByNameLabel(const std::vector<ReflectorEntry>& entries, const std::string& name, const std::string& label) {
+  for (size_t i = 0; i < entries.size(); i++) {
+    if (sameNameCI(entries[i].name, name) && sameNameCI(entries[i].label, label)) return static_cast<int>(i);
+  }
+  return -1;
+}
+
+int findEntryByKey(const std::vector<ReflectorEntry>& entries, const uint8_t key[kNodeKeyBytes], int except) {
+  for (size_t i = 0; i < entries.size(); i++) {
+    if (static_cast<int>(i) != except && memcmp(entries[i].key, key, kNodeKeyBytes) == 0) return static_cast<int>(i);
   }
   return -1;
 }
@@ -72,9 +103,9 @@ bool parseReflectorConfig(const std::string& text, uint32_t reflectorId, std::ve
     const size_t h = line.find('#');
     if (h != std::string::npos) line.resize(h);
     std::istringstream ss(line);
-    std::string idText, keyText, name, extra;
+    std::string idText, keyText, name, label, extra;
     if (!(ss >> idText)) continue;
-    ss >> keyText >> name >> extra;
+    ss >> keyText >> name >> label >> extra;
     char msg[160];
     char* end = nullptr;
     const unsigned long id = strtoul(idText.c_str(), &end, 10);
@@ -89,20 +120,26 @@ bool parseReflectorConfig(const std::string& text, uint32_t reflectorId, std::ve
       err = msg;
       return false;
     }
-    if (!isValidClientName(name) || !extra.empty()) {
-      snprintf(msg, sizeof(msg), "riga %d: il nome (una parola sola, lettere cifre / - _ .) manca o non e' valido", lineNo);
+    if (!isValidClientName(name) || !extra.empty() || (!label.empty() && !isValidClientLabel(label))) {
+      snprintf(msg, sizeof(msg), "riga %d: dopo la chiave vanno il nome (una parola: lettere cifre / - _ .) e, facoltativa, l'etichetta (una parola: lettere cifre - _ .)", lineNo);
       err = msg;
       return false;
     }
     e.id = static_cast<uint32_t>(id);
     e.name = name;
+    e.label = label;
     if (findEntryById(out, e.id) >= 0) {
       snprintf(msg, sizeof(msg), "riga %d: l'id %lu e' ripetuto", lineNo, id);
       err = msg;
       return false;
     }
-    if (findEntryByName(out, e.name) >= 0) {
-      snprintf(msg, sizeof(msg), "riga %d: il nome %s e' ripetuto", lineNo, name.c_str());
+    if (findEntryByNameLabel(out, e.name, e.label) >= 0) {
+      snprintf(msg, sizeof(msg), "riga %d: %s%s%s e' ripetuto (un nominativo con piu' nodi li distingue con l'etichetta)", lineNo, name.c_str(), label.empty() ? "" : " ", label.c_str());
+      err = msg;
+      return false;
+    }
+    if (findEntryByKey(out, e.key) >= 0) {
+      snprintf(msg, sizeof(msg), "riga %d: la chiave e' gia' usata da un altro nodo (ogni nodo ha la sua)", lineNo);
       err = msg;
       return false;
     }
@@ -114,7 +151,7 @@ bool parseReflectorConfig(const std::string& text, uint32_t reflectorId, std::ve
 }
 
 std::string formatReflectorConfig(const std::vector<ReflectorEntry>& entries) {
-  std::string s = "# id  chiave (32 cifre esadecimali)       nome (nominativo)\n";
+  std::string s = "# id  chiave (32 cifre esadecimali)       nominativo [etichetta del nodo]\n";
   for (const auto& e : entries) {
     char b[24];
     snprintf(b, sizeof(b), "%-5u ", static_cast<unsigned>(e.id));
@@ -122,6 +159,10 @@ std::string formatReflectorConfig(const std::vector<ReflectorEntry>& entries) {
     s += keyToHex(e.key);
     s += "  ";
     s += e.name;
+    if (!e.label.empty()) {
+      s += " ";
+      s += e.label;
+    }
     s += "\n";
   }
   return s;
