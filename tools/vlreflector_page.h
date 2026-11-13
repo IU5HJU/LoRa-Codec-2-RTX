@@ -1,5 +1,5 @@
 // La pagina di amministrazione del reflector (servita da tools/vlreflector.cpp con --web): chi e' collegato, chi trasmette adesso, le ultime
-// trasmissioni e la registrazione dei nodi. Una pagina sola, senza librerie esterne; i dati arrivano da /api/status con il token di amministrazione.
+// trasmissioni e la registrazione dei nodi. Una pagina sola, senza librerie esterne; i dati arrivano da /api/status con la password di amministrazione.
 #pragma once
 
 static const char kAdminPage[] = R"HTML(<!doctype html>
@@ -54,8 +54,8 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
 
   <section id="login">
     <h2>Accesso</h2>
-    <p class="muted">Scrivi il token di amministrazione (il file <code>admin.token</code> accanto al file dei client). Resta solo in questa scheda del browser.</p>
-    <input id="token" type="password" autocomplete="off" placeholder="token">
+    <p class="muted">Scrivi la password di amministrazione (la scegli sul server con <code>vlreflector --set-password</code>). Resta solo in questa scheda del browser.</p>
+    <input id="token" type="password" autocomplete="off" placeholder="password">
     <button id="loginBtn" type="button">Entra</button>
     <div id="loginMsg" class="msg err" hidden></div>
   </section>
@@ -200,7 +200,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
   $('loginBtn').addEventListener('click', () => {
     token = $('token').value.trim();
     try { sessionStorage.setItem('vlr-token', token); } catch (e) {}
-    api('/api/status').then(() => { $('loginMsg').hidden = true; refresh(); }).catch(() => { show($('loginMsg'), 'Token non valido.', 'err'); });
+    api('/api/status').then(() => { $('loginMsg').hidden = true; refresh(); }).catch(() => { show($('loginMsg'), 'Password non valida.', 'err'); });
   });
   $('token').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('loginBtn').click(); });
   refresh();

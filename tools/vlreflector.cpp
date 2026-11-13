@@ -6,6 +6,7 @@
 //   build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mode 4] [--status-every 300] [--duration SECONDI]
 //                     [--web 8080 [--web-bind 127.0.0.1] [--admin-token-file FILE] [--public-name nome:5400]]
 //                     [--public-web 8081 [--public-bind 0.0.0.0]]
+//   build/vlreflector --set-password [--config FILE | --admin-token-file FILE]    (sceglie la password della pagina di amministrazione)
 //
 // File dei client (una riga per client; righe vuote e # si ignorano):   <id> <chiave: 32 cifre esadecimali> <nome (il nominativo)>
 // Si ricarica senza fermare il reflector con un segnale SIGHUP (systemctl reload) o dalla pagina di amministrazione.
@@ -20,6 +21,7 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include <chrono>
@@ -32,6 +34,7 @@
 #include <string>
 #include <vector>
 
+#include "admin_auth.h"
 #include "http_mini.h"
 #include "packet.h"
 #include "reflector_config.h"
@@ -110,6 +113,90 @@ static std::string dirOf(const std::string& p) {
   return s == std::string::npos ? "." : (s == 0 ? "/" : p.substr(0, s));
 }
 
+// Legge una riga di password: da terminale senza mostrarla, da un pipe in chiaro (per gli script).
+static bool readPasswordLine(const char* prompt, std::string& out) {
+  const bool tty = isatty(0) != 0;
+  termios old;
+  if (tty) {
+    fputs(prompt, stderr);
+    fflush(stderr);
+    if (tcgetattr(0, &old) == 0) {
+      termios t = old;
+      t.c_lflag &= ~static_cast<tcflag_t>(ECHO);
+      tcsetattr(0, TCSANOW, &t);
+    }
+  }
+  out.clear();
+  bool got = false;
+  int c;
+  while ((c = getchar()) != EOF) {
+    got = true;
+    if (c == '\n') break;
+    if (c != '\r') out += static_cast<char>(c);
+  }
+  if (tty) {
+    tcsetattr(0, TCSANOW, &old);
+    fputs("\n", stderr);
+  }
+  return got;
+}
+
+// vlreflector --set-password: sceglie la password della pagina di amministrazione e la scrive (non in chiaro) in admin.token.
+static int runSetPassword(const std::string& file) {
+  if (file.empty()) {
+    fprintf(stderr, "serve --config FILE (la password sta nella stessa cartella) oppure --admin-token-file FILE\n");
+    return 2;
+  }
+  std::string pw, again, err;
+  if (!readPasswordLine("Nuova password della pagina di amministrazione: ", pw)) {
+    fprintf(stderr, "nessuna password letta\n");
+    return 2;
+  }
+  if (!isValidAdminPassword(pw, err)) {
+    fprintf(stderr, "%s\n", err.c_str());
+    return 2;
+  }
+  if (isatty(0)) {
+    readPasswordLine("Ripetila: ", again);
+    if (again != pw) {
+      fprintf(stderr, "le due password non coincidono: non cambio niente\n");
+      return 2;
+    }
+  }
+  uint8_t salt[kAdminSaltBytes];
+  if (!randomBytes(salt, sizeof(salt))) {
+    fprintf(stderr, "non riesco a generare il sale\n");
+    return 1;
+  }
+  if (!writeFileAtomic(file, makePasswordLine(pw, salt))) {
+    fprintf(stderr, "non riesco a scrivere %s (permessi? lancia il comando come utente del servizio: sudo -u vlreflector ...)\n", file.c_str());
+    return 1;
+  }
+  fprintf(stderr, "Password cambiata (%s). Se il servizio e' acceso: sudo systemctl reload vlreflector\n", file.c_str());
+  return 0;
+}
+
+// Legge il file della password. 'create': se manca o e' rovinato se ne crea uno (un token casuale, come prima); false se non si puo'.
+static bool loadAdminAuth(const std::string& file, bool create, AdminAuth& out, std::string& err) {
+  std::string t;
+  if (readFile(file, t) && parseAdminAuth(t, out)) return true;
+  if (!create) {
+    err = "non riesco a leggere una password valida da " + file;
+    return false;
+  }
+  uint8_t r[16];
+  if (!randomBytes(r, sizeof(r))) {
+    err = "non riesco a generare il token di amministrazione";
+    return false;
+  }
+  const std::string tok = keyToHex(r);
+  if (!writeFileAtomic(file, tok + "\n")) {
+    err = "non riesco a scrivere " + file;
+    return false;
+  }
+  return parseAdminAuth(tok, out);
+}
+
 static std::string epText(Endpoint e) {
   char b[40];
   snprintf(b, sizeof(b), "%u.%u.%u.%u:%u", static_cast<unsigned>((e >> 40) & 255), static_cast<unsigned>((e >> 32) & 255), static_cast<unsigned>((e >> 24) & 255),
@@ -131,7 +218,8 @@ struct UdpNet : public IReflectorNet {
 
 // Lo stato della pagina di amministrazione: i client in elenco (che rispecchiano il file) e cosa si puo' fare.
 struct Admin {
-  std::string configPath, token, publicName;
+  std::string configPath, publicName;
+  AdminAuth auth;  // password (o vecchio token) della pagina di amministrazione
   uint32_t reflectorId = 1000;
   int voiceMode = 4, port = 5400;
   uint32_t startMs = 0;
@@ -259,7 +347,7 @@ struct Admin {
     }
     if (authFails >= 10) return false;
     auto it = req.headers.find("x-token");
-    const bool ok = it != req.headers.end() && !token.empty() && constantTimeEquals(it->second, token);
+    const bool ok = it != req.headers.end() && auth.valid() && checkAdminSecret(auth, it->second);
     if (!ok) authFails++;
     return ok;
   }
@@ -415,6 +503,7 @@ int main(int argc, char** argv) {
   std::string tokenFile;
   int duration = 0, statusEvery = 300, webPort = 0, pubPort = 0;
   std::string webBind = "127.0.0.1", pubBind = "0.0.0.0";
+  bool setPassword = false;
   for (int i = 1; i < argc; i++) {
     const std::string a = argv[i];
     auto next = [&]() -> const char* { return i + 1 < argc ? argv[++i] : ""; };
@@ -429,12 +518,14 @@ int main(int argc, char** argv) {
     else if (a == "--public-web") pubPort = atoi(next());
     else if (a == "--public-bind") pubBind = next();
     else if (a == "--admin-token-file") tokenFile = next();
+    else if (a == "--set-password") setPassword = true;
     else if (a == "--public-name") adm.publicName = next();
     else {
       fprintf(stderr, "parametro sconosciuto: %s (vedi l'inizio di tools/vlreflector.cpp)\n", a.c_str());
       return 2;
     }
   }
+  if (setPassword) return runSetPassword(tokenFile.empty() ? (adm.configPath.empty() ? std::string() : dirOf(adm.configPath) + "/admin.token") : tokenFile);
   if (adm.configPath.empty() || adm.reflectorId == 0 || (adm.voiceMode != 1 && adm.voiceMode != 4) || adm.port < 1 || adm.port > 65535 || webPort < 0 || webPort > 65535 || pubPort < 0 || pubPort > 65535) {
     fprintf(stderr, "servono --config FILE; --id diverso da 0, --voice-mode 1 o 4, --port 1-65535, --web 0-65535, --public-web 0-65535\n");
     return 2;
@@ -465,23 +556,11 @@ int main(int argc, char** argv) {
   int webListen = -1;
   if (webPort > 0) {
     if (tokenFile.empty()) tokenFile = dirOf(adm.configPath) + "/admin.token";
-    std::string t;
-    if (readFile(tokenFile, t)) {
-      while (!t.empty() && (t.back() == '\n' || t.back() == '\r' || t.back() == ' ')) t.pop_back();
+    std::string aerr;
+    if (!loadAdminAuth(tokenFile, true, adm.auth, aerr)) {
+      fprintf(stderr, "%s\n", aerr.c_str());
+      return 1;
     }
-    if (t.size() < 16) {  // manca o e' troppo corto: se ne crea uno
-      uint8_t r[16];
-      if (!randomBytes(r, sizeof(r))) {
-        fprintf(stderr, "non riesco a generare il token di amministrazione\n");
-        return 1;
-      }
-      t = keyToHex(r);
-      if (!writeFileAtomic(tokenFile, t + "\n")) {
-        fprintf(stderr, "non riesco a scrivere %s\n", tokenFile.c_str());
-        return 1;
-      }
-    }
-    adm.token = t;
     webListen = listenTcp(webBind, webPort, "pagina di amministrazione (bind)");
     if (webListen < 0) return 1;
   }
@@ -514,7 +593,7 @@ int main(int argc, char** argv) {
            static_cast<int>(adm.entries.size()));
   logLine(b);
   if (webListen >= 0) {
-    snprintf(b, sizeof(b), "pagina di amministrazione su http://%s:%d/ (token in %s)", webBind.c_str(), webPort, tokenFile.c_str());
+    snprintf(b, sizeof(b), "pagina di amministrazione su http://%s:%d/ (password in %s: vlreflector --set-password per sceglierla)", webBind.c_str(), webPort, tokenFile.c_str());
     logLine(b);
   }
   if (pubListen >= 0) {
@@ -540,6 +619,16 @@ int main(int argc, char** argv) {
       std::string err;
       if (adm.reload(err)) logLine("file dei client ricaricato (" + std::to_string(adm.entries.size()) + " client)");
       else logLine("ricaricamento non riuscito, resta l'elenco di prima: " + err);
+      if (webListen >= 0) {  // anche la password: si cambia con --set-password e un reload
+        AdminAuth na;
+        std::string aerr;
+        if (loadAdminAuth(tokenFile, false, na, aerr)) {
+          adm.auth = na;
+          logLine("password della pagina di amministrazione riletta");
+        } else {
+          logLine("password non riletta, resta quella di prima: " + aerr);
+        }
+      }
     }
     std::vector<pollfd> fds;
     fds.push_back({net.sock, POLLIN, 0});

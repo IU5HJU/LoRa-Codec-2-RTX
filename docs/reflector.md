@@ -10,6 +10,7 @@ Un reflector è un programma su un server che fa da centro-stella: **nodi e ripe
 make vlreflector
 build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mode 4] [--status-every 300]
                   [--web 8080 [--web-bind 127.0.0.1] [--admin-token-file FILE] [--public-name nome:5400]]
+                  vlreflector --set-password [--config FILE | --admin-token-file FILE]   (password della pagina di amministrazione)
                   [--public-web 8081 [--public-bind 0.0.0.0]]
 ```
 
@@ -67,7 +68,12 @@ Con `--web 8080` il reflector serve una pagina (senza librerie esterne) con:
 
 Sicurezza:
 - Di base ascolta **solo su `127.0.0.1`**: dal portatile di casa la raggiungi con un tunnel ssh, `ssh -L 8080:127.0.0.1:8080 IU5HJU@192.168.1.76`, e apri `http://127.0.0.1:8080/`. Con `--web-bind 0.0.0.0` è raggiungibile da tutta la rete locale (`http://indirizzo-del-server:8080/` da qualsiasi PC o telefono di casa; **non inoltrare questa porta nel router**).
-- I dati e le azioni vogliono il **token di amministrazione**: il file `admin.token` accanto al file dei client (creato la prima volta, permessi riservati; lo leggi con `sudo cat /var/lib/vlreflector/admin.token`), che la pagina chiede all'ingresso e tiene solo nella scheda del browser. Dopo 10 tentativi sbagliati in un minuto si blocca per un po'.
+- I dati e le azioni vogliono la **password di amministrazione**, che la pagina chiede all'ingresso e tiene solo nella scheda del browser (si distinguono maiuscole e minuscole). Dopo 10 tentativi sbagliati in un minuto si blocca per un po'. **La scegli tu**, sul server:
+  ```
+  sudo -u vlreflector /opt/vlreflector/vlreflector --set-password --config /var/lib/vlreflector/reflector.conf
+  sudo systemctl reload vlreflector
+  ```
+  Il primo comando la chiede due volte senza mostrarla (da 8 a 64 caratteri ASCII, senza spazi all'inizio o alla fine) e la scrive in `admin.token`, accanto al file dei client, **non in chiaro** (una riga `pw1:` con sale e SHA-256; permessi riservati). Il secondo la fa rileggere al servizio **senza riavviarlo**: da quel momento vale la nuova e la vecchia no. Per cambiarla di nuovo basta ripetere i due comandi. Finché non ne scegli una vale il vecchio token casuale (`sudo cat /var/lib/vlreflector/admin.token`), che alla prima volta viene creato da solo. Il collegamento è HTTP semplice: la password viaggia in chiaro nella rete di casa, per questo la pagina non va inoltrata nel router.
 - È HTTP semplice: **non metterla su Internet** senza un HTTPS davanti (per esempio un proxy con un certificato). La porta UDP dei nodi, invece, è l'unica da aprire.
 
 ## La pagina pubblica (per i colleghi)

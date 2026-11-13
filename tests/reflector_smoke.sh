@@ -63,6 +63,22 @@ n=$(grep -c "^\[pacchetto\] modo 1 " "$D/b.out")
 [ "$n" -ge 12 ] && ok "B riceve i pacchetti di voce ($n)" || ko "B riceve solo $n pacchetti di voce"
 grep -q "pacchetto" "$D/a.out" && ko "A riceve indietro i suoi pacchetti" || ok "A non riceve indietro i suoi pacchetti"
 
+# password al posto del token: si sceglie con --set-password e si applica con un reload (SIGHUP)
+OLDTOKEN=$TOKEN
+printf 'corta\n' | build/vlreflector --set-password --config "$D/ref.conf" > "$D/pw.out" 2>&1 && ko "password troppo corta accettata" || ok "password troppo corta: rifiutata"
+[ "$(tr -d '\n' < "$D/admin.token")" = "$OLDTOKEN" ] && ok "dopo il rifiuto il file della password non e' cambiato" || ko "file cambiato dopo un rifiuto"
+printf 'Prova-Password-1\n' | build/vlreflector --set-password --config "$D/ref.conf" > "$D/pw.out" 2>&1 && ok "password scelta con --set-password" || ko "set-password: $(cat "$D/pw.out")"
+grep -q "Prova-Password-1" "$D/admin.token" && ko "la password e' scritta in chiaro nel file" || ok "la password non e' scritta in chiaro (riga $(cut -c1-4 "$D/admin.token"))"
+[ "$(stat -c %a "$D/admin.token")" = "600" ] && ok "il file della password ha permessi riservati (600)" || ko "permessi del file della password"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: $OLDTOKEN" http://127.0.0.1:$WEB/api/status)" = "200" ] && ok "prima del reload vale ancora la vecchia" || ko "vecchio token non piu' valido prima del reload"
+kill -HUP $REF
+sleep 0.5
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: $OLDTOKEN" http://127.0.0.1:$WEB/api/status)" = "401" ] && ok "dopo il reload il vecchio token non vale piu' (401)" || ko "vecchio token ancora valido"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: Prova-Password-1" http://127.0.0.1:$WEB/api/status)" = "200" ] && ok "con la password nuova si entra" || ko "password nuova non accettata"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: prova-password-1" http://127.0.0.1:$WEB/api/status)" = "401" ] && ok "maiuscole e minuscole contano (401)" || ko "password case-insensitive"
+grep -q "password della pagina di amministrazione riletta" "$D/ref.out" && ok "il log dice che la password e' stata riletta" || ko "log del reload della password"
+TOKEN=Prova-Password-1
+
 # registrazione di un nodo nuovo, con la chiave generata dal reflector
 api "http://127.0.0.1:$WEB/api/lookup?call=iz5iof" | grep -q '"registered":false.*"nextId":4,"nodes":\[\]' && ok "il nominativo nuovo non e' registrato, prossimo id 4" || ko "lookup nominativo nuovo"
 R=$(api -X POST -d "call=iz5iof" "http://127.0.0.1:$WEB/api/register")
