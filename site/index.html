@@ -153,8 +153,8 @@
         <input id="peerid" type="number" min="0" max="4294967295" step="1" placeholder="1000" disabled>
         <p class="hint">Il numero con cui si presenta il reflector: lo sceglie chi lo gestisce e non cambia (per quello di base è <strong>1000</strong>). Serve alla scheda per essere sicura di parlare con il reflector giusto.</p>
         <label for="nodeid">Id di questa scheda (NODEID)</label>
-        <input id="nodeid" type="number" min="1" max="4294967295" step="1" placeholder="2" disabled>
-        <p class="hint">Il numero della <strong>tua scheda</strong> nell'elenco del reflector: te lo <strong>assegna il sysop</strong> quando registra il tuo nodo (non lo scegli tu). Insieme alla chiave dice al reflector chi sei: è la riga della tua scheda nel suo file.</p>
+        <input id="nodeid" type="number" min="1" max="4294967295" step="1" placeholder="lo dà il sysop" disabled>
+        <p class="hint">Il numero della <strong>tua scheda</strong> nell'elenco del reflector: te lo <strong>assegna il sysop</strong> quando registra il tuo nodo (non lo scegli tu: <strong>lascialo vuoto</strong> finché non ti risponde, poi scrivilo e salva). Insieme alla chiave dice al reflector chi sei: è la riga della tua scheda nel suo file.</p>
         <label for="nodelabel">Nome di questo nodo (facoltativo: casa, mare, hotspot…)</label>
         <input id="nodelabel" maxlength="16" autocomplete="off" placeholder="casa" disabled>
         <p class="hint">Se hai più nodi con lo stesso nominativo, ognuno ha il suo <strong>id</strong> e la sua <strong>chiave</strong> (una chiave non si usa due volte): il nome serve solo al sysop per distinguerli. Non viene salvato sulla scheda.</p>
@@ -163,7 +163,7 @@
         <button id="genNodeKey" type="button" class="secondary" disabled>Genera una chiave nuova per il mio nominativo</button>
         <p class="hint" id="nodekeyhint">Chiave non impostata.</p>
         <div id="regbox" hidden>
-          <p class="hint"><strong>Da mandare al sysop del reflector</strong> (su un canale privato, non in un gruppo pubblico): così registra il tuo nodo e ti dice l'<strong>id</strong> da scrivere qui sopra.</p>
+          <p class="hint"><strong>Da mandare al sysop del reflector</strong> (su un canale privato, non in un gruppo pubblico): così registra il tuo nodo e ti risponde con l'<strong>id</strong> (un numero) da scrivere qui sopra.</p>
           <pre id="regline" class="regline"></pre>
           <button id="copyRegLine" type="button" class="secondary">Copia</button>
         </div>
@@ -883,13 +883,13 @@
         const hostOk = pm && (/^(\d{1,3}\.){3}\d{1,3}$/.test(pm[1]) ? pm[1].split('.').every((x) => +x <= 255)
                               : (pm[1].length <= 63 && /[A-Za-z]/.test(pm[1]) && /^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$/.test(pm[1])));
         if (!hostOk || (pm[2] !== undefined && (+pm[2] < 1 || +pm[2] > 65535))) return { err: 'Reflector non valido: un nome (reflector.example.org) o un indirizzo IPv4, e la porta (da 1 a 65535).' };
-        if (!/^\d{1,10}$/.test(nid) || +nid < 1 || +nid > 4294967295) return { err: "L'id di questa scheda (NODEID) deve essere un numero da 1 in su." };
+        if (nid !== '' && (!/^\d{1,10}$/.test(nid) || +nid < 1 || +nid > 4294967295)) return { err: "L'id di questa scheda (NODEID) deve essere un numero da 1 in su, oppure vuoto finché il sysop non te lo comunica." };
         if (pid !== '' && (!/^\d{1,10}$/.test(pid) || +pid > 4294967295)) return { err: "L'id del reflector (PEERID) deve essere un numero, oppure vuoto." };
         if (key !== '' && !/^[0-9a-fA-F]{32}$/.test(key)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
         if (key === '' && !nodeKeyIsSet) return { err: where + ' ha bisogno della chiave (la sua riga nel file del reflector): scrivila o genera una nuova.' };
         if (!/^\d{1,5}$/.test(lport) || +lport < 1 || +lport > 65535) return { err: 'La porta locale deve essere da 1 a 65535.' };
         void any;
-        net = { ssid, pass, peer: pm[1] + ':' + (pm[2] !== undefined ? pm[2] : '5400'), peerid: pid === '' ? '0' : String(+pid), nodeid: String(+nid), key, lport: String(+lport) };
+        net = { ssid, pass, peer: pm[1] + ':' + (pm[2] !== undefined ? pm[2] : '5400'), peerid: pid === '' ? '0' : String(+pid), nodeid: nid === '' ? '' : String(+nid), key, lport: String(+lport) };
       }
     }
     return { net, shift, cs, freq: fm, fmsg, frng, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
@@ -943,7 +943,7 @@
           replies.push(await send('CFG SET PEER ' + v.net.peer, O));
           replies.push(await send('CFG SET NODEPORT ' + v.net.lport, O));
           replies.push(await send('CFG SET PEERID ' + v.net.peerid, O));
-          replies.push(await send('CFG SET NODEID ' + v.net.nodeid, O));
+          if (v.net.nodeid !== '') replies.push(await send('CFG SET NODEID ' + v.net.nodeid, O));
           if (v.net.key !== '') replies.push(await send('CFG SET NODEKEY ' + v.net.key, O));
         }
       }
@@ -1021,8 +1021,7 @@
       all[who] = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
       localStorage.setItem('vlr-keys', JSON.stringify(all));
     } catch (e) { /* senza memoria del browser: nessun avviso */ }
-    const id = $('nodeid').value.trim();
-    $('regline').textContent = 'Nominativo: ' + cs + (label ? '\nNome del nodo: ' + label : '') + '\nChiave: ' + key + '\nRiga per il file del reflector: ' + (id || 'ID') + '  ' + key + '  ' + cs + (label ? ' ' + label : '');
+    $('regline').textContent = 'Nominativo: ' + cs + (label ? '\nNome del nodo: ' + label : '') + '\nChiave: ' + key;
     $('regbox').hidden = false;
     $('nodekeyhint').textContent = 'Chiave generata per ' + who + '. Copiala adesso (dopo il salvataggio non si rilegge) e mandala al sysop. ' + notes.join(' ');
   });

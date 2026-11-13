@@ -998,7 +998,7 @@ async function scenario(name, fn, opts = {}) {
     const k1 = await p.inputValue('#nodekey');
     check('chiave di 32 cifre e riga da mandare', /^[0-9a-f]{32}$/.test(k1) && (await p.isVisible('#regbox')));
     let line = await p.textContent('#regline');
-    check('la riga ha nominativo, chiave e il posto per l\'id', line.includes('Nominativo: IZ5IOF') && line.includes('Chiave: ' + k1) && line.includes('ID  ' + k1 + '  IZ5IOF'), line);
+    check('la riga ha nominativo, chiave e il posto per l\'id', line.includes('Nominativo: IZ5IOF') && line.includes('Chiave: ' + k1) && !/ID  /.test(line), line);
     // ogni pressione ne genera una nuova, e la seconda volta avvisa che la precedente viene sostituita
     await p.click('#genNodeKey');
     const k2 = await p.inputValue('#nodekey');
@@ -1009,7 +1009,7 @@ async function scenario(name, fn, opts = {}) {
     await p.click('#genNodeKey');
     const k3 = await p.inputValue('#nodekey');
     line = await p.textContent('#regline');
-    check('con l\'id: la riga e\' pronta per il file', line.includes('Riga per il file del reflector: 4  ' + k3 + '  IZ5IOF'), line);
+    check('con l\'id: la riga e\' pronta per il file', line.includes('Chiave: ' + k3) && !/Riga per/.test(line), line);
     check('la chiave non e\' nella memoria del browser', await p.evaluate((ks) => { const v = JSON.stringify(localStorage) + JSON.stringify(sessionStorage); return ks.every((k) => !v.includes(k)); }, [k1, k2, k3]));
     // un nominativo diverso non ha la storia dell'altro
     await p.fill('#callsign', 'IU5HJU');
@@ -1027,7 +1027,7 @@ async function scenario(name, fn, opts = {}) {
     await p.click('#genNodeKey');
     const kc = await p.inputValue('#nodekey');
     line = await p.textContent('#regline');
-    check('con il nome del nodo: la riga lo comprende', line.includes('Nome del nodo: casa') && line.includes('ID  ' + kc + '  IZ5IOF casa') && /^[0-9a-f]{32}$/.test(kc), line);
+    check('con il nome del nodo: la riga lo comprende', line.includes('Nome del nodo: casa') && line.includes('Chiave: ' + kc) && /^[0-9a-f]{32}$/.test(kc), line);
     check('"casa" e\' un nodo nuovo: nessun avviso di chiave precedente', !/già generato/.test(await p.textContent('#nodekeyhint')), await p.textContent('#nodekeyhint'));
     await p.fill('#nodelabel', 'mare'); await p.click('#genNodeKey');
     const km = await p.inputValue('#nodekey');
