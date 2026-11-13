@@ -197,6 +197,14 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   check('valore fuori limite bloccato dal modulo', !st.cmds.includes('CFG SET POWER 99'));
   await p.fill('#power', '10');
 
+  // Frequenze: Range e Messaggio seguono lo Standard finche' non si cambiano a mano
+  await p.fill('#freq', '433.900'); await p.fill('#freqmsg', '433.900'); await p.fill('#freqrange', '433.900');  // uguali: seguono
+  await p.fill('#freq', '434.100');
+  check('wifi: di base seguono', (await p.inputValue('#freqmsg')) === '434.100' && (await p.inputValue('#freqrange')) === '434.100');
+  await p.fill('#freqmsg', '435.500'); await p.fill('#freq', '432.000');
+  check('wifi: Messaggio a mano resta, Range segue', (await p.inputValue('#freqmsg')) === '435.500' && (await p.inputValue('#freqrange')) === '432.000');
+  await p.fill('#freq', '433.900'); await p.fill('#freqmsg', '433.900'); await p.fill('#freqrange', '433.900');
+
   // Shift: lettura, ordine dei comandi (SHIFT 0 prima di FREQ), rifiuto fuori banda, firmware senza shift
   st.cfg.freq = '440.000'; st.cfg.freqmsg = '440.000'; st.cfg.freqrange = '440.000'; st.shift = -10000;
   await p.reload();

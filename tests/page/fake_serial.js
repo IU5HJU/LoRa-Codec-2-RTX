@@ -16,6 +16,8 @@
     idmorse: 'on',
     noIdmorse: false,
     legacyFw: false,      // firmware precedente al 12/11/2026: nel CFG GET c'e' freqqual= e non freqrange=
+    noNode: false,        // firmware senza impostazioni di rete (piu' vecchio): CFG GET NODE sconosciuto
+    node: { ssid: 'none', pass: 'none', ip: 'none', port: 5400, listen: 5400, id: 0, peerid: 0, key: 'none', keyHex: '' },
     noShift: false,       // firmware senza shift (piu' vecchio): CFG GET SHIFT e CFG SET SHIFT sconosciuti
     shift: 0,             // shift in trasmissione, kHz: 0, +10000 o -10000
     noIdint: false,       // firmware senza identificativo periodico (piu' vecchio)
@@ -68,6 +70,21 @@
       if (/^CFG\s+GET\s+IDMORSE$/i.test(line.trim())) return out('CFG IDMORSE=' + st.idmorse);
       const dm = /^CFG\s+SET\s+IDMORSE\s+(\S+)$/i.exec(line.trim());
       if (dm) { if (!/^(on|off)$/i.test(dm[1])) return out('CFG ERR idmorse usa ON oppure OFF'); st.idmorse = dm[1].toLowerCase(); return out('CFG OK idmorse=' + st.idmorse); }
+    }
+    if (!st.noNode) {
+      const n = st.node;
+      if (/^CFG\s+GET\s+NODE$/i.test(line.trim())) return out(`CFG NODE ssid=${n.ssid} pass=${n.pass} ip=${n.ip} port=${n.port} listen=${n.listen} id=${n.id} peerid=${n.peerid} key=${n.key}`);
+      const nm = /^CFG\s+SET\s+(WIFISSID|WIFIPASS|PEER|NODEPORT|PEERID|NODEID|NODEKEY)\s+(.+)$/i.exec(line.trim());
+      if (nm) {
+        const k = nm[1].toUpperCase(), v = nm[2];
+        if (k === 'WIFISSID') { n.ssid = v === 'NONE' ? 'none' : v; return out('CFG OK wifissid=' + n.ssid); }
+        if (k === 'WIFIPASS') { if (v !== 'NONE' && v.length < 8) return out('CFG ERR wifipass da 8 a 64 caratteri'); n.pass = v === 'NONE' ? 'none' : 'set'; return out('CFG OK wifipass=' + n.pass); }
+        if (k === 'PEER') { const pm = /^([^:]+)(?::(\d+))?$/.exec(v); if (!pm) return out('CFG ERR peer'); n.ip = pm[1]; n.port = pm[2] ? +pm[2] : 5400; return out('CFG OK peer=' + n.ip + ':' + n.port); }
+        if (k === 'NODEPORT') { n.listen = +v; return out('CFG OK nodeport=' + v); }
+        if (k === 'PEERID') { n.peerid = +v; return out('CFG OK peerid=' + v); }
+        if (k === 'NODEID') { if (+v < 1) return out('CFG ERR nodeid'); n.id = +v; return out('CFG OK nodeid=' + v); }
+        if (k === 'NODEKEY') { if (!/^[0-9a-fA-F]{32}$/.test(v)) return out('CFG ERR nodekey'); n.key = 'set'; n.keyHex = v; return out('CFG OK nodekey=set'); }
+      }
     }
     if (!st.noShift) {
       if (/^CFG\s+GET\s+SHIFT$/i.test(line.trim())) return out('CFG SHIFT=' + (st.shift > 0 ? '+' : '') + st.shift);

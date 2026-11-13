@@ -241,6 +241,30 @@ static void testShift() {
   CHECK(!isValidSettings(bad));
 }
 
+static void testFrequencyFollows() {
+  Fixture f;
+  // di base le tre frequenze sono uguali: FREQ le porta tutte
+  CHECK(f.con.stored().freqMsgKhz == f.con.stored().freqKhz && f.con.stored().rangeFreqKhz() == f.con.stored().freqKhz);
+  CHECK(f.run("CFG SET FREQ 434.250") == ConsoleResult::Ok && strcmp(f.reply, "CFG OK freq=434.250") == 0);
+  CHECK(f.con.stored().freqKhz == 434250 && f.con.stored().freqMsgKhz == 434250 && f.con.stored().rangeFreqKhz() == 434250);
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "freq=434.250 freqmsg=434.250 freqrange=434.250") != nullptr);
+  // una frequenza cambiata a mano resta: le altre seguono ancora FREQ
+  CHECK(f.run("CFG SET FREQMSG 435.000") == ConsoleResult::Ok);
+  CHECK(f.run("CFG SET FREQ 433.900") == ConsoleResult::Ok);
+  CHECK(f.con.stored().freqKhz == 433900 && f.con.stored().freqMsgKhz == 435000 && f.con.stored().rangeFreqKhz() == 433900);
+  // anche Range cambiata a mano resta; Range uguale a FREQ (non a 0) segue
+  CHECK(f.run("CFG SET FREQRANGE 436.000") == ConsoleResult::Ok && f.run("CFG SET FREQ 432.100") == ConsoleResult::Ok);
+  CHECK(f.con.stored().freqMsgKhz == 435000 && f.con.stored().rangeFreqKhz() == 436000);
+  CHECK(f.run("CFG SET FREQRANGE 432.100") == ConsoleResult::Ok && f.run("CFG SET FREQ 431.500") == ConsoleResult::Ok);
+  CHECK(f.con.stored().rangeFreqKhz() == 431500 && f.con.stored().freqMsgKhz == 435000);
+  // si puo' riportare Messaggio uguale a FREQ: da li' in poi segue di nuovo
+  CHECK(f.run("CFG SET FREQMSG 431.500") == ConsoleResult::Ok && f.run("CFG SET FREQ 430.000") == ConsoleResult::Ok && f.con.stored().freqMsgKhz == 430000);
+  // fuori banda: rifiutata e le altre non cambiano
+  CHECK(f.run("CFG SET FREQ 450.000") == ConsoleResult::Error && f.con.stored().freqMsgKhz == 430000);
+  // con lo shift la frequenza che porterebbe la trasmissione fuori banda si rifiuta anche se il Messaggio la seguirebbe
+  CHECK(f.run("CFG SET SHIFT +10000") == ConsoleResult::Ok && f.run("CFG SET FREQ 431.000") == ConsoleResult::Error && f.con.stored().freqKhz == 430000);
+}
+
 static void testShiftFormats() {
   Fixture f;
   CHECK(f.run("CFG SET FREQ 430.000") == ConsoleResult::Ok && f.run("CFG SET FREQMSG 430.000") == ConsoleResult::Ok);
@@ -730,6 +754,7 @@ int main() {
   testIdMorse();
   testShift();
   testShiftFormats();
+  testFrequencyFollows();
   testIdInterval();
   testSysop();
   testMeshcomSettings();

@@ -26,7 +26,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <label for="freq">Frequenza Standard (MHz)</label><input id="freq" inputmode="decimal" required>
 <label for="freqmsg">Frequenza Messaggio (MHz)</label><input id="freqmsg" inputmode="decimal" required>
 <label for="freqrange">Frequenza Range (MHz)</label><input id="freqrange" inputmode="decimal" required>
-<p class="hint">Da 430.000 a 440.000. Le frequenze possono essere uguali.</p>
+<p class="hint">Da 430.000 a 440.000. Le frequenze di Range e Messaggio seguono quella dello Standard finché non le cambi a mano; possono essere uguali o diverse.</p>
 <label for="shift">Shift per operare via ripetitore</label><select id="shift"><option value="0">Nessuno (simplex, di base)</option><option value="10000">+10 MHz</option><option value="-10000">-10 MHz</option></select>
 <p class="hint">Si ascolta sulla frequenza qui sopra e si trasmette sulla frequenza + shift (deve restare tra 430.000 e 440.000). Vale dal riavvio, solo per la stazione normale.</p>
 <label for="power">Potenza (dBm)</label><input id="power" type="number" min="2" max="17" required>
@@ -92,7 +92,9 @@ function st(t,c){const e=$('st');e.textContent=t;e.className=c||'';}
 async function cmd(l){const r=await fetch('/cfg?c='+encodeURIComponent(l));return (await r.text()).trim();}
 function parse(t){const m={};for(const kv of t.replace(/^CFG /,'').split(' ')){const i=kv.indexOf('=');if(i>0)m[kv.slice(0,i)]=kv.slice(i+1);}return m;}
 let board='';
-function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';for(const o of $('role').options)if(o.value==='rptrx'||o.value==='rpttx')o.disabled=board==='tbeam';$('rolenote').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqrange','power','volume','micfloor','pos','qth','gps','role','freqout'])if(m[k]!==undefined&&$(k))$(k).value=m[k];}
+let fp='';
+function fill(m){if(m.board!==undefined){board=m.board;$('gpsbox').hidden=board!=='tbeam';for(const o of $('role').options)if(o.value==='rptrx'||o.value==='rpttx')o.disabled=board==='tbeam';$('rolenote').hidden=board!=='tbeam';}for(const k of ['callsign','profile','freq','freqmsg','freqrange','power','volume','micfloor','pos','qth','gps','role','freqout'])if(m[k]!==undefined&&$(k))$(k).value=m[k];fp=$('freq').value.trim();}
+$('freq').addEventListener('input',()=>{const v=$('freq').value.trim();for(const id of ['freqmsg','freqrange'])if($(id).value.trim()===fp)$(id).value=v;fp=v;});   // le frequenze uguali a quella dello Standard la seguono; quelle cambiate a mano restano
 function roleShow(){const r=$('role').value;$('rxbox').hidden=r!=='rptrx';$('txbox').hidden=r!=='rpttx';$('nodebox').hidden=r!=='node';}
 $('role').addEventListener('change',roleShow);
 async function loadRole(){try{const r=await cmd('CFG GET MONITOR');if(r.startsWith('CFG MONITOR='))$('monitor').value=r.slice(12)==='on'?'on':'off';}catch(e){}roleShow();}

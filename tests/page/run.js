@@ -160,7 +160,7 @@ async function scenario(name, fn, opts = {}) {
     const c = await cmds(p);
     const idx = (s) => c.indexOf(s);
     check('callsign maiuscolo', idx('CFG SET CALLSIGN IU5HJU') >= 0, c.join(' | '));
-    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET FREQMSG 433.900', 'CFG SET FREQRANGE 433.900', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
+    const order = ['CFG SET CALLSIGN IU5HJU', 'CFG SET FREQ 434.125', 'CFG SET FREQMSG 434.125', 'CFG SET FREQRANGE 434.125', 'CFG SET POWER 12', 'CFG SET VOLUME 4', 'CFG SET MICFLOOR -60', 'CFG SET PROFILE std', 'CFG REBOOT'].map(idx);
     check('ordine dei comandi', order.every((v, i) => v >= 0 && (i === 0 || v > order[i - 1])), c.join(' | '));
     check('messaggio di salvataggio', (await status(p)).includes('Salvato'));
     const st = await p.evaluate(() => window.__st.cfg);
@@ -471,6 +471,7 @@ async function scenario(name, fn, opts = {}) {
           (await p.$eval('#role option[value=rpttx]', (o) => o.disabled)) && !(await p.$eval('#role option[value=node]', (o) => o.disabled)) && (await p.isVisible('#rolenote')));
     await p.fill('#callsign', 'IU5HJU');
     await p.selectOption('#role', 'node');
+    await p.fill('#wifissid', 'CasaWifi'); await p.fill('#peer', '192.168.1.51:5400'); await p.fill('#nodeid', '1'); await p.fill('#nodekey', '000102030405060708090a0b0c0d0e0f');
     await p.click('#save');
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
     const c = await cmds(p);
@@ -903,6 +904,88 @@ async function scenario(name, fn, opts = {}) {
     check('nodo: shift nascosto', await p.isHidden('#shift'));
     await p.selectOption('#role', 'off');
     check('stazione: shift visibile', await p.isVisible('#shift'));
+  });
+
+  await scenario('frequenze: Range e Messaggio seguono lo Standard finche\' non si cambiano a mano', async (p) => {
+    await connect(p);
+    await p.fill('#freq', '434.100');
+    check('di base seguono', (await p.inputValue('#freqmsg')) === '434.100' && (await p.inputValue('#freqrange')) === '434.100');
+    await p.fill('#freqmsg', '435.500');
+    await p.fill('#freq', '432.000');
+    check('Messaggio cambiato a mano resta, Range segue', (await p.inputValue('#freqmsg')) === '435.500' && (await p.inputValue('#freqrange')) === '432.000');
+    await p.fill('#freqrange', '436.000');
+    await p.fill('#freq', '433.000');
+    check('anche Range cambiato a mano resta', (await p.inputValue('#freqmsg')) === '435.500' && (await p.inputValue('#freqrange')) === '436.000');
+    await p.fill('#freqmsg', '433.000');
+    await p.fill('#freq', '431.000');
+    check('Messaggio riportato uguale torna a seguire', (await p.inputValue('#freqmsg')) === '431.000' && (await p.inputValue('#freqrange')) === '436.000');
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c = await cmds(p);
+    check('salvate come nei campi', c.includes('CFG SET FREQ 431.000') && c.includes('CFG SET FREQMSG 431.000') && c.includes('CFG SET FREQRANGE 436.000'), c.join(' | '));
+    check('nessun errore JavaScript', p.errors.length === 0);
+  });
+
+  await scenario('rete: nodo Internet e RX del ripetitore, campi della rete', async (p) => {
+    check('campi spenti prima di collegare', await p.isDisabled('#wifissid') && await p.isDisabled('#nodekey'));
+    await connect(p);
+    await until(p, () => !document.getElementById('role').disabled && !document.getElementById('wifissid').disabled);
+    check('stazione normale: rete nascosta', await p.isHidden('#wifissid') && await p.isHidden('#peer'));
+    await p.selectOption('#role', 'node');
+    check('nodo: rete visibile', (await p.isVisible('#wifissid')) && (await p.isVisible('#peer')) && (await p.isVisible('#nodekey')) && (await p.isVisible('#nodeport')));
+    await p.fill('#callsign', 'IU5HJU');
+    // incompleto: errore e nessun riavvio
+    await p.click('#save');
+    await until(p, () => /Wi-Fi|rete/.test(document.getElementById('status').textContent), null, 5000);
+    check('nodo senza rete: errore', /nome della rete/.test(await p.textContent('#status')) && !(await cmds(p)).includes('CFG REBOOT'), await p.textContent('#status'));
+    await p.fill('#wifissid', 'Casa Mia 2.4G'); await p.fill('#wifipass', 'segretissima');
+    await p.fill('#peer', 'reflector.example.org:5401'); await p.fill('#peerid', '1000'); await p.fill('#nodeid', '2'); await p.fill('#nodeport', '5400');
+    await p.click('#save');
+    await until(p, () => /chiave/.test(document.getElementById('status').textContent), null, 5000);
+    check('nodo senza chiave: errore', /chiave/.test(await p.textContent('#status')));
+    await p.click('#genNodeKey');
+    const key = await p.inputValue('#nodekey');
+    check('chiave generata: 32 cifre esadecimali', /^[0-9a-f]{32}$/.test(key));
+    await p.fill('#peer', 'reflector@x'); await p.click('#save');
+    await until(p, () => /Reflector non valido/.test(document.getElementById('status').textContent), null, 5000);
+    check('reflector non valido', /Reflector non valido/.test(await p.textContent('#status')));
+    await p.fill('#peer', 'reflector.example.org:5401');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c = await cmds(p);
+    const at = (s) => c.indexOf(s);
+    const order = ['CFG SET WIFISSID Casa Mia 2.4G', 'CFG SET WIFIPASS segretissima', 'CFG SET PEER reflector.example.org:5401', 'CFG SET NODEPORT 5400', 'CFG SET PEERID 1000', 'CFG SET NODEID 2', 'CFG SET NODEKEY ' + key].map(at);
+    check('comandi di rete nell\'ordine', order.every((v, i) => v >= 0 && (i === 0 || v > order[i - 1])), c.join(' | '));
+    check('la scheda ha la rete', await p.evaluate((k) => { const n = window.__st.node; return n.ssid === 'Casa Mia 2.4G' && n.pass === 'set' && n.ip === 'reflector.example.org' && n.port === 5401 && n.peerid === 1000 && n.id === 2 && n.keyHex === k; }, key));
+    // rilettura: la password e la chiave non si mostrano, restano "impostate"
+    await p.click('#reload');
+    await until(p, () => document.getElementById('wifissid').value === 'Casa Mia 2.4G');
+    check('riletto: nome, reflector, id; password e chiave vuote con il suggerimento "impostata"', (await p.inputValue('#peer')) === 'reflector.example.org:5401' && (await p.inputValue('#nodeid')) === '2' &&
+          (await p.inputValue('#peerid')) === '1000' && (await p.inputValue('#wifipass')) === '' && (await p.inputValue('#nodekey')) === '' && /impostata/.test(await p.textContent('#nodekeyhint')));
+    // salvando di nuovo senza toccare password e chiave: non si mandano
+    await p.evaluate(() => { window.__st.cmds.length = 0; });
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c2 = await cmds(p);
+    check('password e chiave lasciate vuote non si rimandano', !c2.some((x) => /^CFG SET (WIFIPASS|NODEKEY)/.test(x)) && c2.some((x) => x.startsWith('CFG SET WIFISSID')), c2.join(' | '));
+    // RX del ripetitore con tutto vuoto: solo in radio (Wi-Fi tolto)
+    await p.selectOption('#role', 'rptrx');
+    await p.fill('#wifissid', ''); await p.fill('#peer', ''); await p.fill('#nodeid', ''); await p.fill('#peerid', '');
+    await p.evaluate(() => { window.__st.node.key = 'set'; });
+    await p.evaluate(() => { window.__st.cmds.length = 0; });
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    const c3 = await cmds(p);
+    check('RX senza rete: Wi-Fi tolto, nessun altro comando di rete', c3.includes('CFG SET WIFISSID NONE') && !c3.some((x) => /^CFG SET (PEER|PEERID|NODEID|NODEKEY|NODEPORT|WIFIPASS)/.test(x)), c3.join(' | '));
+    check('nessun errore JavaScript', p.errors.length === 0);
+  });
+
+  await scenario('rete: firmware senza impostazioni di rete, campi spenti', async (p) => {
+    await p.evaluate(() => { window.__st.noNode = true; });
+    await connect(p);
+    await p.selectOption('#role', 'node');
+    check('campi di rete spenti', (await p.isDisabled('#wifissid')) && (await p.isDisabled('#nodekey')) && (await p.isDisabled('#peer')));
   });
 
   await browser.close();

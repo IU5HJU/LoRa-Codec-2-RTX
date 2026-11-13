@@ -449,7 +449,12 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       say(reply, cap, "CFG ERR freq %s", "in MHz, da 430.000 a 440.000");
       return ConsoleResult::Error;
     }
+    // Le frequenze degli altri modi che erano uguali alla vecchia seguono la nuova (di base partono tutte uguali): chi ha una frequenza diversa per
+    // una configurazione particolare la tiene, e la cambia con FREQMSG e FREQRANGE.
+    const uint32_t old = next.freqKhz;
     next.freqKhz = khz;
+    if (next.freqMsgKhz == old) next.freqMsgKhz = khz;
+    if (next.freqRangeKhz != 0 && next.freqRangeKhz == old) next.freqRangeKhz = khz;
     if (!validShift(next)) {
       say(reply, cap, "CFG ERR freq %s", "con lo shift impostato la frequenza di trasmissione uscirebbe da 430-440 MHz (CFG SET SHIFT 0)");
       return ConsoleResult::Error;

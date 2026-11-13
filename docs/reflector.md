@@ -33,7 +33,7 @@ build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mod
 
 ## Collegare un nodo
 
-Sulla scheda (per seriale, poi `CFG REBOOT`), con i valori della riga del file:
+Sulla scheda con la [pagina web di configurazione](https://iu5hju.github.io/VoLoRa/) (modalità *Nodo Internet*, riquadro "Rete e reflector") oppure per seriale (poi `CFG REBOOT`), con i valori della riga del file:
 
 ```
 CFG SET ROLE NODE

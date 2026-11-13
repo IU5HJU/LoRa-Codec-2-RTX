@@ -135,6 +135,29 @@
       <div id="nodebox" hidden>
         <p class="hint"><strong>Nodo Internet:</strong> la scheda porta i pacchetti LoRa a un'altra scheda via Wi-Fi (UDP firmato). Solo profilo Standard. Rete, indirizzo dell'altro nodo, id e chiave si impostano da seriale (<code>CFG SET WIFISSID</code>, <code>WIFIPASS</code>, <code>PEER</code>, <code>NODEID</code>, <code>PEERID</code>, <code>NODEKEY</code>: vedi la guida del firmware). Come per il ripetitore, in questo ruolo la scheda non ha il menu: per tornare stazione scegli <em>Stazione normale</em> qui, con il cavo USB.</p>
       </div>
+      <div id="netbox" data-modes="rptrx node">
+        <h3>Rete e reflector</h3>
+        <p class="hint" id="nethint">Per collegarsi in rete a un <strong>reflector</strong> (o a un altro nodo) la scheda usa il Wi-Fi: <strong>non serve aprire porte sul router</strong>, scrive lei per prima. <strong>Nodo Internet:</strong> tutti i campi servono. <strong>Ripetitore:</strong> si imposta sulla scheda <strong>RX</strong> (la TX non ha il Wi-Fi); se lasci tutto vuoto il ripetitore resta solo in radio. Le voci del reflector sono nel file del reflector ([docs/reflector.md](https://github.com/IU5HJU/VoLoRa/blob/main/docs/reflector.md)).</p>
+        <label for="wifissid">Rete Wi-Fi (nome)</label>
+        <input id="wifissid" maxlength="32" autocomplete="off" placeholder="nome della rete" disabled>
+        <label for="wifipass">Password del Wi-Fi</label>
+        <input id="wifipass" type="password" maxlength="64" autocomplete="new-password" placeholder="vuota = non cambiarla" disabled>
+        <p class="hint" id="wifipasshint">Password non impostata (rete aperta).</p>
+        <label for="peer">Reflector o altro nodo: nome o indirizzo, e porta</label>
+        <input id="peer" autocomplete="off" spellcheck="false" placeholder="reflector.example.org:5400" disabled>
+        <p class="hint">Un nome (si risolve da solo, anche se il reflector cambia indirizzo) o un indirizzo IPv4; la porta è la 5400 se manca.</p>
+        <label for="peerid">Id del reflector (PEERID)</label>
+        <input id="peerid" type="number" min="0" max="4294967295" step="1" placeholder="1000" disabled>
+        <label for="nodeid">Id di questa scheda (NODEID)</label>
+        <input id="nodeid" type="number" min="1" max="4294967295" step="1" placeholder="2" disabled>
+        <p class="hint">L'id e la chiave di questa scheda sono la sua riga nel file del reflector.</p>
+        <label for="nodekey">Chiave (32 cifre esadecimali)</label>
+        <input id="nodekey" maxlength="32" autocomplete="off" spellcheck="false" placeholder="vuota = non cambiarla" disabled>
+        <button id="genNodeKey" type="button" class="secondary" disabled>Genera una chiave nuova</button>
+        <p class="hint" id="nodekeyhint">Chiave non impostata.</p>
+        <label for="nodeport">Porta locale (NODEPORT)</label>
+        <input id="nodeport" type="number" min="1" max="65535" step="1" placeholder="5400" disabled>
+      </div>
       <div id="rxbox" hidden>
         <label for="monitor">Altoparlante di monitor sulla RX</label>
         <select id="monitor" disabled><option value="off">Spento</option><option value="on">Acceso</option></select>
@@ -175,10 +198,10 @@
       <summary>Frequenze degli altri profili (Range e Messaggio)</summary>
       <label for="freqmsg">Frequenza del profilo Messaggio (MHz)</label>
       <input id="freqmsg" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
-      <p class="hint" id="freqmsghint">La scheda usa la frequenza del profilo scelto. Le due frequenze <strong>possono essere uguali</strong> (nelle prove si usa spesso una frequenza nota): non c'è nessun obbligo di usarne di diverse. <button id="sameFreq" type="button" class="secondary" disabled>Usa quella dello Standard</button></p>
+      <p class="hint" id="freqmsghint">La scheda usa la frequenza del profilo scelto. Di base seguono la frequenza dello Standard: se la cambi, quelle uguali la seguono. Le frequenze <strong>possono essere uguali</strong> (nelle prove si usa spesso una frequenza nota) e le puoi cambiare a piacere per configurazioni particolari. <button id="sameFreq" type="button" class="secondary" disabled>Usa quella dello Standard</button></p>
       <label for="freqrange">Frequenza del profilo Range (MHz)</label>
       <input id="freqrange" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
-      <p class="hint">Come sopra, per il profilo Range: può essere uguale alle altre.</p>
+      <p class="hint">Come sopra, per il profilo Range: di base segue lo Standard, e può essere uguale alle altre.</p>
       <p class="hint" id="freqnote" hidden>Stessa frequenza per i due profili: va bene per le prove, ma <strong>non è un canale condiviso</strong>. Profili diversi non si decodificano a vicenda e il controllo "canale occupato" non vede un segnale dell'altro profilo.</p>
 
       </details>
@@ -507,6 +530,29 @@
     } catch (e) { shiftSeen = false; }
     $('shift').disabled = !port || !shiftSeen;
   }
+  let nodeSeen = false;      // la scheda risponde a CFG GET NODE (rete: firmware piu' vecchi, no)
+  let nodeKeyIsSet = false, wifiPassIsSet = false;
+  const NET_IDS = ['wifissid', 'wifipass', 'peer', 'peerid', 'nodeid', 'nodekey', 'genNodeKey', 'nodeport'];
+  async function readNode() {
+    try {
+      const r = await send('CFG GET NODE', /^CFG NODE /, 2500);
+      const m = /^CFG NODE ssid=(.*) pass=(\S+) ip=(\S+) port=(\d+) listen=(\d+) id=(\d+) peerid=(\d+) key=(\S+)$/.exec(r);
+      if (!m) throw new Error('formato');
+      $('wifissid').value = m[1] === 'none' ? '' : m[1];
+      wifiPassIsSet = m[2] === 'set';
+      $('wifipass').value = '';
+      $('wifipasshint').textContent = wifiPassIsSet ? 'Password impostata (non si mostra). Lasciala vuota per non cambiarla.' : 'Password non impostata (rete aperta).';
+      $('peer').value = m[3] === 'none' ? '' : m[3] + ':' + m[4];
+      $('nodeport').value = m[5];
+      $('nodeid').value = m[6] === '0' ? '' : m[6];
+      $('peerid').value = m[7] === '0' ? '' : m[7];
+      nodeKeyIsSet = m[8] === 'set';
+      $('nodekey').value = '';
+      $('nodekeyhint').textContent = nodeKeyIsSet ? 'Chiave impostata (non si mostra). Lasciala vuota per non cambiarla.' : 'Chiave non impostata.';
+      nodeSeen = true;
+    } catch (e) { nodeSeen = false; }
+    for (const id of NET_IDS) $(id).disabled = !port || !nodeSeen;
+  }
   let sysopSeen = false;     // la scheda risponde a CFG GET SYSOP (firmware piu' vecchi: no)
   function sysopShow() { const on = $('sysopmode').value === 'on'; $('sysopbox').hidden = !on; $('textsbox').hidden = on; }
   function updateSysopControls(on) { for (const id of ['sysopmode', 'sysop', 'sysopkey', 'genkey']) $(id).disabled = !on || !sysopSeen; }
@@ -559,8 +605,9 @@
     $('connect').disabled = on;
     $('disconnect').disabled = !on;
     for (const id of ['callsign', 'freq', 'power', 'volume', 'micfloor', 'floorDown', 'floorUp', 'measure', 'save', 'reload', 'reset', 'testOn', 'testOff', 'hwMic', 'hwTones']) $(id).disabled = !on;
-    if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; shiftSeen = false; roleSeen = false; roleShow(); }
+    if (!on) { legacyFw = false; profileSeen = false; freqMsgSeen = false; freqRangeSeen = false; posSeen = false; gpsSeen = false; textSeen = false; mcSeen = false; sysopSeen = false; idintSeen = false; idmorseSeen = false; shiftSeen = false; nodeSeen = false; roleSeen = false; roleShow(); }
     $('idint').disabled = !on || !idintSeen;
+    for (const id of NET_IDS) $(id).disabled = !on || !nodeSeen;
     $('shift').disabled = !on || !shiftSeen;
     $('idmorse').disabled = !on || !idmorseSeen;
     updateRoleControls(on);
@@ -586,7 +633,7 @@
       legacyFw = m.freqqual !== undefined && m.freqrange === undefined;
       if (legacyFw) setStatus('Questo firmware è precedente al 12/11/2026: i profili si chiamavano Standard (Codec2 1200) e Qualità (Codec2 3200). Aggiorna il firmware (passo 1 della pagina) prima di salvare le impostazioni da qui.', 'err');
       if (m.callsign) {
-        $('callsign').value = m.callsign; $('freq').value = m.freq; $('power').value = m.power;
+        $('callsign').value = m.callsign; $('freq').value = m.freq; freqPrev = m.freq; $('power').value = m.power;
         if (m.volume !== undefined) $('volume').value = m.volume;
         if (m.freqmsg !== undefined) { $('freqmsg').value = m.freqmsg; freqMsgSeen = true; $('freqmsg').disabled = !port; $('sameFreq').disabled = !port; }
         if (m.freqrange !== undefined) { $('freqrange').value = m.freqrange; freqRangeSeen = true; $('freqrange').disabled = !port; }
@@ -698,6 +745,7 @@
         await readSysop();
         await readIdint();
         await readShift();
+        await readNode();
         await readMonitor();
         return true;
       } catch (e) { if (!writer) return false; }
@@ -804,7 +852,32 @@
       sysop = { call: sy, mode: $('sysopmode').value, key: sk };
     }
     const shift = $('shift').disabled ? null : $('shift').value;
-    return { shift, cs, freq: fm, fmsg, frng, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
+    // Rete (solo nodo e RX del ripetitore): senza nodo/RX non si tocca niente
+    let net = null;
+    if (!$('wifissid').disabled && (role === 'node' || role === 'rptrx')) {
+      const ssid = $('wifissid').value.trim(), pass = $('wifipass').value, peerT = $('peer').value.trim();
+      const nid = $('nodeid').value.trim(), pid = $('peerid').value.trim(), key = $('nodekey').value.trim(), lport = $('nodeport').value.trim();
+      const any = ssid !== '' || peerT !== '' || nid !== '' || key !== '' || nodeKeyIsSet;
+      if (role === 'rptrx' && ssid === '' && peerT === '' && nid === '' && key === '') {
+        net = { off: true };  // il ripetitore resta solo in radio
+      } else {
+        const where = role === 'node' ? 'Il nodo Internet' : 'Il ripetitore in rete';
+        if (ssid === '' || !/^[\x20-\x7E]{1,32}$/.test(ssid)) return { err: where + ' ha bisogno del nome della rete Wi-Fi (da 1 a 32 caratteri, ASCII).' };
+        if (pass !== '' && !/^[\x20-\x7E]{8,64}$/.test(pass)) return { err: 'La password del Wi-Fi deve avere da 8 a 64 caratteri (ASCII).' };
+        const pm = /^([^:]+)(?::(\d{1,5}))?$/.exec(peerT);
+        const hostOk = pm && (/^(\d{1,3}\.){3}\d{1,3}$/.test(pm[1]) ? pm[1].split('.').every((x) => +x <= 255)
+                              : (pm[1].length <= 63 && /[A-Za-z]/.test(pm[1]) && /^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$/.test(pm[1])));
+        if (!hostOk || (pm[2] !== undefined && (+pm[2] < 1 || +pm[2] > 65535))) return { err: 'Reflector non valido: un nome (reflector.example.org) o un indirizzo IPv4, e la porta (da 1 a 65535).' };
+        if (!/^\d{1,10}$/.test(nid) || +nid < 1 || +nid > 4294967295) return { err: "L'id di questa scheda (NODEID) deve essere un numero da 1 in su." };
+        if (pid !== '' && (!/^\d{1,10}$/.test(pid) || +pid > 4294967295)) return { err: "L'id del reflector (PEERID) deve essere un numero, oppure vuoto." };
+        if (key !== '' && !/^[0-9a-fA-F]{32}$/.test(key)) return { err: 'La chiave deve avere 32 cifre esadecimali.' };
+        if (key === '' && !nodeKeyIsSet) return { err: where + ' ha bisogno della chiave (la sua riga nel file del reflector): scrivila o genera una nuova.' };
+        if (!/^\d{1,5}$/.test(lport) || +lport < 1 || +lport > 65535) return { err: 'La porta locale deve essere da 1 a 65535.' };
+        void any;
+        net = { ssid, pass, peer: pm[1] + ':' + (pm[2] !== undefined ? pm[2] : '5400'), peerid: pid === '' ? '0' : String(+pid), nodeid: String(+nid), key, lport: String(+lport) };
+      }
+    }
+    return { net, shift, cs, freq: fm, fmsg, frng, pw, vol, fl, prof, pos, qth, gps, texts, mc, sysop, idint, idmorse, role, freqout, monitor };
   }
 
   // La scheda stampa la posizione fissa con 5 decimali: si confronta con una tolleranza di circa 2 metri.
@@ -845,6 +918,20 @@
       }
       if (v.role !== null) replies.push(await send('CFG SET ROLE ' + v.role, /^CFG (OK|ERR)/));
       if (v.freqout !== null) replies.push(await send('CFG SET FREQOUT ' + v.freqout, /^CFG (OK|ERR)/));
+      if (v.net) {
+        const O = /^CFG (OK|ERR)/;
+        if (v.net.off) {
+          replies.push(await send('CFG SET WIFISSID NONE', O));
+        } else {
+          replies.push(await send('CFG SET WIFISSID ' + v.net.ssid, O));
+          if (v.net.pass !== '') replies.push(await send('CFG SET WIFIPASS ' + v.net.pass, O));
+          replies.push(await send('CFG SET PEER ' + v.net.peer, O));
+          replies.push(await send('CFG SET NODEPORT ' + v.net.lport, O));
+          replies.push(await send('CFG SET PEERID ' + v.net.peerid, O));
+          replies.push(await send('CFG SET NODEID ' + v.net.nodeid, O));
+          if (v.net.key !== '') replies.push(await send('CFG SET NODEKEY ' + v.net.key, O));
+        }
+      }
       if (v.monitor !== null) replies.push(await send('CFG SET MONITOR ' + v.monitor, /^CFG (OK|ERR)/));
       if (v.idint !== null) replies.push(await send('CFG SET IDINT ' + v.idint, /^CFG (OK|ERR)/));
       if (v.idmorse !== null) replies.push(await send('CFG SET IDMORSE ' + v.idmorse, /^CFG (OK|ERR)/));
@@ -885,7 +972,20 @@
     $('sysopkeyhint').textContent = 'Copia questa chiave adesso: dopo il salvataggio non si rilegge. Va impostata uguale sulle due schede del ripetitore e su questa.';
   });
   $('qthclear').addEventListener('click', () => { $('qthlat').value = ''; $('qthlon').value = ''; });
-  $('freq').addEventListener('input', updateFreqNote);
+  // Le frequenze di Range e Messaggio che erano uguali a quella dello Standard la seguono mentre si scrive; quelle cambiate a mano restano
+  let freqPrev = '';
+  $('freq').addEventListener('input', () => {
+    const v = $('freq').value.trim();
+    for (const id of ['freqmsg', 'freqrange']) if (!$(id).disabled && $(id).value.trim() === freqPrev) $(id).value = v;
+    freqPrev = v;
+    updateFreqNote();
+  });
+  $('genNodeKey').addEventListener('click', () => {
+    const b = new Uint8Array(16);
+    crypto.getRandomValues(b);
+    $('nodekey').value = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+    $('nodekeyhint').textContent = 'Copia questa chiave adesso: dopo il salvataggio non si rilegge. Va scritta nella riga di questa scheda nel file del reflector.';
+  });
   $('freqmsg').addEventListener('input', updateFreqNote);
   $('sameFreq').addEventListener('click', () => { $('freqmsg').value = $('freq').value.trim(); updateFreqNote(); });
 
