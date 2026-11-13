@@ -566,7 +566,7 @@ static void testMorseId() {
   size_t tones = 0;
   const size_t n = planMorseBursts(rq, plan, 160, nullptr);
   // la portante non si spegne mai: prima del primo tono e nelle pause ci sono pacchetti 0xFF, i toni sono 0xAA nell'ordine del piano
-  std::vector<decltype(r.radio.fskBursts[0])> toneBursts;
+  std::vector<fake::Radio::FskBurst> toneBursts;
   size_t carriers = 0;
   for (const auto& fb : r.radio.fskBursts) {
     if (fb.pattern == 0xAA) toneBursts.push_back(fb);

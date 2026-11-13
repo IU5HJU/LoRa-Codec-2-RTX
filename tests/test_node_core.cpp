@@ -425,7 +425,7 @@ static void testMorseId() {
   Rig r;
   r.b.core->setIdentification("IU5HJU", 60000, 433900);
   r.b.core->setMorseId(true, 15, 700.0f, 2.5f);
-  r.run(16000);
+  r.run(15100);  // la radio finta non impiega tempo a trasmettere: il Morse finisce in meno di un secondo
   CHECK(r.b.air.sent[0] == 1 && r.b.radio.fskBegins == 1 && r.b.core->morseActive() && r.b.radio.inFsk);
   CHECK(std::fabs(r.b.radio.fskMhz - 433.9f) < 1e-3 && std::fabs(r.b.radio.fskDev - 2.5f) < 1e-4);
   r.run(20000);
@@ -439,7 +439,7 @@ static void testMorseId() {
   Rig q;
   q.b.core->setIdentification("IU5HJU", 60000, 433900);
   q.b.core->setMorseId(true);
-  q.run(16000);
+  q.run(15100);
   CHECK(q.b.core->morseActive());
   const auto msg = makeMessage(0x3333, 12);
   injectToA(q, msg);
