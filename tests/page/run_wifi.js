@@ -20,6 +20,8 @@ const st = {
   idint: '10',
   idmorse: 'on',
   sysop: { call: 'none', key: 'none', mode: 'off', keyHex: '' },
+  noShift: false,   // firmware senza shift (piu' vecchio)
+  shift: 0,
   drop: null,   // chiave che la scheda "dimentica" di salvare
 };
 const KEYS = ['callsign', 'freq', 'freqmsg', 'freqrange', 'power', 'volume', 'micfloor', 'profile', 'pos', 'qth', 'gps', 'role', 'freqout'];
@@ -55,6 +57,16 @@ function handle(line) {
     const k = mm[1].toLowerCase();
     if (k === 'freqmc') st.mc.freq = mm[2]; else if (k === 'mcssid') st.mc.ssid = mm[2]; else st.mc.window = mm[2];
     return 'CFG OK ' + k + '=' + mm[2];
+  }
+  if (!st.noShift) {
+    if (line === 'CFG GET SHIFT') return 'CFG SHIFT=' + (st.shift > 0 ? '+' : '') + st.shift;
+    const sh = /^CFG SET SHIFT ([+-]?\d+)$/.exec(line);
+    if (sh) {
+      const v = parseInt(sh[1], 10), f = Math.round(parseFloat(st.cfg.freq) * 1000);
+      if (v !== 0 && v !== 10000 && v !== -10000) return 'CFG ERR shift in kHz: 0, +10000 oppure -10000';
+      if (v !== 0 && (f + v < 430000 || f + v > 440000)) return 'CFG ERR shift la frequenza di trasmissione uscirebbe da 430-440 MHz';
+      st.shift = v; return 'CFG OK shift=' + (v > 0 ? '+' : '') + v;
+    }
   }
   const t = line.split(' ');
   if (t[1] === 'GET') return 'CFG ' + KEYS.map((k) => k + '=' + st.cfg[k]).join(' ') + ' board=' + st.board + ' reboot=0 test=0';
@@ -184,6 +196,43 @@ function check(name, cond, extra) { checks++; if (!cond) { failures++; console.l
   await p.waitForTimeout(400);
   check('valore fuori limite bloccato dal modulo', !st.cmds.includes('CFG SET POWER 99'));
   await p.fill('#power', '10');
+
+  // Shift: lettura, ordine dei comandi (SHIFT 0 prima di FREQ), rifiuto fuori banda, firmware senza shift
+  st.cfg.freq = '440.000'; st.cfg.freqmsg = '440.000'; st.cfg.freqrange = '440.000'; st.shift = -10000;
+  await p.reload();
+  await p.waitForFunction(() => document.getElementById('freq').value === '440.000' && !document.getElementById('shift').disabled);
+  check('shift letto: -10 MHz', (await p.inputValue('#shift')) === '-10000');
+  await p.selectOption('#shift', '0');
+  await p.fill('#freq', '433.900'); await p.fill('#freqmsg', '433.900'); await p.fill('#freqrange', '433.900');
+  st.cmds.length = 0;
+  await p.click('#save');
+  await p.waitForFunction(() => /Salvato|Rifiutato/.test(document.getElementById('st').textContent));
+  const iS0 = st.cmds.indexOf('CFG SET SHIFT 0'), iF = st.cmds.indexOf('CFG SET FREQ 433.900');
+  check('SHIFT 0 prima di FREQ e shift finale 0', iS0 >= 0 && iF > iS0 && st.shift === 0 && /Salvato/.test(await p.textContent('#st')), st.cmds.join('|') + ' / ' + await p.textContent('#st'));
+  // +10 MHz con una frequenza che porta fuori banda: rifiutato dalla scheda e la pagina lo dice
+  await p.selectOption('#shift', '10000');
+  await p.click('#save');
+  await p.waitForFunction(() => /Rifiutato|Salvato/.test(document.getElementById('st').textContent));
+  check('fuori banda: rifiutato (SHIFT)', /Rifiutato \(SHIFT\)/.test(await p.textContent('#st')), await p.textContent('#st'));
+  // dal bordo basso +10 MHz va bene
+  st.cfg.freq = '430.000'; st.cfg.freqmsg = '430.000'; st.cfg.freqrange = '430.000'; st.shift = 0;
+  await p.reload();
+  await p.waitForFunction(() => document.getElementById('freq').value === '430.000');
+  await p.selectOption('#shift', '10000');
+  await p.click('#save');
+  await p.waitForFunction(() => /Salvato|Rifiutato/.test(document.getElementById('st').textContent));
+  check('430.000 con +10 MHz: salvato', st.shift === 10000 && /Salvato/.test(await p.textContent('#st')), await p.textContent('#st'));
+  // firmware senza shift: campo spento e nessun comando SHIFT
+  st.noShift = true; st.cmds.length = 0;
+  await p.reload();
+  await p.waitForFunction(() => /letti/.test(document.getElementById('st').textContent), null, { timeout: 15000 });
+  check('firmware senza shift: campo spento', await p.isDisabled('#shift'));
+  await p.click('#save');
+  await p.waitForFunction(() => /Salvato|Rifiutato|diversi/.test(document.getElementById('st').textContent));
+  check('firmware senza shift: nessun comando SHIFT', !st.cmds.some((c) => c.includes('SHIFT') && c.startsWith('CFG SET')), st.cmds.join('|'));
+  st.noShift = false; st.cfg.freq = '433.900'; st.cfg.freqmsg = '433.900'; st.cfg.freqrange = '433.900'; st.shift = 0;
+  await p.reload();
+  await p.waitForFunction(() => document.getElementById('freq').value === '433.900');
 
   // Sulla T-Beam il campo GPS compare e il comando parte; il ruolo del ripetitore e' spento (solo T3)
   st.board = 'tbeam';

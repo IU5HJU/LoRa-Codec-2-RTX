@@ -221,6 +221,39 @@ static void testShift() {
   CHECK(!isValidSettings(bad));
 }
 
+static void testShiftFormats() {
+  Fixture f;
+  CHECK(f.run("CFG SET FREQ 430.000") == ConsoleResult::Ok && f.run("CFG SET FREQMSG 430.000") == ConsoleResult::Ok);
+  // FREQRANGE a 0 = come FREQ: lo shift si controlla anche su quella
+  CHECK(f.con.stored().rangeFreqKhz() == f.con.stored().freqKhz);
+  CHECK(f.run("CFG SET SHIFT 10000") == ConsoleResult::Ok && f.con.stored().shiftKhz == 10000);  // senza segno vale +
+  CHECK(f.run("CFG SET SHIFT +0") == ConsoleResult::Ok && f.con.stored().shiftKhz == 0);
+  CHECK(f.run("CFG SET SHIFT -0") == ConsoleResult::Ok && f.con.stored().shiftKhz == 0);
+  CHECK(f.run("CFG SET SHIFT 1e4") == ConsoleResult::Error && f.run("CFG SET SHIFT 10 000") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET SHIFT +") == ConsoleResult::Error && f.run("CFG SET SHIFT --10000") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET SHIFT 10001") == ConsoleResult::Error && f.run("CFG SET SHIFT 100000") == ConsoleResult::Error);
+  CHECK(f.run("CFG SET SHIFT +1000000000") == ConsoleResult::Error && f.con.stored().shiftKhz == 0);  // niente overflow
+  // una sola frequenza fuori banda con lo shift basta a rifiutarlo: FREQRANGE a 435 con +10 MHz
+  CHECK(f.run("CFG SET FREQRANGE 435.000") == ConsoleResult::Ok);
+  CHECK(f.run("CFG SET SHIFT +10000") == ConsoleResult::Error && f.con.stored().shiftKhz == 0);
+  CHECK(f.run("CFG SET FREQRANGE 430.000") == ConsoleResult::Ok && f.run("CFG SET SHIFT +10000") == ConsoleResult::Ok);
+  // lo shift non cambia il resto: il CFG GET principale non lo contiene (resta corto), la frequenza di ascolto e' quella di prima
+  CHECK(f.run("CFG GET") == ConsoleResult::Ok && strstr(f.reply, "shift") == nullptr && strstr(f.reply, "freq=430.000") != nullptr);
+  // txFreqKhz segue il profilo in uso: Range e Messaggio usano la loro frequenza
+  Settings s = f.con.stored();
+  s.profile = kProfileMessage; s.freqMsgKhz = 430000;
+  CHECK(s.txFreqKhz() == 440000);
+  s.profile = kProfileRange; s.freqRangeKhz = 431000;
+  CHECK(s.txFreqKhz() == 441000);  // (fuori banda: un valore salvato cosi' non e' valido)
+  CHECK(!isValidSettings(s));
+  // lo stesso shift su -10 MHz dalla frequenza in alto
+  Settings t = kDefaults;
+  t.freqKhz = 440000; t.freqMsgKhz = 440000; t.freqRangeKhz = 0; t.shiftKhz = -10000;
+  CHECK(isValidSettings(t) && t.txFreqKhz() == 430000);
+  t.freqMsgKhz = 439000;  // 429 MHz: fuori banda
+  CHECK(!isValidSettings(t));
+}
+
 static void testIdInterval() {
   Fixture f;
   CHECK(f.run("CFG GET IDINT") == ConsoleResult::Ok && strcmp(f.reply, "CFG IDINT=10") == 0);
@@ -676,6 +709,7 @@ int main() {
   testNodeSettings();
   testIdMorse();
   testShift();
+  testShiftFormats();
   testIdInterval();
   testSysop();
   testMeshcomSettings();
