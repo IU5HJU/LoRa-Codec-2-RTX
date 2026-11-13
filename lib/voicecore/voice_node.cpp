@@ -389,6 +389,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       continue;
     }
     if (p.mode != prof_.codecMode && p.mode != kModeTest) continue;  // modi sconosciuti
+    if (p.mode == kModeTest && !testMode_) continue;  // le prove le ascolta solo chi ha la prova accesa: in ascolto normale si ignorano (niente schermata, niente misura)
     if (state_ == State::Receiving && (p.mode == kModeTest) != rxIsTest_) continue;  // niente mescolanze
     if (!rx_.onPacket(p, nowMs)) continue;
     if (p.mode == kModeTest) linkRx_.onPacket(rssi, radio_.lastSnr(), radio_.hasSnr());

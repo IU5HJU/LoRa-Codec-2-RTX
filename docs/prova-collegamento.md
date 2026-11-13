@@ -14,9 +14,9 @@ Misurare frequenza e ampiezza dopo il decodificatore darebbe falsi allarmi sul c
 Dal 14/11/2026 la prova di collegamento **è la prova di potenza** (la vecchia prova unica da 12 secondi è stata tolta dal firmware): cerca la potenza minima con cui le due schede si sentono. La descrizione completa è nella sezione [Prova di potenza](#prova-di-potenza-potenza-minima). Ogni passo è una prova breve:
 
 1. Il trasmettitore invia **75 frame (3 s)** non di voce ma pseudocasuali, calcolati da (sessione, numero del frame), con gli stessi pacchetti, la stessa parità XOR e gli stessi tempi della voce (modo 2 nell'intestazione). Il microfono non serve.
-2. Il ricevitore riconosce la prova dal modo del pacchetto, rigenera la sequenza attesa e confronta ogni frame. **Non riproduce nulla** (niente rumore nell'altoparlante).
+2. **Solo una scheda con la prova accesa ascolta le prove**: in ascolto normale (prova spenta) le ignora del tutto, senza schermata, senza misura e senza risposta (la voce normale passa come sempre). Il ricevitore in prova riconosce la prova dal modo del pacchetto, rigenera la sequenza attesa e confronta ogni frame. **Non riproduce nulla** (niente rumore nell'altoparlante).
    Alla fine di ogni passo mostra e stampa: frame arrivati identici, **danneggiati**, **persi** (non recuperabili), pacchetti **recuperati dalla parità**, RSSI e SNR medi.
-3. Se anche sul ricevitore la prova è attiva, dopo circa 0,7 s questo **trasmette un pacchetto di risposta** (modo 3) con lo stesso risultato; il trasmettitore lo registra e passa al passo successivo. Senza la prova attiva sul ricevitore non c'è nessuna risposta: la prova di potenza si ferma dopo due passi muti.
+3. Il ricevitore in prova, dopo circa 0,7 s, **trasmette un pacchetto di risposta** (modo 3) con lo stesso risultato; il trasmettitore lo registra e passa al passo successivo. Se sul ricevitore la prova è spenta (o non ha il nominativo) non vede niente e non risponde: chi trasmette vede "nessuna risposta" e la prova di potenza si ferma dopo due passi muti.
 
 ## Come si usa
 
@@ -37,7 +37,7 @@ Una terza pressione subito dopo due clic è sempre il terzo clic, anche se tenut
 | 100%, danneggiati 0, persi 0 | radio, protocollo e parità funzionano nelle condizioni della prova |
 | persi > 0, danneggiati 0 | pacchetti non arrivati (distanza, antenna, interferenze, ricevitore troppo lento). "Recuperati" dice quanto ha salvato la parità |
 | danneggiati > 0 | frame arrivati ma diversi: non dovrebbe succedere con il CRC della radio; segnalalo come errore |
-| ricevuta ma nessuna risposta | il ricevitore non ha la prova attiva, il canale era occupato, o la risposta non è tornata |
+| nessuna risposta | il ricevitore non ha la prova accesa (le prove le ascolta solo chi è in prova), non ha un nominativo, il canale era occupato, o la risposta non è tornata |
 
 ## Prova di potenza (potenza minima)
 
@@ -53,7 +53,7 @@ Come margine conviene lavorare qualche dBm sopra il minimo trovato.
 
 **Come funziona dentro:**
 - Si ferma da sola dopo **due passi di fila senza risposta**: dura da circa 20 secondi (collegamento debole) a un minuto e mezzo. Se già alla potenza massima non risponde nessuno, finisce dopo due passi: controlla che sull'altra scheda la prova sia accesa.
-- L'**altra scheda** risponde a ogni passo come per la prova normale (alla sua potenza di sempre) e per tutto il tempo mostra la schermata di ogni prova breve ("Parz. 75/300": è normale, sono prove da 3 secondi). Alla fine, chi ha trasmesso le **manda l'esito** (due copie, nello stesso pacchetto di risposta, modo 3, con il primo byte maggiore o uguale a 0x80: la risposta normale comincia sempre con 0 o 1). Così lo vedono tutte e due. Se quel pacchetto si perde, l'altra scheda ha comunque le schermate dei singoli passi.
+- L'**altra scheda** (in prova) risponde a ogni passo come per la prova normale (alla sua potenza di sempre) e per tutto il tempo mostra la schermata di ogni prova breve ("Parz. 75/300": è normale, sono prove da 3 secondi). Alla fine, chi ha trasmesso le **manda l'esito** (due copie, nello stesso pacchetto di risposta, modo 3, con il primo byte maggiore o uguale a 0x80: la risposta normale comincia sempre con 0 o 1). Così lo vedono tutte e due. Se quel pacchetto si perde, l'altra scheda ha comunque le schermate dei singoli passi.
 - Si misura **il verso da chi trasmette verso l'altra scheda**: la risposta dell'altra parte alla **sua** potenza normale. Per l'altro verso si ripete la prova a parti invertite.
 - Non c'è nel profilo Messaggio (il tempo in aria sarebbe troppo lungo).
 - **Da misurare sul campo:** quanto la potenza impostata (`setOutputPower` del SX1278) corrisponda davvero alla potenza in antenna a ogni dBm. La prova dà la potenza *impostata*, non misurata.

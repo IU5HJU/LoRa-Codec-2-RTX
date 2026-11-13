@@ -302,6 +302,25 @@ static void testNoCallsignNeverTransmits() {
   CHECK(n0.note.summaries.empty());                                 // e non mostra l'esito
 }
 
+// Una scheda in ascolto normale (prova spenta) ignora le prove: nessuna schermata, nessuna misura, nessuna risposta; chi trasmette vede "nessuna".
+static void testNormalListenerIgnoresTests() {
+  Sim s;
+  s.a.node.setTestMode(true);  // solo A e' in prova
+  s.run(100);
+  CHECK(s.a.node.startPowerSweep(s.clock, 17, 2, 12));
+  s.run(60000);
+  CHECK(s.b.note.reports.empty() && s.b.note.rxEnds == 0 && s.b.spk.played.empty());  // B non ha visualizzato niente
+  CHECK(s.b.node.state() == VoiceNode::State::Idle && s.air.sent[1] == 0);            // e non ha risposto
+  CHECK(s.a.note.sweepDone == 1 && s.a.note.sweepSteps.size() == 2 && s.a.note.sweepMinAnswered == -1 && s.a.note.sweepMinPerfect == -1);
+  // la voce normale passa lo stesso, anche con la prova spenta
+  s.a.node.setTestMode(false);
+  s.a.node.pttPressed(s.clock);
+  s.run(3000);
+  s.a.node.pttReleased(s.clock);
+  s.run(6000);
+  CHECK(!s.b.spk.played.empty() && s.b.note.rxEnds == 1);
+}
+
 static void testSweepRefusedAndAborted() {
   Sim s;
   s.run(100);
@@ -343,6 +362,7 @@ int main() {
   testSweepSummaryCodec();
   testSweepFromPtt();
   testNoCallsignNeverTransmits();
+  testNormalListenerIgnoresTests();
   testSweepRefusedAndAborted();
   TEST_MAIN_END();
 }
