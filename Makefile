@@ -5,9 +5,9 @@ CXXFLAGS ?= -std=c++17 -Wall -Wextra -O1 -g -fsanitize=address,undefined -Ilib/v
 
 CORE := $(wildcard lib/voicecore/*.cpp)
 HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
-TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live repeater repeater_link message_store inbox text_picker rx_monitor meshcom_frame text_template choice_picker tx_scheduler sha256 sysop radio_test node_link node_core
+TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live repeater repeater_link message_store inbox text_picker rx_monitor meshcom_frame text_template choice_picker tx_scheduler sha256 sysop radio_test node_link node_core reflector_core
 
-.PHONY: test test-page test-py lcr_decode lcr_live codec_compare pdf clean vlnode
+.PHONY: test test-page test-py lcr_decode lcr_live codec_compare pdf clean vlnode vlreflector reflector-smoke
 test: $(addprefix build/test_,$(TESTS))
 	@for t in $^; do ./$$t || exit 1; done
 
@@ -23,6 +23,15 @@ vlnode: build/vlnode
 build/vlnode: tools/vlnode.cpp $(CORE) $(HDRS)
 	@mkdir -p build
 	$(CXX) -std=c++17 -Wall -Wextra -O1 -Ilib/voicecore -o $@ $< $(CORE)
+
+# Reflector VoLoRa per un server (tools/vlreflector.cpp, docs/studio-reflector.md).
+vlreflector: build/vlreflector
+build/vlreflector: tools/vlreflector.cpp $(CORE) $(HDRS)
+	@mkdir -p build
+	$(CXX) -std=c++17 -Wall -Wextra -O1 -Ilib/voicecore -o $@ $< $(CORE)
+
+reflector-smoke: build/vlreflector build/vlnode
+	tests/reflector_smoke.sh
 
 # Rigenera docs/formato-pacchetto.pdf dal codice (serve reportlab: pip install reportlab).
 pdf:

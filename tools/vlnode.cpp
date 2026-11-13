@@ -3,9 +3,10 @@
 // che riceve e puo' mandarne di prova (un testo o una voce finta).
 //
 //   make vlnode
-//   build/vlnode --id 2 --peer-id 1 --key 000102030405060708090a0b0c0d0e0f --listen 5400 --peer 192.168.1.50:5400
+//   build/vlnode --id 2 --peer-id 1 --key 000102030405060708090a0b0c0d0e0f --listen 5400 --peer 192.168.1.50:5400   (--peer puo' essere anche un nome; --listen 0 sceglie una porta)
 //                [--send-text IU5HJU "Prova del nodo" [--every 10]] [--send-voice IU5HJU [--frames 100]] [--duration 60]
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -92,13 +93,26 @@ int main(int argc, char** argv) {
   memset(&peer, 0, sizeof(peer));
   peer.sin_family = AF_INET;
   peer.sin_port = htons(static_cast<uint16_t>(peerPort));
-  if (inet_pton(AF_INET, peerHost.c_str(), &peer.sin_addr) != 1) {
-    fprintf(stderr, "indirizzo non valido: %s\n", peerHost.c_str());
-    return 2;
+  if (inet_pton(AF_INET, peerHost.c_str(), &peer.sin_addr) != 1) {  // non e' un indirizzo: si risolve come nome (per esempio quello di un reflector)
+    addrinfo hints, *res = nullptr;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    if (getaddrinfo(peerHost.c_str(), nullptr, &hints, &res) != 0 || !res) {
+      fprintf(stderr, "indirizzo o nome non valido: %s\n", peerHost.c_str());
+      return 2;
+    }
+    peer.sin_addr = reinterpret_cast<sockaddr_in*>(res->ai_addr)->sin_addr;
+    freeaddrinfo(res);
   }
   auto sendTo = [&](const uint8_t* d, size_t n) { sendto(sock, d, n, 0, reinterpret_cast<sockaddr*>(&peer), sizeof(peer)); };
 
   NodeLink link(cfg, rngFn(), rngFn);
+  if (listenPort == 0) {  // porta scelta dal sistema: dimostra che non serve nessuna porta nota (ne' aperta sul router)
+    sockaddr_in got;
+    socklen_t gl = sizeof(got);
+    if (getsockname(sock, reinterpret_cast<sockaddr*>(&got), &gl) == 0) listenPort = ntohs(got.sin_port);
+  }
   printf("[vlnode] id %u, ascolto sulla porta %d, altro nodo %s:%d\n", cfg.nodeId, listenPort, peerHost.c_str(), peerPort);
 
   std::vector<Packet> voice;
