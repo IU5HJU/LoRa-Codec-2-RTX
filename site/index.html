@@ -111,7 +111,7 @@
       <span slot="unsupported">Browser non supportato.</span>
       <span slot="not-allowed">Serve una pagina https.</span>
     </esp-web-install-button>
-    <p class="hint">Il firmware pubblico ha il nominativo <strong>N0CALL</strong>: riceve ma non trasmette finché non imposti il tuo (passo 2). Le impostazioni già salvate nella scheda restano dopo un aggiornamento.</p>
+    <p class="hint">Il firmware pubblico ha il nominativo <strong>N0CALL</strong>: riceve ma non trasmette finché non imposti il tuo (passo 2). Le impostazioni già salvate nella scheda restano dopo un aggiornamento fatto da questa pagina (dal 13/11/2026: il flasher scrive solo il programma e lascia stare la zona delle impostazioni). Con <code>esptool</code>, invece, <code>write_flash 0x0 …web_factory.bin</code> le cancella: per aggiornare e tenerle scrivi solo il programma, <code>write_flash 0x10000 …ota_update.bin</code>.</p>
   </section>
 
   <section id="config">

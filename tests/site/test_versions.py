@@ -82,6 +82,17 @@ class Sito(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tmp, ignore_errors=True)
 
+    @staticmethod
+    def image(tag):
+        """Un'immagine come quella di merge_bin: vuota (0xFF) con pezzi riconoscibili a 0x1000, 0x8000, 0xE000 e 0x10000."""
+        d = bytearray(b"\xff" * 0x10020)
+        d[0x1000:0x1000 + len(tag) + 5] = b"boot-" + tag
+        d[0x8000:0x8000 + len(tag) + 6] = b"table-" + tag
+        d[0xE000:0xE000 + len(tag) + 5] = b"otad-" + tag
+        d[0x10000:0x10000 + len(tag) + 4] = b"app-" + tag
+        d[0x9000:0x9010] = b"NVS-NON-TOCCARE!"   # dove stanno le impostazioni: nell'immagine intera e' un vuoto, qui un segnale
+        return bytes(d)
+
     def put(self, path, data=b"x"):
         full = os.path.join(self.tmp, path)
         os.makedirs(os.path.dirname(full), exist_ok=True)
@@ -91,14 +102,14 @@ class Sito(unittest.TestCase):
     def run_site(self, version, with_releases=True):
         import subprocess
         for art in ("firmware-t3-v161", "firmware-tbeam-v12"):
-            self.put("art/%s/web_factory.bin" % art, b"corrente-" + art.encode())
+            self.put("art/%s/web_factory.bin" % art, self.image(b"corrente-" + art.encode()))
             self.put("art/%s/ota_update.bin" % art)
         args = [os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "make_site.sh"),
                 os.path.join(self.tmp, "art"), os.path.join(self.tmp, "out"), version, "abc1234def"]
         if with_releases:
             for tag in ("v0.1.0-beta.1", "v0.1.0-beta.0"):
-                self.put("rel/%s/firmware-t3-v161-web_factory.bin" % tag, b"t3-" + tag.encode())
-                self.put("rel/%s/firmware-tbeam-v12-web_factory.bin" % tag, b"tb-" + tag.encode())
+                self.put("rel/%s/firmware-t3-v161-web_factory.bin" % tag, self.image(b"t3-" + tag.encode()))
+                self.put("rel/%s/firmware-tbeam-v12-web_factory.bin" % tag, self.image(b"tb-" + tag.encode()))
             self.put("rel/v0.0.9/senza-binari.txt")   # una release senza binari non entra nel menu
             self.put("rel/index.json", json.dumps([{"tagName": "v0.1.0-beta.1", "publishedAt": "2026-11-08T14:41:43Z"},
                                                    {"tagName": "v0.1.0-beta.0", "publishedAt": "2026-11-01T10:00:00Z"}]).encode())
@@ -114,18 +125,31 @@ class Sito(unittest.TestCase):
         self.assertEqual(v["default"], "v0.1.0-beta.1")
         self.assertEqual(v["versions"][0]["date"], "2026-11-08")
         # Binari al loro posto, ognuno con il suo
-        self.assertEqual(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/web_factory.bin")), b"t3-v0.1.0-beta.1")
-        self.assertEqual(rb(os.path.join(out, "firmware/v0.1.0-beta.0/tbeam/web_factory.bin")), b"tb-v0.1.0-beta.0")
-        self.assertEqual(rb(os.path.join(out, "firmware/dev/t3/web_factory.bin")), b"corrente-firmware-t3-v161")
+        self.assertEqual(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/web_factory.bin")), self.image(b"t3-v0.1.0-beta.1"))
+        self.assertEqual(rb(os.path.join(out, "firmware/v0.1.0-beta.0/tbeam/web_factory.bin")), self.image(b"tb-v0.1.0-beta.0"))
+        self.assertEqual(rb(os.path.join(out, "firmware/dev/t3/web_factory.bin")), self.image(b"corrente-firmware-t3-v161"))
         self.assertFalse(os.path.exists(os.path.join(out, "firmware/v0.0.9")))
         m = load(os.path.join(out, "firmware/v0.1.0-beta.1/t3/manifest.json"))
         self.assertEqual(m["version"], "v0.1.0-beta.1")
-        self.assertEqual(m["builds"][0]["parts"][0], {"path": "web_factory.bin", "offset": 0})
-        # Percorso storico: stesso binario del build corrente, senza una seconda copia
+        # Il flasher scrive quattro pezzi, non l'immagine intera: la partizione delle impostazioni (nvs, da 0x9000 a 0xDFFF) non si tocca
+        parts = m["builds"][0]["parts"]
+        self.assertEqual([p["offset"] for p in parts], [0x1000, 0x8000, 0xE000, 0x10000])
+        self.assertEqual([p["path"] for p in parts], ["part_boot.bin", "part_table.bin", "part_otadata.bin", "part_app.bin"])
+        for p in parts:
+            a, b = p["offset"], p["offset"] + len(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3", p["path"])))
+            self.assertTrue(b <= 0x9000 or a >= 0xE000, "un pezzo scrive nella zona delle impostazioni: %s" % p)
+        self.assertTrue(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/part_app.bin")).startswith(b"app-t3-v0.1.0-beta.1"))
+        self.assertTrue(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/part_boot.bin")).startswith(b"boot-t3-v0.1.0-beta.1"))
+        self.assertTrue(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/part_table.bin")).startswith(b"table-t3-v0.1.0-beta.1"))
+        self.assertTrue(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/part_otadata.bin")).startswith(b"otad-t3-v0.1.0-beta.1"))
+        for n in ("part_boot.bin", "part_table.bin", "part_otadata.bin", "part_app.bin"):  # nessun pezzo contiene il segnale di dove stanno le impostazioni
+            self.assertNotIn(b"NVS-NON-TOCCARE!", rb(os.path.join(out, "firmware/dev/t3", n)))
+        # Percorso storico: stessi pezzi del build corrente, senza una seconda copia
         old = load(os.path.join(out, "firmware/t3/manifest.json"))
         self.assertEqual(old["version"], "main-09/11/2026")
-        target = os.path.normpath(os.path.join(out, "firmware/t3", old["builds"][0]["parts"][0]["path"]))
-        self.assertEqual(rb(target), b"corrente-firmware-t3-v161")
+        self.assertEqual([p["offset"] for p in old["builds"][0]["parts"]], [0x1000, 0x8000, 0xE000, 0x10000])
+        target = os.path.normpath(os.path.join(out, "firmware/t3", old["builds"][0]["parts"][3]["path"]))
+        self.assertTrue(rb(target).startswith(b"app-corrente-firmware-t3-v161"))
         self.assertEqual(load(os.path.join(out, "version.json"))["version"], "main-09/11/2026")
 
     def test_build_da_tag_non_si_ripete(self):
@@ -134,7 +158,7 @@ class Sito(unittest.TestCase):
         self.assertEqual([e["id"] for e in v["versions"]], ["v0.1.0-beta.1", "v0.1.0-beta.0"])  # niente "dev" da un tag
         self.assertEqual(v["versions"][0]["commit"], "abc1234def")
         # il build corrente (da artefatto) prevale sulla release con lo stesso tag
-        self.assertEqual(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/web_factory.bin")), b"corrente-firmware-t3-v161")
+        self.assertEqual(rb(os.path.join(out, "firmware/v0.1.0-beta.1/t3/web_factory.bin")), self.image(b"corrente-firmware-t3-v161"))
 
     def test_senza_release(self):
         out = self.run_site("main-09/11/2026", with_releases=False)

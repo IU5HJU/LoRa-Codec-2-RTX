@@ -65,7 +65,7 @@ Il workflow di GitHub Actions compila a ogni modifica. Per averlo col **proprio 
 2. Nel fork modifica `src/user_config.h` e cambia `#define LCR_CALLSIGN "N0CALL"` con il tuo nominativo (puoi farlo dal sito, con il pulsante di modifica del file). Se è la prima volta che usi Actions nel fork, abilitale dalla scheda Actions.
 3. Aspetta che l'esecuzione sul tuo ramo diventi verde (circa 2-3 minuti).
 4. Aprila e scarica l'artefatto della tua scheda, **`firmware-t3-v161`** (T3) oppure **`firmware-tbeam-v12`** (T-Beam). Serve essere loggati su GitHub; scade dopo circa 90 giorni. Contiene:
-   - `web_factory.bin`: immagine completa, da scrivere all'indirizzo `0x0` (prima installazione);
+   - `web_factory.bin`: immagine completa, da scrivere all'indirizzo `0x0` (prima installazione). **Cancella le impostazioni salvate** (nominativo, frequenze, Wi-Fi, chiavi), perché l'immagine riempie di `0xFF` anche la zona dove stanno; per **aggiornare tenendole** si scrive solo il programma (`ota_update.bin` a `0x10000`). Il flasher della pagina web (dal 13/11/2026) scrive soltanto i quattro pezzi (bootloader, tabella delle partizioni, avvio, programma) e le impostazioni restano; prima di quella data ogni aggiornamento dalla pagina le cancellava;
    - `ota_update.bin`: solo l'applicazione, per gli aggiornamenti futuri;
    - `SHA256SUMS`: somme di controllo.
 

@@ -27,16 +27,38 @@ mkdir -p "$out/firmware"
 cp "$here"/site/index.html "$out/"
 touch "$out/.nojekyll"
 
-# manifest.json di una versione: <cartella> <percorso-del-binario> <versione> <scheda>
+# web_factory.bin e' un'immagine unica da scrivere all'indirizzo 0, con i vuoti fra i pezzi riempiti di 0xFF: comprese le impostazioni salvate sulla
+# scheda (partizione nvs, 0x9000-0xDFFF), che una scrittura intera cancellerebbe a ogni aggiornamento. Il flasher della pagina scrive invece solo i
+# quattro pezzi, tagliati dall'immagine: bootloader (0x1000), tabella delle partizioni (0x8000), avvio (0xE000) e applicazione (0x10000).
+# split_image <immagine> <cartella>: scrive part_boot.bin, part_table.bin, part_otadata.bin e part_app.bin.
+split_image() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+src, out = sys.argv[1], sys.argv[2]
+d = open(src, "rb").read()
+if len(d) <= 0x10000:
+    sys.exit("immagine troppo corta per il flasher: %s (%d byte)" % (src, len(d)))
+for name, a, b in (("part_boot.bin", 0x1000, 0x8000), ("part_table.bin", 0x8000, 0x9000), ("part_otadata.bin", 0xE000, 0x10000), ("part_app.bin", 0x10000, len(d))):
+    open(out + "/" + name, "wb").write(d[a:b])
+PY
+}
+
+# manifest.json di una versione: <cartella> <prefisso-dei-percorsi> <versione> <scheda>
+# Quattro pezzi (non l'immagine intera): la partizione delle impostazioni, in mezzo, non viene toccata.
 manifest() {
-  local dir=$1 path=$2 ver=$3 board=$4
+  local dir=$1 pre=$2 ver=$3 board=$4
   cat > "$dir/manifest.json" <<EOF
 {
   "name": "VoLoRa ($board)",
   "version": "$ver",
   "new_install_prompt_erase": false,
   "builds": [
-    { "chipFamily": "ESP32", "parts": [ { "path": "$path", "offset": 0 } ] }
+    { "chipFamily": "ESP32", "parts": [
+      { "path": "${pre}part_boot.bin", "offset": 4096 },
+      { "path": "${pre}part_table.bin", "offset": 32768 },
+      { "path": "${pre}part_otadata.bin", "offset": 57344 },
+      { "path": "${pre}part_app.bin", "offset": 65536 }
+    ] }
   ]
 }
 EOF
@@ -50,9 +72,10 @@ for pair in "t3:firmware-t3-v161" "tbeam:firmware-tbeam-v12"; do
   # Build corrente
   mkdir -p "$out/firmware/$cur_id/$board" "$out/firmware/$board"
   cp "$in/$art/web_factory.bin" "$in/$art/ota_update.bin" "$out/firmware/$cur_id/$board/"
-  manifest "$out/firmware/$cur_id/$board" "web_factory.bin" "$version" "$board"
-  # Percorso storico firmware/<scheda>/manifest.json: stesso binario, senza una seconda copia
-  manifest "$out/firmware/$board" "../$cur_id/$board/web_factory.bin" "$version" "$board"
+  split_image "$in/$art/web_factory.bin" "$out/firmware/$cur_id/$board"
+  manifest "$out/firmware/$cur_id/$board" "" "$version" "$board"
+  # Percorso storico firmware/<scheda>/manifest.json: stessi pezzi, senza una seconda copia
+  manifest "$out/firmware/$board" "../$cur_id/$board/" "$version" "$board"
 
   # Release gia' pubblicate (una cartella per tag)
   if [ -n "$releases" ] && [ -d "$releases" ]; then
@@ -64,7 +87,8 @@ for pair in "t3:firmware-t3-v161" "tbeam:firmware-tbeam-v12"; do
       [ -f "$f" ] || continue
       mkdir -p "$out/firmware/$tag/$board"
       cp "$f" "$out/firmware/$tag/$board/web_factory.bin"
-      manifest "$out/firmware/$tag/$board" "web_factory.bin" "$tag" "$board"
+      split_image "$f" "$out/firmware/$tag/$board"
+      manifest "$out/firmware/$tag/$board" "" "$tag" "$board"
     done
   fi
 done
