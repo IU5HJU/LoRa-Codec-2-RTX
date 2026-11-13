@@ -953,6 +953,7 @@ async function scenario(name, fn, opts = {}) {
     await p.fill('#peer', 'reflector.example.org:5401');
     await p.click('#save');
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    await until(p, () => /Impostazioni lette/.test(document.getElementById('status').textContent), null, 20000);  // la rilettura dopo il riavvio (4 s) riscrive i campi
     const c = await cmds(p);
     const at = (s) => c.indexOf(s);
     const order = ['CFG SET WIFISSID Casa Mia 2.4G', 'CFG SET WIFIPASS segretissima', 'CFG SET PEER reflector.example.org:5401', 'CFG SET NODEPORT 5400', 'CFG SET PEERID 1000', 'CFG SET NODEID 2', 'CFG SET NODEKEY ' + key].map(at);
@@ -967,6 +968,7 @@ async function scenario(name, fn, opts = {}) {
     await p.evaluate(() => { window.__st.cmds.length = 0; });
     await p.click('#save');
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    await until(p, () => /Impostazioni lette/.test(document.getElementById('status').textContent), null, 20000);
     const c2 = await cmds(p);
     check('password e chiave lasciate vuote non si rimandano', !c2.some((x) => /^CFG SET (WIFIPASS|NODEKEY)/.test(x)) && c2.some((x) => x.startsWith('CFG SET WIFISSID')), c2.join(' | '));
     // RX del ripetitore con tutto vuoto: solo in radio (Wi-Fi tolto)
