@@ -323,3 +323,11 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 
 - Prova "una stazione parla mentre il nodo trasmette" (sovrapposizione fra voce locale e voce dalla rete). L'operatore l'ha provata sfruttando le latenze fra trasmissione e ricezione, senza la procedura scritta in [banco-nodo.md](banco-nodo.md), e riferisce che il **blocco sul canale occupato funziona perfettamente**, nei due casi (la stazione locale inizia a parlare mentre il nodo ritrasmette; la voce dalla rete arriva mentre una stazione locale sta già parlando). Esito: **superata** secondo l'operatore.
 - Non annotati: i contatori dei nodi (`persi coda`), cosa viene perso in pratica, e il modo preciso della prova.
+
+### 13/11/2026, casa, IU5HJU (reflector su un server vero)
+
+- Server: un PC con Debian 12 sulla rete di casa, programma `vlreflector` compilato dal repository, avviato come servizio `systemd` (utente dedicato, riavvio automatico), porta UDP 5400 inoltrata dal router, raggiungibile con un nome DDNS. Procedura in [reflector.md](reflector.md).
+- **Prova sul server stesso:** due nodi finti (`vlnode`) con le chiavi del file si collegano e il testo di uno arriva all'altro con il flag "ripetuto"; il reflector scrive `client ... collegato` per ciascuno.
+- **Prova da un'altra rete:** un portatile collegato a internet con il telefono (altro indirizzo pubblico) ha raggiunto il reflector per nome (`--peer nome:5400`, `--listen 0`: porta locale scelta dal sistema, **nessuna porta aperta** su quella rete): `collegamento ATTIVO`, una sfida, una autenticazione, nessuna firma errata, testo mandato.
+- Il confronto fra l'indirizzo del nome e quello con cui il server esce su Internet (`curl -4 ifconfig.me` sul server) è risultato uguale: nessuna asimmetria dei percorsi.
+- Non provato: schede vere (nodo T-Beam/T3, RX del ripetitore) collegate al reflector, e il passaggio della voce.
