@@ -29,6 +29,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: make test
         run: make test
+      - name: Reflector e pagina di amministrazione (socket veri)
+        run: make reflector-smoke
       - name: Parte Python del ricevitore SDR
         run: make test-py
 

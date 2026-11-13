@@ -357,6 +357,81 @@ static void testPacketCounts() {
   CHECK(q.core.stats().textForwarded == 0);
 }
 
+static void testRegistryOperations() {
+  Rig r;
+  Client& a = r.add(1, 0xA1, 5001);
+  Client& b = r.add(2, 0xB2, 5002);
+  r.run(4000);
+  CHECK(r.core.idByName("c1") == 1 && r.core.idByName("C2") == 2 && r.core.idByName("x") == 0 && r.core.idByName("") == 0 && r.core.hasClient(2) && !r.core.hasClient(9));
+  // cambiare la chiave: il client con la chiave vecchia non e' piu' accettato (firma errata), e con la nuova si ricollega
+  uint8_t nk[kNodeKeyBytes];
+  memset(nk, 0xEE, sizeof(nk));
+  CHECK(r.core.setClientKey(1, nk) && !r.core.setClientKey(9, nk));
+  CHECK(!r.up(1) && !r.core.clients(r.t)[0].haveEndpoint);
+  const uint32_t bad = r.core.stats().badSignature;
+  r.run(25000);  // il suo prossimo KEEPALIVE
+  CHECK(!r.up(1) && r.core.stats().badSignature > bad);  // A insiste con la chiave vecchia
+  CHECK(r.up(2));                                          // gli altri non si accorgono di niente
+  memset(a.key, 0xEE, sizeof(a.key));
+  a.reset(0xAAAA);
+  r.run(6000);
+  CHECK(r.up(1));
+  r.sendPacket(a, textPacket("IU5HJU", "con la chiave nuova"));
+  CHECK(b.received.size() == 1);
+  // il nome si cambia
+  CHECK(r.core.setClientName(1, "IU5HJU") && r.core.idByName("iu5hju") == 1 && r.core.idByName("c1") == 0);
+  // togliere un client: sparisce, non riceve piu' e non e' piu' in elenco; chi parlava libera il canale
+  r.sendPacket(b, voicePacket(kModeCodec2_3200, 0x0101, 0, kFlagStart));
+  CHECK(r.core.talker(r.t) == 2);
+  CHECK(r.core.removeClient(2) && !r.core.removeClient(2) && !r.core.hasClient(2));
+  CHECK(r.core.talker(r.t) == 0 && r.core.clients(r.t).size() == 1);
+  const size_t got = a.received.size();
+  r.sendPacket(a, textPacket("IU5HJU", "da solo"));
+  CHECK(a.received.size() == got && r.core.stats().textForwarded == 1 + 0);
+  r.core.onDatagram(5002, nullptr, 0, r.t);  // e un datagramma di chi non c'e' piu' si ignora
+  CHECK(r.core.stats().unknownClient > 0);
+}
+
+static void testTalkHistory() {
+  Rig r;
+  Client& a = r.add(1, 0xA1, 5001);
+  Client& b = r.add(2, 0xB2, 5002);
+  r.add(3, 0xC3, 5003);
+  r.run(4000);
+  CHECK(!r.core.currentTalk(r.t).active && r.core.recentTalks().empty());
+  r.sendPacket(a, voicePacket(kModeCodec2_3200, 0x0A0A, 0, kFlagStart, "IZ5IOF"));
+  r.t += 400;
+  r.sendPacket(a, voicePacket(kModeCodec2_3200, 0x0A0A, 1, 0));
+  ReflectorCore::Talk t = r.core.currentTalk(r.t);
+  CHECK(t.active && t.clientId == 1 && t.client == "c1" && t.callsign == "IZ5IOF" && t.packets == 2 && t.lastMs - t.startMs == 400);
+  // un'altra voce mentre parla A e' scartata: non entra nella trasmissione ne' nella storia
+  r.sendPacket(b, voicePacket(kModeCodec2_3200, 0x0B0B, 0, kFlagStart, "IW0XYZ"));
+  CHECK(r.core.currentTalk(r.t).packets == 2 && r.core.currentTalk(r.t).callsign == "IZ5IOF" && r.core.recentTalks().empty());
+  r.t += 400;
+  r.sendPacket(a, voicePacket(kModeCodec2_3200, 0x0A0A, 2, kFlagEnd));
+  CHECK(!r.core.currentTalk(r.t).active && r.core.recentTalks().size() == 1);
+  const ReflectorCore::Talk& done = r.core.recentTalks()[0];
+  CHECK(!done.active && done.callsign == "IZ5IOF" && done.client == "c1" && done.packets == 3 && done.lastMs - done.startMs == 800);
+  // una che finisce per silenzio entra nella storia al giro di manutenzione, e la piu' recente e' la prima
+  r.sendPacket(b, voicePacket(kModeCodec2_3200, 0x0C0C, 0, kFlagStart, "IW0XYZ"));
+  r.t += ReflectorCore::kTalkHangMs + 100;
+  CHECK(!r.core.currentTalk(r.t).active);
+  r.core.tick(r.t);
+  CHECK(r.core.recentTalks().size() == 2 && r.core.recentTalks()[0].callsign == "IW0XYZ" && r.core.recentTalks()[1].callsign == "IZ5IOF");
+  // senza nominativo nel primo pacchetto: "-", e poi arriva
+  r.sendPacket(a, voicePacket(kModeCodec2_3200, 0x0D0D, 1, 0));
+  CHECK(r.core.currentTalk(r.t).callsign == "-");
+  r.sendPacket(a, voicePacket(kModeCodec2_3200, 0x0D0D, 0, kFlagStart, "IZ5IOF"));  // stessa sessione: il nominativo si completa
+  CHECK(r.core.currentTalk(r.t).callsign == "IZ5IOF" && r.core.recentTalks().size() == 2);
+  // al massimo kRecentTalks
+  for (int i = 0; i < 30; i++) {
+    r.t += 100;
+    r.sendPacket(a, voicePacket(kModeCodec2_3200, static_cast<uint16_t>(0x2000 + i), 0, kFlagStart, "IZ5IOF"));
+    r.sendPacket(a, voicePacket(kModeCodec2_3200, static_cast<uint16_t>(0x2000 + i), 1, kFlagEnd));
+  }
+  CHECK(r.core.recentTalks().size() == ReflectorCore::kRecentTalks);
+}
+
 int main() {
   testHandshake();
   testTextAndRelayed();
@@ -367,5 +442,7 @@ int main() {
   testNatRebind();
   testDeadClientAndRestart();
   testPacketCounts();
+  testRegistryOperations();
+  testTalkHistory();
   TEST_MAIN_END();
 }

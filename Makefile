@@ -4,8 +4,8 @@ CXX ?= g++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O1 -g -fsanitize=address,undefined -Ilib/voicecore -Itests
 
 CORE := $(wildcard lib/voicecore/*.cpp)
-HDRS := $(wildcard lib/voicecore/*.h tests/*.h)
-TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live repeater repeater_link message_store inbox text_picker rx_monitor meshcom_frame text_template choice_picker tx_scheduler sha256 sysop radio_test node_link node_core reflector_core peer_resolve repeater_uplink
+HDRS := $(wildcard lib/voicecore/*.h tests/*.h tools/*.h)
+TESTS := packet stream node button audio output pins battery settings link level tone decode amp profile menu position morse nmea live repeater repeater_link message_store inbox text_picker rx_monitor meshcom_frame text_template choice_picker tx_scheduler sha256 sysop radio_test node_link node_core reflector_core peer_resolve repeater_uplink reflector_config http_mini
 
 .PHONY: test test-page test-py lcr_decode lcr_live codec_compare pdf clean vlnode vlreflector reflector-smoke
 test: $(addprefix build/test_,$(TESTS))

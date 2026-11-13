@@ -9,20 +9,75 @@ Un reflector è un programma su un server che fa da centro-stella: **nodi e ripe
 ```
 make vlreflector
 build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mode 4] [--status-every 300]
+                  [--web 8080 [--web-bind 127.0.0.1] [--admin-token-file FILE] [--public-name nome:5400]]
 ```
 
 - `--id`: l'identificativo con cui si presenta il reflector (di base 1000): è il `PEERID` dei client.
 - `--voice-mode`: il modo voce che inoltra, **4** (Standard, Codec2 3200, di base) o **1** (Range, 1200). Il testo passa sempre; gli altri modi si scartano. Un reflector inoltra un solo modo voce, per questo i client collegati devono usare lo stesso profilo.
 - `--status-every`: ogni quanti secondi scrive nel registro lo stato dei client (di base 300).
-- Il file di configurazione ha **una riga per client** (righe vuote e che iniziano con `#` si ignorano):
+- `--web PORTA`: la **pagina di amministrazione** (vedi sotto); `--public-name`: il nome e la porta che compaiono nelle istruzioni da dare ai colleghi.
+- Il file dei client ha **una riga per client** (righe vuote e che iniziano con `#` si ignorano). Lo scrive anche la pagina di amministrazione, quindi il programma deve poterlo modificare:
   ```
-  # id  chiave (32 cifre esadecimali)       nome
-  2     000102030405060708090a0b0c0d0e0f    nodo-firenze
+  # id  chiave (32 cifre esadecimali)       nome (nominativo)
+  2     000102030405060708090a0b0c0d0e0f    IZ5IOF
   3     101112131415161718191a1b1c1d1e1f    ripetitore-rx
   ```
-  Ogni client ha **la sua chiave** (`openssl rand -hex 16`) e il suo id (diverso da 0 e dall'id del reflector). Per togliere un client si cancella la sua riga e si riavvia il reflector.
-- **Firewall del server:** aprire solo la porta UDP scelta in ingresso. Il reflector non risponde a chi non conosce un id e una chiave in elenco (nessuna amplificazione).
-- Come servizio (esempio `systemd`): `ExecStart=/opt/vlreflector/vlreflector --config /etc/vlreflector.conf --port 5400`, `Restart=always`.
+  Ogni client ha **la sua chiave** (`openssl rand -hex 16`) e il suo id (diverso da 0 e dall'id del reflector). Un nominativo ha una sola riga.
+- **Ricaricare il file senza fermare il reflector** (nessuno si stacca): `sudo systemctl reload vlreflector` (segnale `SIGHUP`). Se nel file c'è un errore il reflector lo scrive nel registro e **resta con l'elenco di prima**.
+- **Firewall del server:** aprire solo la porta UDP scelta in ingresso (e **non** la porta della pagina di amministrazione). Il reflector non risponde a chi non conosce un id e una chiave in elenco (nessuna amplificazione).
+- **Come servizio** (`systemd`), con il file dei client in una cartella che il servizio può scrivere (`/var/lib/vlreflector/`):
+  ```
+  sudo mkdir -p /var/lib/vlreflector
+  sudo mv /etc/vlreflector.conf /var/lib/vlreflector/reflector.conf      # se c'era già
+  sudo chown -R vlreflector /var/lib/vlreflector
+  sudo nano /etc/systemd/system/vlreflector.service
+  ```
+  ```
+  [Unit]
+  Description=Reflector VoLoRa
+  After=network-online.target
+  Wants=network-online.target
+
+  [Service]
+  User=vlreflector
+  StateDirectory=vlreflector
+  ExecStart=/opt/vlreflector/vlreflector --config /var/lib/vlreflector/reflector.conf --port 5400 --id 1000 --web 8080 --public-name iu5hju.ddns.net:5400
+  ExecReload=/bin/kill -HUP $MAINPID
+  Restart=always
+  RestartSec=5
+  NoNewPrivileges=true
+  ProtectSystem=strict
+  ProtectHome=true
+  PrivateTmp=true
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
+  poi `sudo systemctl daemon-reload && sudo systemctl restart vlreflector`. Aggiornare il programma: `cd ~/VoLoRa && git pull && make vlreflector && sudo cp build/vlreflector /opt/vlreflector/ && sudo systemctl restart vlreflector`.
+
+## La pagina di amministrazione
+
+Con `--web 8080` il reflector serve una pagina (senza librerie esterne) con:
+- **In trasmissione adesso**: il nominativo di chi trasmette e da quale nodo arriva;
+- **Collegati**: ogni nodo in elenco con stato (collegato o no), da quanto non si fa sentire, pacchetti ricevuti e inoltrati, indirizzo, e "Togli";
+- **Ultime trasmissioni**: le ultime 20, con nominativo, nodo di provenienza, durata e pacchetti;
+- **Registra un nodo**: vedi sotto.
+
+Sicurezza:
+- Di base ascolta **solo su `127.0.0.1`**: dal portatile di casa la raggiungi con un tunnel ssh, `ssh -L 8080:127.0.0.1:8080 IU5HJU@192.168.1.76`, e apri `http://127.0.0.1:8080/`. Con `--web-bind 0.0.0.0` è raggiungibile da tutta la rete locale.
+- I dati e le azioni vogliono il **token di amministrazione**: il file `admin.token` accanto al file dei client (creato la prima volta, permessi riservati; lo leggi con `sudo cat /var/lib/vlreflector/admin.token`), che la pagina chiede all'ingresso e tiene solo nella scheda del browser. Dopo 10 tentativi sbagliati in un minuto si blocca per un po'.
+- È HTTP semplice: **non metterla su Internet** senza un HTTPS davanti (per esempio un proxy con un certificato). La porta UDP dei nodi, invece, è l'unica da aprire.
+
+## Registrare un nuovo nodo (procedura)
+
+La chiave è un segreto condiviso fra il nodo e il reflector, e nasce **dal collega, sulla sua scheda**:
+
+1. **Il collega** apre la [pagina di configurazione](https://iu5hju.github.io/VoLoRa/), sceglie *Nodo Internet*, scrive il suo **nominativo** e nel riquadro "Rete e reflector" preme **"Genera una chiave nuova per il mio nominativo"**. La pagina propone già il reflector di base (nome, porta e id 1000): chi ha un reflector suo, anche privato, li cambia. La chiave è casuale (non si può ricavare dal nominativo, che è pubblico) e **nuova a ogni pressione**; la pagina ricorda soltanto la data dell'ultima generata per quel nominativo, e avvisa che la nuova sostituisce la vecchia.
+2. **La pagina gli mostra la riga da mandare** (nominativo, chiave, e la riga per il file) con il pulsante *Copia*: la manda al sysop **su un canale privato**.
+3. **Il sysop** apre la pagina di amministrazione, scrive il nominativo e incolla la chiave in *Registra un nodo*. *Controlla il nominativo* dice se è già registrato (in quel caso la chiave nuova **sostituisce** la vecchia, con lo stesso id, e il nodo vecchio si stacca) o qual è il prossimo id libero. *Registra* scrive il file e **il nodo può collegarsi subito**, senza riavvii. Se il collega non ha ancora una chiave, il sysop lascia il campo vuoto: il reflector ne genera una e la mostra una volta sola, da dare al collega.
+4. **Il sysop** dice al collega l'**id** assegnato (e conferma l'indirizzo del reflector): il collega lo scrive in *Id di questa scheda*, salva, e la scheda si collega.
+
+Il collegamento si vede subito nella pagina del sysop ("Collegati") e nel registro (`journalctl -u vlreflector -f`).
 
 ## Cosa fa
 

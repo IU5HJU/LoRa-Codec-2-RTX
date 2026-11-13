@@ -1,29 +1,89 @@
 #!/bin/bash
-# Prova con veri socket UDP (make reflector-smoke): il reflector e due nodi finti sul PC. I nodi usano una porta scelta dal sistema (--listen 0) e
-# scrivono per primi: nessuna porta nota o aperta, come dietro un router. Il secondo nodo deve ricevere il testo e la voce del primo.
+# Prova con veri socket UDP e HTTP (make reflector-smoke): il reflector e due nodi finti sul PC. I nodi usano una porta scelta dal sistema (--listen 0)
+# e scrivono per primi: nessuna porta nota o aperta, come dietro un router. Poi la pagina di amministrazione: stato, registrazione di un nodo nuovo
+# (con la chiave generata dal reflector), sostituzione della chiave e ricaricamento del file con SIGHUP.
 set -u
 cd "$(dirname "$0")/.."
 D=$(mktemp -d)
 trap 'kill $(jobs -p) 2>/dev/null; rm -rf "$D"' EXIT
 PORT=$((20000 + RANDOM % 20000))
+WEB=$((PORT + 1))
 cat > "$D/ref.conf" <<EOF
 2 000102030405060708090a0b0c0d0e0f nodoA
 3 101112131415161718191a1b1c1d1e1f nodoB
 EOF
-build/vlreflector --config "$D/ref.conf" --port $PORT --id 1000 --voice-mode 1 --duration 22 > "$D/ref.out" 2>&1 &
-sleep 0.5
-build/vlnode --id 3 --peer-id 1000 --key 101112131415161718191a1b1c1d1e1f --listen 0 --peer localhost:$PORT --duration 18 > "$D/b.out" 2>&1 &
-sleep 4
-build/vlnode --id 2 --peer-id 1000 --key 000102030405060708090a0b0c0d0e0f --listen 0 --peer 127.0.0.1:$PORT --send-text IU5HJU "Prova via reflector" --send-voice IU5HJU --frames 30 --duration 10 > "$D/a.out" 2>&1
-wait
 fail=0
-check() { if grep -q "$2" "$1"; then echo "ok    $3"; else echo "FALLITO $3"; fail=1; fi; }
-check "$D/ref.out" "client nodoA collegato" "il reflector vede il nodo A"
-check "$D/ref.out" "client nodoB collegato" "il reflector vede il nodo B"
+ok() { echo "ok    $1"; }
+ko() { echo "FALLITO $1"; fail=1; }
+check() { if grep -q -- "$2" "$1"; then ok "$3"; else ko "$3"; fi; }
+
+build/vlreflector --config "$D/ref.conf" --port $PORT --id 1000 --voice-mode 1 --web $WEB --public-name prova.example:$PORT --duration 60 > "$D/ref.out" 2>&1 &
+REF=$!
+sleep 0.7
+TOKEN=$(tr -d '\n' < "$D/admin.token")
+[ ${#TOKEN} -ge 16 ] && ok "il token di amministrazione e' stato creato (con permessi riservati: $(stat -c %a "$D/admin.token"))" || ko "token non creato"
+api() { curl -s -m 5 -H "X-Token: $TOKEN" "$@"; }
+
+# la pagina senza token si vede, i dati no
+curl -s -m 5 "http://127.0.0.1:$WEB/" | grep -q "Reflector VoLoRa" && ok "la pagina di amministrazione si apre" || ko "la pagina non si apre"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:$WEB/api/status)" = "401" ] && ok "senza token i dati non si vedono (401)" || ko "i dati si vedono senza token"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H 'X-Token: sbagliato' http://127.0.0.1:$WEB/api/status)" = "401" ] && ok "con un token sbagliato nemmeno (401)" || ko "token sbagliato accettato"
+[ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: $TOKEN" http://127.0.0.1:$WEB/api/nonesiste)" = "404" ] && ok "indirizzo sconosciuto: 404" || ko "404 mancante"
+api "http://127.0.0.1:$WEB/api/status" | grep -q '"clients":\[{"id":2,"name":"nodoA","up":false' && ok "stato: i due client in elenco, non collegati" || ko "stato iniziale"
+
+# i nodi
+build/vlnode --id 3 --peer-id 1000 --key 101112131415161718191a1b1c1d1e1f --listen 0 --peer localhost:$PORT --duration 22 > "$D/b.out" 2>&1 &
+NODEB=$!
+sleep 4
+build/vlnode --id 2 --peer-id 1000 --key 000102030405060708090a0b0c0d0e0f --listen 0 --peer 127.0.0.1:$PORT --send-text IU5HJU "Prova via reflector" --send-voice IZ5IOF --frames 150 --duration 16 > "$D/a.out" 2>&1 &
+NODEA=$!
+sleep 3.5
+S=$(api "http://127.0.0.1:$WEB/api/status")
+echo "$S" | grep -q '"talking":{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: chi trasmette adesso (IZ5IOF, dal nodoA)" || ko "chi trasmette non compare"
+wait $NODEA
+S=$(api "http://127.0.0.1:$WEB/api/status")
+echo "$S" | grep -q '"name":"nodoA","up":true' && echo "$S" | grep -q '"name":"nodoB","up":true' && ok "stato: i due nodi collegati" || ko "nodi non collegati nello stato"
+echo "$S" | grep -q '"recent":\[{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: la trasmissione finita e' fra le ultime" || ko "storico vuoto"
+wait $NODEB  # l'uscita di vlnode si scrive alla fine
 check "$D/b.out" 'testo "Prova via reflector"' "B riceve il testo di A"
-check "$D/b.out" "modo 1 sessione .* flags C9 IU5HJU (ripetuto)" "B riceve l'inizio della voce di A, con il flag di ripetuto"
+check "$D/b.out" "modo 1 sessione .* flags C9 IZ5IOF (ripetuto)" "B riceve l'inizio della voce di A, con il flag di ripetuto"
 n=$(grep -c "^\[pacchetto\] modo 1 " "$D/b.out")
-if [ "$n" = "5" ]; then echo "ok    B riceve i 5 pacchetti di voce"; else echo "FALLITO B riceve $n pacchetti di voce invece di 5"; fail=1; fi
-if grep -q "pacchetto" "$D/a.out"; then echo "FALLITO A riceve indietro i suoi pacchetti"; fail=1; else echo "ok    A non riceve indietro i suoi pacchetti"; fi
-check "$D/ref.out" "firme errate 0" "nessuna firma errata"
+[ "$n" -ge 12 ] && ok "B riceve i pacchetti di voce ($n)" || ko "B riceve solo $n pacchetti di voce"
+grep -q "pacchetto" "$D/a.out" && ko "A riceve indietro i suoi pacchetti" || ok "A non riceve indietro i suoi pacchetti"
+
+# registrazione di un nodo nuovo, con la chiave generata dal reflector
+api "http://127.0.0.1:$WEB/api/lookup?call=iz5iof" | grep -q '"registered":false,"id":0,"nextId":4' && ok "il nominativo nuovo non e' registrato, prossimo id 4" || ko "lookup nominativo nuovo"
+R=$(api -X POST -d "call=iz5iof" "http://127.0.0.1:$WEB/api/register")
+echo "$R" | grep -q '"ok":true,"id":4,"call":"IZ5IOF","replaced":false,"key":"' && ok "registrato IZ5IOF con id 4 e chiave generata" || ko "registrazione: $R"
+KEY=$(echo "$R" | sed -n 's/.*"key":"\([0-9a-f]\{32\}\)".*/\1/p')
+grep -q "^4 .* IZ5IOF" "$D/ref.conf" && ok "il file dei client e' aggiornato" || ko "file non aggiornato"
+[ "$(stat -c %a "$D/ref.conf")" = "600" ] && ok "il file dei client ha permessi riservati (600)" || ko "permessi del file"
+build/vlnode --id 4 --peer-id 1000 --key "$KEY" --listen 0 --peer localhost:$PORT --duration 6 > "$D/c.out" 2>&1
+check "$D/c.out" "collegamento ATTIVO" "il nodo registrato con la chiave generata si collega, senza riavviare il reflector"
+# di nuovo lo stesso nominativo: la chiave si sostituisce, la vecchia non vale piu'
+api "http://127.0.0.1:$WEB/api/lookup?call=IZ5IOF" | grep -q '"registered":true,"id":4' && ok "il nominativo ora risulta registrato (id 4)" || ko "lookup nominativo registrato"
+NEWKEY=00112233445566778899aabbccddeeff
+R=$(api -X POST -d "call=IZ5IOF&key=$NEWKEY" "http://127.0.0.1:$WEB/api/register")
+echo "$R" | grep -q '"ok":true,"id":4,"call":"IZ5IOF","replaced":true' && ok "stesso nominativo: chiave sostituita, stesso id" || ko "sostituzione: $R"
+build/vlnode --id 4 --peer-id 1000 --key "$KEY" --listen 0 --peer localhost:$PORT --duration 5 > "$D/c2.out" 2>&1
+grep -q "collegamento ATTIVO" "$D/c2.out" && ko "la chiave vecchia si collega ancora" || ok "la chiave vecchia non si collega piu'"
+build/vlnode --id 4 --peer-id 1000 --key "$NEWKEY" --listen 0 --peer localhost:$PORT --duration 6 > "$D/c3.out" 2>&1
+check "$D/c3.out" "collegamento ATTIVO" "la chiave nuova si collega"
+# errori
+api -X POST -d "call=BAD CALL!" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false' && ok "nominativo non valido rifiutato" || ko "nominativo non valido accettato"
+api -X POST -d "call=IW0XYZ&key=abc" "http://127.0.0.1:$WEB/api/register" | grep -q '"ok":false' && ok "chiave non valida rifiutata" || ko "chiave non valida accettata"
+[ "$(api -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$WEB/api/register")" = "405" ] && ok "register con GET: 405" || ko "405 mancante"
+# togliere un client
+api -X POST -d "id=3" "http://127.0.0.1:$WEB/api/remove" | grep -q '"ok":true' && ok "client tolto" || ko "client non tolto"
+grep -q "nodoB" "$D/ref.conf" && ko "il client tolto e' ancora nel file" || ok "il client tolto non e' piu' nel file"
+# ricaricamento del file con SIGHUP: si aggiunge una riga a mano
+echo "9 aabbccddeeff00112233445566778899 MANO" >> "$D/ref.conf"
+kill -HUP $REF; sleep 1
+api "http://127.0.0.1:$WEB/api/status" | grep -q '"name":"MANO"' && ok "SIGHUP: la riga aggiunta a mano e' attiva senza riavviare" || ko "SIGHUP non ricarica"
+# un file con un errore: si resta con l'elenco di prima
+echo "x non valida" >> "$D/ref.conf"
+kill -HUP $REF; sleep 1
+api "http://127.0.0.1:$WEB/api/status" | grep -q '"name":"MANO"' && ok "file con un errore: resta l'elenco di prima" || ko "elenco perso dopo un file sbagliato"
+check "$D/ref.out" "ricaricamento non riuscito" "l'errore e' scritto nel registro"
+check "$D/ref.out" "client IZ5IOF collegato" "il registro scrive i collegamenti"
 exit $fail

@@ -30,6 +30,7 @@
   .verhelp p { margin: 4px 0; }
   .verhelp ul { margin: 6px 0; padding-left: 22px; }
   .nomode { display:none !important; }
+  .regline { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px 10px; overflow:auto; white-space:pre-wrap; word-break:break-all; font-size:.9rem; }
   .hint { font-size:.85rem; color:var(--muted); margin:.2em 0 0; }
   /* Messaggio di stato: fisso in basso nella finestra, cosi' si vede accanto al pulsante premuto, ovunque sia nella pagina. */
   #status { font-weight:600; }
@@ -145,7 +146,7 @@
         <p class="hint" id="wifipasshint">Password non impostata (rete aperta).</p>
         <label for="peer">Reflector o altro nodo: nome o indirizzo, e porta</label>
         <input id="peer" autocomplete="off" spellcheck="false" placeholder="reflector.example.org:5400" disabled>
-        <p class="hint">Un nome (si risolve da solo, anche se il reflector cambia indirizzo) o un indirizzo IPv4; la porta è la 5400 se manca.</p>
+        <p class="hint" id="peerhint">Di base compare il <strong>reflector VoLoRa</strong> di IU5HJU: se hai un reflector tuo (anche privato) scrivi qui il suo nome o indirizzo e la sua porta. Un nome si risolve da solo, anche se il reflector cambia indirizzo; la porta è la 5400 se manca.</p>
         <label for="peerid">Id del reflector (PEERID)</label>
         <input id="peerid" type="number" min="0" max="4294967295" step="1" placeholder="1000" disabled>
         <label for="nodeid">Id di questa scheda (NODEID)</label>
@@ -153,8 +154,13 @@
         <p class="hint">L'id e la chiave di questa scheda sono la sua riga nel file del reflector.</p>
         <label for="nodekey">Chiave (32 cifre esadecimali)</label>
         <input id="nodekey" maxlength="32" autocomplete="off" spellcheck="false" placeholder="vuota = non cambiarla" disabled>
-        <button id="genNodeKey" type="button" class="secondary" disabled>Genera una chiave nuova</button>
+        <button id="genNodeKey" type="button" class="secondary" disabled>Genera una chiave nuova per il mio nominativo</button>
         <p class="hint" id="nodekeyhint">Chiave non impostata.</p>
+        <div id="regbox" hidden>
+          <p class="hint"><strong>Da mandare al sysop del reflector</strong> (su un canale privato, non in un gruppo pubblico): così registra il tuo nodo e ti dice l'<strong>id</strong> da scrivere qui sopra.</p>
+          <pre id="regline" class="regline"></pre>
+          <button id="copyRegLine" type="button" class="secondary">Copia</button>
+        </div>
         <label for="nodeport">Porta locale (NODEPORT)</label>
         <input id="nodeport" type="number" min="1" max="65535" step="1" placeholder="5400" disabled>
       </div>
@@ -532,6 +538,8 @@
   }
   let nodeSeen = false;      // la scheda risponde a CFG GET NODE (rete: firmware piu' vecchi, no)
   let nodeKeyIsSet = false, wifiPassIsSet = false;
+  // Il reflector di base: compare nei campi se la scheda non ne ha uno; chi vuole un reflector suo (anche privato) lo cambia
+  const DEFAULT_REFLECTOR = 'iu5hju.ddns.net:5400', DEFAULT_REFLECTOR_ID = '1000';
   const NET_IDS = ['wifissid', 'wifipass', 'peer', 'peerid', 'nodeid', 'nodekey', 'genNodeKey', 'nodeport'];
   async function readNode() {
     try {
@@ -542,10 +550,11 @@
       wifiPassIsSet = m[2] === 'set';
       $('wifipass').value = '';
       $('wifipasshint').textContent = wifiPassIsSet ? 'Password impostata (non si mostra). Lasciala vuota per non cambiarla.' : 'Password non impostata (rete aperta).';
-      $('peer').value = m[3] === 'none' ? '' : m[3] + ':' + m[4];
+      const noPeer = m[3] === 'none';
+      $('peer').value = noPeer ? DEFAULT_REFLECTOR : m[3] + ':' + m[4];
       $('nodeport').value = m[5];
       $('nodeid').value = m[6] === '0' ? '' : m[6];
-      $('peerid').value = m[7] === '0' ? '' : m[7];
+      $('peerid').value = noPeer && m[7] === '0' ? DEFAULT_REFLECTOR_ID : (m[7] === '0' ? '' : m[7]);
       nodeKeyIsSet = m[8] === 'set';
       $('nodekey').value = '';
       $('nodekeyhint').textContent = nodeKeyIsSet ? 'Chiave impostata (non si mostra). Lasciala vuota per non cambiarla.' : 'Chiave non impostata.';
@@ -858,8 +867,8 @@
       const ssid = $('wifissid').value.trim(), pass = $('wifipass').value, peerT = $('peer').value.trim();
       const nid = $('nodeid').value.trim(), pid = $('peerid').value.trim(), key = $('nodekey').value.trim(), lport = $('nodeport').value.trim();
       const any = ssid !== '' || peerT !== '' || nid !== '' || key !== '' || nodeKeyIsSet;
-      if (role === 'rptrx' && ssid === '' && peerT === '' && nid === '' && key === '') {
-        net = { off: true };  // il ripetitore resta solo in radio
+      if (role === 'rptrx' && ssid === '' && nid === '' && key === '') {
+        net = { off: true };  // il ripetitore resta solo in radio (il reflector di base nel campo non conta: e' solo il valore di partenza)
       } else {
         const where = role === 'node' ? 'Il nodo Internet' : 'Il ripetitore in rete';
         if (ssid === '' || !/^[\x20-\x7E]{1,32}$/.test(ssid)) return { err: where + ' ha bisogno del nome della rete Wi-Fi (da 1 a 32 caratteri, ASCII).' };
@@ -980,11 +989,37 @@
     freqPrev = v;
     updateFreqNote();
   });
+  // La chiave si genera per il nominativo della scheda: a caso (non si puo' ricavare dal nominativo, che e' pubblico) e nuova a ogni pressione. Si ricorda
+  // solo QUANDO si e' generata l'ultima per quel nominativo (mai la chiave), per avvisare che la nuova sostituisce la vecchia dopo la registrazione.
   $('genNodeKey').addEventListener('click', () => {
+    const cs = $('callsign').value.trim().toUpperCase();
+    if (!/^[A-Z0-9\/]{1,8}$/.test(cs) || /^N0CALL$|^NOCALL$/.test(cs)) {
+      setStatus('Scrivi prima il tuo nominativo (in alto): la chiave si registra per quel nominativo.', 'err');
+      return;
+    }
     const b = new Uint8Array(16);
     crypto.getRandomValues(b);
-    $('nodekey').value = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
-    $('nodekeyhint').textContent = 'Copia questa chiave adesso: dopo il salvataggio non si rilegge. Va scritta nella riga di questa scheda nel file del reflector.';
+    const key = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+    $('nodekey').value = key;
+    let notes = [];
+    let prev = null;
+    try { prev = (JSON.parse(localStorage.getItem('vlr-keys') || '{}'))[cs] || null; } catch (e) { prev = null; }
+    if (prev) notes.push('Per ' + cs + ' avevi già generato una chiave il ' + prev + ': quella nuova la sostituisce quando il sysop la registra.');
+    if (nodeKeyIsSet) notes.push('La scheda ha già una chiave: salvando, la nuova prende il suo posto.');
+    try {
+      const all = JSON.parse(localStorage.getItem('vlr-keys') || '{}');
+      const d = new Date();
+      all[cs] = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      localStorage.setItem('vlr-keys', JSON.stringify(all));
+    } catch (e) { /* senza memoria del browser: nessun avviso */ }
+    const id = $('nodeid').value.trim();
+    $('regline').textContent = 'Nominativo: ' + cs + '\nChiave: ' + key + '\nRiga per il file del reflector: ' + (id || 'ID') + '  ' + key + '  ' + cs;
+    $('regbox').hidden = false;
+    $('nodekeyhint').textContent = 'Chiave generata per ' + cs + '. Copiala adesso (dopo il salvataggio non si rilegge) e mandala al sysop. ' + notes.join(' ');
+  });
+  $('copyRegLine').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('regline').textContent); setStatus('Copiato: mandalo al sysop del reflector su un canale privato.', 'ok'); }
+    catch (e) { setStatus('Copia non riuscita: seleziona il testo a mano.', 'err'); }
   });
   $('freqmsg').addEventListener('input', updateFreqNote);
   $('sameFreq').addEventListener('click', () => { $('freqmsg').value = $('freq').value.trim(); updateFreqNote(); });

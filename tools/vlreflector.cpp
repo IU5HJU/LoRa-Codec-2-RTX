@@ -1,20 +1,24 @@
-// Reflector VoLoRa per un server (Linux): vedi docs/studio-reflector.md. I nodi e i ripetitori si collegano da dietro il loro router SENZA aprire
-// porte: scrivono loro per primi e il reflector risponde all'indirizzo da cui e' arrivato il datagramma. Serve solo una porta UDP raggiungibile
-// sul server.
+// Reflector VoLoRa per un server (Linux): vedi docs/reflector.md e docs/studio-reflector.md. I nodi e i ripetitori si collegano da dietro il loro
+// router SENZA aprire porte: scrivono loro per primi e il reflector risponde all'indirizzo da cui e' arrivato il datagramma. Serve solo una porta UDP
+// raggiungibile sul server.
 //
 //   make vlreflector
 //   build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mode 4] [--status-every 300] [--duration SECONDI]
+//                     [--web 8080 [--web-bind 127.0.0.1] [--admin-token-file FILE] [--public-name nome:5400]]
 //
-// File di configurazione, una riga per client (righe vuote e che iniziano con # si ignorano):
-//   <id> <chiave: 32 cifre esadecimali> <nome>
-//   2 000102030405060708090a0b0c0d0e0f nodo-firenze
-// L'id e la chiave sono quelli che il client imposta con NODEID e NODEKEY; sul client PEERID e' l'id del reflector (--id).
-// Un client si toglie cancellando la sua riga e riavviando il reflector. Solo IPv4 per ora.
+// File dei client (una riga per client; righe vuote e # si ignorano):   <id> <chiave: 32 cifre esadecimali> <nome (il nominativo)>
+// Si ricarica senza fermare il reflector con un segnale SIGHUP (systemctl reload) o dalla pagina di amministrazione.
+//
+// Pagina di amministrazione (--web PORTA): chi e' collegato, chi trasmette adesso, le ultime trasmissioni e la registrazione dei nodi. Di base ascolta
+// solo su 127.0.0.1 (si raggiunge con un tunnel ssh); con --web-bind 0.0.0.0 e' raggiungibile dalla rete locale. Ogni richiesta dei dati vuole il
+// token di amministrazione (file admin.token accanto al file dei client, creato se manca). Non metterla su Internet senza HTTPS.
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <chrono>
@@ -25,37 +29,37 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
+#include "http_mini.h"
+#include "packet.h"
+#include "reflector_config.h"
 #include "reflector_core.h"
+#include "vlreflector_page.h"
 
 using namespace lcr;
 
 static volatile sig_atomic_t g_stop = 0;
+static volatile sig_atomic_t g_hup = 0;
 static void onSignal(int) { g_stop = 1; }
+static void onHup(int) { g_hup = 1; }
 
 static uint32_t nowMs() {
   using namespace std::chrono;
   return static_cast<uint32_t>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
 }
-static uint32_t rngFn() { return static_cast<uint32_t>(rand()) ^ (static_cast<uint32_t>(rand()) << 16); }
 
-static bool hexKey(const std::string& s, uint8_t* out) {
-  if (s.size() != 32) return false;
-  for (int i = 0; i < 32; i++) {
-    const char c = s[static_cast<size_t>(i)];
-    int v = (c >= '0' && c <= '9') ? c - '0' : (c >= 'a' && c <= 'f') ? c - 'a' + 10 : (c >= 'A' && c <= 'F') ? c - 'A' + 10 : -1;
-    if (v < 0) return false;
-    if (i % 2 == 0) out[i / 2] = static_cast<uint8_t>(v << 4);
-    else out[i / 2] = static_cast<uint8_t>(out[i / 2] | v);
-  }
-  return true;
+static bool randomBytes(uint8_t* out, size_t n) {
+  FILE* f = fopen("/dev/urandom", "rb");
+  if (!f) return false;
+  const size_t got = fread(out, 1, n, f);
+  fclose(f);
+  return got == n;
 }
-
-static std::string epText(Endpoint e) {
-  char b[40];
-  snprintf(b, sizeof(b), "%u.%u.%u.%u:%u", static_cast<unsigned>((e >> 40) & 255), static_cast<unsigned>((e >> 32) & 255), static_cast<unsigned>((e >> 24) & 255),
-           static_cast<unsigned>((e >> 16) & 255), static_cast<unsigned>(e & 0xFFFF));
-  return b;
+static uint32_t rngFn() {
+  uint32_t v = 0;
+  if (!randomBytes(reinterpret_cast<uint8_t*>(&v), sizeof(v))) v = static_cast<uint32_t>(rand());
+  return v;
 }
 
 static void logLine(const std::string& s) {
@@ -64,6 +68,51 @@ static void logLine(const std::string& s) {
   strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", localtime(&t));
   printf("%s %s\n", ts, s.c_str());
   fflush(stdout);
+}
+
+static bool readFile(const std::string& path, std::string& out) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) return false;
+  std::ostringstream ss;
+  ss << in.rdbuf();
+  out = ss.str();
+  return true;
+}
+
+// Scrive in un file temporaneo e lo rinomina: il file dei client non resta mai a meta'. Permessi 0600 (ci sono le chiavi).
+static bool writeFileAtomic(const std::string& path, const std::string& text) {
+  const std::string tmp = path + ".tmp";
+  const int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  if (fd < 0) return false;
+  size_t off = 0;
+  while (off < text.size()) {
+    const ssize_t w = write(fd, text.data() + off, text.size() - off);
+    if (w <= 0) {
+      close(fd);
+      unlink(tmp.c_str());
+      return false;
+    }
+    off += static_cast<size_t>(w);
+  }
+  fsync(fd);
+  close(fd);
+  if (rename(tmp.c_str(), path.c_str()) != 0) {
+    unlink(tmp.c_str());
+    return false;
+  }
+  return true;
+}
+
+static std::string dirOf(const std::string& p) {
+  const size_t s = p.rfind('/');
+  return s == std::string::npos ? "." : (s == 0 ? "/" : p.substr(0, s));
+}
+
+static std::string epText(Endpoint e) {
+  char b[40];
+  snprintf(b, sizeof(b), "%u.%u.%u.%u:%u", static_cast<unsigned>((e >> 40) & 255), static_cast<unsigned>((e >> 32) & 255), static_cast<unsigned>((e >> 24) & 255),
+           static_cast<unsigned>((e >> 16) & 255), static_cast<unsigned>(e & 0xFFFF));
+  return b;
 }
 
 struct UdpNet : public IReflectorNet {
@@ -78,60 +127,292 @@ struct UdpNet : public IReflectorNet {
   }
 };
 
-int main(int argc, char** argv) {
-  std::string configPath;
-  int port = 5400, duration = 0, statusEvery = 300;
+// Lo stato della pagina di amministrazione: i client in elenco (che rispecchiano il file) e cosa si puo' fare.
+struct Admin {
+  std::string configPath, token, publicName;
   uint32_t reflectorId = 1000;
-  int voiceMode = 4;
+  int voiceMode = 4, port = 5400;
+  uint32_t startMs = 0;
+  std::vector<ReflectorEntry> entries;
+  ReflectorCore* core = nullptr;
+  int authFails = 0;
+  uint32_t authWindowMs = 0;
+
+  // Porta il reflector acceso all'elenco 'next' (client aggiunti, chiavi e nomi cambiati, client tolti) e lo ricorda.
+  void apply(const std::vector<ReflectorEntry>& next) {
+    for (const auto& e : entries) {
+      if (findEntryById(next, e.id) < 0) core->removeClient(e.id);
+    }
+    for (const auto& n : next) {
+      const int i = findEntryById(entries, n.id);
+      if (i < 0) {
+        core->addClient(n.id, n.key, n.name.c_str());
+        continue;
+      }
+      if (memcmp(entries[static_cast<size_t>(i)].key, n.key, kNodeKeyBytes) != 0) core->setClientKey(n.id, n.key);
+      if (entries[static_cast<size_t>(i)].name != n.name) core->setClientName(n.id, n.name.c_str());
+    }
+    entries = next;
+  }
+  bool save(const std::vector<ReflectorEntry>& next, std::string& err) {
+    if (!writeFileAtomic(configPath, formatReflectorConfig(next))) {
+      err = "non riesco a scrivere " + configPath + " (permessi della cartella?)";
+      return false;
+    }
+    apply(next);
+    return true;
+  }
+  bool reload(std::string& err) {
+    std::string text;
+    if (!readFile(configPath, text)) {
+      err = "non riesco a leggere " + configPath;
+      return false;
+    }
+    std::vector<ReflectorEntry> next;
+    if (!parseReflectorConfig(text, reflectorId, next, err)) return false;  // un errore nel file: non si cambia niente
+    apply(next);
+    return true;
+  }
+
+  std::string statusJson(uint32_t now) const {
+    std::ostringstream o;
+    o << "{\"reflector\":{\"id\":" << reflectorId << ",\"voiceMode\":" << voiceMode << ",\"port\":" << port << ",\"uptimeS\":" << (now - startMs) / 1000
+      << ",\"publicName\":\"" << jsonEscape(publicName) << "\"},";
+    const ReflectorCore::Talk t = core->currentTalk(now);
+    if (t.active && core->talker(now) != 0) {
+      o << "\"talking\":{\"client\":\"" << jsonEscape(t.client) << "\",\"callsign\":\"" << jsonEscape(t.callsign) << "\",\"durationMs\":" << (t.lastMs - t.startMs)
+        << ",\"packets\":" << t.packets << "},";
+    } else {
+      o << "\"talking\":null,";
+    }
+    o << "\"clients\":[";
+    bool first = true;
+    for (const auto& c : core->clients(now)) {
+      const long seen = (c.haveEndpoint || c.lastSeenMs != 0) ? static_cast<long>(now - c.lastSeenMs) : -1;
+      o << (first ? "" : ",") << "{\"id\":" << c.id << ",\"name\":\"" << jsonEscape(c.name) << "\",\"up\":" << (c.up ? "true" : "false") << ",\"seenMs\":" << seen
+        << ",\"in\":" << c.packetsIn << ",\"out\":" << c.packetsOut << ",\"endpoint\":\"" << (c.haveEndpoint ? jsonEscape(epText(c.endpoint)) : "") << "\"}";
+      first = false;
+    }
+    o << "],\"recent\":[";
+    first = true;
+    for (const auto& r : core->recentTalks()) {
+      o << (first ? "" : ",") << "{\"client\":\"" << jsonEscape(r.client) << "\",\"callsign\":\"" << jsonEscape(r.callsign) << "\",\"agoMs\":" << (now - r.lastMs)
+        << ",\"durationMs\":" << (r.lastMs - r.startMs) << ",\"packets\":" << r.packets << "}";
+      first = false;
+    }
+    const ReflectorCore::Stats& s = core->stats();
+    o << "],\"stats\":{\"datagrams\":" << s.datagrams << ",\"unknown\":" << s.unknownClient << ",\"badSignature\":" << s.badSignature << ",\"voiceBlocked\":" << s.voiceBlocked
+      << ",\"talks\":" << s.talks << "}}";
+    return o.str();
+  }
+
+  static std::string json(const std::string& body) { return httpResponse(200, "application/json; charset=utf-8", body); }
+  static std::string fail(int status, const std::string& msg) {
+    return httpResponse(status, "application/json; charset=utf-8", "{\"ok\":false,\"error\":\"" + jsonEscape(msg) + "\"}");
+  }
+
+  bool authorized(const HttpRequest& req, uint32_t now) {
+    if (now - authWindowMs > 60000) {  // finestra di un minuto per i tentativi sbagliati
+      authWindowMs = now;
+      authFails = 0;
+    }
+    if (authFails >= 10) return false;
+    auto it = req.headers.find("x-token");
+    const bool ok = it != req.headers.end() && !token.empty() && constantTimeEquals(it->second, token);
+    if (!ok) authFails++;
+    return ok;
+  }
+
+  std::string handle(const HttpRequest& req, uint32_t now) {
+    if (req.path == "/" || req.path == "/index.html") {
+      if (req.method != "GET") return fail(405, "metodo non ammesso");
+      return httpResponse(200, "text/html; charset=utf-8", kAdminPage,
+                          "Content-Security-Policy: default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-ancestors 'none'\r\n");
+    }
+    if (req.path.compare(0, 5, "/api/") != 0) return fail(404, "non trovato");
+    if (!authorized(req, now)) return fail(401, "token mancante o non valido");
+    if (req.path == "/api/status") {
+      if (req.method != "GET") return fail(405, "metodo non ammesso");
+      return json(statusJson(now));
+    }
+    if (req.path == "/api/lookup") {
+      if (req.method != "GET") return fail(405, "metodo non ammesso");
+      std::string call = formParam(req.query, "call");
+      for (auto& c : call) c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
+      const int i = findEntryByName(entries, call);
+      std::ostringstream o;
+      o << "{\"registered\":" << (i >= 0 ? "true" : "false") << ",\"id\":" << (i >= 0 ? entries[static_cast<size_t>(i)].id : 0)
+        << ",\"nextId\":" << nextFreeClientId(entries, reflectorId) << ",\"up\":";
+      bool up = false;
+      if (i >= 0) {
+        for (const auto& c : core->clients(now)) {
+          if (c.id == entries[static_cast<size_t>(i)].id) up = c.up;
+        }
+      }
+      o << (up ? "true" : "false") << "}";
+      return json(o.str());
+    }
+    if (req.path == "/api/register") {
+      if (req.method != "POST") return fail(405, "metodo non ammesso");
+      std::string call = formParam(req.body, "call"), keyText = formParam(req.body, "key");
+      for (auto& c : call) c = static_cast<char>(toupper(static_cast<unsigned char>(c)));
+      if (!isValidCallsign(call.c_str())) return fail(400, "nominativo non valido (lettere, cifre e /, massimo 8 caratteri)");
+      ReflectorEntry e;
+      bool generated = false;
+      if (keyText.empty()) {
+        if (!randomBytes(e.key, kNodeKeyBytes)) return fail(500, "non riesco a generare una chiave");
+        generated = true;
+      } else if (!parseKeyHex(keyText, e.key)) {
+        return fail(400, "la chiave deve avere 32 cifre esadecimali");
+      }
+      std::vector<ReflectorEntry> next = entries;
+      const int i = findEntryByName(next, call);
+      const bool replaced = i >= 0;
+      if (replaced) {
+        memcpy(next[static_cast<size_t>(i)].key, e.key, kNodeKeyBytes);
+        e.id = next[static_cast<size_t>(i)].id;
+        next[static_cast<size_t>(i)].name = call;
+      } else {
+        e.id = nextFreeClientId(next, reflectorId);
+        e.name = call;
+        next.push_back(e);
+      }
+      std::string err;
+      if (!save(next, err)) return fail(500, err);
+      char b[96];
+      snprintf(b, sizeof(b), "registrato %s (id %u)%s", call.c_str(), static_cast<unsigned>(e.id), replaced ? ": chiave sostituita" : "");
+      logLine(b);
+      std::ostringstream o;
+      o << "{\"ok\":true,\"id\":" << e.id << ",\"call\":\"" << jsonEscape(call) << "\",\"replaced\":" << (replaced ? "true" : "false");
+      if (generated) o << ",\"key\":\"" << keyToHex(e.key) << "\"";
+      o << "}";
+      return json(o.str());
+    }
+    if (req.path == "/api/remove") {
+      if (req.method != "POST") return fail(405, "metodo non ammesso");
+      const unsigned long id = strtoul(formParam(req.body, "id").c_str(), nullptr, 10);
+      const int i = findEntryById(entries, static_cast<uint32_t>(id));
+      if (i < 0) return fail(404, "client non in elenco");
+      std::vector<ReflectorEntry> next = entries;
+      const std::string name = next[static_cast<size_t>(i)].name;
+      next.erase(next.begin() + i);
+      std::string err;
+      if (!save(next, err)) return fail(500, err);
+      logLine("tolto " + name + " dall'elenco");
+      return json("{\"ok\":true}");
+    }
+    if (req.path == "/api/reload") {
+      if (req.method != "POST") return fail(405, "metodo non ammesso");
+      std::string err;
+      if (!reload(err)) return fail(400, err);
+      logLine("file dei client ricaricato");
+      return json("{\"ok\":true}");
+    }
+    return fail(404, "non trovato");
+  }
+};
+
+struct Conn {
+  int fd;
+  std::string in;
+  uint32_t startMs;
+};
+
+static void sendAll(int fd, const std::string& data) {
+  timeval tv = {1, 0};
+  setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+  int fl = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, fl & ~O_NONBLOCK);
+  size_t off = 0;
+  while (off < data.size()) {
+    const ssize_t w = send(fd, data.data() + off, data.size() - off, MSG_NOSIGNAL);
+    if (w <= 0) break;
+    off += static_cast<size_t>(w);
+  }
+}
+
+int main(int argc, char** argv) {
+  Admin adm;
+  std::string tokenFile;
+  int duration = 0, statusEvery = 300, webPort = 0;
+  std::string webBind = "127.0.0.1";
   for (int i = 1; i < argc; i++) {
     const std::string a = argv[i];
     auto next = [&]() -> const char* { return i + 1 < argc ? argv[++i] : ""; };
-    if (a == "--config") configPath = next();
-    else if (a == "--port") port = atoi(next());
-    else if (a == "--id") reflectorId = static_cast<uint32_t>(strtoul(next(), nullptr, 10));
-    else if (a == "--voice-mode") voiceMode = atoi(next());
+    if (a == "--config") adm.configPath = next();
+    else if (a == "--port") adm.port = atoi(next());
+    else if (a == "--id") adm.reflectorId = static_cast<uint32_t>(strtoul(next(), nullptr, 10));
+    else if (a == "--voice-mode") adm.voiceMode = atoi(next());
     else if (a == "--status-every") statusEvery = atoi(next());
     else if (a == "--duration") duration = atoi(next());
+    else if (a == "--web") webPort = atoi(next());
+    else if (a == "--web-bind") webBind = next();
+    else if (a == "--admin-token-file") tokenFile = next();
+    else if (a == "--public-name") adm.publicName = next();
     else {
       fprintf(stderr, "parametro sconosciuto: %s (vedi l'inizio di tools/vlreflector.cpp)\n", a.c_str());
       return 2;
     }
   }
-  if (configPath.empty() || reflectorId == 0 || (voiceMode != 1 && voiceMode != 4) || port < 1 || port > 65535) {
-    fprintf(stderr, "servono --config FILE; --id diverso da 0, --voice-mode 1 o 4, --port 1-65535\n");
+  if (adm.configPath.empty() || adm.reflectorId == 0 || (adm.voiceMode != 1 && adm.voiceMode != 4) || adm.port < 1 || adm.port > 65535 || webPort < 0 || webPort > 65535) {
+    fprintf(stderr, "servono --config FILE; --id diverso da 0, --voice-mode 1 o 4, --port 1-65535, --web 0-65535\n");
     return 2;
   }
   srand(static_cast<unsigned>(time(nullptr)) ^ static_cast<unsigned>(getpid()));
+  signal(SIGPIPE, SIG_IGN);
 
   UdpNet net;
-  ReflectorCore core(net, reflectorId, static_cast<uint8_t>(voiceMode), rngFn(), rngFn);
+  ReflectorCore core(net, adm.reflectorId, static_cast<uint8_t>(adm.voiceMode), rngFn(), rngFn);
   core.setLog(logLine);
-  std::ifstream in(configPath);
-  if (!in) {
-    fprintf(stderr, "non riesco ad aprire %s\n", configPath.c_str());
-    return 2;
-  }
-  std::string line;
-  int n = 0, lineNo = 0;
-  while (std::getline(in, line)) {
-    lineNo++;
-    const size_t h = line.find('#');
-    if (h != std::string::npos) line.resize(h);
-    std::istringstream ss(line);
-    std::string idText, keyText, name;
-    if (!(ss >> idText)) continue;
-    ss >> keyText >> name;
-    uint8_t key[kNodeKeyBytes];
-    const unsigned long id = strtoul(idText.c_str(), nullptr, 10);
-    if (id == 0 || !hexKey(keyText, key) || !core.addClient(static_cast<uint32_t>(id), key, name.c_str())) {
-      fprintf(stderr, "%s riga %d: attesi <id diverso da 0 e dal reflector, non ripetuto> <32 cifre esadecimali> <nome>\n", configPath.c_str(), lineNo);
+  adm.core = &core;
+  adm.startMs = nowMs();
+  {
+    std::string text, err;
+    if (!readFile(adm.configPath, text)) {
+      fprintf(stderr, "non riesco ad aprire %s\n", adm.configPath.c_str());
       return 2;
     }
-    n++;
+    std::vector<ReflectorEntry> list;
+    if (!parseReflectorConfig(text, adm.reflectorId, list, err)) {
+      fprintf(stderr, "%s: %s\n", adm.configPath.c_str(), err.c_str());
+      return 2;
+    }
+    adm.apply(list);
   }
-  if (n == 0) {
-    fprintf(stderr, "nessun client in %s\n", configPath.c_str());
-    return 2;
+
+  // Pagina di amministrazione
+  int webListen = -1;
+  if (webPort > 0) {
+    if (tokenFile.empty()) tokenFile = dirOf(adm.configPath) + "/admin.token";
+    std::string t;
+    if (readFile(tokenFile, t)) {
+      while (!t.empty() && (t.back() == '\n' || t.back() == '\r' || t.back() == ' ')) t.pop_back();
+    }
+    if (t.size() < 16) {  // manca o e' troppo corto: se ne crea uno
+      uint8_t r[16];
+      if (!randomBytes(r, sizeof(r))) {
+        fprintf(stderr, "non riesco a generare il token di amministrazione\n");
+        return 1;
+      }
+      t = keyToHex(r);
+      if (!writeFileAtomic(tokenFile, t + "\n")) {
+        fprintf(stderr, "non riesco a scrivere %s\n", tokenFile.c_str());
+        return 1;
+      }
+    }
+    adm.token = t;
+    webListen = socket(AF_INET, SOCK_STREAM, 0);
+    int one = 1;
+    setsockopt(webListen, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    sockaddr_in wa;
+    memset(&wa, 0, sizeof(wa));
+    wa.sin_family = AF_INET;
+    wa.sin_port = htons(static_cast<uint16_t>(webPort));
+    if (inet_pton(AF_INET, webBind.c_str(), &wa.sin_addr) != 1 || bind(webListen, reinterpret_cast<sockaddr*>(&wa), sizeof(wa)) != 0 || listen(webListen, 8) != 0) {
+      perror("pagina di amministrazione (bind)");
+      return 1;
+    }
+    fcntl(webListen, F_SETFL, fcntl(webListen, F_GETFL, 0) | O_NONBLOCK);
   }
 
   net.sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -139,24 +420,41 @@ int main(int argc, char** argv) {
   memset(&me, 0, sizeof(me));
   me.sin_family = AF_INET;
   me.sin_addr.s_addr = htonl(INADDR_ANY);
-  me.sin_port = htons(static_cast<uint16_t>(port));
+  me.sin_port = htons(static_cast<uint16_t>(adm.port));
   if (bind(net.sock, reinterpret_cast<sockaddr*>(&me), sizeof(me)) != 0) {
     perror("bind");
     return 1;
   }
   signal(SIGINT, onSignal);
   signal(SIGTERM, onSignal);
-  char b[160];
-  snprintf(b, sizeof(b), "vlreflector id %u in ascolto sulla porta UDP %d, modo voce %d, %d client in elenco", reflectorId, port, voiceMode, n);
+  signal(SIGHUP, onHup);
+  char b[200];
+  snprintf(b, sizeof(b), "vlreflector id %u in ascolto sulla porta UDP %d, modo voce %d, %d client in elenco", adm.reflectorId, adm.port, adm.voiceMode,
+           static_cast<int>(adm.entries.size()));
   logLine(b);
+  if (webListen >= 0) {
+    snprintf(b, sizeof(b), "pagina di amministrazione su http://%s:%d/ (token in %s)", webBind.c_str(), webPort, tokenFile.c_str());
+    logLine(b);
+  }
 
-  const uint32_t start = nowMs();
-  uint32_t lastStatus = start;
+  std::vector<Conn> conns;
+  uint32_t lastStatus = adm.startMs;
   while (!g_stop) {
-    const uint32_t t = nowMs();
-    if (duration > 0 && t - start > static_cast<uint32_t>(duration) * 1000u) break;
-    pollfd pfd = {net.sock, POLLIN, 0};
-    if (poll(&pfd, 1, 20) > 0) {
+    const uint32_t t0 = nowMs();
+    if (duration > 0 && t0 - adm.startMs > static_cast<uint32_t>(duration) * 1000u) break;
+    if (g_hup) {
+      g_hup = 0;
+      std::string err;
+      if (adm.reload(err)) logLine("file dei client ricaricato (" + std::to_string(adm.entries.size()) + " client)");
+      else logLine("ricaricamento non riuscito, resta l'elenco di prima: " + err);
+    }
+    std::vector<pollfd> fds;
+    fds.push_back({net.sock, POLLIN, 0});
+    if (webListen >= 0) fds.push_back({webListen, POLLIN, 0});
+    for (const auto& c : conns) fds.push_back({c.fd, POLLIN, 0});
+    poll(fds.data(), fds.size(), 20);
+
+    if (fds[0].revents & POLLIN) {
       for (int guard = 0; guard < 64; guard++) {  // svuota quello che e' arrivato
         uint8_t buf[kNodeMaxDatagram + 16];
         sockaddr_in from;
@@ -167,7 +465,54 @@ int main(int argc, char** argv) {
         core.onDatagram(ep, buf, static_cast<size_t>(k), nowMs());
       }
     }
-    core.tick(nowMs());
+    if (webListen >= 0) {
+      if (fds[1].revents & POLLIN) {
+        for (int guard = 0; guard < 8; guard++) {
+          const int cfd = accept(webListen, nullptr, nullptr);
+          if (cfd < 0) break;
+          if (conns.size() >= 16) {
+            close(cfd);
+            continue;
+          }
+          fcntl(cfd, F_SETFL, fcntl(cfd, F_GETFL, 0) | O_NONBLOCK);
+          conns.push_back({cfd, "", nowMs()});
+        }
+      }
+      // le connessioni: quelle pronte si leggono, e si chiude chi ha finito o e' troppo lento
+      std::vector<Conn> keep;
+      for (size_t i = 0; i < conns.size(); i++) {
+        Conn c = conns[i];
+        const pollfd& p = fds[2 + i];
+        bool done = false;
+        if (p.revents & (POLLIN | POLLHUP | POLLERR)) {
+          char buf[2048];
+          const ssize_t k = recv(c.fd, buf, sizeof(buf), 0);
+          if (k <= 0) {
+            done = true;
+          } else {
+            c.in.append(buf, static_cast<size_t>(k));
+            HttpRequest req;
+            const HttpParse pr = parseHttpRequest(c.in, req);
+            if (pr == HttpParse::Ok) {
+              sendAll(c.fd, adm.handle(req, nowMs()));
+              done = true;
+            } else if (pr == HttpParse::Bad) {
+              sendAll(c.fd, httpResponse(400, "text/plain", "richiesta non valida"));
+              done = true;
+            } else if (pr == HttpParse::TooBig) {
+              sendAll(c.fd, httpResponse(413, "text/plain", "richiesta troppo grande"));
+              done = true;
+            }
+          }
+        }
+        if (!done && nowMs() - c.startMs > 5000) done = true;
+        if (done) close(c.fd);
+        else keep.push_back(c);
+      }
+      conns = keep;
+    }
+    const uint32_t t = nowMs();
+    core.tick(t);
     if (statusEvery > 0 && t - lastStatus >= static_cast<uint32_t>(statusEvery) * 1000u) {
       lastStatus = t;
       std::string s = "stato:";
@@ -176,8 +521,8 @@ int main(int argc, char** argv) {
     }
   }
   const ReflectorCore::Stats& s = core.stats();
-  snprintf(b, sizeof(b), "fine: datagrammi %u, sconosciuti %u, firme errate %u, ripetuti %u, voce inoltrata %u, testi %u, voce bloccata %u, trasmissioni %u",
-           s.datagrams, s.unknownClient, s.badSignature, s.replays, s.voiceForwarded, s.textForwarded, s.voiceBlocked, s.talks);
+  snprintf(b, sizeof(b), "fine: datagrammi %u, sconosciuti %u, firme errate %u, ripetuti %u, voce inoltrata %u, testi %u, voce bloccata %u, trasmissioni %u", s.datagrams,
+           s.unknownClient, s.badSignature, s.replays, s.voiceForwarded, s.textForwarded, s.voiceBlocked, s.talks);
   logLine(b);
   return 0;
 }

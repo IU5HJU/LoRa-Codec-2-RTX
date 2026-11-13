@@ -45,6 +45,18 @@ class ReflectorCore {
     uint32_t talks = 0;           // trasmissioni iniziate
   };
 
+  // Una trasmissione (finita o in corso): chi l'ha fatta arrivare e con quale nominativo.
+  struct Talk {
+    uint32_t clientId = 0;
+    std::string client;      // nome del client (il suo nominativo)
+    std::string callsign;    // nominativo di chi trasmetteva (dal pacchetto di inizio), "-" se manca
+    uint32_t startMs = 0;
+    uint32_t lastMs = 0;     // ultimo pacchetto
+    uint32_t packets = 0;
+    bool active = false;
+  };
+  static constexpr size_t kRecentTalks = 20;
+
   struct ClientInfo {
     uint32_t id = 0;
     std::string name;
@@ -61,6 +73,13 @@ class ReflectorCore {
 
   // Un client ammesso: id (diverso da 0 e da quello del reflector), chiave di 16 byte, un nome per il registro. false se non e' valido o c'e' gia'.
   bool addClient(uint32_t id, const uint8_t key[kNodeKeyBytes], const char* name);
+  // Gestione a reflector acceso (registrazione dei nodi, ricaricamento del file): cambiare la chiave stacca il client (deve ripresentarsi con la
+  // nuova); togliere un client lo ferma subito. false se l'id non c'e'.
+  bool setClientKey(uint32_t id, const uint8_t key[kNodeKeyBytes]);
+  bool setClientName(uint32_t id, const char* name);
+  bool removeClient(uint32_t id);
+  bool hasClient(uint32_t id) const;
+  uint32_t idByName(const char* name) const;  // 0 se non c'e' (il nome si confronta senza distinguere maiuscole)
 
   void onDatagram(Endpoint from, const uint8_t* d, size_t n, uint32_t nowMs);
   // Manutenzione: HELLO e KEEPALIVE ai client collegati, e dimenticare l'indirizzo di chi tace da kNodeDeadMs.
@@ -70,6 +89,9 @@ class ReflectorCore {
   const Stats& stats() const { return stats_; }
   // Chi sta parlando adesso (0 = nessuno).
   uint32_t talker(uint32_t nowMs) const { return talking_ && nowMs - talkLastMs_ <= kTalkHangMs ? talkerId_ : 0; }
+  // La trasmissione in corso (active) e le ultime finite, la piu' recente per prima, al massimo kRecentTalks.
+  Talk currentTalk(uint32_t nowMs) const;
+  const std::vector<Talk>& recentTalks() const { return recent_; }
   // Registro (facoltativo): una riga per evento (client collegato, trasmissione iniziata e finita, ...).
   void setLog(std::function<void(const std::string&)> f) { log_ = f; }
 
@@ -85,6 +107,8 @@ class ReflectorCore {
     uint32_t packetsIn = 0, packetsOut = 0;
   };
   Client* find(uint32_t id);
+  const Client* find(uint32_t id) const;
+  void endTalk();
   void forward(const Client& from, const uint8_t* wire, size_t len, bool voice, uint32_t nowMs);
   void say(const std::string& s) const;
 
@@ -99,6 +123,8 @@ class ReflectorCore {
   uint32_t talkerId_ = 0;
   uint16_t talkSession_ = 0;
   uint32_t talkLastMs_ = 0;
+  Talk cur_;
+  std::vector<Talk> recent_;
   std::function<void(const std::string&)> log_;
 };
 

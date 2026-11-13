@@ -983,6 +983,47 @@ async function scenario(name, fn, opts = {}) {
     check('nessun errore JavaScript', p.errors.length === 0);
   });
 
+  await scenario('reflector: di base quello nostro, chiave legata al nominativo e riga da mandare al sysop', async (p) => {
+    await connect(p);
+    await until(p, () => !document.getElementById('role').disabled && !document.getElementById('wifissid').disabled);
+    await p.selectOption('#role', 'node');
+    check('reflector di base nei campi', (await p.inputValue('#peer')) === 'iu5hju.ddns.net:5400' && (await p.inputValue('#peerid')) === '1000');
+    check('il suggerimento dice che si puo\' cambiare', /reflector tuo/.test(await p.textContent('#peerhint')));
+    // la chiave serve il nominativo: con N0CALL no
+    await p.fill('#callsign', 'N0CALL');
+    await p.click('#genNodeKey');
+    check('senza nominativo vero: niente chiave', (await p.inputValue('#nodekey')) === '' && /nominativo/.test(await p.textContent('#status')) && (await p.isHidden('#regbox')));
+    await p.fill('#callsign', 'iz5iof');
+    await p.click('#genNodeKey');
+    const k1 = await p.inputValue('#nodekey');
+    check('chiave di 32 cifre e riga da mandare', /^[0-9a-f]{32}$/.test(k1) && (await p.isVisible('#regbox')));
+    let line = await p.textContent('#regline');
+    check('la riga ha nominativo, chiave e il posto per l\'id', line.includes('Nominativo: IZ5IOF') && line.includes('Chiave: ' + k1) && line.includes('ID  ' + k1 + '  IZ5IOF'), line);
+    // ogni pressione ne genera una nuova, e la seconda volta avvisa che la precedente viene sostituita
+    await p.click('#genNodeKey');
+    const k2 = await p.inputValue('#nodekey');
+    check('una chiave nuova a ogni volta', /^[0-9a-f]{32}$/.test(k2) && k2 !== k1);
+    check('avvisa che per questo nominativo ne aveva gia\' generata una', /già generato una chiave il \d\d\/\d\d\/\d{4}/.test(await p.textContent('#nodekeyhint')), await p.textContent('#nodekeyhint'));
+    // con l'id gia' scritto la riga lo usa; la chiave non finisce mai nella memoria del browser
+    await p.fill('#nodeid', '4');
+    await p.click('#genNodeKey');
+    const k3 = await p.inputValue('#nodekey');
+    line = await p.textContent('#regline');
+    check('con l\'id: la riga e\' pronta per il file', line.includes('Riga per il file del reflector: 4  ' + k3 + '  IZ5IOF'), line);
+    check('la chiave non e\' nella memoria del browser', await p.evaluate((ks) => { const v = JSON.stringify(localStorage) + JSON.stringify(sessionStorage); return ks.every((k) => !v.includes(k)); }, [k1, k2, k3]));
+    // un nominativo diverso non ha la storia dell'altro
+    await p.fill('#callsign', 'IU5HJU');
+    await p.click('#genNodeKey');
+    check('altro nominativo: nessun avviso di chiave precedente', !/già generato/.test(await p.textContent('#nodekeyhint')));
+    // dopo il salvataggio la scheda ricorda un reflector diverso (non si sovrascrive col valore di base)
+    await p.fill('#wifissid', 'Casa'); await p.fill('#peer', 'mio.reflector.it:5500'); await p.fill('#peerid', '77'); await p.fill('#nodeid', '5');
+    await p.click('#save');
+    await until(p, () => window.__st.cmds.includes('CFG REBOOT'), null, 15000);
+    await until(p, () => /Impostazioni lette/.test(document.getElementById('status').textContent), null, 20000);
+    check('un reflector privato resta com\'e\' dopo il salvataggio', (await p.inputValue('#peer')) === 'mio.reflector.it:5500' && (await p.inputValue('#peerid')) === '77');
+    check('nessun errore JavaScript', p.errors.length === 0);
+  });
+
   await scenario('rete: firmware senza impostazioni di rete, campi spenti', async (p) => {
     await p.evaluate(() => { window.__st.noNode = true; });
     await connect(p);
