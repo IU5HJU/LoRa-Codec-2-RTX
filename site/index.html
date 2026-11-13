@@ -30,6 +30,8 @@
   .verhelp p { margin: 4px 0; }
   .verhelp ul { margin: 6px 0; padding-left: 22px; }
   .nomode { display:none !important; }
+  /* la password del Wi-Fi e' un campo di testo con i caratteri nascosti: cosi' il browser non propone di generarla ne' di salvarla come password di questo sito */
+  .secret { -webkit-text-security: disc; text-security: disc; }
   .regline { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px 10px; overflow:auto; white-space:pre-wrap; word-break:break-all; font-size:.9rem; }
   .hint { font-size:.85rem; color:var(--muted); margin:.2em 0 0; }
   /* Messaggio di stato: fisso in basso nella finestra, cosi' si vede accanto al pulsante premuto, ovunque sia nella pagina. */
@@ -142,16 +144,17 @@
         <label for="wifissid">Rete Wi-Fi (nome)</label>
         <input id="wifissid" maxlength="32" autocomplete="off" placeholder="nome della rete" disabled>
         <label for="wifipass">Password del Wi-Fi</label>
-        <input id="wifipass" type="password" maxlength="64" autocomplete="new-password" placeholder="vuota = non cambiarla" disabled>
+        <input id="wifipass" class="secret" type="text" maxlength="64" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="vuota = non cambiarla" disabled>
         <p class="hint" id="wifipasshint">Password non impostata (rete aperta).</p>
         <label for="peer">Reflector o altro nodo: nome o indirizzo, e porta</label>
         <input id="peer" autocomplete="off" spellcheck="false" placeholder="reflector.example.org:5400" disabled>
         <p class="hint" id="peerhint">Di base compare il <strong>reflector VoLoRa</strong> di IU5HJU: se hai un reflector tuo (anche privato) scrivi qui il suo nome o indirizzo e la sua porta. Un nome si risolve da solo, anche se il reflector cambia indirizzo; la porta è la 5400 se manca.</p>
         <label for="peerid">Id del reflector (PEERID)</label>
         <input id="peerid" type="number" min="0" max="4294967295" step="1" placeholder="1000" disabled>
+        <p class="hint">Il numero con cui si presenta il reflector: lo sceglie chi lo gestisce e non cambia (per quello di base è <strong>1000</strong>). Serve alla scheda per essere sicura di parlare con il reflector giusto.</p>
         <label for="nodeid">Id di questa scheda (NODEID)</label>
         <input id="nodeid" type="number" min="1" max="4294967295" step="1" placeholder="2" disabled>
-        <p class="hint">L'id e la chiave di questa scheda sono la sua riga nel file del reflector.</p>
+        <p class="hint">Il numero della <strong>tua scheda</strong> nell'elenco del reflector: te lo <strong>assegna il sysop</strong> quando registra il tuo nodo (non lo scegli tu). Insieme alla chiave dice al reflector chi sei: è la riga della tua scheda nel suo file.</p>
         <label for="nodelabel">Nome di questo nodo (facoltativo: casa, mare, hotspot…)</label>
         <input id="nodelabel" maxlength="16" autocomplete="off" placeholder="casa" disabled>
         <p class="hint">Se hai più nodi con lo stesso nominativo, ognuno ha il suo <strong>id</strong> e la sua <strong>chiave</strong> (una chiave non si usa due volte): il nome serve solo al sysop per distinguerli. Non viene salvato sulla scheda.</p>
