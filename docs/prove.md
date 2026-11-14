@@ -374,3 +374,10 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Prova dopo la correzione:** una T3 aggiornata dalla pagina (versione `dev`) da un firmware precedente al `40f598a`, con la casella lasciata vuota (come riferito dall'operatore). Avvio: `firmware 40f598a`, `[avvio] impostazioni: lette dalla memoria`, `CFG`: `callsign=IU5HJU freq=433.475 freqmsg=433.475 freqrange=433.475 power=10 volume=5 micfloor=-60 profile=std board=t3`. **Le impostazioni sono rimaste.**
 - **Limiti:** una scheda, una T3; il `CFG` di prima non è stato confrontato campo per campo e `CFG` mostra solo i campi base (non Wi-Fi, ruolo, shift, testi). **Non provato sulle T-Beam** né partendo da versioni molto vecchie.
 
+### 14/11/2026, un altro radioamatore, T-Beam SX1262 (prova dei toni nel profilo Messaggio)
+
+- Su una T-Beam con radio **SX1262** (firmware `6424402`, profilo **Messaggio**, 432.500 MHz, 17 dBm) la prova `CFG TEST AUDIO` si ferma nella **fase 2** (toni con la radio in trasmissione): `task_wdt: ... CPU 0: rfburst`, `abort()`, riavvio. Succede a ogni prova.
+- **Causa:** il task `rfburst` trasmette pacchetti da 192 byte di payload con una chiamata bloccante che non cede il tempo al task IDLE del core 0. A SF12/BW125 (profilo Messaggio) un pacchetto così dura circa **7,8 s**, più dei 5 s del watchdog. Negli altri profili dura meno di 0,5 s. Non è un difetto dell'SX1262: vale anche per la T3 nel profilo Messaggio.
+- **Correzione:** il pacchetto della prova si accorcia finché dura al massimo 1,5 s in aria (nel Messaggio circa 20 byte in tutto). **Non ancora riprovata su una scheda.**
+- **Non spiegato:** la stessa scheda riceve il messaggio ma l'audio non si sente. Dal registro (solo comandi e prova dei toni) non si vede la ricezione: servono le righe della seriale mentre arriva il messaggio e mentre si preme il PTT per ascoltarlo.
+

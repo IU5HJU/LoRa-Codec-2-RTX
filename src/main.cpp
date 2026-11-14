@@ -258,8 +258,13 @@ static void rfBurstTask(void*) {
   p.mode = lcr::kModeRfCheck;
   p.session = static_cast<uint16_t>(esp_random());
   strncpy(p.callsign, settings.callsign, lcr::kMaxCallsign);
-  p.payloadLen = lcr::kMaxDataPayload;
   for (size_t k = 0; k < lcr::kMaxDataPayload; k++) p.payload[k] = static_cast<uint8_t>(0x55 ^ (k * 37));
+  // La trasmissione e' bloccante e non cede il tempo al task IDLE del core 0: un pacchetto lungo piu' di qualche secondo (il massimo da 192 byte
+  // a SF12/BW125 del profilo Messaggio dura circa 7,5 s) fa scattare il watchdog e la scheda si riavvia. Il pacchetto si accorcia finche' dura
+  // al massimo 1,5 s in aria: nei profili veloci resta quello intero.
+  const lcr::Profile& prof = lcr::profileFor(settings.profile);
+  p.payloadLen = lcr::kMaxDataPayload;
+  while (p.payloadLen > lcr::kFrameBytes && lcr::airtimeMs(5 + 1 + lcr::kMaxCallsign + p.payloadLen, prof) > 1500.0) p.payloadLen = static_cast<uint8_t>(p.payloadLen - lcr::kFrameBytes);
   uint8_t seq = 0;
   while (rfBurstRun) {
     p.seq = seq++;
