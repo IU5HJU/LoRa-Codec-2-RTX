@@ -131,7 +131,7 @@ void VoiceNode::startTx(uint32_t nowMs) {
   }
   replyPending_ = false;
   tx_ = TxSession(cfg_.callsign, sid, cfg_.fec, txTest_ ? kModeTest : prof_.codecMode);
-  if (cfg_.sendPosition && !txTest_) tx_.setPosition(cfg_.position);
+  if (cfg_.sendPosition) tx_.setPosition(cfg_.position);  // anche nella prova: l'altra scheda ne ricava la distanza (solo con l'invio della posizione acceso)
   framesCaptured_ = 0;
   releasing_ = false;
   limitHit_ = false;
@@ -375,6 +375,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
         if (testMode_ && decodeSweepSummary(p.payload, p.payloadLen, sm) && !(haveSummaryRx_ && lastSummaryRx_ == p.session)) {
           haveSummaryRx_ = true;
           lastSummaryRx_ = p.session;
+          if (p.position.valid) notify_.testPeerPosition(p.position);
           notify_.powerSweepSummary(p.callsign, sm);
         }
         continue;
@@ -384,6 +385,7 @@ void VoiceNode::rxTick(uint32_t nowMs) {
       if (lastTestValid_ && p.session == lastTestSession_ && p.payloadLen == kTestReportBytes &&
           decodeTestReport(p.payload, p.payloadLen, r)) {
         lastTestValid_ = false;  // una sola risposta per prova
+        if (p.position.valid) notify_.testPeerPosition(p.position);
         notify_.linkTestReport(true, p.callsign, r);
         if (sweepPhase_ == SweepPhase::Wait) sweepRecord(nowMs, true, r);
       }
@@ -444,7 +446,8 @@ void VoiceNode::rxTick(uint32_t nowMs) {
   }
   if (!positionNotified_ && rx_.position().valid) {
     positionNotified_ = true;
-    notify_.rxPosition(rx_.position());
+    if (rxIsTest_) notify_.testPeerPosition(rx_.position());  // in prova la distanza va nell'esito, non nella schermata dell'ultimo ricevuto
+    else notify_.rxPosition(rx_.position());
   }
 
   if (prof_.message && !rxIsTest_) {  // profilo Messaggio: la voce va in casella, non si riproduce
@@ -1035,6 +1038,7 @@ void VoiceNode::sendTestReply(uint32_t nowMs) {
   p.seq = 0;
   p.flags = kFlagStart | kFlagEnd;
   memcpy(p.callsign, cfg_.callsign, strnlen(cfg_.callsign, kMaxCallsign));
+  if (cfg_.sendPosition && cfg_.position.valid) p.position = cfg_.position;
   p.payloadLen = kTestReportBytes;
   encodeTestReport(replyReport_, p.payload);
   uint8_t buf[kMaxWireBytes];
@@ -1140,6 +1144,7 @@ void VoiceNode::sendSweepSummary(uint32_t nowMs) {
   p.seq = 0;
   p.flags = kFlagStart | kFlagEnd;
   memcpy(p.callsign, cfg_.callsign, strnlen(cfg_.callsign, kMaxCallsign));
+  if (cfg_.sendPosition && cfg_.position.valid) p.position = cfg_.position;
   p.payloadLen = static_cast<uint8_t>(summaryLen_);
   memcpy(p.payload, summaryBuf_, summaryLen_);
   uint8_t buf[kMaxWireBytes];

@@ -80,6 +80,7 @@ Formato `(Batt=4.12V)`, come nel firmware LoRa APRS iGate di Guzman. Larghezza f
 
 ## Note
 
+- Con la posizione (`CFG SET POS ON` sull'altra scheda e una posizione propria) l'ultima riga dell'esito della prova di potenza mostra anche la **distanza in km** (`100% a MIN  5.0km`, `frame persi 5.0km`); vedi [prova-collegamento.md](prova-collegamento.md).
 - Fine della prova di potenza (su entrambe le schede, 30 s): "MIN 9 dBm" (potenza minima con tutti i frame intatti), "sente fino a 7 dBm"; su chi ha ricevuto in alto "POTENZA da" e il nominativo; "NON PULITA" (con "risponde a N dBm / ma con frame persi") o "NESSUNA" (con "nessuna risposta / l'altra e' in prova?") se non c'è un minimo pulito. Ogni riga sta nei 21 caratteri dello schermo, una sola per posto.
 - Il "30" di "Trasmissione 12/30 s" e di "LIMITE 30 s" oggi è fisso. Quando il TOT diventerà un'impostazione
   (vedi [roadmap](roadmap.md)) seguirà il valore scelto.

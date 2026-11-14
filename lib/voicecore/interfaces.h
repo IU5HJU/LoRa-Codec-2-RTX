@@ -99,6 +99,8 @@ class INotifier {
   virtual void rxCallsign(const char* callsign) { (void)callsign; }
   // Chi trasmette ha mandato la sua posizione (nel pacchetto START). Una volta per ricezione.
   virtual void rxPosition(const Position& p) { (void)p; }
+  // Posizione dell'altra scheda arrivata in una prova di potenza (passo ricevuto, risposta o esito): serve per la distanza sul display.
+  virtual void testPeerPosition(const Position& p) { (void)p; }
   // Avanzamento (1-100) dell'invio di un messaggio o della ricezione di un messaggio, quando la lunghezza e' dichiarata.
   virtual void txProgress(int percent) { (void)percent; }
   virtual void rxProgress(int percent) { (void)percent; }

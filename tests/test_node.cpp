@@ -179,6 +179,50 @@ static void testExitTestModeDuringSweep() {
   CHECK(!s.a.node.testMode());
 }
 
+// Prova di potenza con la posizione: chi la trasmette (CFG POSTX ON) permette all'altra scheda di calcolare la distanza.
+static Position pos(int32_t latE7, int32_t lonE7) {
+  Position p;
+  p.valid = true;
+  p.latE7 = latE7;
+  p.lonE7 = lonE7;
+  return p;
+}
+
+static void testSweepCarriesPosition() {
+  const Position pa = pos(437993720, 108802190), pb = pos(438347440, 109190150);
+  {
+    Sim s;
+    s.air.clock = &s.clock;
+    s.a.node.setTestMode(true);
+    s.b.node.setTestMode(true);
+    s.a.node.setOwnPosition(pa, true);
+    s.b.node.setOwnPosition(pb, true);
+    s.run(100);
+    CHECK(s.a.node.startPowerSweep(s.clock, 3, 2, 10));
+    s.run(40000);
+    CHECK(s.a.note.sweepDone == 1 && !s.a.note.sweepAborted);
+    // B ha ricevuto i passi con la posizione di A; A l'ha ricevuta dalle risposte di B
+    CHECK(s.b.note.peerPositions > 0 && std::abs(s.b.note.peerPosition.latE7 - pa.latE7) < 200 && std::abs(s.b.note.peerPosition.lonE7 - pa.lonE7) < 300);
+    CHECK(s.a.note.peerPositions > 0 && std::abs(s.a.note.peerPosition.latE7 - pb.latE7) < 200);
+    CHECK(s.a.note.positions == 0 && s.b.note.positions == 0);  // in prova non e' una posizione "dell'ultimo ricevuto"
+    const double km = distanceKm(pa, s.a.note.peerPosition);
+    CHECK(km > 4.9 && km < 5.1);
+  }
+  {
+    Sim s;  // invio della posizione spento (e' cosi' di default): nessuna posizione nella prova
+    s.air.clock = &s.clock;
+    s.a.node.setTestMode(true);
+    s.b.node.setTestMode(true);
+    s.a.node.setOwnPosition(pa, false);
+    s.b.node.setOwnPosition(pb, false);
+    s.run(100);
+    CHECK(s.a.node.startPowerSweep(s.clock, 3, 2, 10));
+    s.run(40000);
+    CHECK(s.a.note.sweepDone == 1);
+    CHECK(s.a.note.peerPositions == 0 && s.b.note.peerPositions == 0);
+  }
+}
+
 static void testSlowClicksDoNothing() {
   Sim s;
   s.run(100);
@@ -1306,6 +1350,7 @@ int main() {
   testTripleClickTogglesTestMode();
   testExitTestModeWhileReceiving();
   testExitTestModeDuringSweep();
+  testSweepCarriesPosition();
   testSlowClicksDoNothing();
   testShortTapDoesNotTransmit();
   testClicksWorkWithoutCallsign();

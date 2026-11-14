@@ -93,6 +93,7 @@ class UiNotifier : public lcr::INotifier {
   void rxStarted() override;
   void rxCallsign(const char* callsign) override;
   void rxPosition(const lcr::Position& p) override;
+  void testPeerPosition(const lcr::Position& p) override;
   void rxPlaybackStarted() override {
     playing_ = true;
     dirty_ = true;
@@ -121,6 +122,7 @@ class UiNotifier : public lcr::INotifier {
   void powerSweepStarted(int firstDbm) override {
     sweepRunning_ = true;
     sweepFromRemote_ = false;
+    testDist_[0] = 0;
     sweepShown_ = true;
     sweepUntilMs_ = 0;
     sweepDbm_ = firstDbm;
@@ -166,6 +168,7 @@ class UiNotifier : public lcr::INotifier {
   bool gpsFix_ = false;
   int gpsSats_ = 0;
   lcr::Position ownPos_;
+  char testDist_[12] = {0};  // distanza dall'altra scheda nella prova di potenza ("5.0km"), vuota se non nota
   char distText_[12] = {0};  // distanza dall'ultima stazione ricevuta ("12.3km"), vuota se non nota
   const lcr::Menu* menu_ = nullptr;
   uint8_t menuCurrentId_ = 0;

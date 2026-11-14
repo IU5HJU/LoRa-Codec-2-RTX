@@ -152,6 +152,7 @@ void UiNotifier::rxStarted() {
   rxPct_ = 0;
   rxCall_[0] = 0;
   distText_[0] = 0;
+  testDist_[0] = 0;
   playing_ = false;
   haveLast_ = false;
   dirty_ = true;
@@ -188,6 +189,12 @@ void UiNotifier::beaconReceived(const char* callsign) {
 void UiNotifier::rxPosition(const lcr::Position& p) {
   if (!ownPos_.valid) return;  // senza la propria posizione non si calcola nessuna distanza
   lcr::formatDistance(distText_, sizeof(distText_), lcr::distanceKm(ownPos_, p));
+  dirty_ = true;
+}
+
+void UiNotifier::testPeerPosition(const lcr::Position& p) {
+  if (!ownPos_.valid) return;
+  lcr::formatDistance(testDist_, sizeof(testDist_), lcr::distanceKm(ownPos_, p));
   dirty_ = true;
 }
 
@@ -539,10 +546,12 @@ void UiNotifier::drawSweep() {
     char l1[24], l2[24];
     if (sweepMinPerfect_ >= 0) {
       snprintf(l1, sizeof(l1), "sente fino a %d dBm", sweepMinAnswered_);
-      snprintf(l2, sizeof(l2), "(frame 100%% a MIN)");
+      if (testDist_[0]) snprintf(l2, sizeof(l2), "100%% a MIN  %s", testDist_);  // la distanza dall'altra scheda, se l'ha mandata la posizione
+      else snprintf(l2, sizeof(l2), "(frame 100%% a MIN)");
     } else if (sweepMinAnswered_ >= 0) {
       snprintf(l1, sizeof(l1), "risponde a %d dBm", sweepMinAnswered_);
-      snprintf(l2, sizeof(l2), "ma con frame persi");
+      if (testDist_[0]) snprintf(l2, sizeof(l2), "frame persi %s", testDist_);
+      else snprintf(l2, sizeof(l2), "ma con frame persi");
     } else {
       snprintf(l1, sizeof(l1), "nessuna risposta");
       snprintf(l2, sizeof(l2), "l'altra e' in prova?");
@@ -627,6 +636,7 @@ void UiNotifier::loop(uint32_t nowMs, lcr::VoiceNode::State state, int volumeSte
   }
   if (sweepShown_ && !sweepRunning_ && nowMs > sweepUntilMs_) {
     sweepShown_ = false;
+    testDist_[0] = 0;
     dirty_ = true;
   }
   if (notice_ && nowMs > noticeUntilMs_) {

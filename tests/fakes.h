@@ -178,6 +178,12 @@ class Notifier : public lcr::INotifier {
     positions++;
     position = p;
   }
+  void testPeerPosition(const lcr::Position& p) override {
+    peerPositions++;
+    peerPosition = p;
+  }
+  int peerPositions = 0;
+  lcr::Position peerPosition;
   void txProgress(int p) override { txPercents.push_back(p); }
   void rxProgress(int p) override { rxPercents.push_back(p); }
   std::vector<int> txPercents, rxPercents;

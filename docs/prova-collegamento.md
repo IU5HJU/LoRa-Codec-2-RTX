@@ -71,3 +71,12 @@ Si esce con le stesse tre pressioni brevi del PTT che l'hanno accesa, in qualunq
 - anche mentre la scheda sta ricevendo (altre schede o rumore in banda): in prova i clic contano sempre;
 - anche a prova di potenza in corso: la prima pressione ferma la prova e conta già come primo clic, quindi bastano tre pressioni in tutto;
 - in prova il clic non apre né chiude messaggi in arrivo.
+
+## Distanza in km sul display
+
+Dal 14/11/2026 la prova di potenza porta anche la **posizione** (la stessa che viaggia nei turni di voce: GPS della T-Beam oppure posizione fissa `CFG SET QTH`), se sulla scheda che trasmette è acceso l'invio della posizione (`CFG SET POS ON`, **spento di default**: la posizione è un dato personale). Compare nel pacchetto `START` di ogni passo, nella risposta e nell'esito finale.
+
+- La scheda che riceve calcola la distanza dalla **propria** posizione (QTH o GPS), quindi per vederla servono **tutte e due le cose**: l'altra scheda ha `POS ON` e questa ha una posizione (`CFG SET QTH ...` oppure il GPS con fix).
+- Nell'esito finale sul display la distanza sta sull'ultima riga: `100% a MIN  5.0km` (potenza minima pulita) oppure `frame persi 5.0km`. Senza posizione resta `(frame 100% a MIN)` / `ma con frame persi`.
+- Per avere la distanza su **entrambe** le schede, `POS ON` e una posizione vanno impostate su tutte e due.
+
