@@ -40,7 +40,7 @@
 //   CFG GET IDMORSE              -> CFG IDMORSE=on
 //   CFG GET IDINT                -> CFG IDINT=10
 //   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-fm.md)
-//   CFG SET ROLE NODE            -> CFG OK role=node           (nodo su Wi-Fi: solo T3; i parametri sotto; vale dal riavvio)
+//   CFG SET ROLE NODE            -> CFG OK role=node           (nodo su Wi-Fi: T3 o T-Beam; i parametri sotto; vale dal riavvio)
 //   CFG SET WIFISSID <nome della rete> / CFG SET WIFIPASS <password>   (il resto della riga: possono avere spazi; NONE toglie la password)
 //   CFG SET PEER 192.168.1.51:5400  -> CFG OK peer=192.168.1.51:5400  (indirizzo e porta dell'altro nodo; NONE lo toglie)
 //   CFG SET NODEPORT 5400 / NODEID 1 / PEERID 2 / NODEKEY <32 cifre esadecimali>   (porta di ascolto, id di questo nodo, id atteso dell'altro (0 = qualunque), chiave condivisa)

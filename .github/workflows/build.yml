@@ -93,6 +93,9 @@ jobs:
       - name: Compila
         run: pio run -e ${{ matrix.env }}
 
+      - name: Controlla la tabella delle partizioni (le impostazioni non devono spostarsi)
+        run: python3 tools/check_partitions.py .pio/build/${{ matrix.env }}/partitions.bin
+
       - name: Crea i binari per il flasher
         run: |
           set -euo pipefail

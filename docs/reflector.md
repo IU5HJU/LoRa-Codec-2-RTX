@@ -1,6 +1,6 @@
 # Il reflector VoLoRa
 
-13/11/2026. **Scritto, provato sul PC** (logica con client finti, `make reflector-smoke` con veri socket UDP); **mai provato con schede**. Il perché e il confronto con il reflector YSF sono in [studio-reflector.md](studio-reflector.md).
+14/11/2026. **Provato** sul PC (logica con client finti, `make reflector-smoke` con veri socket UDP), su **un server Debian di casa** (servizio `systemd`, porta UDP 5400 inoltrata dal router, nome DDNS) e **da una rete cellulare**; una **scheda** collegata dal telefono è vista dal reflector (13/11/2026). **Ancora da provare:** la voce che passa attraverso il reflector fra schede, e l'IP pubblico dichiarato dalle schede (dal 14/11/2026). Il perché e il confronto con il reflector YSF sono in [studio-reflector.md](studio-reflector.md).
 
 Un reflector è un programma su un server che fa da centro-stella: **nodi e ripetitori si collegano a lui** e quello che uno riceve in radio lo ascoltano tutti gli altri. **Chi si collega non apre nessuna porta sul router**: scrive per primo al reflector e il reflector risponde all'indirizzo da cui è arrivato il datagramma, come nel reflector YSF. Solo il **server** deve avere una porta UDP raggiungibile da Internet (di base la 5400).
 
@@ -21,8 +21,8 @@ build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mod
 - Il file dei client ha **una riga per client** (righe vuote e che iniziano con `#` si ignorano). Lo scrive anche la pagina di amministrazione, quindi il programma deve poterlo modificare:
   ```
   # id  chiave (32 cifre esadecimali)       nominativo [nome del nodo]
-  2     000102030405060708090a0b0c0d0e0f    IZ5IOF casa
-  3     101112131415161718191a1b1c1d1e1f    IZ5IOF mare
+  2     000102030405060708090a0b0c0d0e0f    IZ5ABC casa
+  3     101112131415161718191a1b1c1d1e1f    IZ5ABC mare
   4     aabbccddeeff00112233445566778899    ripetitore-rx
   ```
   Ogni client ha **il suo id** (diverso da 0 e dall'id del reflector) e **la sua chiave** (`openssl rand -hex 16`): una chiave **non si può usare due volte**. Un radioamatore può avere **più nodi** (un hotspot, un nodo a casa e uno al mare): stesso nominativo su più righe, ognuna con il suo id e la sua chiave, e un **nome del nodo** facoltativo (una parola) per distinguerli. La stessa coppia nominativo + nome non può ripetersi.
@@ -154,4 +154,4 @@ build/vlnode --id 3 --peer-id 1000 --key <chiave> --listen 0 --peer localhost:54
 - **Solo IPv4**, e un solo modo voce per reflector.
 - Il contenuto dei pacchetti **non è cifrato** (come la radio): la firma impedisce di inserire pacchetti, non di leggerli.
 - Chi conosce la chiave di un client può fingersi quel client: una chiave per client serve a poterlo escludere senza toccare gli altri.
-- Non provato con schede, né con un reflector su Internet vero dietro il NAT di un router di casa.
+- Provato dietro il NAT di un router di casa (server e nodi, anche da rete cellulare). **Non ancora provato:** il passaggio della voce fra schede attraverso il reflector, e il comportamento con più di due schede insieme.

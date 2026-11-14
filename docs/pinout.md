@@ -7,7 +7,7 @@ Le schede supportate sono due. La mappa in codice è un file per scheda, scelto 
 |---|---|---|---|
 | LILYGO LoRa32 T3 V1.6.1 | `lora32` | [`src/board_pins_t3_v161.h`](../src/board_pins_t3_v161.h) | provata (avvio, OLED, PTT, trasmissione) |
 | LILYGO T-Beam V1.2 (AXP2101) | `tbeam` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) | **provata:** avvio, AXP2101, radio, tasto IO38, GPS e voce (4-10 novembre) |
-| LILYGO T-Beam V1.2 (AXP2101) con radio **SX1262** | `tbeam1262` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) (gli stessi pin) | **non provata.** Audio, tasto, OLED e GPS come sopra; cambia solo la radio: GPIO33 = interrupt (DIO1), **GPIO32 = BUSY**, GPIO26 non si usa. Schema dei collegamenti di IK5PWR: [VoLoRa-collegamenti-TBeam-SX1262.pdf](https://github.com/ik5pwr/lora-codec-2-rtx/blob/main/docs/VoLoRa-collegamenti-TBeam-SX1262.pdf); differenze in [tbeam-sx1262.md](tbeam-sx1262.md) |
+| LILYGO T-Beam V1.2 (AXP2101) con radio **SX1262** | `tbeam1262` | [`src/board_pins_tbeam_v12.h`](../src/board_pins_tbeam_v12.h) (gli stessi pin) | **non provata.** Audio, tasto, OLED e GPS come sopra; cambia solo la radio: GPIO33 = interrupt (DIO1), **GPIO32 = BUSY**, GPIO26 non si usa. Schema dei collegamenti di un collega: [VoLoRa-collegamenti-TBeam-SX1262.pdf](https://github.com/ik5pwr/lora-codec-2-rtx/blob/main/docs/VoLoRa-collegamenti-TBeam-SX1262.pdf); differenze in [tbeam-sx1262.md](tbeam-sx1262.md) |
 
 La sezione seguente riguarda la **T3**; quella della T-Beam è più sotto.
 

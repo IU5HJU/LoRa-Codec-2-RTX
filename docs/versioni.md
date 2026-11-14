@@ -38,8 +38,19 @@ git tag -a v0.1.0-beta.1 -m "Prima beta: la voce passa da una scheda all'altra"
 git push origin v0.1.0-beta.1
 ```
 
-Il workflow compila le due schede, crea la release di GitHub con `web_factory.bin` e `ota_update.bin` (pre-release se il tag ha un trattino) e pubblica la pagina con quella versione. Il numero si scrive **solo nel tag**: non va modificato nessun file.
+Il workflow compila tutte le schede (T3, T-Beam con SX1278 e T-Beam con SX1262), crea la release di GitHub con `web_factory.bin` e `ota_update.bin` (pre-release se il tag ha un trattino) e pubblica la pagina con quella versione. Il numero si scrive **solo nel tag**: non va modificato nessun file.
 Poi si annotano nelle [prove](prove.md) le schede e le condizioni della verifica.
+
+## Prima di una release candidate (checklist)
+
+Una rc è la versione che si pensa sia quella buona: prima di proporla si controlla, **e si annota in [prove.md](prove.md)**, che:
+
+1. `main` è verde su GitHub Actions (test sul PC, prova della pagina, prova del reflector, compilazione di **tutte** le schede) e `make test` passa in locale;
+2. i documenti riflettono il firmware (README, [guida rapida](guida-rapida.md), [indice](README.md), [firmware.md](firmware.md), [protocollo.md](protocollo.md): numero di versione del protocollo e modi, comandi `CFG`, schede supportate, stato di ogni funzione);
+3. le note di rilascio sono scritte in [note-rilascio/](note-rilascio/) con **cosa è provato su scheda e cosa no** e, se cambia il protocollo, l'avviso di aggiornare tutte le schede;
+4. è stato provato su due schede che la voce, i testi e la prova passano ancora (le prove su scheda mancanti si dicono, non si omettono).
+
+Il tag lo crea chi pubblica, a mano: i documenti non lo creano.
 
 ## Limiti per ora
 

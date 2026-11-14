@@ -330,4 +330,25 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Prova sul server stesso:** due nodi finti (`vlnode`) con le chiavi del file si collegano e il testo di uno arriva all'altro con il flag "ripetuto"; il reflector scrive `client ... collegato` per ciascuno.
 - **Prova da un'altra rete:** un portatile collegato a internet con il telefono (altro indirizzo pubblico) ha raggiunto il reflector per nome (`--peer nome:5400`, `--listen 0`: porta locale scelta dal sistema, **nessuna porta aperta** su quella rete): `collegamento ATTIVO`, una sfida, una autenticazione, nessuna firma errata, testo mandato.
 - Il confronto fra l'indirizzo del nome e quello con cui il server esce su Internet (`curl -4 ifconfig.me` sul server) è risultato uguale: nessuna asimmetria dei percorsi.
-- Non provato: schede vere (nodo T-Beam/T3, RX del ripetitore) collegate al reflector, e il passaggio della voce.
+- Non provato in questa prova: schede vere collegate al reflector e il passaggio della voce (la scheda collegata è nella prova seguente).
+
+### 13/11/2026, casa, IU5HJU (reflector con una scheda vera, pagina di amministrazione)
+
+- Una **scheda in ruolo nodo**, collegata al Wi-Fi del telefono (altra rete, altro indirizzo pubblico), si collega al reflector sul server di casa: l'operatore riferisce che il reflector la vede collegata e che "tutto fila liscio".
+- **Pagina di amministrazione** provata da telefono e dai PC di casa: elenco dei collegati, registrazione di un nodo nuovo (chiave generata dalla pagina, id assegnato dal server), più nodi per lo stesso nominativo, rimozione dalla pagina e dal file, ricaricamento del file con `SIGHUP`, file non valido ignorato senza perdere l'elenco. L'operatore riferisce che funzionano.
+- Aggiornamento del programma sul server con `tools/aggiorna-reflector.sh` (ferma il servizio, copia, riavvia).
+- Non annotati: i contatori del reflector durante la prova e il giudizio sulla voce, perché **la voce attraverso il reflector non è stata provata**.
+
+### 13/11/2026, casa, IU5HJU (identificativo del nodo in Morse FM)
+
+- L'identificativo del nodo ascoltato con un ricevitore FM: **si ascolta bene**, ma la portante non era continua (compariva un attimo prima di ogni tono). Corretto lo stesso giorno: portante iniziale, portante nelle pause e coda ([studio-identificativo-fm.md](studio-identificativo-fm.md)). **Da riprovare** con il firmware corretto, e da misurare l'eventuale colpo fra tono e pausa.
+
+### 13/11/2026, casa, IU5HJU (prova di potenza: primi esiti sul display)
+
+- Il display del trasmettitore con l'altra scheda in ascolto normale mostra "POTENZA: finita / NESSUNA", ma le righe sotto si **sovrapponevano**: corretto (ogni caso ha le sue righe, entro i 21 caratteri). La scheda in ascolto normale mostrava invece "PROVA 100%": ora **ignora** le prove e le ascolta solo chi ha la prova accesa.
+- Una scheda senza nominativo non accende più la prova e non trasmette mai in prova.
+- **Non ancora provata**: la prova completa fra due schede in aria, con l'esito sul display di entrambe.
+
+### 14/11/2026, casa, IU5HJU (collega collegato da rete cellulare: indirizzo)
+
+- Un collega collegato da rete cellulare: il reflector mostrava l'indirizzo **interno del router** di casa (`192.168.1.254`) e non quello pubblico del collega. Causa: il router riscrive l'origine dei pacchetti prima di passarli al server, e il server non può ricostruirla. Soluzione scritta: la scheda **dichiara il proprio indirizzo pubblico** al reflector (colonna "IP del Nodo" della pagina di amministrazione). **Da provare** con il firmware nuovo sulla scheda del collega.

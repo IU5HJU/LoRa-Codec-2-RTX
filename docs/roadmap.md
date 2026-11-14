@@ -2,7 +2,23 @@
 
 > **Nota del 12/11/2026 sui nomi dei profili.** Questo documento è stato scritto con i nomi di allora: *Standard* (Codec2 1200, SF8), *Messaggio* e *Qualità* (Codec2 3200, SF7). Da quel giorno si chiamano **Range** (1200, SF8, lettera R), **Messaggio** (M) e **Standard** (3200, SF7, lettera S). Le parti storiche non sono state riscritte.
 
-Aggiornato il 10 novembre 2026 (sezione "Stato al 10/11/2026" qui sotto; le decisioni dell'8 novembre sono più sotto).
+Aggiornato il 14 novembre 2026 (sezione "Stato al 14/11/2026" qui sotto; sezione "Stato al 10/11/2026" qui sotto; le decisioni dell'8 novembre sono più sotto).
+
+## Stato al 14/11/2026: verso la prima release candidate
+
+**Fatto dalla beta.2** (nell'ordine in cui è arrivato; dettagli e prove in [prove.md](prove.md)): testi brevi e casella dei messaggi, MeshCom, ripetitore con due T3 (identificativo anche in Morse FM, comandi firmati del sysop), profili Standard (3200) / Range (1200) / Messaggio, shift libero da 0 a 10 MHz, nodo Internet su Wi-Fi, reflector (pagina di amministrazione con password, pagina pubblica, IP del nodo), prova di potenza, aggiornamento dalla pagina che conserva le impostazioni, firmware per la T-Beam con radio SX1262.
+
+**Prima della release candidate, da fare o da confermare su schede** (nessuna di queste cose blocca la rc, ma le note di rilascio devono dire che non sono provate):
+
+1. Prova di potenza **in aria fra due schede**, con l'esito sul display di entrambe.
+2. **Voce attraverso il reflector** fra schede (finora è provato il collegamento, non la voce).
+3. **T-Beam con radio SX1262** su una scheda vera: la radio parte? dialoga con le schede SX1278? ([tbeam-sx1262.md](tbeam-sx1262.md)).
+4. **Aggiornamento dalla pagina senza perdere le impostazioni**, confermato su una scheda.
+5. **Ripetitore** a banco ([banco-ripetitore.md](banco-ripetitore.md)) e **shift** con un ripetitore vero.
+6. **IP pubblico** dichiarato dalle schede, visto nella pagina del reflector.
+7. Misure sul campo (distanze lunghe, mezzi in movimento): restano per la stabile.
+
+La checklist per proporre una rc è in [versioni.md](versioni.md); la bozza delle note è in [note-rilascio/v0.1.0-rc.1.md](note-rilascio/v0.1.0-rc.1.md). **Tag e release li crea chi pubblica**, a mano.
 
 ## Decisione del 12/11/2026: lo Standard passa a Codec2 3200, il 1200 resta come Range
 

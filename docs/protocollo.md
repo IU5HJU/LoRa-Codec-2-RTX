@@ -33,7 +33,7 @@ Sintesi in tre pagine, da girare a chi lo chiede: [formato-pacchetto.pdf](format
 ## Formato del pacchetto
 
 ```
-byte 0     versione (4 bit alti, = 2) | modo (4 bit bassi: 1 = Codec2 1200 bps, 2 = prova di collegamento, 3 = risposta alla prova, 4 = Codec2 3200 bps)
+byte 0     versione (4 bit alti, = 2) | modo (4 bit bassi: 1 = Codec2 1200 bps, 2 = prova di collegamento, 3 = risposta alla prova, 4 = Codec2 3200 bps, 5 = comando del sysop, 6 = ripetitore occupato, 7 = testo)
 byte 1-2   ID di sessione (casuale per ogni PTT), big endian
 byte 3     numero di sequenza (0..127)
 byte 4     flag

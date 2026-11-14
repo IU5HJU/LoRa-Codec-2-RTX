@@ -17,6 +17,10 @@ I pin e le differenze tra le due sono in [pinout.md](pinout.md).
 **Stato (10/11/2026).** Compila con PlatformIO su GitHub Actions. **Provato sulle schede** (T3 e T-Beam): voce a turni nei tre profili (con i nomi di allora: Standard, Messaggio, Qualità; dal 12/11/2026 Range, Messaggio, Standard), microfono e altoparlante, menu a bordo, configurazione dal Wi-Fi della scheda, volume con guadagno, posizione e GPS, impostazioni salvate, pagina web di installazione e configurazione, prova di collegamento. **Ancora da misurare:** distanze lunghe, mezzi in movimento. **CPU del Codec2 3200 misurata:** codifica 10,0 ms e decodifica 13,3 ms per frame da 40 ms ([codec2.md](codec2.md)).
 
 **Profili (12/11/2026).** Lo **Standard** è il Codec2 3200 (SF7/BW250), il profilo di base. Il **Range** (Codec2 1200, SF8/BW250) resta nel firmware per le prove di collegamento in condizioni difficili, quando serve quel poco in più di portata (circa 2,5 dB teorici, non misurati) a discapito della qualità vocale. Motivazione e decisione in [roadmap.md](roadmap.md).
+**Aggiornamento (14/11/2026).** Dalla beta.2 sono arrivati: testi e casella dei messaggi, MeshCom, ripetitore e sue funzioni, shift libero da 0 a 10 MHz, nodo Internet e reflector (con l'indirizzo pubblico che la scheda dichiara al reflector, `ifconfig.me`, spegnibile in `src/user_config.h`), identificativo periodico con Morse in FM, **prova di potenza** (il PTT con la prova accesa), aggiornamento dalla pagina senza cancellare le impostazioni e il firmware per la **T-Beam con radio SX1262** ([tbeam-sx1262.md](tbeam-sx1262.md)). Cosa è provato su scheda e cosa no è nella tabella "Stato" del [README](../README.md).
+
+**Spazio del programma e partizioni (14/11/2026).** Con la tabella delle partizioni di base il programma poteva essere al massimo di **1,25 MB** e il firmware ne usava già il **99,2%** sulla T3 (1.299.765 byte su 1.310.720): quello per la T-Beam con radio SX1262 ci è uscito di 141 byte e la compilazione è fallita. Da allora si usa la tabella **`min_spiffs`** del framework (`board_build.partitions` in `platformio.ini`): il programma può arrivare a **1,875 MB**. **Le impostazioni (partizione `nvs`, 0x9000) e l'avvio (`otadata`, 0xE000) restano dove erano**, quindi aggiornare dalla pagina non le cancella: `tools/check_partitions.py` lo controlla a ogni compilazione in GitHub Actions e la fa fallire se una tabella futura le spostasse. Conseguenza: **il flasher della pagina scrive anche la tabella nuova** (lo fa già, sono i quattro pezzi); non scrivere solo `ota_update.bin` su una scheda con la tabella vecchia, perché il programma può essere più grande dei 1,25 MB di allora.
+
 Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protocollo
 (`lib/voicecore/`) è testata sul PC. Il workflow `.github/workflows/build.yml` produce
 `web_factory.bin` e `ota_update.bin` come artefatti di ogni esecuzione.
@@ -30,7 +34,7 @@ Problemi trovati e risultati sono in [prove.md](prove.md). La logica del protoco
 | `src/codec2_adapter.*` | Codec2 a 1200 bps o a 3200 bps (due blocchi da 20 ms per frame) (`ICodec`) |
 | `src/wifi_config.*`, `src/wifi_page.h` | Configurazione dal Wi-Fi della scheda: rete con password salvata, server asincrono, pagina su 192.168.4.1 |
 | `src/gps.*`, `lib/voicecore/nmea.*`, `position.*` | GPS della T-Beam (letture NMEA), posizione, QTH e distanza |
-| `lib/voicecore/profile.*`, `menu.*` | Profili (Standard, Messaggio, Qualità) e menu a bordo |
+| `lib/voicecore/profile.*`, `menu.*` | Profili (Standard, Range, Messaggio) e menu a bordo |
 | `lib/voicecore/morse.*` | Segnali "MSG" (voce) e "SMS" (testo) in Morse all'arrivo di un messaggio |
 | `lib/voicecore/meshcom_frame.h`, `text_template.*`, `choice_picker.*` | Escursione MeshCom: frame di testo (codifica, decodifica, FCS), segnaposti `%C %M %F` nei testi, scelta di testo e destinatario dal menu |
 | `lib/voicecore/inbox.*` | Casella dei messaggi ricevuti: un solo messaggio (voce o testo), cancellato dopo l'ascolto |
@@ -65,7 +69,7 @@ Il workflow di GitHub Actions compila a ogni modifica. Per averlo col **proprio 
 1. Fai un **fork** del repository su GitHub.
 2. Nel fork modifica `src/user_config.h` e cambia `#define LCR_CALLSIGN "N0CALL"` con il tuo nominativo (puoi farlo dal sito, con il pulsante di modifica del file). Se è la prima volta che usi Actions nel fork, abilitale dalla scheda Actions.
 3. Aspetta che l'esecuzione sul tuo ramo diventi verde (circa 2-3 minuti).
-4. Aprila e scarica l'artefatto della tua scheda, **`firmware-t3-v161`** (T3) oppure **`firmware-tbeam-v12`** (T-Beam). Serve essere loggati su GitHub; scade dopo circa 90 giorni. Contiene:
+4. Aprila e scarica l'artefatto della tua scheda, **`firmware-t3-v161`** (T3), **`firmware-tbeam-v12`** (T-Beam con radio SX1278) oppure **`firmware-tbeam-v12-sx1262`** (T-Beam con radio SX1262). Serve essere loggati su GitHub; scade dopo circa 90 giorni. Contiene:
    - `web_factory.bin`: immagine completa, da scrivere all'indirizzo `0x0` (prima installazione). **Cancella le impostazioni salvate** (nominativo, frequenze, Wi-Fi, chiavi), perché l'immagine riempie di `0xFF` anche la zona dove stanno; per **aggiornare tenendole** si scrive solo il programma (`ota_update.bin` a `0x10000`). Il flasher della pagina web (dal 13/11/2026) scrive soltanto i quattro pezzi (bootloader, tabella delle partizioni, avvio, programma) e le impostazioni restano; prima di quella data ogni aggiornamento dalla pagina le cancellava;
    - `ota_update.bin`: solo l'applicazione, per gli aggiornamenti futuri;
    - `SHA256SUMS`: somme di controllo.
@@ -99,7 +103,7 @@ Se fai un fork con un nominativo compilato in `src/user_config.h`, non usare i b
    ~/esp/bin/esptool.py --chip esp32 --port /dev/ttyACM0 --baud 460800 write_flash 0x0 web_factory.bin
    ```
 5. **Seriale:** `~/esp/bin/python -m serial.tools.miniterm --rts 0 --dtr 0 /dev/ttyACM0 115200` (esci con Ctrl+]).
-   Dopo l'avvio compaiono le righe `[avvio] ...` e `IU5HJU pronto, 433.900 MHz, SF8 BW250`.
+   Dopo l'avvio compaiono le righe `[avvio] ...` e `IU5HJU pronto, 433.900 MHz, SF7 BW250` (col profilo Standard di base).
 
 Il comando `chip_id` e la scrittura sono entrati in modalità di caricamento da soli, senza toccare pulsanti.
 
@@ -137,7 +141,7 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | Comando | Risposta | Note |
 |---|---|---|
 | `CFG GET` | `CFG callsign=IU5HJU freq=433.900 freqmsg=433.900 power=10 volume=7 micfloor=-60 profile=std board=t3 reboot=0 test=0` | `reboot=1` se i valori salvati differiscono da quelli in uso |
-| `CFG VERSION` | `CFG VERSION fw=v0.1.0-beta.2 board=t3 proto=2` | versione del firmware (da `git describe`, "dev" se compilato senza git), scheda e **versione del protocollo** ([versioni.md](versioni.md)); la pagina web la confronta con quella pubblicata |
+| `CFG VERSION` | `CFG VERSION fw=v0.1.0-beta.2 board=t3 proto=2` | versione del firmware (da `git describe`, "dev" se compilato senza git), scheda e **versione del protocollo** ([versioni.md](versioni.md)); la pagina web la confronta con quella pubblicata. Sulla T-Beam con radio SX1262 in coda c'è `radio=SX1262`. |
 | `CFG SET CALLSIGN iu5hju` | `CFG OK callsign=IU5HJU` | solo A-Z, 0-9 e `/`, massimo 8 caratteri |
 | `CFG SET FREQ 433.900` | `CFG OK freq=433.900` | MHz, da 430.000 a 440.000 (70 cm); **segnaposto**: scegli il canale col band plan IARU R1 / ARI. **Le frequenze di Range e Messaggio che erano uguali a questa la seguono** (di base partono tutte uguali); quelle cambiate a mano con `FREQMSG` e `FREQRANGE` restano (dal 13/11/2026) |
 | `CFG SET POWER 10` | `CFG OK power=10` | dBm, da 2 a 17 |
@@ -159,6 +163,14 @@ Su `pio device monitor` (115200 baud) si scrivono righe che iniziano con `CFG`; 
 | `CFG MIC MEASURE` | `CFG OK mic misura in corso...`, dopo 3 s `CFG MIC fondo=-61 min=-63 max=-58 frames=75` | misura il fondo (stare in silenzio): `fondo` è il livello sotto cui sta il 90% dei campioni. Non salva da solo: lo fa la pagina con `CFG SET MICFLOOR` |
 | `CFG TEST AUDIO` | `CFG OK audio prova in corso...`, poi `CFG AUDIO f=500 base=-90.1 tone=-52.3` (e 1000, 2000 Hz) e `CFG AUDIO fine` | suona tre toni a volume basso e fisso e misura il microfono alla frequenza del tono ([verifica-hardware-audio.md](verifica-hardware-audio.md)); blocca la scheda per circa 3,5 s |
 | `CFG TEST ON` / `CFG TEST OFF` | `CFG OK test=on` | prova di collegamento = prova di potenza ([prova-collegamento.md](prova-collegamento.md)), attivabile anche con tre clic veloci sul PTT; non viene salvata, all'accensione è sempre spenta |
+| `CFG SET ROLE RPTRX` | `CFG OK role=rptrx` | **ruolo della scheda**: `OFF` (stazione normale), `RPTRX` / `RPTTX` (scheda RX / TX del [ripetitore](ripetitore.md), solo T3), `NODE` (nodo Internet su Wi-Fi, T3 o T-Beam: [banco-nodo.md](banco-nodo.md)). Vale dal riavvio |
+| `CFG SET FREQOUT 434.400` | `CFG OK freqout=434.400` | frequenza di uscita del ripetitore (scheda TX), 430.000-440.000 |
+| `CFG SET MONITOR ON` / `CFG GET MONITOR` | `CFG OK monitor=on` | solo scheda RX del ripetitore: altoparlante per ascoltare il traffico; vale dal riavvio |
+| `CFG SET SYSOP IU5HJU` / `SYSOPKEY <32 cifre esadecimali>` / `SYSOPMODE ON`, `CFG GET SYSOP` | `CFG OK sysop=IU5HJU` | nominativo e chiave del sysop che comanda il ripetitore (la chiave non si rilegge mai) e modo Sysop del menu: [ripetitore.md](ripetitore.md). Vale dal riavvio |
+| `CFG SET IDINT 10` / `CFG GET IDINT` | `CFG OK idint=10` | ripetitore e nodo: ogni quanti minuti (1-10, di base 10) la scheda TX manda l'identificativo. Vale dal riavvio |
+| `CFG SET IDMORSE ON` / `CFG GET IDMORSE` | `CFG OK idmorse=on` | ripetitore e nodo: dopo l'identificativo in testo anche il **Morse a tono in FM**, per chi non ha le schede LoRa (di base acceso): [studio-identificativo-fm.md](studio-identificativo-fm.md) |
+| `CFG SET WIFISSID <rete>` / `WIFIPASS <password>` / `NODEPORT 5400` / `NODEID 4` / `PEERID 1000` / `NODEKEY <32 cifre esadecimali>`, `CFG GET NODE` | `CFG OK ...`, `CFG NODE ssid=casa pass=set ip=... id=4 peerid=1000 key=set` | collegamento a Internet del nodo e della scheda RX del ripetitore, insieme a `PEER`: rete Wi-Fi, porta locale, id di questa scheda (assegnato dal sysop del reflector), id dell'altro nodo o del reflector e chiave. La password e la chiave non si rileggono. Vale dal riavvio: [reflector.md](reflector.md) |
+| `CFG SET FREQMC 433.175` / `MCSSID 99` / `MCWINDOW 300`, `CFG GET MC` | `CFG OK freqmc=433.175` | escursione MeshCom: frequenza delle reti di testo, SSID del tuo nominativo in rete (0-99) e secondi di ascolto dopo l'invio (30-1800): [meshcom-testo.md](meshcom-testo.md) |
 | `CFG RESET` | `CFG OK reset` | cancella i valori salvati e torna a quelli di `user_config.h` |
 | `CFG REBOOT` | `CFG OK reboot` | riavvia la scheda |
 

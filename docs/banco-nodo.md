@@ -3,7 +3,7 @@
 12/11/2026. Primo passo del collegamento a Internet ([studio-nodo-internet.md](studio-nodo-internet.md)): due schede (T3 o T-Beam) in ruolo **NODE**, sullo stesso router, che si portano a vicenda i pacchetti LoRa con UDP firmato. **Scritto e provato sul PC** (test della logica e due processi `vlnode` su socket UDP veri). **Eseguito su due schede il 12/11/2026** (T-Beam e T3, firmware `808bc07`): il collegamento sale e i pacchetti passano dalla rete alla radio; esiti in [prove.md](prove.md). Decisioni prese: UDP con firma, due frequenze diverse, solo profilo Standard, ruolo `NODE` a sé.
 
 ## Cosa serve
-- **Due schede** (due T3, due T-Beam o una di ciascuna) con l'ultimo firmware (artefatto `firmware-t3-v161` o `firmware-tbeam-v12` di GitHub Actions), antenne a 433 MHz **collegate**; sulla T3 microSD tolta.
+- **Due schede** (due T3, due T-Beam o una di ciascuna) con l'ultimo firmware (artefatto `firmware-t3-v161`, `firmware-tbeam-v12` o `firmware-tbeam-v12-sx1262` di GitHub Actions), antenne a 433 MHz **collegate**; sulla T3 microSD tolta.
 - Un router Wi-Fi a 2,4 GHz **senza isolamento dei client**, e le due T3 sulla stessa rete (indirizzi IP noti: assegna due indirizzi fissi al router, oppure leggili dal display di ciascun nodo).
 - Per la prova in radio: **due T3 stazione** normali (o la prova di collegamento, senza audio), potenza minima.
 - Facoltativo: un PC sulla stessa rete con `make vlnode` (nodo finto, vedi sotto).

@@ -2,7 +2,7 @@
 
 *(già LoRa-Codec-2-RTX fino all'11/11/2026: se cerchi il vecchio nome, sei nel posto giusto.)*
 
-Messaggi vocali broadcast a turni (stile QSO) tra schede LilyGo a 433 MHz (LoRa32 T3 V1.6.1 e T-Beam V1.2), per radioamatori.
+Messaggi vocali broadcast a turni (stile QSO) tra schede LilyGo a 433 MHz (LoRa32 T3 V1.6.1 e T-Beam V1.2, quest'ultima anche con il modulo radio SX1262), per radioamatori.
 La voce è compressa con Codec2 e trasmessa con LoRa, con tre **profili** da scegliere dal menu della scheda:
 
 | Profilo | Radio | Codec2 | Uso |
@@ -27,11 +27,22 @@ Funzionamento in breve:
 
 > **Nuovo? Parti dalla [guida rapida](docs/guida-rapida.md).** Indice della documentazione: [docs/README.md](docs/README.md).
 
+## Oltre alla voce a turni
+
+Sulle stesse schede, dalla beta.2 (09/11/2026) a oggi (14/11/2026):
+
+- **Testi brevi** (stile SMS, fino a 150 caratteri), **casella dei messaggi**, **MeshCom** (escursione a tempo sulle reti di testo a 433,175 MHz) e **posizione/GPS**: [docs/meshcom-testo.md](docs/meshcom-testo.md), [docs/protocollo.md](docs/protocollo.md).
+- **Ripetitore con due T3** (RX e TX) con identificativo periodico, anche in **Morse a tono in FM** per chi non ha le schede LoRa, e comandi firmati del sysop: [docs/ripetitore.md](docs/ripetitore.md).
+- **Shift** per operare via ripetitore, libero da 0 a 10 MHz in positivo o negativo (come l'offset di una radio): [docs/firmware.md](docs/firmware.md).
+- **Nodo Internet** (due schede su Wi-Fi che si portano i pacchetti, UDP firmato) e **reflector**: un server a cui si collegano nodi e ripetitori **senza aprire porte sul router**, con pagina di amministrazione (password) e pagina pubblica di sola lettura: [docs/reflector.md](docs/reflector.md), [docs/banco-nodo.md](docs/banco-nodo.md).
+- **Prova di potenza** fra due schede: cerca da sola la potenza minima con cui si sentono, e l'esito compare sul display di entrambe: [docs/prova-collegamento.md](docs/prova-collegamento.md).
+- **T-Beam con radio SX1262** (la stessa scheda col modulo LoRa diverso dall'SX1278): firmware dedicato, scritto ma **non ancora provato** su una scheda: [docs/tbeam-sx1262.md](docs/tbeam-sx1262.md).
+
 ## Per provare il firmware
 
 **Occorrente per ogni stazione:**
 
-- scheda **LILYGO LoRa32 T3 V1.6.1** oppure **T-Beam V1.2 (AXP2101)**, a 433 MHz, con **antenna a 433 MHz** (SMA);
+- scheda **LILYGO LoRa32 T3 V1.6.1** oppure **T-Beam V1.2 (AXP2101)**, a 433 MHz, con **antenna a 433 MHz** (SMA); sulla T-Beam guarda la sigla sul modulo radio (**SX1278** o **SX1262**): servono firmware diversi ([docs/tbeam-sx1262.md](docs/tbeam-sx1262.md));
 - un **pulsante PTT** esterno tra GPIO0 e massa;
 - per la voce: microfono **INMP441**, amplificatore **MAX98357A** e altoparlante 8 Ω 3 W (per il solo test radio senza audio non servono);
 - schema dei collegamenti in [docs/pinout.md](docs/pinout.md) (con le immagini dei collegamenti di T3 e T-Beam) e [docs/audio.md](docs/audio.md).
@@ -41,9 +52,9 @@ Funzionamento in breve:
 **Passi:**
 
 1. **Dal browser (il modo più semplice, anche senza Linux).** Apri la [pagina di installazione](https://iu5hju.github.io/VoLoRa/) con Chrome, Edge od Opera, collega la scheda con il cavo USB, scegli la **versione dal menu a tendina** (quella proposta va bene per chi non sa quale scegliere: stabile, o beta finché non ce n'è una) e premi "Installa il firmware". Poi, nel passo 2 della stessa pagina, imposta **nominativo**, frequenza, potenza e volume: restano salvati nella scheda. Il firmware pubblico ha `N0CALL` e **non trasmette** (riceve soltanto) finché non imposti il tuo nominativo. La configurazione si può fare anche **senza cavo e senza PC**: dal menu della scheda (volume lungo, voce "Wi-Fi") la scheda crea una rete con la sua pagina su `192.168.4.1` ([docs/firmware.md](docs/firmware.md)).
-2. **In alternativa.** Scarica i binari dall'esecuzione di GitHub Actions (artefatto `firmware-t3-v161` o `firmware-tbeam-v12`, serve essere loggati; contengono `web_factory.bin` e `ota_update.bin`) e caricali con `web_factory.bin` all'indirizzo `0x0` ([docs/firmware.md](docs/firmware.md), anche per Windows), oppure compila in locale con PlatformIO. Il nominativo non richiede di ricompilare: si imposta dalla pagina o con `CFG SET CALLSIGN` e resta salvato. Se preferisci un firmware con il tuo nominativo già dentro: fai un **fork**, cambia `LCR_CALLSIGN` in `src/user_config.h` dal sito GitHub e lascia compilare Actions (non usare binari di altri che ne contengono uno diverso). Dalla seriale si cambia tutto con i comandi `CFG` ([docs/firmware.md](docs/firmware.md)).
+2. **In alternativa.** Scarica i binari dall'esecuzione di GitHub Actions (artefatto `firmware-t3-v161`, `firmware-tbeam-v12` o, per la T-Beam col modulo SX1262, `firmware-tbeam-v12-sx1262`; serve essere loggati; contengono `web_factory.bin` e `ota_update.bin`) e caricali con `web_factory.bin` all'indirizzo `0x0` ([docs/firmware.md](docs/firmware.md), anche per Windows; **così le impostazioni salvate si cancellano**, la pagina invece le conserva negli aggiornamenti), oppure compila in locale con PlatformIO. Il nominativo non richiede di ricompilare: si imposta dalla pagina o con `CFG SET CALLSIGN` e resta salvato. Se preferisci un firmware con il tuo nominativo già dentro: fai un **fork**, cambia `LCR_CALLSIGN` in `src/user_config.h` dal sito GitHub e lascia compilare Actions (non usare binari di altri che ne contengono uno diverso). Dalla seriale si cambia tutto con i comandi `CFG` ([docs/firmware.md](docs/firmware.md)).
 3. **Frequenza.** Il valore predefinito è un **segnaposto**: scegli il canale con il band plan IARU R1 / ARI. Le stazioni che si ascoltano devono avere gli **stessi** parametri LoRa e la stessa frequenza.
-4. **Prova di collegamento (senza microfono né altoparlante).** Su due schede attiva la prova (tre pressioni veloci del PTT, il pulsante nella pagina o `CFG TEST ON`) e premi il PTT: la scheda ricevente confronta una sequenza nota bit per bit, mostra l'esito sul display e risponde. Dettagli in [docs/prova-collegamento.md](docs/prova-collegamento.md).
+4. **Prova di potenza (senza microfono né altoparlante).** Su **entrambe** le schede attiva la prova (tre pressioni brevi del PTT, il pulsante nella pagina o `CFG TEST ON`; serve un nominativo vero), poi su una premi il PTT: la scheda ripete la prova di collegamento (sequenze note confrontate bit per bit) dalla potenza massima alla minima, un dBm alla volta, e l'altra risponde ogni volta. Alla fine **tutte e due mostrano sul display** la potenza minima con cui si sentono. Una scheda con la prova spenta non ascolta le prove. Dettagli in [docs/prova-collegamento.md](docs/prova-collegamento.md).
 
 ## Per chi collabora
 
@@ -59,11 +70,11 @@ Copyright (C) 2026 IU5HJU. Questo programma è software libero, distribuito sott
 La scelta deriva dalla libreria Codec2 per ESP32 usata (GPL-3.0); dettagli sulle librerie in
 [docs/firmware.md](docs/firmware.md).
 
-Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Taratura del microfono, misure e come adattarla: [docs/taratura-microfono.md](docs/taratura-microfono.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Registro delle prove: [docs/prove.md](docs/prove.md). Prova di collegamento: [docs/prova-collegamento.md](docs/prova-collegamento.md). Verifica del montaggio audio con una sola scheda: [docs/verifica-hardware-audio.md](docs/verifica-hardware-audio.md). Ricezione e decodifica con un SDR: [docs/sdr.md](docs/sdr.md). Numerazione delle versioni (beta, rc, stabile): [docs/versioni.md](docs/versioni.md). Alimentazione e batteria della T-Beam: [docs/alimentazione.md](docs/alimentazione.md). Schermate dell'OLED: [docs/display.md](docs/display.md). Modi del Codec2 e confronto: [docs/codec2.md](docs/codec2.md). Profilo Messaggio: [docs/modo-messaggio.md](docs/modo-messaggio.md). Testi su reti a pacchetto (MeshCom): [docs/meshcom-testo.md](docs/meshcom-testo.md). Il ripetitore: [docs/ripetitore.md](docs/ripetitore.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
+Protocollo e parametri: [docs/protocollo.md](docs/protocollo.md). Audio e collegamenti: [docs/audio.md](docs/audio.md). Taratura del microfono, misure e come adattarla: [docs/taratura-microfono.md](docs/taratura-microfono.md). Firmware e primo avvio: [docs/firmware.md](docs/firmware.md). Decisioni e prossimi passi: [docs/roadmap.md](docs/roadmap.md). Registro delle prove: [docs/prove.md](docs/prove.md). Prova di collegamento: [docs/prova-collegamento.md](docs/prova-collegamento.md). Verifica del montaggio audio con una sola scheda: [docs/verifica-hardware-audio.md](docs/verifica-hardware-audio.md). Ricezione e decodifica con un SDR: [docs/sdr.md](docs/sdr.md). Numerazione delle versioni (beta, rc, stabile): [docs/versioni.md](docs/versioni.md). Alimentazione e batteria della T-Beam: [docs/alimentazione.md](docs/alimentazione.md). Schermate dell'OLED: [docs/display.md](docs/display.md). Modi del Codec2 e confronto: [docs/codec2.md](docs/codec2.md). Profilo Messaggio: [docs/modo-messaggio.md](docs/modo-messaggio.md). Testi su reti a pacchetto (MeshCom): [docs/meshcom-testo.md](docs/meshcom-testo.md). Il ripetitore: [docs/ripetitore.md](docs/ripetitore.md). Nodo Internet e reflector: [docs/reflector.md](docs/reflector.md), [docs/banco-nodo.md](docs/banco-nodo.md). La T-Beam con radio SX1262: [docs/tbeam-sx1262.md](docs/tbeam-sx1262.md). Progetti simili e scelte che ne derivano: [docs/progetti-simili.md](docs/progetti-simili.md).
 
 ## Stato
 
-Aggiornato il 12/11/2026.
+Aggiornato il 14/11/2026.
 
 | Parte | Stato |
 |---|---|
@@ -80,7 +91,12 @@ Aggiornato il 12/11/2026.
 | Posizione (spenta di default), QTH fisso, distanza dalla stazione ricevuta; GPS sulla T-Beam | **provati** (fix con 4 satelliti) |
 | Impostazioni nella scheda e comandi `CFG` | fatti e provati; salvate in NVS |
 | Pagina web di installazione e configurazione (GitHub Pages, Web Serial) con menu delle versioni | **online** e provata |
-| Prova di collegamento (frame noti, confronto bit per bit) | fatta e **provata sulle schede** |
+| Prova di collegamento (frame noti, confronto bit per bit), dal 13/11/2026 **prova di potenza** dalla massima alla minima con l'esito sul display di entrambe le schede | la prova con frame noti è **provata sulle schede**; la prova di potenza è **provata sul PC** (le due schede vengono simulate) e sul display di una scheda, **da provare in aria fra due schede** |
+| **Nodo Internet** (due schede su Wi-Fi, UDP firmato con HMAC) con identificativo periodico anche in Morse FM | **provato sulle schede** (12/11/2026: radio, rete, riavvio, router spento, conversazione lunga); il Morse in FM ascoltato con un ricevitore FM (13/11/2026, la portante è stata resa continua dopo la prova, da riprovare) |
+| **Reflector** (server `vlreflector`, pagina di amministrazione con password, pagina pubblica, IP del nodo) | **provato** sul PC, su un server Debian di casa e da una rete cellulare; una scheda collegata dal telefono è vista dal reflector (13/11/2026); la **voce attraverso il reflector** e l'IP pubblico dichiarato dalle schede sono **da provare** ([docs/reflector.md](docs/reflector.md)) |
+| **Shift** libero da 0 a 10 MHz (direzione e scostamento) per operare via ripetitore | scritto, provato sul PC e dalla pagina; **non ancora provato con un ripetitore** |
+| **T-Beam con radio SX1262** | firmware **scritto e compilato** da GitHub Actions; **mai provato su una scheda** ([docs/tbeam-sx1262.md](docs/tbeam-sx1262.md)) |
+| Aggiornamento dalla pagina **senza perdere le impostazioni** (dal 13/11/2026) | corretto e coperto da un test; **da confermare su una scheda** |
 | Ricezione con SDR (NESDR, GNU Radio): decodifica e ascolto in tempo reale, anche in Standard | fatta e **provata** in Range, in Messaggio e in Standard (provata il 10/11/2026 con i vecchi nomi: Standard, Messaggio, Qualità) |
 | Misure sul campo, distanze lunghe, mezzi in movimento | **da fare** |
 | **Ripetitore con due T3** (RX e TX collegate con quattro fili): ripetizione della voce e del testo, messaggi vocali in coda, annuncio di occupato, identificativo periodico in testo e in Morse FM, comandi firmati del sysop ([docs/ripetitore.md](docs/ripetitore.md)) | scritto, **provato sul PC** e compilato da GitHub Actions; **mai provato sulle schede**: prima la prova a banco ([docs/banco-ripetitore.md](docs/banco-ripetitore.md)) |
@@ -91,6 +107,7 @@ Aggiornato il 12/11/2026.
 ```
 lib/voicecore/   logica del protocollo, indipendente dalla scheda
 src/             firmware per le schede supportate e impostazioni dell'operatore (user_config.h)
+tools/           programmi per il PC: reflector (vlreflector) e nodo finto (vlnode), ricevitore SDR, pagina del sito
 tests/           test sul PC con radio, codec e audio simulati
 docs/            protocollo, audio, pinout (T3 V1.6.1 e T-Beam V1.2), progetti simili
 ```
