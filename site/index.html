@@ -257,7 +257,9 @@
         <input id="qthlat" inputmode="decimal" placeholder="43.7696" aria-label="Latitudine in gradi" disabled>
         <input id="qthlon" inputmode="decimal" placeholder="11.2558" aria-label="Longitudine in gradi" disabled>
         <button id="qthclear" type="button" class="secondary" disabled>Cancella</button>
+        <button id="qthbrowser" type="button" class="secondary" disabled>Usa la posizione del browser</button>
       </div>
+      <p class="hint" id="qthgeo" hidden></p>
       <p class="hint" id="qthhint">In gradi decimali: positivi a nord e a est, negativi a sud e a ovest (per esempio 43.7696 e 11.2558). Si può scrivere anche con la virgola. Serve <strong>anche senza trasmetterla</strong>, per vedere la distanza dalle stazioni che trasmettono la loro. Lascia vuoti i due campi per non avere nessuna posizione fissa.</p>
 
       <label for="gps">GPS (solo T-Beam)</label>
@@ -635,15 +637,30 @@
     $('qthlat').disabled = !on || !posSeen;
     $('qthlon').disabled = !on || !posSeen;
     $('qthclear').disabled = !on || !posSeen;
+    $('qthbrowser').disabled = !on || !posSeen || !geoOk();
+    $('qthbrowser').hidden = !geoOk();
     const tbeam = lastBoard === 'tbeam';
     $('gps').disabled = !on || !gpsSeen || !tbeam;
     $('gpshint').hidden = false;
     if (on && gpsSeen && !tbeam) $('gps').value = 'off';
   }
+  // La posizione del browser serve solo da proposta: il permesso lo chiede il browser quando si preme il pulsante, e il valore resta nei campi (da controllare) fino al Salva.
+  // Funziona solo in una pagina sicura (https o localhost): dalla pagina della scheda (http://192.168.4.1) il browser la blocca.
+  function geoOk() { return !!(navigator.geolocation && window.isSecureContext); }
   function setQth(v) {   // "43.76960,11.25580" oppure "none"
     const m = /^(-?[\d.]+),(-?[\d.]+)$/.exec(v || '');
     $('qthlat').value = m ? m[1] : '';
     $('qthlon').value = m ? m[2] : '';
+    geoSuggest(!m);
+  }
+  function geoSuggest(empty) {
+    const g = $('qthgeo');
+    if (empty && geoOk()) {
+      g.hidden = false;
+      g.textContent = 'La posizione fissa non è impostata: puoi proporla dal browser con il pulsante "Usa la posizione del browser" (il browser ti chiede il permesso).';
+    } else {
+      g.hidden = true;
+    }
   }
   function updateFreqNote() {
     const same = !$('freqmsg').disabled && $('freq').value.trim() !== '' && $('freq').value.trim() === $('freqmsg').value.trim();
@@ -1024,7 +1041,22 @@
     $('sysopkey').value = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
     $('sysopkeyhint').textContent = 'Copia questa chiave adesso: dopo il salvataggio non si rilegge. Va impostata uguale sulle due schede del ripetitore e su questa.';
   });
-  $('qthclear').addEventListener('click', () => { $('qthlat').value = ''; $('qthlon').value = ''; });
+  $('qthclear').addEventListener('click', () => { $('qthlat').value = ''; $('qthlon').value = ''; geoSuggest(true); });
+  $('qthbrowser').addEventListener('click', () => {
+    const g = $('qthgeo');
+    g.hidden = false;
+    g.textContent = 'Chiedo la posizione al browser...';
+    navigator.geolocation.getCurrentPosition((p) => {
+      $('qthlat').value = p.coords.latitude.toFixed(5);
+      $('qthlon').value = p.coords.longitude.toFixed(5);
+      const acc = Math.round(p.coords.accuracy || 0);
+      g.textContent = 'Posizione del browser inserita' + (acc ? ' (precisione circa ' + acc + ' m)' : '') + '. È una stima: da un computer è spesso poco precisa. Controllala, correggila se serve e premi Salva per scriverla nella scheda.';
+    }, (err) => {
+      g.textContent = err.code === 1 ? 'Permesso negato: abilita la posizione per questo sito nelle impostazioni del browser, oppure scrivi i numeri a mano.'
+        : err.code === 3 ? 'Il browser non ha risposto in tempo: riprova o scrivi i numeri a mano.'
+        : 'Il browser non riesce a ricavare la posizione: scrivi i numeri a mano.';
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  });
   // Le frequenze di Range e Messaggio che erano uguali a quella dello Standard la seguono mentre si scrive; quelle cambiate a mano restano
   let freqPrev = '';
   $('freq').addEventListener('input', () => {

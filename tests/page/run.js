@@ -310,6 +310,18 @@ async function scenario(name, fn, opts = {}) {
     // Cancella: entrambi vuoti -> QTH NONE
     await p.click('#qthclear');
     check('Cancella svuota i campi', (await p.inputValue('#qthlat')) === '' && (await p.inputValue('#qthlon')) === '');
+    // Posizione del browser: proposta, mai salvata da sola
+    check('con la posizione fissa vuota la pagina propone quella del browser', !(await p.isHidden('#qthgeo')) && !(await p.isDisabled('#qthbrowser')));
+    await p.context().grantPermissions(['geolocation']);
+    await p.context().setGeolocation({ latitude: 43.834744, longitude: 10.919017, accuracy: 25 });
+    await until(p, () => !document.getElementById('qthbrowser').disabled);
+    await p.evaluate(() => { window.__st.cmds.length = 0; });
+    await p.click('#qthbrowser');
+    await until(p, () => document.getElementById('qthlat').value !== '');
+    check('la posizione del browser riempie i campi a 5 decimali', (await p.inputValue('#qthlat')) === '43.83474' && (await p.inputValue('#qthlon')) === '10.91902', (await p.inputValue('#qthlat')) + ',' + (await p.inputValue('#qthlon')));
+    check('dice la precisione e che va salvata', (await p.textContent('#qthgeo')).includes('25 m') && (await p.textContent('#qthgeo')).includes('Salva'));
+    check('nessun comando inviato alla scheda finche non si salva', !(await cmds(p)).some((x) => x.startsWith('CFG SET')));
+    await p.click('#qthclear');
     await p.click('#save');
     await until(p, () => window.__st.cmds.includes('CFG REBOOT'));
     check('CFG SET QTH none inviato (il firmware accetta maiuscole e minuscole)', (await cmds(p)).includes('CFG SET QTH none'), (await cmds(p)).join(' | '));
