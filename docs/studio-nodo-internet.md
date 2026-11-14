@@ -56,7 +56,7 @@ Un datagramma UDP: `magic (2) | versione (1) | tipo (1) | id nodo (4) | id di av
 - **Riconnessione** automatica e stato visibile sul display (Wi-Fi, IP, peer raggiungibile, contatori).
 
 ## Configurazione
-Nuovo ruolo `NODE` (come `RPTRX`/`RPTTX`: senza menu a bordo, per tornare normale serve il cavo USB e `CFG SET ROLE OFF`). Impostazioni nuove: nome e password del Wi-Fi, **indirizzo e porta dell'altro nodo**, porta di ascolto, **chiave condivisa** (mai mostrata), id del nodo. Si impostano dal sito (Web Serial) e dalla seriale; la pagina interna della scheda non si apre più in questo ruolo (stesso limite del ripetitore). Il nodo mostra su ogni riga: stato del Wi-Fi e IP, peer raggiungibile o no (e ritardo), pacchetti da radio a rete e da rete a radio, scartati, ultima voce.
+Nuovo ruolo `NODE` (come `RPTRX`/`RPTTX`: senza menu a bordo, per tornare normale serve il cavo USB e `CFG SET ROLE OFF`; dal 14/11/2026 all'avvio apre per 3 minuti il Wi-Fi di configurazione della scheda, vedi [banco-nodo.md](banco-nodo.md)). Impostazioni nuove: nome e password del Wi-Fi, **indirizzo e porta dell'altro nodo**, porta di ascolto, **chiave condivisa** (mai mostrata), id del nodo. Si impostano dal sito (Web Serial) e dalla seriale; la pagina interna della scheda non si apre più in questo ruolo (stesso limite del ripetitore). Il nodo mostra su ogni riga: stato del Wi-Fi e IP, peer raggiungibile o no (e ritardo), pacchetti da radio a rete e da rete a radio, scartati, ultima voce.
 
 ## Piano di prova a banco (primo passo)
 Strumenti: **2 T3 nodo** sullo stesso router, **2 T3 stazione** normali con il microfono (o con la prova di collegamento, senza audio), antenne collegate, potenza minima.
