@@ -453,6 +453,15 @@ static void testDeclaredAddress() {
   CHECK(r.core.clients(r.t)[0].declaredAddr == 0);
 }
 
+static void testPublicIpv4() {
+  auto ip = [](uint32_t a, uint32_t b, uint32_t c, uint32_t d) { return (a << 24) | (b << 16) | (c << 8) | d; };
+  CHECK(isPublicIpv4(ip(78, 211, 227, 119)) && isPublicIpv4(ip(81, 56, 162, 206)) && isPublicIpv4(ip(8, 8, 8, 8)));
+  CHECK(!isPublicIpv4(ip(192, 168, 1, 254)) && !isPublicIpv4(ip(192, 168, 0, 1)) && !isPublicIpv4(ip(10, 1, 2, 3)) && !isPublicIpv4(ip(127, 0, 0, 1)));
+  CHECK(!isPublicIpv4(ip(172, 16, 0, 1)) && !isPublicIpv4(ip(172, 31, 255, 254)) && isPublicIpv4(ip(172, 15, 0, 1)) && isPublicIpv4(ip(172, 32, 0, 1)));
+  CHECK(!isPublicIpv4(ip(169, 254, 1, 1)) && !isPublicIpv4(ip(100, 64, 0, 1)) && !isPublicIpv4(ip(100, 127, 255, 1)) && isPublicIpv4(ip(100, 63, 0, 1)) && isPublicIpv4(ip(100, 128, 0, 1)));
+  CHECK(!isPublicIpv4(0) && !isPublicIpv4(ip(224, 0, 0, 1)) && !isPublicIpv4(ip(255, 255, 255, 255)));
+}
+
 int main() {
   testHandshake();
   testTextAndRelayed();
@@ -466,5 +475,6 @@ int main() {
   testRegistryOperations();
   testTalkHistory();
   testDeclaredAddress();
+  testPublicIpv4();
   TEST_MAIN_END();
 }

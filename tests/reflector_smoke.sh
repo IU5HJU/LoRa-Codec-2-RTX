@@ -48,8 +48,8 @@ echo "$PS" | grep -q '"talking":{"callsign":"IZ5IOF"' && ok "pubblica: chi trasm
 wait $NODEA
 S=$(api "http://127.0.0.1:$WEB/api/status")
 echo "$S" | grep -q '"name":"nodoA","call":"nodoA","label":"","up":true' && echo "$S" | grep -q '"name":"nodoB","call":"nodoB","label":"","up":true' && ok "stato: i due nodi collegati" || ko "nodi non collegati nello stato"
-echo "$S" | grep -q '"name":"nodoB".*"public":"203\.0\.113\.7"' && ok "stato: l'indirizzo pubblico dichiarato dal nodoB (203.0.113.7), accanto a quello visto dal server" || ko "indirizzo pubblico dichiarato nello stato ($S)"
-echo "$S" | grep -q '"name":"nodoA".*"public":""' && ok "stato: il nodoA, che non dichiara niente, ha l'indirizzo pubblico vuoto" || ko "nodoA senza indirizzo dichiarato ($S)"
+echo "$S" | grep -q '"name":"nodoB".*"public":"203\.0\.113\.7","nodeIp":"203\.0\.113\.7"' && ok "stato: IP del nodoB = l'indirizzo pubblico che dichiara (203.0.113.7)" || ko "IP del nodo dichiarato nello stato ($S)"
+echo "$S" | grep -q '"name":"nodoA".*"public":"","nodeIp":""' && ok "stato: il nodoA, che non dichiara niente e arriva da 127.0.0.1 (non pubblico), non ha nessun IP del nodo" || ko "nodoA senza IP del nodo ($S)"
 echo "$S" | grep -q '"name":"nodoA".*"endpoint":"127\.0\.0\.1:[0-9]*"' && ok "stato: l'indirizzo mostrato e' quello da cui arrivano i pacchetti del nodo (127.0.0.1:porta)" || ko "indirizzo del nodo nello stato ($S)"
 echo "$S" | grep -q '"recent":\[{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: la trasmissione finita e' fra le ultime" || ko "storico vuoto"
 PS=$(curl -s -m 5 $P/status.json)

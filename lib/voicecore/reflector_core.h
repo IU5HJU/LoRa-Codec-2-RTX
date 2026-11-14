@@ -20,6 +20,18 @@
 
 namespace lcr {
 
+// true se l'indirizzo IPv4 (a<<24|b<<16|c<<8|d) e' un indirizzo pubblico, cioe' non e' di una rete locale (10/8, 172.16/12, 192.168/16), ne' di loopback,
+// link-local, CGNAT degli operatori (100.64/10), "questa rete" (0/8), multicast o riservato (224 e oltre).
+inline bool isPublicIpv4(uint32_t a) {
+  const uint32_t o1 = a >> 24, o2 = (a >> 16) & 255;
+  if (o1 == 0 || o1 == 10 || o1 == 127 || o1 >= 224) return false;
+  if (o1 == 172 && o2 >= 16 && o2 <= 31) return false;
+  if (o1 == 192 && o2 == 168) return false;
+  if (o1 == 169 && o2 == 254) return false;
+  if (o1 == 100 && o2 >= 64 && o2 <= 127) return false;
+  return true;
+}
+
 typedef uint64_t Endpoint;  // indirizzo e porta di un client, come li tiene chi ha il socket (per IPv4: indirizzo * 65536 + porta)
 
 class IReflectorNet {

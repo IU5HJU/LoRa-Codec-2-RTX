@@ -43,7 +43,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
     main { padding:10px; }
     section { padding:10px; }
     th, td { padding:6px 4px; }
-    #clients td:nth-child(5), #clients td:nth-child(6), thead th:nth-child(5), thead th:nth-child(6) { display:none; }
+    #clients td:nth-child(5), thead th:nth-child(5) { display:none; }
     #recent td:nth-child(5) { display:none; }
   }
 </style>
@@ -69,7 +69,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
     <section>
       <h2>Collegati</h2>
       <div class="tw"><table>
-        <thead><tr><th>Nominativo</th><th>Id</th><th>Stato</th><th>Ultimo segnale</th><th>Pacchetti in/out</th><th title="L'indirizzo da cui il reflector riceve i pacchetti del nodo, dopo l'eventuale NAT del router: dietro un router e' quello del router, non quello interno del nodo">Indirizzo visto dal server</th><th title="L'indirizzo pubblico che il nodo stesso dice di avere (lo chiede a un servizio esterno e lo manda nei messaggi di mantenimento). Non e' verificato dal server; vuoto se il nodo e' di una versione che non lo manda">Indirizzo pubblico dichiarato dal nodo</th><th></th></tr></thead>
+        <thead><tr><th>Nominativo</th><th>Id</th><th>Stato</th><th>Ultimo segnale</th><th>Pacchetti in/out</th><th title="L'indirizzo IP pubblico del nodo, cioe' quello da cui si collega a Internet. Lo dice il nodo stesso (non e' verificato); se il nodo ha un firmware vecchio e il server lo vede da un indirizzo pubblico si usa quello; vuoto negli altri casi">IP del Nodo</th><th></th></tr></thead>
         <tbody id="clients"></tbody>
       </table></div>
       <p class="muted" id="clientsEmpty" hidden>Nessun nodo in elenco.</p>
@@ -142,7 +142,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
       const n = cell(tr, c.name); n.style.fontWeight = '600';
       cell(tr, c.id);
       const st = document.createElement('td'); const d = document.createElement('span'); d.className = 'dot' + (c.up ? ' up' : ''); st.appendChild(d); st.appendChild(document.createTextNode(c.up ? 'collegato' : 'non collegato')); tr.appendChild(st);
-      cell(tr, fmtAgo(c.seenMs)); cell(tr, c.in + ' / ' + c.out); cell(tr, c.endpoint || '-'); cell(tr, c.public || '-');
+      cell(tr, fmtAgo(c.seenMs)); cell(tr, c.in + ' / ' + c.out); cell(tr, c.nodeIp || '-');
       const act = document.createElement('td'); const del = document.createElement('button'); del.className = 'danger'; del.textContent = 'Togli';
       del.addEventListener('click', async () => { if (!confirm('Togliere ' + c.name + ' (id ' + c.id + ')? Il nodo non potrà più collegarsi.')) return; await api('/api/remove', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'id=' + c.id }); refresh(); });
       act.appendChild(del); tr.appendChild(act);

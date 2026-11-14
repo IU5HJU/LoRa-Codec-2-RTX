@@ -203,6 +203,19 @@ static std::string ipText(uint32_t a) {
   return b;
 }
 
+static std::string epText(Endpoint e);
+
+// L'IP pubblico del nodo: quello che il nodo dichiara; se non lo dichiara (firmware precedente) quello da cui il server lo vede, ma solo se e' un indirizzo
+// pubblico (dietro un router il server vede l'indirizzo del router, che e' interno o comunque non e' quello del nodo: allora niente).
+static std::string nodeIpText(const ReflectorCore::ClientInfo& c) {
+  if (c.declaredAddr != 0 && isPublicIpv4(c.declaredAddr)) return ipText(c.declaredAddr);
+  if (c.declaredAddr == 0 && c.haveEndpoint) {
+    const uint32_t seen = static_cast<uint32_t>(c.endpoint >> 16);
+    if (isPublicIpv4(seen)) return ipText(seen);
+  }
+  return "";
+}
+
 static std::string epText(Endpoint e) {
   char b[40];
   snprintf(b, sizeof(b), "%u.%u.%u.%u:%u", static_cast<unsigned>((e >> 40) & 255), static_cast<unsigned>((e >> 32) & 255), static_cast<unsigned>((e >> 24) & 255),
@@ -288,7 +301,7 @@ struct Admin {
       const int ei = findEntryById(entries, c.id);
       o << (first ? "" : ",") << "{\"id\":" << c.id << ",\"name\":\"" << jsonEscape(c.name) << "\",\"call\":\"" << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].name : c.name)
         << "\",\"label\":\"" << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].label : "") << "\",\"up\":" << (c.up ? "true" : "false") << ",\"seenMs\":" << seen
-        << ",\"in\":" << c.packetsIn << ",\"out\":" << c.packetsOut << ",\"endpoint\":\"" << (c.haveEndpoint ? jsonEscape(epText(c.endpoint)) : "") << "\",\"public\":\"" << (c.declaredAddr ? ipText(c.declaredAddr) : "") << "\"}";
+        << ",\"in\":" << c.packetsIn << ",\"out\":" << c.packetsOut << ",\"endpoint\":\"" << (c.haveEndpoint ? jsonEscape(epText(c.endpoint)) : "") << "\",\"public\":\"" << (c.declaredAddr ? ipText(c.declaredAddr) : "") << "\",\"nodeIp\":\"" << jsonEscape(nodeIpText(c)) << "\"}";
       first = false;
     }
     o << "],\"recent\":[";
