@@ -1047,8 +1047,8 @@
     g.hidden = false;
     g.textContent = 'Chiedo la posizione al browser...';
     navigator.geolocation.getCurrentPosition((p) => {
-      $('qthlat').value = p.coords.latitude.toFixed(5);
-      $('qthlon').value = p.coords.longitude.toFixed(5);
+      $('qthlat').value = p.coords.latitude.toFixed(4);
+      $('qthlon').value = p.coords.longitude.toFixed(4);
       const acc = Math.round(p.coords.accuracy || 0);
       g.textContent = 'Posizione del browser inserita' + (acc ? ' (precisione circa ' + acc + ' m)' : '') + '. È una stima: da un computer è spesso poco precisa. Controllala, correggila se serve e premi Salva per scriverla nella scheda.';
     }, (err) => {

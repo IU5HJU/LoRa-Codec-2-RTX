@@ -318,7 +318,7 @@ async function scenario(name, fn, opts = {}) {
     await p.evaluate(() => { window.__st.cmds.length = 0; });
     await p.click('#qthbrowser');
     await until(p, () => document.getElementById('qthlat').value !== '');
-    check('la posizione del browser riempie i campi a 5 decimali', (await p.inputValue('#qthlat')) === '43.83474' && (await p.inputValue('#qthlon')) === '10.91902', (await p.inputValue('#qthlat')) + ',' + (await p.inputValue('#qthlon')));
+    check('la posizione del browser riempie i campi a 4 decimali', (await p.inputValue('#qthlat')) === '43.8347' && (await p.inputValue('#qthlon')) === '10.9190', (await p.inputValue('#qthlat')) + ',' + (await p.inputValue('#qthlon')));
     check('dice la precisione e che va salvata', (await p.textContent('#qthgeo')).includes('25 m') && (await p.textContent('#qthgeo')).includes('Salva'));
     check('nessun comando inviato alla scheda finche non si salva', !(await cmds(p)).some((x) => x.startsWith('CFG SET')));
     await p.click('#qthclear');
