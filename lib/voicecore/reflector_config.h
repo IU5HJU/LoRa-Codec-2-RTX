@@ -17,7 +17,7 @@ struct ReflectorEntry {
   uint8_t key[kNodeKeyBytes] = {0};
   std::string name;   // di solito il nominativo del radioamatore (puo' ripetersi su piu' nodi)
   std::string label;  // facoltativa: distingue i nodi dello stesso nominativo ("casa", "mare", "hotspot")
-  // Come si mostra nei registri: "IZ5IOF" oppure "IZ5IOF casa".
+  // Come si mostra nei registri: "N0CALL" oppure "N0CALL casa".
   std::string display() const { return label.empty() ? name : name + " " + label; }
 };
 

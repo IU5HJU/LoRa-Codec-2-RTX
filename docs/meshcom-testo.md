@@ -35,7 +35,7 @@ occupato, nessun destinatario, nominativo N0CALL) la radio torna subito com'era.
 
 | Impostazione | Comando | Note |
 |---|---|---|
-| Destinatari | `CFG SET MCDEST1 22251` … `MCDEST5` | **un gruppo** (numero: 22251, 222…), **un nominativo-SSID** (IU5ABC-9) o **`*`** per tutti; `NONE` svuota il posto; di base `22251`, `222`, `*`; valgono subito |
+| Destinatari | `CFG SET MCDEST1 22251` … `MCDEST5` | **un gruppo** (numero: 22251, 222…), **un nominativo-SSID** (N0CALL-9) o **`*`** per tutti; `NONE` svuota il posto; di base `22251`, `222`, `*`; valgono subito |
 | SSID | `CFG SET MCSSID 99` | 0-99, 0 = nessuno; il tuo nominativo in rete è `IU5HJU-99` |
 | Ascolto dopo l'invio | `CFG SET MCWINDOW 300` | secondi, 30-1800 |
 | Frequenza | `CFG SET FREQMC 433.175` | MHz, 430.000-440.000 |
@@ -85,7 +85,7 @@ le posizioni, i rapporti dei nodi e le conferme dei tuoi testi. Se chi scrive **
 chiede la conferma dei propri testi.
 
 **Diagnostica:** durante l'escursione la seriale (115200) scrive una riga per ogni frame ricevuto, con il motivo se non viene
-mostrato: `[meshcom] : da IU5ABC-9 a IU5HJU-99: MOSTRATO`, `... scartato, non e' per noi (IU5HJU-99)`, `... copia gia' vista`,
+mostrato: `[meshcom] : da N0CALL-9 a IU5HJU-99: MOSTRATO`, `... scartato, non e' per noi (IU5HJU-99)`, `... copia gia' vista`,
 `... messaggio di servizio`, `... CONFERMA ackNNN INVIATA` (la risposta che la scheda manda a chi ha chiesto la conferma), `... FCS sbagliata`, `frame non valido (... byte)`. A fine escursione una riga di riepilogo (`fine escursione: 12 frame ricevuti (testi 10, posizioni e rapporti 0, FCS sbagliata 1, non validi 1)`) distingue "non ha sentito niente" da "ha sentito ma scartato". Serve a capire perché una risposta non compare.
 
 ## Formato dei frame

@@ -1,17 +1,17 @@
 # Studio: il reflector VoLoRa (preso da quello YSF)
 
-13/11/2026. Scopo: un **reflector** a cui si collegano **nodi e ripetitori** VoLoRa e che porta i pacchetti radio da uno a tutti gli altri, **senza aprire porte sul router** di chi si collega. Parte dall'esame del reflector YSF (System Fusion) di G4KLX. Stato: **fatto sul PC** (passi 1-4 sotto); come si usa è in [reflector.md](reflector.md).
+13/11/2026. Scopo: un **reflector** a cui si collegano **nodi e ripetitori** VoLoRa e che porta i pacchetti radio da uno a tutti gli altri, **senza aprire porte sul router** di chi si collega. Parte dall'esame del reflector YSF (System Fusion) del progetto YSFClients. Stato: **fatto sul PC** (passi 1-4 sotto); come si usa è in [reflector.md](reflector.md).
 
 ## Come funziona il reflector YSF (letto dal sorgente)
 
-Fonte: `YSFReflector.cpp` e `Network.cpp` di G4KLX, nella copia [wdatkinson/YSFClients](https://github.com/wdatkinson/YSFClients/tree/master/YSFReflector) (il repository originale è [g4klx/YSFClients](https://github.com/g4klx/YSFClients)). I numeri sotto sono quelli del codice, non una mia stima.
+Fonte: `YSFReflector.cpp` e `Network.cpp` del progetto YSFClients, nella copia [wdatkinson/YSFClients](https://github.com/wdatkinson/YSFClients/tree/master/YSFReflector) (il repository originale è [g4klx/YSFClients](https://github.com/g4klx/YSFClients)). I numeri sotto sono quelli del codice, non una mia stima.
 
 - **UDP, un solo socket sul server.** I ripetitori e i gateway (i *client*) **iniziano sempre loro**: mandano un datagramma al server e il server risponde all'**indirizzo e porta da cui è arrivato**. Per questo i client **non aprono nessuna porta** sul router: il NAT crea da solo la corrispondenza quando il client scrive per primo.
 - **Registrazione = il poll.** Un datagramma `YSFP` + nominativo (10 caratteri): se il server non conosce quella coppia (indirizzo, porta) la aggiunge all'elenco, avvia un timer da **60 s** e risponde con `YSFPREFLECTOR ` (14 byte). Il client si identifica quindi **solo con l'indirizzo e la porta di origine**: se il NAT cambia la porta, per il server è un altro client.
 - **Poll in due sensi ogni 5 s.** Il server manda `YSFPREFLECTOR ` a tutti i client ogni **5 s** (tiene aperto il NAT e dice che c'è); chi non si fa sentire per 60 s viene tolto. Il client risponde con i suoi poll.
 - **Dati.** `YSFD` è un datagramma da **155 byte** (all'inizio 4 byte di tipo, poi 10 caratteri del ripetitore che ha trasmesso, 10 del mittente, 10 del destinatario; il bit 0 del byte 34 segna **fine trasmissione**). Il server lo **inoltra identico a tutti i client tranne quello da cui arriva**.
 - **Scollegamento.** `YSFU`: il server toglie subito il client. **Stato.** `YSFS`: risposta di 42 byte con un numero, nome, descrizione e conteggio dei client collegati.
-- **Chi parla.** Il reflector G4KLX tiene un solo "watchdog di rete" da **1,5 s** che serve per i messaggi di log: **inoltra comunque tutto**. Chi parla per primo è deciso da implementazioni successive (per esempio [pYSFReflector](https://github.com/dg9vh/pYSFReflector): "first-come-first-served", la seconda trasmissione contemporanea è silenziata; elenchi di nominativi e gateway bloccati).
+- **Chi parla.** Il reflector YSFClients tiene un solo "watchdog di rete" da **1,5 s** che serve per i messaggi di log: **inoltra comunque tutto**. Chi parla per primo è deciso da implementazioni successive (per esempio [pYSFReflector](https://github.com/dg9vh/pYSFReflector): "first-come-first-served", la seconda trasmissione contemporanea è silenziata; elenchi di nominativi e gateway bloccati).
 - **Nessuna autenticazione.** Chiunque conosca l'indirizzo manda un poll e entra; un datagramma da un indirizzo qualsiasi è accettato.
 
 ## Cosa prendiamo, cosa cambiamo

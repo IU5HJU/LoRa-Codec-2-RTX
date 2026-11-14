@@ -88,7 +88,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
       <h2>Registra un nodo</h2>
       <p class="muted">Il collega genera la chiave dalla pagina di configurazione della sua scheda e te la manda (su un canale privato) con il suo nominativo e, se ne ha più d'uno, il nome del nodo. Scrivili qui: l'id lo assegna il reflector. Un nominativo può avere <strong>più nodi</strong> (casa, mare, hotspot): ognuno ha il suo id e la sua chiave, e una chiave non si può usare due volte.</p>
       <label for="call">Nominativo</label>
-      <input id="call" maxlength="8" autocomplete="off" placeholder="IZ5ABC">
+      <input id="call" maxlength="8" autocomplete="off" placeholder="N0CALL">
       <label for="label">Nome del nodo (facoltativo: casa, mare, hotspot…)</label>
       <input id="label" maxlength="16" autocomplete="off" placeholder="casa">
       <label for="target">Cosa fare</label>

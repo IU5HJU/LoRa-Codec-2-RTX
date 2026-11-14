@@ -741,7 +741,7 @@ void UiNotifier::draw(uint32_t nowMs) {
   } else if (haveLast_) {
     {  // "Ultimo IU5HJU 12.3km": la distanza si aggiunge solo se la riga resta entro i 21 caratteri
       char line[32];
-      // "Ultimo IZ5ABC via RPT" (arrivata da un ripetitore) o "Ultimo IR5XXX ID" (identificativo del ripetitore)
+      // "Ultimo N0CALL via RPT" (arrivata da un ripetitore) o "Ultimo N0CALL ID" (identificativo del ripetitore)
       int n = snprintf(line, sizeof(line), "Ultimo %s%s", rxCall_[0] ? rxCall_ : "-", lastBeacon_ ? " ID" : (lastVia_ ? " via RPT" : ""));
       if (distText_[0] && n > 0 && n + 1 + static_cast<int>(strlen(distText_)) <= 21) snprintf(line + n, sizeof(line) - n, " %s", distText_);
       display_.print(line);

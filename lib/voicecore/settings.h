@@ -29,7 +29,7 @@
 //   CFG GET MONITOR              -> CFG MONITOR=on
 //   CFG SET FREQMC 433.175       -> CFG OK freqmc=433.175      (frequenza delle reti di testo, solo per l'escursione; come FREQ)
 //   CFG SET MCDEST1 22251        -> CFG OK mcdest1=22251       (MCDEST1..MCDEST5: destinatari tra cui scegliere nell'escursione MeshCom: un gruppo
-//                                   numerico (22251, 222...), un nominativo-SSID (IU5ABC-9) o * per tutti; NONE svuota il posto; valgono subito)
+//                                   numerico (22251, 222...), un nominativo-SSID (N0CALL-9) o * per tutti; NONE svuota il posto; valgono subito)
 //   CFG SET SYSOP IU5HJU         -> CFG OK sysop=IU5HJU        (nominativo del sysop: il solo che puo' comandare il ripetitore; NONE lo toglie; vale dal riavvio)
 //   CFG SET SYSOPKEY <32 cifre esadecimali> -> CFG OK sysopkey=set  (chiave condivisa di 16 byte per firmare i comandi; NONE la toglie; mai mostrata)
 //   CFG SET SYSOPMODE ON         -> CFG OK sysopmode=on        (modo Sysop: nel menu "Comandi Sysop" al posto di "Invia testo"; OFF lo spegne; vale dal riavvio)
@@ -39,7 +39,7 @@
 //   CFG SET IDMORSE ON           -> CFG OK idmorse=on          (ripetitore e nodo: dopo l'identificativo in testo anche il Morse in FM, per chi non ha le schede LoRa; di base ON; vale dal riavvio)
 //   CFG GET IDMORSE              -> CFG IDMORSE=on
 //   CFG GET IDINT                -> CFG IDINT=10
-//   CFG RADIOTEST MORSE FM IR5XXX -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-fm.md)
+//   CFG RADIOTEST MORSE FM N0CALL -> prova radio del Morse (solo prove: MORSE, BEACON, CARRIER, TONE; vedi radio_test.h e docs/studio-identificativo-fm.md)
 //   CFG SET ROLE NODE            -> CFG OK role=node           (nodo su Wi-Fi: T3 o T-Beam; i parametri sotto; vale dal riavvio)
 //   CFG SET WIFISSID <nome della rete> / CFG SET WIFIPASS <password>   (il resto della riga: possono avere spazi; NONE toglie la password)
 //   CFG SET PEER 192.168.1.51:5400  -> CFG OK peer=192.168.1.51:5400  (indirizzo e porta dell'altro nodo; NONE lo toglie)

@@ -1,7 +1,7 @@
 # Alimentazione e batteria della T-Beam
 
 Confronto tra T-Beam V1.0/1.1 (chip **AXP192**) e V1.2 (chip **AXP2101**), ricavato leggendo il
-firmware LoRa APRS iGate di Ricardo Guzman (CA2RXU, `src/power_utils.cpp`, versione V4.0.4 del 14 ottobre 2026)
+firmware del progetto LoRa APRS iGate (`src/power_utils.cpp`, versione V4.0.4 del 14 ottobre 2026)
 e il codice di riferimento LilyGO. Non sono prove su hardware: quello che segue è lettura del codice.
 
 ## Differenze nella gestione dell'alimentazione

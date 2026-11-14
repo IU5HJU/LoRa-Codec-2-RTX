@@ -506,7 +506,7 @@ ConsoleResult SettingsConsole::set(const char* key, const char* value, char* rep
       for (; value[i] && i < sizeof(up) - 1; i++) up[i] = static_cast<char>(toupper(static_cast<unsigned char>(value[i])));
       up[i] = 0;
       if (!isValidMcDest(up)) {
-        say(reply, cap, "CFG ERR mcdest %s", "gruppo (22251), nominativo-SSID (IU5ABC-9, A-Z 0-9 / -, massimo 15), * per tutti, NONE per svuotare");
+        say(reply, cap, "CFG ERR mcdest %s", "gruppo (22251), nominativo-SSID (N0CALL-9, A-Z 0-9 / -, massimo 15), * per tutti, NONE per svuotare");
         return ConsoleResult::Error;
       }
       memset(next.mcDests[slot], 0, sizeof(next.mcDests[slot]));

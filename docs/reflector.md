@@ -21,8 +21,8 @@ build/vlreflector --config reflector.conf [--port 5400] [--id 1000] [--voice-mod
 - Il file dei client ha **una riga per client** (righe vuote e che iniziano con `#` si ignorano). Lo scrive anche la pagina di amministrazione, quindi il programma deve poterlo modificare:
   ```
   # id  chiave (32 cifre esadecimali)       nominativo [nome del nodo]
-  2     000102030405060708090a0b0c0d0e0f    IZ5ABC casa
-  3     101112131415161718191a1b1c1d1e1f    IZ5ABC mare
+  2     000102030405060708090a0b0c0d0e0f    N0CALL casa
+  3     101112131415161718191a1b1c1d1e1f    N0CALL mare
   4     aabbccddeeff00112233445566778899    ripetitore-rx
   ```
   Ogni client ha **il suo id** (diverso da 0 e dall'id del reflector) e **la sua chiave** (`openssl rand -hex 16`): una chiave **non si può usare due volte**. Un radioamatore può avere **più nodi** (un hotspot, un nodo a casa e uno al mare): stesso nominativo su più righe, ognuna con il suo id e la sua chiave, e un **nome del nodo** facoltativo (una parola) per distinguerli. La stessa coppia nominativo + nome non può ripetersi.

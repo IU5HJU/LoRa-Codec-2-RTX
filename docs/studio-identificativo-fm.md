@@ -58,11 +58,11 @@ Non c'è un firmware a parte: i comandi di prova stanno nel firmware normale (co
 |---|---|
 | `CFG RADIOTEST CARRIER 5` | portante pura (tutti i bit a 1) per 5 s: serve a misurare la **frequenza** e la sua deriva |
 | `CFG RADIOTEST TONE 5 hz=700 dev=2.5` | tono continuo in FM (bit 1010...) per 5 s: serve a misurare **deviazione, frequenza del tono, armoniche** |
-| `CFG RADIOTEST MORSE FM IR5XXX` | l'identificativo in Morse con tono in FM stretta (15 parole al minuto, tono 700 Hz, deviazione ±2,5 kHz) |
-| `CFG RADIOTEST MORSE CW IR5XXX` | lo stesso in CW puro (portante accesa e spenta) |
-| `CFG RADIOTEST BEACON FM IR5XXX 60` | l'identificativo in FM ripetuto ogni 60 s (da 10 s a un'ora), per vedere nel tempo **frequenza, rientro a LoRa e deriva**; si ferma con un tasto qualsiasi dalla seriale |
+| `CFG RADIOTEST MORSE FM N0CALL` | l'identificativo in Morse con tono in FM stretta (15 parole al minuto, tono 700 Hz, deviazione ±2,5 kHz) |
+| `CFG RADIOTEST MORSE CW N0CALL` | lo stesso in CW puro (portante accesa e spenta) |
+| `CFG RADIOTEST BEACON FM N0CALL 60` | l'identificativo in FM ripetuto ogni 60 s (da 10 s a un'ora), per vedere nel tempo **frequenza, rientro a LoRa e deriva**; si ferma con un tasto qualsiasi dalla seriale |
 
-Parametri facoltativi di tutti i comandi (dopo i fissi): `wpm=5..30`, `hz=300..2500` (tono, solo FM), `dev=0.6..10` (kHz, solo FM), `shape=0|0.3|0.5|1.0` (filtro gaussiano, solo FM), `ramp=0..15` (salita della potenza). Il testo ha lettere e cifre; `_` vale spazio. Esempio per provare le rampe del tasto: `CFG RADIOTEST MORSE CW IR5XXX ramp=0`, poi `ramp=9`, e confrontare i "click" nello spettro.
+Parametri facoltativi di tutti i comandi (dopo i fissi): `wpm=5..30`, `hz=300..2500` (tono, solo FM), `dev=0.6..10` (kHz, solo FM), `shape=0|0.3|0.5|1.0` (filtro gaussiano, solo FM), `ramp=0..15` (salita della potenza). Il testo ha lettere e cifre; `_` vale spazio. Esempio per provare le rampe del tasto: `CFG RADIOTEST MORSE CW N0CALL ramp=0`, poi `ramp=9`, e confrontare i "click" nello spettro.
 
 **Come lavora:** la scheda esce da LoRa (`beginFSK` di RadioLib), manda pacchetti FSK a lunghezza fissa senza preambolo, sincronismo né CRC (`0xFF` = portante, `0xAA` = tono quadro di bit rate / 2), e torna a LoRa e in ascolto. Un punto e una linea sono pacchetti della durata giusta (in FM a 700 Hz un punto a 15 wpm è di 14 byte a 1,4 kbit/s; in CW 24 byte a 2,4 kbit/s), le pause sono silenzio. Per il CW la frequenza è spostata di -0,6 kHz per compensare la deviazione minima, così la portante cade sulla frequenza del profilo. La scheda **rifiuta** la prova con N0CALL, se sta ricevendo o trasmettendo o se il canale è occupato (CAD). Sulla seriale stampa tutti i parametri usati (`CFG RADIOTEST start ...`), la durata misurata contro quella prevista e il **tempo di cambio LoRa → FSK → LoRa** di ogni ciclo.
 

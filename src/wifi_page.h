@@ -37,7 +37,7 @@ button.sec{background:#e5e7eb;color:#14181f}
 <label for="qth">Posizione fissa (latitudine,longitudine, oppure none)</label><input id="qth" placeholder="43.7696,11.2558">
 <div id="gpsbox" hidden><label for="gps">GPS (solo T-Beam)</label><select id="gps"><option value="off">Spento</option><option value="on">Acceso</option></select></div>
 <h2>MeshCom: avvisi e accordi</h2>
-<p class="hint">Dal menu della scheda (volume lungo, voce MeshCom) la scheda passa per qualche minuto ai 433,175 MHz delle reti di testo, invia un testo a un destinatario (gruppo come 22251 o 222, nominativo-SSID come IU5ABC-9, * per tutti), ascolta le risposte e torna da sola al profilo voce. Un posto vuoto non si usa.</p>
+<p class="hint">Dal menu della scheda (volume lungo, voce MeshCom) la scheda passa per qualche minuto ai 433,175 MHz delle reti di testo, invia un testo a un destinatario (gruppo come 22251 o 222, nominativo-SSID come N0CALL-9, * per tutti), ascolta le risposte e torna da sola al profilo voce. Un posto vuoto non si usa.</p>
 <label for="mcfreq">Frequenza della rete (MHz)</label><input id="mcfreq" inputmode="decimal">
 <label for="mcssid">SSID del tuo nominativo (0-99)</label><input id="mcssid" type="number" min="0" max="99">
 <label for="mcwindow">Secondi di ascolto dopo l'invio (30-1800)</label><input id="mcwindow" type="number" min="30" max="1800">

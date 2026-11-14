@@ -220,7 +220,7 @@ Si usano i due tasti che ci sono già. **Deciso:** pressione lunga sul volume ap
 - Il menu si apre **solo a scheda ferma** (né in ricezione né in trasmissione). **Nel menu il PTT non trasmette mai.** Dopo 10 s senza tasti il menu si chiude **senza cambiare**.
 - **Canali memorizzati:** non solo "tre modi", ma memorie, ognuna con **profilo e frequenze proprie** (per esempio: Standard diretto, Standard via ripetitore con ingresso e uscita separati, Messaggio, Qualità). Si configurano dalla pagina; il menu a bordo sceglie la memoria e il display ne mostra il nome. Servono quindi **frequenze per profilo** nelle impostazioni (oggi ce n'è una sola).
 - **Cambio di memoria:** nel primo passo si **salva la scelta e si riavvia** la scheda (due secondi, semplice e sicuro). Il cambio a caldo della radio viene dopo. La voce "Qualità" è attiva dal 10/11/2026.
-- **Pagina di configurazione interna** (stile LoRa APRS di Guzman, CA2RXU: all'avvio la scheda crea un proprio Wi-Fi e serve una pagina su `192.168.4.1`): una **voce "Configurazione Wi-Fi" nello stesso menu**, quindi un solo gesto. Con la pagina attiva **la trasmissione è disattivata**.
+- **Pagina di configurazione interna** (stile del progetto LoRa APRS iGate: all'avvio la scheda crea un proprio Wi-Fi e serve una pagina su `192.168.4.1`): una **voce "Configurazione Wi-Fi" nello stesso menu**, quindi un solo gesto. Con la pagina attiva **la trasmissione è disattivata**.
   - La rete (`VoLoRa-XXXX`) ha una **password casuale mostrata sul display**: le password predefinite uguali per tutti (come in alcuni progetti analoghi) sono note a chiunque.
   - **Stessa pagina di oggi**, che passa i comandi `CFG` alla scheda al posto della porta seriale: l'interprete dei comandi esiste già e ha i test, quindi non c'è un secondo programma da mantenere.
   - Dopo il salvataggio la pagina **rilegge i valori dalla scheda** e li confronta (lo fa già oggi): in alcuni progetti analoghi capitavano impostazioni che non si salvavano senza che nessuno se ne accorgesse.
@@ -274,7 +274,7 @@ Numerazione semantica con beta e rc ([versioni.md](versioni.md)). La prima etich
 
 ## 4. Flasher web (dopo la configurazione a runtime)
 
-- Pagina statica con `esp-web-tools`, un manifest per versione e tipo (installazione di fabbrica, aggiornamento), come nell'esempio di CA2RXU.
+- Pagina statica con `esp-web-tools`, un manifest per versione e tipo (installazione di fabbrica, aggiornamento), come nell'esempio del progetto LoRa APRS iGate.
 - I binari li produce il workflow `.github/workflows/build.yml`: `web_factory.bin` (all'indirizzo 0) e `ota_update.bin` (a 0x10000), con tag `v*` anche in una release di GitHub.
 - Il nominativo di default è **N0CALL** con trasmissione bloccata, quindi il binario è distribuibile; nominativo e frequenza si impostano con la pagina di configurazione.
 - Licenza scelta (GPL-3.0): chi distribuisce i binari deve rendere disponibile il sorgente corrispondente.

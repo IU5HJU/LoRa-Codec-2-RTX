@@ -59,7 +59,7 @@ Un tunnel dei pacchetti VoLoRa fra due ripetitori (o fra la RX e la TX dello ste
 - **Identificazione dell'utente:** i sistemi digitali portano il nominativo o il **DMR ID** del singolo parlante; un gateway ne ha **uno** (il suo) a meno di una tabella di corrispondenza che non esiste. Per il DMR serve un **DMR ID** del nodo e va rispettata la politica del network.
 - **Regole di rete:** BrandMeister vieta il peer bridging; i ponti verso altre reti passano da protocolli ammessi e concordati con i gestori. Un nodo "fatto in casa" che unisce LoRa e DMR **non è automaticamente accettato**.
 - **Banda e tempi:** i sistemi digitali parlano a ritmo continuo e a turni lunghi; il canale LoRa regge una conversazione alla volta (stesso limite di sopra).
-- **Il protocollo dei frame YSF non è verificato** qui: serve il codice di riferimento (YSFReflector di G4KLX).
+- **Il protocollo dei frame YSF non è verificato** qui: serve il codice di riferimento (YSFReflector del progetto YSFClients).
 
 ## DMR e C4FM: come si collegherebbe
 

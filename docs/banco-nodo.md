@@ -47,7 +47,7 @@ Una **chiave** di 16 byte uguale sui due nodi (per esempio `openssl rand -hex 16
 ## Nodo finto sul PC (`vlnode`)
 Con una sola T3 si può provare tutto il lato rete: sul PC `make vlnode`, poi
 `build/vlnode --id 2 --peer-id 1 --key <la chiave> --listen 5400 --peer <IP della T3>:5400 --send-text IU5HJU "Prova" --every 10`
-e la T3 (con `NODEID 1`, `PEERID 2`, `PEER <IP del PC>:5400`) deve **trasmettere in radio** il testo ogni 10 s, e il PC stampa i pacchetti che la T3 riceve in radio dalle stazioni. Con `--send-voice IZ0ABC --frames 100` manda una voce finta.
+e la T3 (con `NODEID 1`, `PEERID 2`, `PEER <IP del PC>:5400`) deve **trasmettere in radio** il testo ogni 10 s, e il PC stampa i pacchetti che la T3 riceve in radio dalle stazioni. Con `--send-voice N0CALL --frames 100` manda una voce finta.
 
 ## Esito della prova del 12/11/2026
 Dettagli in [prove.md](prove.md). In sintesi: con un `PEER` sbagliato il collegamento non sale; con la chiave diversa non sale e `firma errata` cresce di circa 15 ogni 30 secondi; con le impostazioni giuste compare `collegamento con l'altro nodo attivo`. Memoria libera all'avvio circa 146 KB, heap stabile intorno a 140,7 KB con il collegamento attivo.

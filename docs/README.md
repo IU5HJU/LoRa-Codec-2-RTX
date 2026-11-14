@@ -18,7 +18,7 @@
 | [audio.md](audio.md) | Collegamenti e catena audio del microfono, amplificatore e altoparlante |
 | [pinout.md](pinout.md) | Pin e schemi dei collegamenti della T3 V1.6.1 e della T-Beam V1.2 (anche con radio SX1262) |
 | [alimentazione.md](alimentazione.md) | Batteria e alimentazione, T-Beam AXP2101, lettura della tensione |
-| [display.md](display.md) | Le schermate dell'OLED (24 mockup) e le novità: lettera del profilo, menu, schermata Wi-Fi |
+| [display.md](display.md) | Le schermate dell'OLED (25 mockup) e le novità: lettera del profilo, menu, schermata Wi-Fi |
 | [versioni.md](versioni.md) | Numerazione delle versioni (SemVer con beta e rc), firmware e protocollo, come si pubblica una versione |
 | [codec2.md](codec2.md) | Modi del Codec2: costo in CPU e memoria, tempo in aria, ascolto comparativo (`codec_compare`) |
 | [sdr.md](sdr.md) | Ricevere e decodificare le trasmissioni con un SDR (NESDR / RTL-SDR, GNU Radio, `lcr_decode`) |

@@ -14,7 +14,7 @@ namespace lcr {
 class Inbox {
  public:
   enum class Kind : uint8_t { None, Voice, Text };
-  static constexpr size_t kMaxFrom = 15;  // nominativo-SSID del mittente di un testo di altre reti (IU5ABC-12)
+  static constexpr size_t kMaxFrom = 15;  // nominativo-SSID del mittente di un testo di altre reti (N0CALL-12)
 
   void clear();
   Kind kind() const { return kind_; }
