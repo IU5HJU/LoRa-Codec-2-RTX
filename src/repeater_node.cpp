@@ -23,6 +23,7 @@
 #include "sysop.h"
 #include "tx_scheduler.h"
 #include "button_gesture.h"
+#include "wifi_config.h"
 
 namespace {
 
@@ -30,6 +31,7 @@ constexpr uint32_t kLinkBaud = 115200;
 constexpr uint32_t kHeartbeatMs = 1000;
 constexpr uint32_t kLinkDeadMs = 3500;
 constexpr uint32_t kDisplayMs = 500;
+constexpr uint32_t kConfigWindowMs = 180000;  // il nodo apre il Wi-Fi di configurazione per 3 minuti all'avvio (si prolunga con un client collegato)
 
 typedef std::function<bool(const char*, char*, size_t)> CfgHandler;
 
@@ -376,9 +378,50 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
 // ---- Nodo su Wi-Fi (ruolo NODE, docs/studio-nodo-internet.md): una T3 con la radio e un collegamento UDP firmato con un altro nodo ----
 
 // Finche' mancano dei parametri il nodo non parte: mostra cosa manca e lascia la console USB per impostarli.
+// Configurazione dal Wi-Fi all'avvio del nodo, anche con la scheda appena uscita dalla scatola: la scheda crea la rete VoLoRa-XXXX (password
+// sul display, pagina su 192.168.4.1) per 'windowMs' millisecondi, poi la chiude e parte il nodo. Finche' c'e' un client collegato la
+// finestra si prolunga (almeno 60 s dall'ultima verifica). windowMs 0 = senza scadenza (nodo non pronto): si esce solo con un riavvio.
+// Anche la seriale resta attiva. Ritorna solo alla scadenza o se il Wi-Fi non parte.
+void configWindow(UiNotifier& ui, CfgHandler handler, uint32_t windowMs, const char* why) {
+  static WifiConfig wc;
+  char ssid[24], pass[16];
+  ui.showMessage("WI-FI", "Avvio...");
+  if (!wc.begin(handler, ssid, sizeof(ssid), pass, sizeof(pass))) {
+    Serial.println("[nodo] il Wi-Fi di configurazione non parte: resta la seriale");
+    return;
+  }
+  Serial.printf("[nodo] configurazione dal Wi-Fi: rete %s, password %s, pagina http://192.168.4.1 %s\n", ssid, pass, windowMs ? "(per qualche minuto, poi parte il nodo)" : "(finche' non e' configurato)");
+  UsbConsole usb(handler);
+  uint32_t deadline = millis() + windowMs;
+  uint32_t lastDrawMs = 0;
+  for (;;) {
+    const uint32_t now = millis();
+    if (windowMs != 0) {
+      if (WiFi.softAPgetStationNum() > 0 && static_cast<int32_t>(deadline - now) < 60000) deadline = now + 60000;
+      if (static_cast<int32_t>(now - deadline) >= 0) break;
+    }
+    if (usb.poll() || wc.loop()) restartNow(ui);
+    if (lastDrawMs == 0 || now - lastDrawMs >= 1000) {
+      lastDrawMs = now ? now : 1;
+      char foot[24];
+      if (windowMs != 0) {
+        const uint32_t left = (deadline - now) / 1000;
+        snprintf(foot, sizeof(foot), "il nodo parte in %u:%02u", static_cast<unsigned>(left / 60), static_cast<unsigned>(left % 60));
+      } else {
+        snprintf(foot, sizeof(foot), "%s", why ? why : "da configurare");
+      }
+      ui.showWifi(ssid, pass, foot);
+    }
+    delay(5);
+  }
+  wc.end();
+  Serial.println("[nodo] finestra di configurazione Wi-Fi chiusa");
+}
+
 [[noreturn]] void nodeNotReady(UiNotifier& ui, CfgHandler handler, const char* what) {
   UsbConsole usb(handler);
-  Serial.printf("[nodo] non pronto: %s (CFG SET ... poi CFG REBOOT)\n", what);
+  Serial.printf("[nodo] non pronto: %s (CFG SET ... poi CFG REBOOT, oppure dal Wi-Fi della scheda)\n", what);
+  configWindow(ui, handler, 0, what);  // senza scadenza: ritorna solo se il Wi-Fi non parte
   for (;;) {
     ui.showLines("NODO INTERNET", "NON PRONTO", what, "CFG SET ... e", "CFG REBOOT");
     if (usb.poll()) restartNow(ui);
@@ -392,6 +435,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
   if (settings.peerIp[0] == 0) nodeNotReady(ui, handler, "manca PEER");
   if (settings.nodeId == 0) nodeNotReady(ui, handler, "manca NODEID");
   if (!settings.nodeKeySet) nodeNotReady(ui, handler, "manca NODEKEY");
+  configWindow(ui, handler, kConfigWindowMs, nullptr);  // la configurazione dal Wi-Fi, poi parte il nodo
 
   RadioLora radio;
   if (!radio.begin(settings)) stopWithError(ui, "radio", radio.lastError());

@@ -77,7 +77,7 @@ class UiNotifier : public lcr::INotifier {
   // false se il display non risponde (il resto del sistema funziona comunque).
   bool begin();
   void showMessage(const char* line1, const char* line2 = nullptr);  // schermata bloccante (avvio/errori)
-  void showWifi(const char* ssid, const char* password);  // configurazione Wi-Fi: password in carattere doppio
+  void showWifi(const char* ssid, const char* password, const char* footer = "VOL lungo = esci");  // configurazione Wi-Fi: password in carattere doppio
   void showLines(const char* l1, const char* l2 = nullptr, const char* l3 = nullptr, const char* l4 = nullptr,
                  const char* l5 = nullptr);  // fino a 5 righe di testo piccolo
 

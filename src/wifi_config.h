@@ -18,6 +18,8 @@ class WifiConfig {
   // Da chiamare spesso. true se e' stato chiesto il riavvio.
   bool loop();
   bool active() const { return active_; }
+  // Chiude server e punto di accesso e spegne il Wi-Fi (la scheda puo' poi usarlo come client). Libera la memoria del server.
+  void end();
   // Indicatore salvato nella scheda: la voce "Wi-Fi" del menu lo accende e riavvia; all'avvio si controlla e si cancella.
   static bool bootRequest();
   static void setBootRequest(bool on);

@@ -108,6 +108,20 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
   return true;
 }
 
+void WifiConfig::end() {
+  if (!active_) return;
+  if (server) {
+    server->end();
+    delete server;
+    server = nullptr;
+  }
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_OFF);
+  active_ = false;
+  reboot_ = false;
+  rebootRequested = false;
+}
+
 bool WifiConfig::loop() {
   if (!active_) return false;
   if (rebootRequested && !reboot_) {
