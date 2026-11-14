@@ -352,3 +352,14 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 ### 14/11/2026, casa, IU5HJU (collega collegato da rete cellulare: indirizzo)
 
 - Un collega collegato da rete cellulare: il reflector mostrava l'indirizzo **interno del router** di casa (`192.168.1.254`) e non quello pubblico del collega. Causa: il router riscrive l'origine dei pacchetti prima di passarli al server, e il server non può ricostruirla. Soluzione scritta: la scheda **dichiara il proprio indirizzo pubblico** al reflector (colonna "IP del Nodo" della pagina di amministrazione). **Da provare** con il firmware nuovo sulla scheda del collega.
+
+### 14/11/2026, in movimento, IU5HJU (prova di potenza in aria a circa 5 km)
+
+![Tratta della prova](images/prova-distanza-14-11-2026.png)
+
+- **Scenario:** prova di potenza fra due schede VoLoRa, una in auto, a **5,02 km** in linea d'aria (direzione circa 39°, nord-est). Posizioni (segnaposto di Google Maps, pubblicazione autorizzata da IU5HJU): **A** 43,799372 N 10,880219 E, Via P. Togliatti 198, Lamporecchio (PT); **B** 43,834744 N 10,919015 E, Strada Provinciale 16 Montalbano 3-1, San Baronto (PT).
+- **Impostazioni:** LILYGO T3 V1.6.1 (SX1278), 433,475 MHz, profilo Standard (Codec2 3200, SF7, BW 250 kHz), prova di potenza dalla massima alla minima, un dBm alla volta.
+- **Esito sul display della scheda fotografata:** "POTENZA: finita", **MIN 2 dBm**, "sente fino a 2 dBm (frame 100% a MIN)". La prova è arrivata alla potenza minima impostabile (2 dBm) con tutti i frame intatti: il margine oltre quel valore **non è misurato**.
+- **Non registrati:** quale scheda fosse in A e in B, antenne (tipo e altezza), ostacoli lungo la tratta, nominativo e firmware dell'altra stazione, esito sul display dell'altra scheda. Una sola prova, in movimento: non è una statistica.
+- Il documento in PDF con le stesse informazioni è stato preparato il 14/11/2026 (non è nel repository).
+
