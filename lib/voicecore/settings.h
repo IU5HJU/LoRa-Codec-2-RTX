@@ -231,7 +231,10 @@ class ISettingsStorage {
 };
 
 // Valori da usare all'avvio: quelli salvati se validi, altrimenti i predefiniti.
-Settings loadSettings(ISettingsStorage& storage, const Settings& defaults);
+// Esito della lettura: Loaded = impostazioni salvate usate; Empty = niente di salvato (o memoria non leggibile); Invalid = qualcosa e'
+// salvato ma non e' valido, quindi si usano i valori predefiniti (la memoria NON viene cancellata).
+enum class LoadStatus : uint8_t { Loaded, Empty, Invalid };
+Settings loadSettings(ISettingsStorage& storage, const Settings& defaults, LoadStatus* status = nullptr);
 
 enum class ConsoleResult {
   NotCommand,  // la riga non e' per la console (nessuna risposta)

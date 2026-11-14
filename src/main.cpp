@@ -118,7 +118,9 @@ void setup() {
 
   // Impostazioni dell'operatore: salvate nella scheda, altrimenti quelle di user_config.h.
   const lcr::Settings defaults = compileTimeSettings();
-  settings = lcr::loadSettings(settingsStorage, defaults);
+  lcr::LoadStatus loadStatus = lcr::LoadStatus::Empty;
+  settings = lcr::loadSettings(settingsStorage, defaults, &loadStatus);
+  Serial.printf("[avvio] impostazioni: %s\n", loadStatus == lcr::LoadStatus::Loaded ? "lette dalla memoria" : loadStatus == lcr::LoadStatus::Invalid ? "salvate ma NON valide, uso i valori predefiniti (memoria non toccata)" : "nessuna salvata, uso i valori predefiniti");
   console = new lcr::SettingsConsole(settings, defaults, settingsStorage, kBoardShort, LCR_VERSION, RadioLora::chipName());
   ui.setSettings(settings);
   ui.setProfile(lcr::profileFor(settings.profile));

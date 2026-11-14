@@ -133,10 +133,18 @@ bool isValidSettings(const Settings& s) {
          (!s.qthSet || isValidCoordinate(s.qthLatE7, s.qthLonE7)) && validTexts(s);
 }
 
-Settings loadSettings(ISettingsStorage& storage, const Settings& defaults) {
+Settings loadSettings(ISettingsStorage& storage, const Settings& defaults, LoadStatus* status) {
   Settings s;
-  if (storage.load(s) && isValidSettings(s)) return s;
-  return defaults;
+  if (!storage.load(s)) {
+    if (status) *status = LoadStatus::Empty;
+    return defaults;
+  }
+  if (!isValidSettings(s)) {
+    if (status) *status = LoadStatus::Invalid;
+    return defaults;
+  }
+  if (status) *status = LoadStatus::Loaded;
+  return s;
 }
 
 namespace {

@@ -447,11 +447,22 @@ void testValidate() {
 
 void testLoad() {
   FakeStorage st;
-  CHECK(loadSettings(st, kDefaults) == kDefaults);  // niente salvato
+  {
+    LoadStatus ls = LoadStatus::Loaded;
+    CHECK(loadSettings(st, kDefaults, &ls) == kDefaults);
+    CHECK(ls == LoadStatus::Empty);
+  }
+  // niente salvato
   st.save(make("IU5HJU", 434000, 12));
-  CHECK(loadSettings(st, kDefaults) == make("IU5HJU", 434000, 12));
+  {
+    LoadStatus ok = LoadStatus::Empty;
+    CHECK(loadSettings(st, kDefaults, &ok) == make("IU5HJU", 434000, 12));
+    CHECK(ok == LoadStatus::Loaded);
+  }
   st.data = make("IU5HJU", 999000, 12);  // dati corrotti: si torna ai predefiniti
-  CHECK(loadSettings(st, kDefaults) == kDefaults);
+  LoadStatus ls = LoadStatus::Loaded;
+  CHECK(loadSettings(st, kDefaults, &ls) == kDefaults);
+  CHECK(ls == LoadStatus::Invalid);
 }
 
 void testNotCommand() {
