@@ -36,7 +36,7 @@ Sulle stesse schede, dalla beta.2 (09/11/2026) a oggi (14/11/2026):
 - **Shift** per operare via ripetitore, libero da 0 a 10 MHz in positivo o negativo (come l'offset di una radio): [docs/firmware.md](docs/firmware.md).
 - **Nodo Internet** (due schede su Wi-Fi che si portano i pacchetti, UDP firmato) e **reflector**: un server a cui si collegano nodi e ripetitori **senza aprire porte sul router**, con pagina di amministrazione (password) e pagina pubblica di sola lettura: [docs/reflector.md](docs/reflector.md), [docs/banco-nodo.md](docs/banco-nodo.md).
 - **Prova di potenza** fra due schede: cerca da sola la potenza minima con cui si sentono, e l'esito compare sul display di entrambe: [docs/prova-collegamento.md](docs/prova-collegamento.md).
-- **T-Beam con radio SX1262** (la stessa scheda col modulo LoRa diverso dall'SX1278): firmware dedicato, scritto ma **non ancora provato** su una scheda: [docs/tbeam-sx1262.md](docs/tbeam-sx1262.md).
+- **T-Beam con radio SX1262** (la stessa scheda col modulo LoRa diverso dall'SX1278): firmware dedicato, **provato in ricezione di un messaggio da una T3 il 14/11/2026** (Standard e Range non verificati): [docs/tbeam-sx1262.md](docs/tbeam-sx1262.md).
 
 ## Per provare il firmware
 
@@ -95,7 +95,7 @@ Aggiornato il 14/11/2026.
 | **Nodo Internet** (due schede su Wi-Fi, UDP firmato con HMAC) con identificativo periodico anche in Morse FM | **provato sulle schede** (12/11/2026: radio, rete, riavvio, router spento, conversazione lunga); il Morse in FM ascoltato con un ricevitore FM (13/11/2026, la portante è stata resa continua dopo la prova, da riprovare); dal 14/11/2026 all'avvio apre per 3 minuti il Wi-Fi di configurazione (**non ancora provato su una scheda**) |
 | **Reflector** (server `vlreflector`, pagina di amministrazione con password, pagina pubblica, IP del nodo) | **provato** sul PC, su un server Debian di casa e da una rete cellulare; una scheda collegata dal telefono è vista dal reflector (13/11/2026); la **voce attraverso il reflector** e l'IP pubblico dichiarato dalle schede sono **da provare** ([docs/reflector.md](docs/reflector.md)) |
 | **Shift** libero da 0 a 10 MHz (direzione e scostamento) per operare via ripetitore | scritto, provato sul PC e dalla pagina; **non ancora provato con un ripetitore** |
-| **T-Beam con radio SX1262** | firmware **scritto e compilato** da GitHub Actions; **mai provato su una scheda** ([docs/tbeam-sx1262.md](docs/tbeam-sx1262.md)) |
+| **T-Beam con radio SX1262** | firmware compilato da GitHub Actions; **il 14/11/2026 ha ricevuto un messaggio (profilo Messaggio) da una T3 con SX1278** ([docs/prove.md](docs/prove.md)); Standard, Range e la trasmissione verso una SX1278 **non provati** ([docs/tbeam-sx1262.md](docs/tbeam-sx1262.md)) |
 | Aggiornamento dalla pagina **senza perdere le impostazioni** (dal 14/11/2026, con la casella "Erase device" vuota) | **provato su una T3** (14/11/2026, [docs/prove.md](docs/prove.md)); **non provato sulle T-Beam** |
 | Ricezione con SDR (NESDR, GNU Radio): decodifica e ascolto in tempo reale, anche in Standard | fatta e **provata** in Range, in Messaggio e in Standard (provata il 10/11/2026 con i vecchi nomi: Standard, Messaggio, Qualità) |
 | Misure sul campo, distanze lunghe, mezzi in movimento | **da fare** |

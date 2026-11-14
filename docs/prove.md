@@ -379,5 +379,14 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - Su una T-Beam con radio **SX1262** (firmware `6424402`, profilo **Messaggio**, 432.500 MHz, 17 dBm) la prova `CFG TEST AUDIO` si ferma nella **fase 2** (toni con la radio in trasmissione): `task_wdt: ... CPU 0: rfburst`, `abort()`, riavvio. Succede a ogni prova.
 - **Causa:** il task `rfburst` trasmette pacchetti da 192 byte di payload con una chiamata bloccante che non cede il tempo al task IDLE del core 0. A SF12/BW125 (profilo Messaggio) un pacchetto così dura circa **7,8 s**, più dei 5 s del watchdog. Negli altri profili dura meno di 0,5 s. Non è un difetto dell'SX1262: vale anche per la T3 nel profilo Messaggio.
 - **Correzione:** il pacchetto della prova si accorcia finché dura al massimo 1,5 s in aria (nel Messaggio circa 20 byte in tutto). **Non ancora riprovata su una scheda.**
-- **Non spiegato:** la stessa scheda riceve il messaggio ma l'audio non si sente. Dal registro (solo comandi e prova dei toni) non si vede la ricezione: servono le righe della seriale mentre arriva il messaggio e mentre si preme il PTT per ascoltarlo.
+- **L'audio del messaggio:** all'inizio la scheda riceveva il messaggio ma l'operatore non lo sentiva; poi **l'ha ascoltato**. **La causa del mancato ascolto iniziale non è stata accertata** (il primo registro conteneva solo comandi e prova dei toni).
+- **Seconda prova dei toni** (ancora con il firmware `6424402`, quindi con il riavvio): con la radio in trasmissione il rumore di fondo al microfono sale di molto (500 Hz da -90 a -68 dB, 1000 Hz da -95,5 a -78 dB, 2000 Hz da -101 a -83 dB) mentre i toni restano intorno a -50 dB: la radiofrequenza entra nell'audio a 17 dBm.
+
+### 14/11/2026, T-Beam SX1262 riceve da una T3 (profilo Messaggio, primo collegamento SX1262 - SX1278)
+
+- **Scenario:** una **T3 con SX1278** (IU5HJU, 432.500 MHz, profilo Messaggio SF12/BW125, 17 dBm) trasmette messaggi vocali a una **T-Beam con SX1262** di un altro radioamatore (firmware `6424402`, `radio=SX1262`).
+- **Esito:** il messaggio **arriva e viene ascoltato**. Registro della T-Beam ([docs/prove-log/2026-11-14-tbeam-sx1262-ricezione-messaggio.txt](prove-log/2026-11-14-tbeam-sx1262-ricezione-messaggio.txt)): `RX fine: IU5HJU RSSI -125 dBm SNR -11.0 dB, frame persi 0, pacchetti recuperati 0`; `pacchetti letti 11, errori CRC 0, sovrascritti 0`; 79 frame; decodifica Codec2 in media 13,3 ms per frame (limite 40 ms). **Per la prima volta la radio SX1262 è provata su una scheda vera e dialoga con una SX1278.**
+- **Standard e Range:** a quella distanza **non si sentono** (siamo al limite della copertura, come riferito dall'operatore: non ci sono valori di distanza né di segnale). Provati solo i messaggi.
+- **Non provato:** la trasmissione dalla T-Beam SX1262 verso una SX1278; la voce Standard o Range fra le due; la distanza non è registrata.
+- **Dal lato della T3**, nella stessa sessione: una registrazione di 4,0 s ha riportato `frame persi dal microfono 18` (le altre 0). Non è chiaro se c'entri con questo collegamento: da tenere d'occhio.
 

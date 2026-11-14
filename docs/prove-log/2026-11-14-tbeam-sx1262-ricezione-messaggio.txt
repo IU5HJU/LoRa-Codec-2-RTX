@@ -1,0 +1,25 @@
+[gps] nessun fix (satelliti 0, frasi lette 0, errori 0): serve il cielo aperto, il primo fix puo' richiedere alcuni minuti
+[pmu] batteria presente, 4055 mV, 51 %, USB si, carica in corso
+[gps] nessun fix (satelliti 0, frasi lette 0, errori 0): serve il cielo aperto, il primo fix puo' richiedere alcuni minuti
+[pmu] batteria presente, 4055 mV, 51 %, USB si, carica in corso
+[gps] nessun fix (satelliti 0, frasi lette 0, errori 0): serve il cielo aperto, il primo fix puo' richiedere alcuni minuti
+[pmu] batteria presente, 4056 mV, 52 %, USB si, carica in corso
+[gps] nessun fix (satelliti 0, frasi lette 0, errori 0): serve il cielo aperto, il primo fix puo' richiedere alcuni minuti
+[pmu] batteria presente, 4056 mV, 52 %, USB si, carica in corso
+RX fine: IU5HJU RSSI -125 dBm SNR -11.0 dB, frame persi 0, pacchetti recuperati 0
+[rx] pacchetti letti 11, errori CRC 0, sovrascritti 0, ritardo massimo di lettura 28 ms
+[rx-hex] 79 frame
+[rx-hex] eb7c525e88b6e5f79b559e5aecfad632aa18e37dd25f5bccdd7b22993f50822ffca0f600edb97298bd7ec1b31259ab94ce53d29b5e6ad9f1925828cc
+[rx-hex] b8756b57b7d0ff761b5d0544e5b0925e18fcc576db53931ae9b3d29fefacd87f663b512ad5b51b54b4daa773633d486ac3b9fbfb7716dc7f9a1e0ff8
+[rx-hex] f8779689063edd75129d49dee676763a3ee2eafd9b529b8cc27d18af5b64ff7a62585896ff73163e927adaf7925e18ccd5b0925f5894c3bd9b54b44e
+[rx-hex] c278d25f5be4fb7e329ee4a8f671929e1c04ee75625ab738d9bb925fab96cdbc32908416e4f0b714d2f2e47e35d72058dcfb3cd2220efb7b390cb732
+[rx-hex] dcfb3d5e1ebcca79fb5fa3662e2581e765562580dbe73d56258fdcf5ae66623233d063b6f8ff7c839276fb797c83f604fb72392d1fd6e2ffd7ab8bf2
+[rx-hex] fa373c0a5b32c4f4fc0c1ffcec70b7aa0c5cecf977a80c56f9f567aa73a6c6fab7acb572d9f57dbbcbfceadd3319429ef4ffb251b5d0d6ffb1bfd11a
+[rx-hex] dcf2d3d61b18c8f137893c56f4fd3b8ab676fdbd6b537f18e5f6bf7518f0c6709f733596643794f25b0efafa7c198c26e9f5723e9ee6e9f5b9d41ba4
+[rx-hex] c1fd93f68804cdfe36d5885ee874079bf51ad5b966d55962ebb517ad58b4d6b0225fab1ef471925efa14e87771c92b8c8904bbb0f648
+[rx-codec] decodifica Codec2: media 13.3 ms, massimo 18.9 ms per frame (limite 40 ms)
+[gps] nessun fix (satelliti 0, frasi lette 0, errori 0): serve il cielo aperto, il primo fix puo' richiedere alcuni minuti
+[pmu] batteria presente, 4057 mV, 52 %, USB si, carica in corso
+[mic] livello -75 dBFS, picco -66 dBFS, offset 0.0%, AGC in -84 dBFS, guadagno 26 dB, uscita al codec -58 dBFS, errori 0
+[gps] nessun fix (satelliti 0, frasi lette 0, errori 0): serve il cielo aperto, il primo fix puo' richiedere alcuni minuti
+[pmu] batteria presente, 4056 mV, 52 %, USB si, carica in corso

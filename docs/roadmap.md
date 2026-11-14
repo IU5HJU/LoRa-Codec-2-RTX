@@ -12,7 +12,7 @@ Aggiornato il 14 novembre 2026 (sezione "Stato al 14/11/2026" qui sotto; sezione
 
 1. Prova di potenza in aria fra due schede: **fatta il 14/11/2026 a 5,02 km** ([prove.md](prove.md)); resta da documentare l'esito sul display di **entrambe** le schede e la distanza in km (nuova, 14/11/2026).
 2. **Voce attraverso il reflector** fra schede (finora è provato il collegamento, non la voce).
-3. **T-Beam con radio SX1262** su una scheda vera: la radio parte? dialoga con le schede SX1278? ([tbeam-sx1262.md](tbeam-sx1262.md)).
+3. **T-Beam con radio SX1262**: provata il 14/11/2026 in ricezione di un messaggio da una SX1278 ([prove.md](prove.md)); restano da provare Standard e Range, la trasmissione verso una SX1278 e la prova dei toni dopo la correzione del watchdog ([tbeam-sx1262.md](tbeam-sx1262.md)).
 4. **Aggiornamento dalla pagina senza perdere le impostazioni**: **confermato su una T3 il 14/11/2026** ([prove.md](prove.md)); resta da provare su una T-Beam.
 5. **Ripetitore** a banco ([banco-ripetitore.md](banco-ripetitore.md)) e **shift** con un ripetitore vero.
 6. **IP pubblico** dichiarato dalle schede, visto nella pagina del reflector.
