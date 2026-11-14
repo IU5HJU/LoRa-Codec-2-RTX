@@ -11,6 +11,7 @@ const MenuItem* defaultMenuItems(size_t& count, bool sysopMode) {
       {"Modo Messaggio", 1, true},
       {"Invia testo", kMenuTextId, true},
       {"MeshCom", kMenuMeshId, true},
+      {"MeshCom ascolto", kMenuMeshListenId, true},
       {"Wi-Fi", kMenuWifiId, true},
   };
   static const MenuItem kSysopItems[] = {
@@ -19,6 +20,7 @@ const MenuItem* defaultMenuItems(size_t& count, bool sysopMode) {
       {"Modo Messaggio", 1, true},
       {"Comandi Sysop", kMenuSysopId, true},
       {"MeshCom", kMenuMeshId, true},
+      {"MeshCom ascolto", kMenuMeshListenId, true},
       {"Wi-Fi", kMenuWifiId, true},
   };
   count = sizeof(kItems) / sizeof(kItems[0]);

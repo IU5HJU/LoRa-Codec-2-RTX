@@ -16,6 +16,9 @@ class WifiConfig {
   // false se il Wi-Fi non parte.
   bool begin(Handler handler, char* ssid, size_t ssidCap, char* password, size_t passCap);
   // Da chiamare spesso. true se e' stato chiesto il riavvio.
+  // Pagina di gestione sulla rete di casa (la scheda e' un client Wi-Fi): stesse pagine, ma con utente 'volora' e la password della scheda
+  // (quella mostrata sul display all'accensione). La password e' scritta in 'password' (almeno 16 caratteri). false se non parte.
+  bool beginLan(Handler handler, char* password, size_t passCap);
   bool loop();
   bool active() const { return active_; }
   // Chiude server e punto di accesso e spegne il Wi-Fi (la scheda puo' poi usarlo come client). Libera la memoria del server.

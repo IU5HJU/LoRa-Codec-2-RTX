@@ -48,7 +48,7 @@ static void testGesture() {
 static void testMenu() {
   size_t n = 0;
   const MenuItem* items = defaultMenuItems(n);
-  CHECK(n == 6);
+  CHECK(n == 7);
   // i tre profili si chiamano "Modo ...": Standard (id 2, Codec2 3200), Range (id 0, Codec2 1200), Messaggio (id 1); le altre voci no
   CHECK(strcmp(items[0].label, "Modo Standard") == 0 && items[0].id == 2);
   CHECK(strcmp(items[1].label, "Modo Range") == 0 && items[1].id == 0);
@@ -60,15 +60,17 @@ static void testMenu() {
   // Si apre sulla voce in uso (Range, id 0).
   CHECK(m.open(0, 0));
   CHECK(m.isOpen() && m.selectedIndex() == 1);
-  // Range -> Messaggio -> Invia testo -> MeshCom -> Wi-Fi -> Standard -> Range
+  // Range -> Messaggio -> Invia testo -> MeshCom -> MeshCom ascolto -> Wi-Fi -> Standard -> Range
   m.next(100);
   CHECK(m.selectedIndex() == 2 && m.item(2).id == 1);
   m.next(120);
   CHECK(m.selectedIndex() == 3 && m.item(3).id == kMenuTextId);  // Invia testo
   m.next(125);
   CHECK(m.selectedIndex() == 4 && m.item(4).id == kMenuMeshId);  // MeshCom (escursione)
+  m.next(128);
+  CHECK(m.selectedIndex() == 5 && m.item(5).id == kMenuMeshListenId);  // MeshCom ascolto
   m.next(130);
-  CHECK(m.selectedIndex() == 5 && m.item(5).id == kMenuWifiId);
+  CHECK(m.selectedIndex() == 6 && m.item(6).id == kMenuWifiId);
   m.next(150);
   CHECK(m.selectedIndex() == 0);
   m.next(200);
@@ -98,6 +100,13 @@ static void testMenu() {
   m.next(720);
   m.next(725);
   o = m.confirm(730);
+  CHECK(o.kind == K::Selected && o.id == kMenuMeshListenId);  // MeshCom ascolto: id 104
+  CHECK(m.open(1, 740));
+  m.next(750);
+  m.next(760);
+  m.next(765);
+  m.next(768);
+  o = m.confirm(770);
   CHECK(o.kind == K::Selected && o.id == kMenuWifiId);
   // Dallo Standard (id 2, in cima) si va al Range con un tocco
   CHECK(m.open(2, 800));

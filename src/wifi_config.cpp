@@ -12,6 +12,8 @@ namespace {
 AsyncWebServer* server = nullptr;
 WifiConfig::Handler handler;
 volatile bool rebootRequested = false;
+bool lanAuth = false;  // true: pagine dalla rete di casa, con utente e password
+char lanPass[16] = {0};
 }  // namespace
 
 bool WifiConfig::bootRequest() {
@@ -32,55 +34,23 @@ void WifiConfig::setBootRequest(bool on) {
   }
 }
 
-bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, size_t passCap) {
-  handler = h;
-  // Password casuale di 8 cifre (esp_random usa l'hardware), generata la prima volta e poi salvata nella scheda: resta
-  // la stessa a ogni avvio del Wi-Fi (si rigenera solo con i valori di fabbrica). Non esiste una password uguale per
-  // tutte le schede.
-  {
-    Preferences pref;
-    String saved;
-    if (pref.begin("lcr", true)) {
-      saved = pref.getString("wpass", "");
-      pref.end();
-    }
-    if (saved.length() == 8) {
-      snprintf(password, passCap, "%s", saved.c_str());
-    } else {
-      snprintf(password, passCap, "%08lu", static_cast<unsigned long>(esp_random() % 100000000UL));
-      if (pref.begin("lcr", false)) {
-        pref.putString("wpass", password);
-        pref.end();
-      }
-    }
-  }
-
-  // Come nel Tracker LoRa APRS di Guzman (wifi_utils.cpp, startAutoAP): modo NULL, poi AP, softAP(nome, password) con i
-  // valori predefiniti, nessun indirizzo configurato a mano e nessun DNS. Le righe [wifi] sulla seriale dicono se il
-  // client si collega, che indirizzo riceve e se la richiesta della pagina arriva.
-  WiFi.mode(WIFI_MODE_NULL);
-  WiFi.mode(WIFI_AP);
-  uint8_t mac[6] = {0};
-  WiFi.macAddress(mac);
-  snprintf(ssid, ssidCap, "VoLoRa-%02X%02X", mac[4], mac[5]);
-  WiFi.onEvent([](WiFiEvent_t ev, WiFiEventInfo_t info) {
-    if (ev == ARDUINO_EVENT_WIFI_AP_STACONNECTED) Serial.println("[wifi] un client si e' collegato alla rete");
-    if (ev == ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED) Serial.printf("[wifi] indirizzo assegnato al client: %s\n", IPAddress(info.wifi_ap_staipassigned.ip.addr).toString().c_str());
-    if (ev == ARDUINO_EVENT_WIFI_AP_STADISCONNECTED) Serial.println("[wifi] il client si e' scollegato");
-  });
-  if (!WiFi.softAP(ssid, password)) {
-    WiFi.mode(WIFI_OFF);
-    return false;
-  }
-  // Server asincrono come nel Tracker LoRa APRS di Guzman (ESPAsyncWebServer): le richieste si servono nel task di rete e
-  // il loop principale non resta bloccato. Il server sincrono (WebServer) dava una pagina bianca e poi non rispondeva piu'.
-  server = new AsyncWebServer(80);
+// Le due pagine (la configurazione e il comando CFG). Dalla rete di casa (lanAuth) servono utente e password: la rete non e' protetta come il
+// punto di accesso della scheda.
+static void addRoutes() {
   server->on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (lanAuth && !request->authenticate("volora", lanPass)) {
+      request->requestAuthentication();
+      return;
+    }
     Serial.println("[wifi] richiesta della pagina");
     // Come nel Tracker di Guzman: risposta dalla flash (senza copiare la pagina nella memoria), con tipo e lunghezza.
     request->send(request->beginResponse(200, "text/html", reinterpret_cast<const uint8_t*>(kWifiPage), sizeof(kWifiPage) - 1));
   });
   server->on("/cfg", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (lanAuth && !request->authenticate("volora", lanPass)) {
+      request->requestAuthentication();
+      return;
+    }
     const String line = request->hasParam("c") ? request->getParam("c")->value() : String();
     Serial.printf("[wifi] comando dalla pagina: %s\n", line.c_str());
     // Solo comandi CFG; quelli che usano audio o radio non ci sono (la scheda e' ferma).
@@ -102,8 +72,69 @@ bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, si
     Serial.println("[wifi] richiesta non trovata");
     request->send(404, "text/plain; charset=utf-8", "non trovato");
   });
+}
+
+// Password casuale di 8 cifre (esp_random usa l'hardware), generata la prima volta e poi salvata nella scheda: resta la stessa a ogni avvio
+// del Wi-Fi (si rigenera solo con i valori di fabbrica). Non esiste una password uguale per tutte le schede.
+static void ensurePassword(char* password, size_t passCap) {
+  Preferences pref;
+  String saved;
+  if (pref.begin("lcr", true)) {
+    saved = pref.getString("wpass", "");
+    pref.end();
+  }
+  if (saved.length() == 8) {
+    snprintf(password, passCap, "%s", saved.c_str());
+  } else {
+    snprintf(password, passCap, "%08lu", static_cast<unsigned long>(esp_random() % 100000000UL));
+    if (pref.begin("lcr", false)) {
+      pref.putString("wpass", password);
+      pref.end();
+    }
+  }
+}
+
+bool WifiConfig::begin(Handler h, char* ssid, size_t ssidCap, char* password, size_t passCap) {
+  handler = h;
+  ensurePassword(password, passCap);
+
+  // Come nel Tracker LoRa APRS di Guzman (wifi_utils.cpp, startAutoAP): modo NULL, poi AP, softAP(nome, password) con i
+  // valori predefiniti, nessun indirizzo configurato a mano e nessun DNS. Le righe [wifi] sulla seriale dicono se il
+  // client si collega, che indirizzo riceve e se la richiesta della pagina arriva.
+  WiFi.mode(WIFI_MODE_NULL);
+  WiFi.mode(WIFI_AP);
+  uint8_t mac[6] = {0};
+  WiFi.macAddress(mac);
+  snprintf(ssid, ssidCap, "VoLoRa-%02X%02X", mac[4], mac[5]);
+  WiFi.onEvent([](WiFiEvent_t ev, WiFiEventInfo_t info) {
+    if (ev == ARDUINO_EVENT_WIFI_AP_STACONNECTED) Serial.println("[wifi] un client si e' collegato alla rete");
+    if (ev == ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED) Serial.printf("[wifi] indirizzo assegnato al client: %s\n", IPAddress(info.wifi_ap_staipassigned.ip.addr).toString().c_str());
+    if (ev == ARDUINO_EVENT_WIFI_AP_STADISCONNECTED) Serial.println("[wifi] il client si e' scollegato");
+  });
+  if (!WiFi.softAP(ssid, password)) {
+    WiFi.mode(WIFI_OFF);
+    return false;
+  }
+  // Server asincrono come nel Tracker LoRa APRS di Guzman (ESPAsyncWebServer): le richieste si servono nel task di rete e
+  // il loop principale non resta bloccato. Il server sincrono (WebServer) dava una pagina bianca e poi non rispondeva piu'.
+  server = new AsyncWebServer(80);
+  addRoutes();
   server->begin();
   Serial.printf("[wifi] punto di accesso %s, indirizzo %s\n", ssid, WiFi.softAPIP().toString().c_str());
+  active_ = true;
+  return true;
+}
+
+bool WifiConfig::beginLan(Handler h, char* password, size_t passCap) {
+  if (active_) return true;
+  handler = h;
+  ensurePassword(password, passCap);
+  snprintf(lanPass, sizeof(lanPass), "%s", password);
+  lanAuth = true;
+  server = new AsyncWebServer(80);
+  addRoutes();
+  server->begin();
+  Serial.printf("[wifi] pagina di gestione sulla rete di casa: http://%s/ (utente volora)\n", WiFi.localIP().toString().c_str());
   active_ = true;
   return true;
 }
@@ -120,6 +151,7 @@ void WifiConfig::end() {
   active_ = false;
   reboot_ = false;
   rebootRequested = false;
+  lanAuth = false;
 }
 
 bool WifiConfig::loop() {

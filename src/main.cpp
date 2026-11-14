@@ -920,6 +920,9 @@ void loop() {
     } else if (act.outcome.id == lcr::kMenuMeshId) {
       mcOpenText(now);
       ui.refresh();
+    } else if (act.outcome.id == lcr::kMenuMeshListenId) {
+      mcStart(nullptr, nullptr, now);  // solo ascolto, per il tempo di CFG SET MCWINDOW
+      ui.refresh();
     } else if (act.outcome.id == lcr::kMenuSysopId) {
       sysopOpenList(now);
       ui.refresh();

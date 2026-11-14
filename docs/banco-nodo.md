@@ -87,3 +87,13 @@ Il nodo non usa PTT, tasti né menu, quindi la scheda funziona uguale su tutte l
 
 Costo: ogni avvio in modo nodo ritarda di 3 minuti la partenza del collegamento (anche dopo un'interruzione di corrente). Nessun costo di spazio nel programma: la pagina e il server sono già nel firmware; la memoria del server si libera alla chiusura.
 
+## Gestione dalla rete di casa (dal 14/11/2026, non ancora provata su una scheda)
+
+Quando il nodo è collegato al Wi-Fi di casa serve **la stessa pagina di configurazione** anche sulla rete interna, senza cavo e senza il Wi-Fi della scheda:
+
+- **Indirizzo:** `http://<indirizzo della scheda>/` (lo mostra il display, riga `WiFi 192.168.x.y`, e la seriale) oppure `http://volora-XXXX.local/` (XXXX = ultime quattro cifre del MAC; il nome `.local` funziona se il computer supporta mDNS).
+- **Accesso:** utente **`volora`** e la **password di 8 cifre** della scheda: la stessa del Wi-Fi di configurazione, scritta sul display nei primi 3 minuti dopo l'accensione e sulla seriale (`[nodo] gestione dalla rete di casa: ...`).
+- **Cosa si può fare:** tutti i comandi `CFG` tranne quelli che usano audio e radio (`CFG TEST`, `CFG MIC`, `CFG REC`), come dal Wi-Fi della scheda. Le modifiche valgono dopo il riavvio; la pagina lo chiede da sola.
+- **Sicurezza:** è una pagina **in chiaro (http)** protetta da utente e password: va bene su una rete di casa fidata, **non** esporla su Internet (non aprire porte sul router).
+- **Costo:** il server resta acceso finché il nodo è acceso: qualche decina di KB di memoria, che il nodo ha (non usa audio né Codec2).
+

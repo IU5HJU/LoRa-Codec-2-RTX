@@ -27,6 +27,8 @@ constexpr uint8_t kMenuTextId = 101;
 constexpr uint8_t kMenuSysopId = 103;
 // Voce "MeshCom": invia un testo sulle reti di testo e ascolta per un po' (escursione, docs/meshcom-testo.md). Non e' un profilo.
 constexpr uint8_t kMenuMeshId = 102;
+// Voce "MeshCom ascolto": come MeshCom ma senza inviare nessun testo, solo ascolto per il tempo impostato (CFG SET MCWINDOW). Non e' un profilo.
+constexpr uint8_t kMenuMeshListenId = 104;
 
 struct MenuItem {
   const char* label;  // testo sul display (al massimo 10 caratteri a testo grande)
@@ -34,7 +36,7 @@ struct MenuItem {
   bool enabled;       // false: si vede ma non si puo' scegliere (per esempio un profilo non ancora disponibile)
 };
 
-// Le voci del menu: Standard, Range, Messaggio, Invia testo, MeshCom (escursione) e Wi-Fi (configurazione).
+// Le voci del menu: Standard, Range, Messaggio, Invia testo, MeshCom (escursione), MeshCom ascolto e Wi-Fi (configurazione).
 // sysopMode: al posto di "Invia testo" c'e' "Comandi Sysop".
 const MenuItem* defaultMenuItems(size_t& count, bool sysopMode = false);
 

@@ -17,6 +17,7 @@ solo per qualche minuto, quando lo chiedi.
 
 1. **Menu a bordo** (volume lungo) → **MeshCom**. Prima scegli il testo con il PTT (volume breve per confermare), con in fondo
    **"(solo ascolto)"**; poi scegli il **destinatario** tra quelli impostati.
+   **Solo per ascoltare, senza inviare niente** (dal 14/11/2026): voce di menu **"MeshCom ascolto"**, subito dopo "MeshCom". La scheda passa ai parametri della rete di testo per il tempo di `CFG SET MCWINDOW` (impostabile dalla pagina, di base 5 minuti), mostra il conto alla rovescia e rientra da sola; i testi diretti a te e quelli dei gruppi finiscono nella casella come sempre. Serve il nominativo impostato (come per ogni escursione).
 2. La scheda **cambia i parametri della radio a caldo** (433,175 MHz, SF11, 250 kHz, CR 4/6, sync word 0x2B, preambolo 8), controlla
    che il canale sia libero e invia il testo **una volta sola**. Sul display compare la lettera **T**, "MESHCOM" e il conto alla rovescia
    dell'ascolto (di base 5 minuti).

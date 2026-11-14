@@ -23,6 +23,8 @@
 #include "sysop.h"
 #include "tx_scheduler.h"
 #include "button_gesture.h"
+#include <ESPmDNS.h>
+
 #include "wifi_config.h"
 
 namespace {
@@ -466,6 +468,8 @@ void configWindow(UiNotifier& ui, CfgHandler handler, uint32_t windowMs, const c
 
   uint32_t lastDispMs = 0, lastLogMs = 0;
   bool wasUp = false, wasWifi = false;
+  static WifiConfig lan;  // pagina di gestione sulla rete di casa, a Wi-Fi connesso
+  bool lanStarted = false;
   uint8_t dgram[lcr::kNodeMaxDatagram];
   size_t dgramLen = 0;
   for (;;) {
@@ -482,6 +486,19 @@ void configWindow(UiNotifier& ui, CfgHandler handler, uint32_t windowMs, const c
     if (up != wasUp) Serial.printf("[nodo] collegamento con l'altro nodo %s\n", up ? "attivo" : "giu'");
     wasWifi = wifi;
     wasUp = up;
+    if (wifi && !lanStarted) {  // la scheda e' sulla rete di casa: stessa pagina di configurazione, con utente e password (dal Wi-Fi della scheda)
+      lanStarted = true;
+      char pw[16];
+      if (lan.beginLan(handler, pw, sizeof(pw))) {
+        uint8_t mac[6] = {0};
+        WiFi.macAddress(mac);
+        char host[24];
+        snprintf(host, sizeof(host), "volora-%02x%02x", mac[4], mac[5]);
+        if (MDNS.begin(host)) MDNS.addService("http", "tcp", 80);
+        Serial.printf("[nodo] gestione dalla rete di casa: http://%s/ oppure http://%s.local/ (utente volora, password %s)\n", WiFi.localIP().toString().c_str(), host, pw);
+      }
+    }
+    if (lan.loop()) restartNow(ui);
     if (now - lastLogMs >= 30000) {  // una riga ogni 30 s per le prove
       lastLogMs = now;
       const lcr::NodeCore::Stats& s = core.stats();
