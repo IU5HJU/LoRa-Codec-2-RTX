@@ -61,10 +61,10 @@ Sono i cinque testi predefiniti (gli stessi di "Invia testo": [firmware.md](firm
 |---|---|
 | `%C` | il tuo nominativo (`IU5HJU`) |
 | `%M` | la lettera del modo del profilo voce in uso: `S` Range, `R` Range, `M` Messaggio |
-| `%F` | la frequenza del profilo voce, in MHz (`433.900`) |
+| `%F` | la frequenza del profilo voce, in MHz (`433.475`) |
 | `%%` | il segno `%` |
 
-Per esempio `%C QRV su VoLora modo %M %F` diventa `IU5HJU QRV su VoLora modo Q 433.900`.
+Per esempio `%C QRV su VoLora modo %M %F` diventa `IU5HJU QRV su VoLora modo Q 433.475`.
 
 **Limiti:** al massimo **150 caratteri** dopo la sostituzione, ASCII stampabile, **senza le parentesi graffe** `{` `}`. Il frame
 massimo è 255 byte e il percorso cresce di circa 10 byte a ogni salto; le graffe hanno un significato di servizio sulla rete

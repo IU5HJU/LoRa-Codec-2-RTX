@@ -42,7 +42,7 @@
 // qui restano la frequenza, la potenza e la sync word.
 // ATTENZIONE: la frequenza e' un SEGNAPOSTO, da scegliere con il band plan
 // IARU Regione 1 / ARI per la sottobanda digitale dei 70 cm prima di trasmettere.
-#define LCR_FREQUENCY_MHZ 433.900f
+#define LCR_FREQUENCY_MHZ 433.475f
 #define LCR_BANDWIDTH_KHZ 250.0f
 #define LCR_SPREADING_FACTOR 8
 #define LCR_CODING_RATE 5  // 4/5

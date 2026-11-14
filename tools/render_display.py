@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H = 128, 64
 CALLSIGN = "IU5HJU"
-FREQ = "433.900"
+FREQ = "433.475"
 
 
 def load_font(path):

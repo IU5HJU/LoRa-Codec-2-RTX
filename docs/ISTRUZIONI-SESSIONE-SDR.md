@@ -25,7 +25,7 @@ La documentazione completa è in **`docs/sdr.md`** del repository: leggila per p
 
 ## Parametri radio da usare (sono quelli del firmware)
 
-**433.900 MHz** (segnaposto, modificabile con `CFG SET FREQ`), **SF8, BW 250 kHz, CR 4/5, sync word 0x4C, preambolo 12 simboli, intestazione esplicita, CRC attivo.** Antenna del NESDR a circa **17 cm** (quarto d'onda), **almeno 1 metro dalla scheda** che trasmette (a distanza ravvicinata la chiavetta si satura: abbassare `--gain`).
+**433.475 MHz** (segnaposto, modificabile con `CFG SET FREQ`), **SF8, BW 250 kHz, CR 4/5, sync word 0x4C, preambolo 12 simboli, intestazione esplicita, CRC attivo.** Antenna del NESDR a circa **17 cm** (quarto d'onda), **almeno 1 metro dalla scheda** che trasmette (a distanza ravvicinata la chiavetta si satura: abbassare `--gain`).
 
 ## Prossimi passi (uno alla volta, nell'ordine)
 

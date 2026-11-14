@@ -199,7 +199,7 @@
       <p class="hint" id="profilehint"><strong>Standard</strong>: voce in tempo reale con Codec2 3200, la più naturale: è il modo di base, quello da usare via ripetitore o nodo. <strong>Range</strong>: voce in tempo reale con Codec2 1200 (il vecchio &ldquo;Standard&rdquo; di prima del 12/11/2026), un po&rsquo; più di portata (circa 2,5 dB teorici in più, non misurati) ma meno fedele: da usare per i collegamenti in condizioni difficili, quando serve quel poco in più. <strong>Messaggio</strong>: tieni premuto il PTT e registra fino a 15 secondi (quanto ripete il ripetitore); un secondo dopo il rilascio la scheda trasmette il messaggio, molto più lentamente del parlato (circa 94 secondi in aria ogni 10 secondi di voce) e con circa 13 dB di sensibilità in più; chi riceve lo ascolta <strong>a ricezione conclusa</strong>. <strong>Le schede con profili diversi non si sentono</strong>: usa lo stesso profilo (e la stessa frequenza) su tutte. Vale dal riavvio.</p>
 
       <label for="freq">Frequenza (MHz)</label>
-      <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
+      <input id="freq" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.475" disabled required>
       <p class="hint">Da 430.000 a 440.000. Il valore predefinito è un segnaposto: scegli il canale con il band plan IARU Regione 1 / ARI. Le stazioni che si ascoltano devono usare la stessa frequenza.</p>
 
       <div id="shiftbox" data-modes="off">
@@ -212,10 +212,10 @@
       <details class="falsi" id="otherfreq" data-modes="off rptrx rpttx">
       <summary>Frequenze degli altri profili (Range e Messaggio)</summary>
       <label for="freqmsg">Frequenza del profilo Messaggio (MHz)</label>
-      <input id="freqmsg" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
+      <input id="freqmsg" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.475" disabled required>
       <p class="hint" id="freqmsghint">La scheda usa la frequenza del profilo scelto. Di base seguono la frequenza dello Standard: se la cambi, quelle uguali la seguono. Le frequenze <strong>possono essere uguali</strong> (nelle prove si usa spesso una frequenza nota) e le puoi cambiare a piacere per configurazioni particolari. <button id="sameFreq" type="button" class="secondary" disabled>Usa quella dello Standard</button></p>
       <label for="freqrange">Frequenza del profilo Range (MHz)</label>
-      <input id="freqrange" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.900" disabled required>
+      <input id="freqrange" inputmode="decimal" pattern="[0-9]{3}(\.[0-9]{1,3})?" placeholder="433.475" disabled required>
       <p class="hint">Come sopra, per il profilo Range: di base segue lo Standard, e può essere uguale alle altre.</p>
       <p class="hint" id="freqnote" hidden>Stessa frequenza per i due profili: va bene per le prove, ma <strong>non è un canale condiviso</strong>. Profili diversi non si decodificano a vicenda e il controllo "canale occupato" non vede un segnale dell'altro profilo.</p>
 
@@ -280,7 +280,7 @@
       <label for="mcdest3">Destinatario 3</label><input id="mcdest3" maxlength="15" autocomplete="off" placeholder="*" disabled>
       <label for="mcdest4">Destinatario 4</label><input id="mcdest4" maxlength="15" autocomplete="off" disabled>
       <label for="mcdest5">Destinatario 5</label><input id="mcdest5" maxlength="15" autocomplete="off" disabled>
-      <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S Standard, R Range, M Messaggio), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo S 433.900&rdquo;.</p>
+      <p class="hint">Nei testi qui sotto puoi usare dei segnaposti, sostituiti al momento dell'invio: <strong>%C</strong> il tuo nominativo, <strong>%M</strong> la lettera del modo del profilo voce in uso (S Standard, R Range, M Messaggio), <strong>%F</strong> la frequenza del profilo voce. Per esempio &ldquo;%C QRV su VoLora modo %M %F&rdquo; diventa &ldquo;IU5HJU QRV su VoLora modo S 433.475&rdquo;.</p>
 
       </div>
       <details class="falsi" id="sysopdet" data-modes="off">
@@ -806,20 +806,20 @@
     const cs = $('callsign').value.trim().toUpperCase();
     if (!/^[A-Z0-9\/]{1,8}$/.test(cs)) return { err: 'Nominativo non valido: solo A-Z, 0-9 e “/”, massimo 8 caratteri.' };
     const fm = $('freq').value.trim();
-    if (!/^\d{3}(\.\d{1,3})?$/.test(fm)) return { err: 'Frequenza non valida: usa il formato 433.900.' };
+    if (!/^\d{3}(\.\d{1,3})?$/.test(fm)) return { err: 'Frequenza non valida: usa il formato 433.475.' };
     const khz = Math.round(parseFloat(fm) * 1000);
     if (khz < LIMITS.freqMin || khz > LIMITS.freqMax) return { err: 'La frequenza deve essere tra 430.000 e 440.000 MHz.' };
     let fmsg = null;
     if (!$('freqmsg').disabled) {
       fmsg = $('freqmsg').value.trim();
-      if (!/^\d{3}(\.\d{1,3})?$/.test(fmsg)) return { err: 'Frequenza del profilo Messaggio non valida: usa il formato 433.900.' };
+      if (!/^\d{3}(\.\d{1,3})?$/.test(fmsg)) return { err: 'Frequenza del profilo Messaggio non valida: usa il formato 433.475.' };
       const km = Math.round(parseFloat(fmsg) * 1000);
       if (km < LIMITS.freqMin || km > LIMITS.freqMax) return { err: 'La frequenza del profilo Messaggio deve essere tra 430.000 e 440.000 MHz.' };
     }
     let frng = null;
     if (!$('freqrange').disabled) {
       frng = $('freqrange').value.trim();
-      if (!/^\d{3}(\.\d{1,3})?$/.test(frng)) return { err: 'Frequenza del profilo Range non valida: usa il formato 433.900.' };
+      if (!/^\d{3}(\.\d{1,3})?$/.test(frng)) return { err: 'Frequenza del profilo Range non valida: usa il formato 433.475.' };
       const kq = Math.round(parseFloat(frng) * 1000);
       if (kq < LIMITS.freqMin || kq > LIMITS.freqMax) return { err: 'La frequenza del profilo Range deve essere tra 430.000 e 440.000 MHz.' };
     }

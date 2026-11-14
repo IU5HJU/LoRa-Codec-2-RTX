@@ -40,7 +40,7 @@ select M in "Standard (SF8, banda 250 kHz): voce in diretta" "Messaggio (SF12, b
     *) echo "Scelta non valida" ;;
   esac
 done
-read -rp "Frequenza in MHz [433.9]: " F; F=${F:-433.9}
+read -rp "Frequenza in MHz [433.475]: " F; F=${F:-433.475}
 read -rp "Guadagno RF in dB [30] (abbassalo se la scheda e' vicina): " G; G=${G:-30}
 FREQ=$(awk -v f="$F" 'BEGIN{printf "%d", f*1000000}')
 FILE="$OUT/cattura-$(date +%Y%m%d-%H%M%S).txt"

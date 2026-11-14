@@ -22,7 +22,7 @@ automatico del codice in `src/ui.cpp`. Sul display reale i colori dipendono dal 
 ## Struttura di una schermata
 
 ```
-IU5HJU  433.900 MHz          riga 1: nominativo e frequenza (testo piccolo)
+IU5HJU  433.475 MHz          riga 1: nominativo e frequenza (testo piccolo)
 ------------------------     linea di separazione
 ASCOLTO                      riga 2: stato (testo grande)
 Premi PTT per parlare        riga 3: informazioni o avvisi (testo piccolo)

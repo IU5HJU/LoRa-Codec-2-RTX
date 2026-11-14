@@ -200,7 +200,7 @@ s.append(table([
 s.append(Spacer(1, 4))
 s.append(table([
     ["Parametro comune", "Valore"],
-    ["Frequenza", "433,900 MHz predefinita (un segnaposto: si sceglie il canale con il piano di banda; ogni profilo ha la sua frequenza e possono essere uguali)"],
+    ["Frequenza", "433,475 MHz predefinita (un segnaposto: si sceglie il canale con il piano di banda; ogni profilo ha la sua frequenza e possono essere uguali)"],
     ["Coding rate / sync word / preambolo", "4/5, 0x4C, 12 simboli; intestazione LoRa esplicita, CRC LoRa attivo (un pacchetto con CRC errato viene scartato)"],
     ["Potenza", "10 dBm predefinita, impostabile"],
     ["Chip", "SX1278 (LILYGO LoRa32 T3 V1.6.1 e T-Beam V1.2)"],
