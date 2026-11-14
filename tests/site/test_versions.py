@@ -137,6 +137,9 @@ class Sito(unittest.TestCase):
         self.assertEqual(by_id["v0.1.0-beta.1"]["boards"], ["t3", "tbeam"])
         m = load(os.path.join(out, "firmware/v0.1.0-beta.1/t3/manifest.json"))
         self.assertEqual(m["version"], "v0.1.0-beta.1")
+        # esp-web-tools 10.1.1: con "new_install_prompt_erase" false cancella TUTTA la memoria (anche le impostazioni) senza chiedere;
+        # con true mostra la casella "Erase device", lasciata vuota di default
+        self.assertIs(m["new_install_prompt_erase"], True)
         # Il flasher scrive quattro pezzi, non l'immagine intera: la partizione delle impostazioni (nvs, da 0x9000 a 0xDFFF) non si tocca
         parts = m["builds"][0]["parts"]
         self.assertEqual([p["offset"] for p in parts], [0x1000, 0x8000, 0xE000, 0x10000])

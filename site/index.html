@@ -106,7 +106,7 @@
       <p id="relnotes" hidden>Cosa c'è in questa versione: <a id="relnoteslink" href="https://github.com/IU5HJU/VoLoRa/releases">note di rilascio</a>.</p>
       <details class="falsi">
         <summary>Per chi preferisce la riga di comando (esptool)</summary>
-        <p>Scarica il file <code>firmware-…-web_factory.bin</code> della tua scheda (T3 o T-Beam) dalla <a href="https://github.com/IU5HJU/VoLoRa/releases">pagina delle versioni su GitHub</a> e scrivilo con <code>esptool.py --chip esp32 write_flash 0x0 file.bin</code>. Le impostazioni salvate nella scheda restano.</p>
+        <p>Scarica il file <code>firmware-…-web_factory.bin</code> della tua scheda (T3 o T-Beam) dalla <a href="https://github.com/IU5HJU/VoLoRa/releases">pagina delle versioni su GitHub</a> e scrivilo con <code>esptool.py --chip esp32 write_flash 0x0 file.bin</code>. Attenzione: questo comando <strong>cancella</strong> le impostazioni salvate nella scheda; per aggiornare e tenerle scrivi solo il programma (<code>ota_update.bin</code> all'indirizzo <code>0x10000</code>).</p>
       </details>
     </div>
     <esp-web-install-button id="installer" manifest="firmware/t3/manifest.json">
@@ -114,7 +114,7 @@
       <span slot="unsupported">Browser non supportato.</span>
       <span slot="not-allowed">Serve una pagina https.</span>
     </esp-web-install-button>
-    <p class="hint">Il firmware pubblico ha il nominativo <strong>N0CALL</strong>: riceve ma non trasmette finché non imposti il tuo (passo 2). Le impostazioni già salvate nella scheda restano dopo un aggiornamento fatto da questa pagina (dal 13/11/2026: il flasher scrive solo il programma e lascia stare la zona delle impostazioni). Con <code>esptool</code>, invece, <code>write_flash 0x0 …web_factory.bin</code> le cancella: per aggiornare e tenerle scrivi solo il programma, <code>write_flash 0x10000 …ota_update.bin</code>.</p>
+    <p class="hint">Il firmware pubblico ha il nominativo <strong>N0CALL</strong>: riceve ma non trasmette finché non imposti il tuo (passo 2). Le impostazioni già salvate nella scheda restano dopo un aggiornamento fatto da questa pagina, <strong>purché nella finestra che si apre lasci la casella “Erase device” NON spuntata</strong> (il flasher scrive solo il programma e lascia stare la zona delle impostazioni; se la spunti, o se la finestra dice “All data on the device will be erased”, cancella tutto). Con <code>esptool</code>, invece, <code>write_flash 0x0 …web_factory.bin</code> le cancella: per aggiornare e tenerle scrivi solo il programma, <code>write_flash 0x10000 …ota_update.bin</code>.</p>
   </section>
 
   <section id="config">

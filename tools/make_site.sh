@@ -51,7 +51,7 @@ manifest() {
 {
   "name": "VoLoRa ($board)",
   "version": "$ver",
-  "new_install_prompt_erase": false,
+  "new_install_prompt_erase": true,
   "builds": [
     { "chipFamily": "ESP32", "parts": [
       { "path": "${pre}part_boot.bin", "offset": 4096 },
