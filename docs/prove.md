@@ -368,3 +368,9 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
   In alto nella cascata il segnale VoLoRa a 433,475 MHz; a sinistra, a **433,175 MHz**, le due trasmissioni **MeshCom** (indicate da IU5HJU; le due barre sono larghe circa 250 kHz). Le etichette sono state aggiunte all'immagine.
 - Il documento in PDF con le stesse informazioni è stato preparato il 14/11/2026 (non è nel repository).
 
+### 14/11/2026, casa, IU5HJU (aggiornamento dalla pagina: le impostazioni restano?)
+
+- **Problema segnalato:** dopo un aggiornamento dalla pagina web le impostazioni si perdevano. **Causa** (trovata il 14/11/2026): con `esp-web-tools` 10.1.1, un manifest con `new_install_prompt_erase: false` cancella **tutta** la memoria senza chiedere (il firmware non supporta Improv Serial). La correzione del 13/11/2026, che faceva scrivere solo quattro pezzi, non bastava: la finestra diceva "All data on the device will be erased". Il manifest ora ha `true`: compare la casella "Erase device", vuota di default.
+- **Prova dopo la correzione:** una T3 aggiornata dalla pagina (versione `dev`) da un firmware precedente al `40f598a`, con la casella lasciata vuota (come riferito dall'operatore). Avvio: `firmware 40f598a`, `[avvio] impostazioni: lette dalla memoria`, `CFG`: `callsign=IU5HJU freq=433.475 freqmsg=433.475 freqrange=433.475 power=10 volume=5 micfloor=-60 profile=std board=t3`. **Le impostazioni sono rimaste.**
+- **Limiti:** una scheda, una T3; il `CFG` di prima non è stato confrontato campo per campo e `CFG` mostra solo i campi base (non Wi-Fi, ruolo, shift, testi). **Non provato sulle T-Beam** né partendo da versioni molto vecchie.
+

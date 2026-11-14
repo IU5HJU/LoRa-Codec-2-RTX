@@ -10,10 +10,10 @@ Aggiornato il 14 novembre 2026 (sezione "Stato al 14/11/2026" qui sotto; sezione
 
 **Prima della release candidate, da fare o da confermare su schede** (nessuna di queste cose blocca la rc, ma le note di rilascio devono dire che non sono provate):
 
-1. Prova di potenza **in aria fra due schede**, con l'esito sul display di entrambe.
+1. Prova di potenza in aria fra due schede: **fatta il 14/11/2026 a 5,02 km** ([prove.md](prove.md)); resta da documentare l'esito sul display di **entrambe** le schede e la distanza in km (nuova, 14/11/2026).
 2. **Voce attraverso il reflector** fra schede (finora è provato il collegamento, non la voce).
 3. **T-Beam con radio SX1262** su una scheda vera: la radio parte? dialoga con le schede SX1278? ([tbeam-sx1262.md](tbeam-sx1262.md)).
-4. **Aggiornamento dalla pagina senza perdere le impostazioni**, confermato su una scheda.
+4. **Aggiornamento dalla pagina senza perdere le impostazioni**: **confermato su una T3 il 14/11/2026** ([prove.md](prove.md)); resta da provare su una T-Beam.
 5. **Ripetitore** a banco ([banco-ripetitore.md](banco-ripetitore.md)) e **shift** con un ripetitore vero.
 6. **IP pubblico** dichiarato dalle schede, visto nella pagina del reflector.
 7. Misure sul campo (distanze lunghe, mezzi in movimento): restano per la stabile.
