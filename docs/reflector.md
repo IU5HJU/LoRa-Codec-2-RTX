@@ -85,7 +85,14 @@ Come per le altre reti, chiunque può guardare chi è collegato e chi trasmette.
 
 Per attivarla sul server si aggiunge `--public-web 8081` all'`ExecStart` del servizio (`sudo systemctl edit --full vlreflector`, poi `sudo systemctl daemon-reload && sudo systemctl restart vlreflector`) e si **inoltra nel router la porta TCP 8081** verso il server (la sola porta della pagina pubblica: **mai la 8080 di amministrazione**). L'indirizzo da dare ai colleghi è `http://iu5hju.ddns.net:8081/`. È HTTP semplice: i dati sono già pubblici per natura (nominativi radioamatori), ma se si vuole HTTPS basta metterci davanti un proxy come nginx o Caddy.
 
-## Registrare un nuovo nodo (procedura)
+### L'indirizzo IP mostrato per un nodo
+
+La colonna "Indirizzo visto dal server" (e il log `stato: ...=su(indirizzo:porta)`) è **l'indirizzo da cui il reflector riceve i pacchetti**, e non può essere altro: il server non vede l'indirizzo interno della scheda, vede quello che il router (NAT) mette sul pacchetto in uscita. Quindi:
+- una scheda **dietro un router** (casa, hotspot del telefono) compare con l'indirizzo **pubblico del router** (con il telefono, quello dell'operatore) e una porta scelta dal router;
+- una scheda della **stessa rete del server** che si collega con il nome (`iu5hju.ddns.net`) passa dal router e dal "NAT loopback": il server vede l'indirizzo del router. Collegandosi direttamente all'indirizzo interno del server (per esempio `192.168.1.76:5400`) il server vede invece **l'indirizzo interno della scheda**;
+- non è un errore e non influisce sul funzionamento: il nodo si riconosce dall'id e dalla chiave, e l'indirizzo serve solo a rispondergli.
+
+
 
 La chiave è un segreto condiviso fra il nodo e il reflector, e nasce **dal collega, sulla sua scheda**:
 

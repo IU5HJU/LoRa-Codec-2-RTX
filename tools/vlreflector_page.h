@@ -69,7 +69,7 @@ static const char kAdminPage[] = R"HTML(<!doctype html>
     <section>
       <h2>Collegati</h2>
       <div class="tw"><table>
-        <thead><tr><th>Nominativo</th><th>Id</th><th>Stato</th><th>Ultimo segnale</th><th>Pacchetti in/out</th><th>Indirizzo</th><th></th></tr></thead>
+        <thead><tr><th>Nominativo</th><th>Id</th><th>Stato</th><th>Ultimo segnale</th><th>Pacchetti in/out</th><th title="L'indirizzo da cui il reflector riceve i pacchetti del nodo, dopo l'eventuale NAT del router: dietro un router e' quello del router, non quello interno del nodo">Indirizzo visto dal server</th><th></th></tr></thead>
         <tbody id="clients"></tbody>
       </table></div>
       <p class="muted" id="clientsEmpty" hidden>Nessun nodo in elenco.</p>
