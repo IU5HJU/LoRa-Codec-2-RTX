@@ -361,5 +361,10 @@ Le tre perdite recuperate dalla parità a -28 dBm (prova del 4 novembre) hanno u
 - **Impostazioni:** LILYGO T3 V1.6.1 (SX1278), 433,475 MHz, profilo Standard (Codec2 3200, SF7, BW 250 kHz), prova di potenza dalla massima alla minima, un dBm alla volta.
 - **Esito sul display della scheda fotografata:** "POTENZA: finita", **MIN 2 dBm**, "sente fino a 2 dBm (frame 100% a MIN)". La prova è arrivata alla potenza minima impostabile (2 dBm) con tutti i frame intatti: il margine oltre quel valore **non è misurato**.
 - **Non registrati:** quale scheda fosse in A e in B, antenne (tipo e altezza), ostacoli lungo la tratta, nominativo e firmware dell'altra stazione, esito sul display dell'altra scheda. Una sola prova, in movimento: non è una statistica.
+- **Ricezione SDR della banda** (SDR++ v1.3.0, RTL-SDR Nooelec NESDR SMArt v5, centro 433,475 MHz, 2,4 MHz di campionamento, guadagno 20,7 dB, NFM):
+
+  ![Ricezione SDR](images/prova-distanza-sdr-14-11-2026.png)
+
+  In alto nella cascata il segnale VoLoRa a 433,475 MHz; a sinistra, a **433,175 MHz**, le due trasmissioni **MeshCom** (indicate da IU5HJU; le due barre sono larghe circa 250 kHz). Le etichette sono state aggiunte all'immagine.
 - Il documento in PDF con le stesse informazioni è stato preparato il 14/11/2026 (non è nel repository).
 
