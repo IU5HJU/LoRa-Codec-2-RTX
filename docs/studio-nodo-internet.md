@@ -36,6 +36,7 @@ stazioni VoLoRa  ⇄  [LoRa, frequenza F1]  T3 nodo 1  ⇄  Wi-Fi/router/LAN  �
 ## Protocollo fra i nodi (bozza "VoLoRa-IP")
 Un datagramma UDP: `magic (2) | versione (1) | tipo (1) | id nodo (4) | id di avvio (4) | contatore (4) | canale (1) | lunghezza (1) | contenuto | firma (8)`.
 - **Tipi:** `PACKET` (contenuto = il pacchetto radio così com'è), `HELLO` (si presenta, chiede la sfida), `KEEPALIVE`, `BYE`.
+- **Indirizzo pubblico (14/11/2026):** `HELLO` e `KEEPALIVE` portano 5 byte di stato; se il nodo conosce il proprio indirizzo pubblico (lo chiede a un servizio esterno) ne portano 9, con in coda l'indirizzo IPv4. Chi non lo conosce o non lo legge usa i primi 5: compatibile con le versioni precedenti. Serve al reflector, che dietro un router vede solo l'indirizzo del router ([reflector.md](reflector.md)).
 - **Firma:** HMAC-SHA256 troncato a 8 byte con una **chiave condivisa** (come per i comandi del sysop), calcolata su tutto il datagramma. **Senza firma chiunque su Internet potrebbe far trasmettere il nodo in radio**: la firma è obbligatoria, non un'opzione.
 - **Anti-ripetizione:** contatore crescente per nodo; dopo un riavvio il contatore ricomincia, quindi serve una **sfida** (`HELLO` → il ricevitore manda un numero casuale → il mittente risponde firmato) per riaccettare un nodo senza che una vecchia registrazione possa riaprire il passaggio.
 - **Canale** (1 byte, di base 0): non serve al primo passo, ma lo mette in conto per il reflector (un "talk group" per ripartire il traffico).

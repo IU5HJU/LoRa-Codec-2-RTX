@@ -13,7 +13,8 @@
 //   18  contenuto
 //   ... firma (8): HMAC-SHA256 troncato, calcolato su tutto quello che precede, con la chiave condivisa di 16 byte
 //
-// Tipi: HELLO e KEEPALIVE (contenuto = 5 byte: bit 0 del primo = "ho autenticato il tuo id di avvio", bit 1 = "il collegamento per me e' attivo", poi quell'id di avvio), CHALLENGE (sfida: contenuto =
+// Tipi: HELLO e KEEPALIVE (contenuto = 5 byte: bit 0 del primo = "ho autenticato il tuo id di avvio", bit 1 = "il collegamento per me e' attivo", poi quell'id di avvio;
+// se il nodo conosce il proprio indirizzo pubblico ne porta 9, con in coda l'indirizzo IPv4 (4 byte): chi non lo conosce legge solo i primi 5), CHALLENGE (sfida: contenuto =
 // 8 byte casuali), RESPONSE (risposta: contenuto = gli stessi 8 byte), PACKET (contenuto = un pacchetto radio cosi' com'e').
 // Il collegamento e' "attivo" per spedire solo quando i due nodi si sono autenticati a vicenda: ognuno dice all'altro, nei suoi HELLO e KEEPALIVE, che ha gia'
 // accettato il suo id di avvio, cosi' i pacchetti non partono prima che l'altro li accetti.
@@ -84,6 +85,11 @@ class NodeLink {
   NodeLink(const Config& cfg, uint32_t bootId, uint32_t (*rng)());
 
   // Datagrammi da mandare al nodo.
+  // L'indirizzo IPv4 pubblico del nodo, come lo vede Internet (a.b.c.d = a<<24|b<<16|c<<8|d; 0 = non noto): dietro un router il reflector vede solo
+  // l'indirizzo che gli mette il router, quindi lo dice il nodo stesso. Viaggia nei HELLO e KEEPALIVE firmati; non e' verificato da nessuno.
+  void setPublicAddress(uint32_t ipv4) { publicAddr_ = ipv4; }
+  // Quello dichiarato dall'altro nodo nell'ultimo HELLO o KEEPALIVE accettato (0 = nessuno).
+  uint32_t peerPublicAddress() const { return peerPublic_; }
   size_t makeHello(uint8_t* out, size_t cap);
   size_t makeKeepalive(uint8_t* out, size_t cap);
   size_t makePacket(const uint8_t* wire, size_t len, uint8_t* out, size_t cap);  // 0 se len e' troppo lungo
@@ -114,6 +120,8 @@ class NodeLink {
   uint32_t lastStatusReplyMs_ = 0;
   bool peerAcceptsMe_ = false;   // l'altro nodo ci ha detto di aver autenticato il nostro id di avvio
   size_t makeStatus(uint8_t type, uint8_t* out, size_t cap);
+  uint32_t publicAddr_ = 0;
+  uint32_t peerPublic_ = 0;
   uint32_t peerSeenId_ = 0;
   uint32_t peerBoot_ = 0;
   uint32_t peerLastCounter_ = 0;

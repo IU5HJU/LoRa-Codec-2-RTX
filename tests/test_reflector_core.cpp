@@ -432,6 +432,27 @@ static void testTalkHistory() {
   CHECK(r.core.recentTalks().size() == ReflectorCore::kRecentTalks);
 }
 
+// L'indirizzo pubblico dichiarato dal nodo: il reflector lo mostra accanto a quello che vede (che dietro un router e' quello del router).
+static void testDeclaredAddress() {
+  Rig r;
+  Client& a = r.add(1, 0x11, 0xC0A8FE01u * 65536ull + 4000);  // il reflector vede 192.168.254.1: un indirizzo interno messo dal router
+  Client& b = r.add(2, 0x22, 5002);
+  (void)b;
+  r.run(3000);
+  CHECK(r.up(1) && r.up(2));
+  CHECK(r.core.clients(r.t)[0].declaredAddr == 0 && r.core.clients(r.t)[1].declaredAddr == 0);  // nessuno lo dichiara
+  a.link->setPublicAddress((78u << 24) | (211u << 16) | (227u << 8) | 119u);
+  r.run(25000);  // un KEEPALIVE ogni 20 s
+  const auto info = r.core.clients(r.t);
+  CHECK(info[0].declaredAddr == ((78u << 24) | (211u << 16) | (227u << 8) | 119u));
+  CHECK(info[0].endpoint == 0xC0A8FE01u * 65536ull + 4000);  // quello visto dal server resta quello da cui arrivano i pacchetti
+  CHECK(info[1].declaredAddr == 0);
+  // dopo un riavvio senza indirizzo il vecchio non resta
+  a.reset(0xD000);
+  r.run(5000);
+  CHECK(r.core.clients(r.t)[0].declaredAddr == 0);
+}
+
 int main() {
   testHandshake();
   testTextAndRelayed();
@@ -444,5 +465,6 @@ int main() {
   testPacketCounts();
   testRegistryOperations();
   testTalkHistory();
+  testDeclaredAddress();
   TEST_MAIN_END();
 }

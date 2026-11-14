@@ -39,6 +39,7 @@ class RepeaterUplink {
   void tick(uint32_t nowMs);
 
   bool linkUp(uint32_t nowMs) const { return link_.linkUp(nowMs); }
+  void setPublicAddress(uint32_t ipv4) { link_.setPublicAddress(ipv4); }
   const Stats& stats() const { return stats_; }
   const NodeLink& link() const { return link_; }
   // Chi tiene l'uscita adesso: 0 nessuno, 1 la radio, 2 la rete.

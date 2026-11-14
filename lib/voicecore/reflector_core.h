@@ -66,6 +66,7 @@ class ReflectorCore {
     uint32_t lastSeenMs = 0;
     uint32_t packetsIn = 0;
     uint32_t packetsOut = 0;
+    uint32_t declaredAddr = 0;  // l'indirizzo pubblico che il nodo dice di avere (a<<24|b<<16|c<<8|d), 0 = non lo dice; non verificato
   };
 
   // reflectorId: l'id con cui il reflector si presenta (il PEERID dei client); voiceMode: il modo voce inoltrato (di base 4, Standard).

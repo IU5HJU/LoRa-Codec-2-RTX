@@ -25,6 +25,10 @@ class NetUdp : public lcr::INodeNet {
   // L'indirizzo dell'altro nodo (0 = non ancora risolto) e quante volte e' cambiato.
   uint32_t peerAddress() const { return peerAddr_; }
   uint32_t resolveCount() const { return resolved_; }
+  // L'indirizzo IPv4 pubblico della scheda come lo vede Internet (a<<24|b<<16|c<<8|d; 0 = non ancora noto o funzione spenta). Lo chiede il task a un
+  // servizio esterno (LCR_PUBLIC_IP_HOST in user_config.h) al primo collegamento Wi-Fi e poi ogni 10 minuti; serve al reflector, che dietro un router
+  // vedrebbe solo l'indirizzo del router.
+  uint32_t publicAddress() const { return publicAddr_; }
 
  private:
   struct Dgram {
@@ -33,6 +37,8 @@ class NetUdp : public lcr::INodeNet {
   };
   static void taskEntry(void* self) { static_cast<NetUdp*>(self)->run(); }
   void run();
+  void fetchPublicAddress();
+  static void fetchEntry(void* self);
 
   QueueHandle_t rx_ = nullptr;
   QueueHandle_t tx_ = nullptr;
@@ -41,5 +47,7 @@ class NetUdp : public lcr::INodeNet {
   char host_[lcr::kMaxPeerHost + 1] = {0};
   volatile uint32_t peerAddr_ = 0;
   volatile uint32_t resolved_ = 0;
+  volatile uint32_t publicAddr_ = 0;
+  volatile bool fetching_ = false;  // la richiesta dell'indirizzo pubblico e' in corso (gira in un task a parte: puo' durare qualche secondo)
   volatile bool linkUp_ = false;
 };

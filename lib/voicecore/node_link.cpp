@@ -51,10 +51,11 @@ size_t NodeLink::build(uint8_t type, const uint8_t* payload, size_t len, uint8_t
 
 // HELLO e KEEPALIVE portano lo stato dell'autenticazione: [1 se abbiamo autenticato l'altro][il suo id di avvio che abbiamo autenticato].
 size_t NodeLink::makeStatus(uint8_t type, uint8_t* out, size_t cap) {
-  uint8_t p[5];
+  uint8_t p[9];
   p[0] = static_cast<uint8_t>((peerAuth_ ? 1 : 0) | ((peerAuth_ && peerAcceptsMe_) ? 2 : 0));
   put32(p + 1, peerAuth_ ? peerBoot_ : 0);
-  return build(type, p, sizeof(p), out, cap);
+  if (publicAddr_ != 0) put32(p + 5, publicAddr_);
+  return build(type, p, publicAddr_ != 0 ? 9 : 5, out, cap);
 }
 
 size_t NodeLink::makeHello(uint8_t* out, size_t cap) { return makeStatus(kNodeHello, out, cap); }
@@ -137,6 +138,7 @@ NodeLink::Rx& NodeLink::onDatagram(const uint8_t* d, size_t n, uint32_t nowMs) {
       peerBoot_ = boot;
       peerLastCounter_ = counter;
       peerAcceptsMe_ = false;  // finche' l'altro non dice di aver autenticato noi
+      peerPublic_ = 0;         // un nuovo avvio: l'indirizzo dichiarato prima non vale piu'
       haveRx_ = true;
       lastRxMs_ = nowMs;
       stats_.authenticated++;
@@ -176,6 +178,7 @@ NodeLink::Rx& NodeLink::onDatagram(const uint8_t* d, size_t n, uint32_t nowMs) {
     rx.kind = Kind::Control;  // HELLO o KEEPALIVE dello stesso avvio
     if ((type == kNodeHello || type == kNodeKeepalive) && len >= 5) {
       peerAcceptsMe_ = (payload[0] & 1) != 0 && get32(payload + 1) == boot_;
+      if (len >= 9) peerPublic_ = get32(payload + 5);  // l'indirizzo pubblico dichiarato dal nodo (le versioni vecchie mandano 5 byte)
       // l'altro nodo non ha ancora saputo di essere stato accettato (bit 1): glielo diciamo subito, al massimo una volta al secondo
       if (!(payload[0] & 2) && (!haveStatusReplyMs_ || nowMs - lastStatusReplyMs_ >= kNodeChallengeGapMs)) {
         haveStatusReplyMs_ = true;

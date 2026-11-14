@@ -196,6 +196,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
     // 1a. rete: i pacchetti del reflector vanno alla TX per essere trasmessi sull'uscita
     if (uplink) {
       uplink->tick(now);
+      uplink->setPublicAddress(net.publicAddress());  // l'indirizzo pubblico, per il reflector
       const bool netUp = uplink->linkUp(now);
       net.setLinkUp(netUp);
       uint8_t dg[lcr::kNodeMaxDatagram];
@@ -427,6 +428,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
     const uint32_t now = millis();
     int guard = 8;
     while (guard-- > 0 && net.receive(dgram, sizeof(dgram), dgramLen)) core.onDatagram(dgram, dgramLen, now);
+    core.setPublicAddress(net.publicAddress());  // l'indirizzo pubblico, per il reflector
     core.tick(now, mayTransmit);
 
     const bool wifi = WiFi.status() == WL_CONNECTED;

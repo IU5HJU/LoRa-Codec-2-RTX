@@ -271,6 +271,7 @@ std::vector<ReflectorCore::ClientInfo> ReflectorCore::clients(uint32_t nowMs) co
     i.lastSeenMs = c->lastSeenMs;
     i.packetsIn = c->packetsIn;
     i.packetsOut = c->packetsOut;
+    i.declaredAddr = c->link->peerPublicAddress();
     v.push_back(i);
   }
   return v;

@@ -33,7 +33,7 @@ curl -s -m 5 "http://127.0.0.1:$WEB/" | grep -q "Reflector VoLoRa" && ok "la pag
 api "http://127.0.0.1:$WEB/api/status" | grep -q '"clients":\[{"id":2,"name":"nodoA","call":"nodoA","label":"","up":false' && ok "stato: i due client in elenco, non collegati" || ko "stato iniziale"
 
 # i nodi
-build/vlnode --id 3 --peer-id 1000 --key 101112131415161718191a1b1c1d1e1f --listen 0 --peer localhost:$PORT --duration 22 > "$D/b.out" 2>&1 &
+build/vlnode --id 3 --peer-id 1000 --key 101112131415161718191a1b1c1d1e1f --listen 0 --peer localhost:$PORT --public-addr 203.0.113.7 --duration 22 > "$D/b.out" 2>&1 &
 NODEB=$!
 sleep 4
 build/vlnode --id 2 --peer-id 1000 --key 000102030405060708090a0b0c0d0e0f --listen 0 --peer 127.0.0.1:$PORT --send-text IU5HJU "Prova via reflector" --send-voice IZ5IOF --frames 150 --duration 16 > "$D/a.out" 2>&1 &
@@ -48,13 +48,15 @@ echo "$PS" | grep -q '"talking":{"callsign":"IZ5IOF"' && ok "pubblica: chi trasm
 wait $NODEA
 S=$(api "http://127.0.0.1:$WEB/api/status")
 echo "$S" | grep -q '"name":"nodoA","call":"nodoA","label":"","up":true' && echo "$S" | grep -q '"name":"nodoB","call":"nodoB","label":"","up":true' && ok "stato: i due nodi collegati" || ko "nodi non collegati nello stato"
+echo "$S" | grep -q '"name":"nodoB".*"public":"203\.0\.113\.7"' && ok "stato: l'indirizzo pubblico dichiarato dal nodoB (203.0.113.7), accanto a quello visto dal server" || ko "indirizzo pubblico dichiarato nello stato ($S)"
+echo "$S" | grep -q '"name":"nodoA".*"public":""' && ok "stato: il nodoA, che non dichiara niente, ha l'indirizzo pubblico vuoto" || ko "nodoA senza indirizzo dichiarato ($S)"
 echo "$S" | grep -q '"name":"nodoA".*"endpoint":"127\.0\.0\.1:[0-9]*"' && ok "stato: l'indirizzo mostrato e' quello da cui arrivano i pacchetti del nodo (127.0.0.1:porta)" || ko "indirizzo del nodo nello stato ($S)"
 echo "$S" | grep -q '"recent":\[{"client":"nodoA","callsign":"IZ5IOF"' && ok "stato: la trasmissione finita e' fra le ultime" || ko "storico vuoto"
 PS=$(curl -s -m 5 $P/status.json)
 curl -s -m 5 $P/ | grep -q "Stazioni collegate" && ok "pubblica: la pagina si apre senza token" || ko "pubblica: la pagina non si apre"
 echo "$PS" | grep -q '"call":"nodoA","label":"","seenS":' && echo "$PS" | grep -q '"call":"nodoB"' && ok "pubblica: le due stazioni collegate" || ko "pubblica: stazioni ($PS)"
 echo "$PS" | grep -q '"recent":\[{"callsign":"IZ5IOF"' && ok "pubblica: ultime trasmissioni" || ko "pubblica: ultime ($PS)"
-echo "$PS" | grep -qE 'endpoint|key|127\.0\.0\.1|"id"|"in"|"out"|stats|badSignature|unknown' && ko "pubblica: compare qualcosa di riservato ($PS)" || ok "pubblica: niente indirizzi, id, chiavi o contatori"
+echo "$PS" | grep -qE 'endpoint|key|127\.0\.0\.1|203\.0\.113|public|"id"|"in"|"out"|stats|badSignature|unknown' && ko "pubblica: compare qualcosa di riservato ($PS)" || ok "pubblica: niente indirizzi, id, chiavi o contatori"
 [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' $P/api/status)" = "404" ] && [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -H "X-Token: $TOKEN" $P/api/status)" = "404" ] && ok "pubblica: i comandi di amministrazione non esistono (404, anche con il token)" || ko "pubblica: /api raggiungibile"
 [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST -d call=ABC $P/api/register)" = "405" ] && [ "$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST -d x=1 $P/)" = "405" ] && ok "pubblica: solo GET (POST: 405), nessuna registrazione" || ko "pubblica: accetta richieste di scrittura"
 wait $NODEB  # l'uscita di vlnode si scrive alla fine

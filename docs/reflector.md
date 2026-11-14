@@ -92,6 +92,12 @@ La colonna "Indirizzo visto dal server" (e il log `stato: ...=su(indirizzo:porta
 - una scheda della **stessa rete del server** che si collega con il nome (`iu5hju.ddns.net`) passa dal router e dal "NAT loopback": il server vede l'indirizzo del router. Collegandosi direttamente all'indirizzo interno del server (per esempio `192.168.1.76:5400`) il server vede invece **l'indirizzo interno della scheda**;
 - non è un errore e non influisce sul funzionamento: il nodo si riconosce dall'id e dalla chiave, e l'indirizzo serve solo a rispondergli.
 
+**L'indirizzo pubblico vero** (quello da cui il collega esce su Internet) il server non lo può vedere se il router riscrive l'origine (per esempio 192.168.1.254), quindi lo **dice il nodo**: la colonna **"Indirizzo pubblico dichiarato dal nodo"** della pagina di amministrazione. Come funziona:
+- la scheda (nodo, e scheda RX del ripetitore) lo chiede a un servizio esterno, `ifconfig.me/ip` (una GET in HTTP semplice sulla porta 80, che risponde con il solo indirizzo), al primo collegamento Wi-Fi (riprovando ogni 30 s) e poi ogni 10 minuti, in un task a parte che non ferma i pacchetti;
+- lo manda al reflector nei messaggi di mantenimento (HELLO e KEEPALIVE, che sono firmati con la chiave del nodo): 4 byte in più, e le versioni che non lo mandano o non lo leggono continuano a funzionare come prima;
+- è **un'informazione dichiarata, non verificata**: chi ha la chiave potrebbe scrivere un indirizzo qualsiasi. Si vede **solo nella pagina di amministrazione** (mai in quella pubblica); è vuoto per i nodi con un firmware precedente al 14/11/2026;
+- il servizio esterno vede l'indirizzo della scheda (quello che serve). Per **non contattare nessuno** si compila con `-DLCR_PUBLIC_IP_HOST=\"\"` (host e percorso sono in `src/user_config.h`).
+
 
 
 La chiave è un segreto condiviso fra il nodo e il reflector, e nasce **dal collega, sulla sua scheda**:

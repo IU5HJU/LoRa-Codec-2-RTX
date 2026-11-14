@@ -63,6 +63,8 @@ class NodeCore {
   bool morseActive() const { return morseActive_; }
 
   bool linkUp(uint32_t nowMs) const { return link_.linkUp(nowMs); }
+  // L'indirizzo pubblico della scheda (vedi NodeLink::setPublicAddress), da aggiornare quando cambia.
+  void setPublicAddress(uint32_t ipv4) { link_.setPublicAddress(ipv4); }
   const NodeLink& link() const { return link_; }
   const TxQueue& queue() const { return queue_; }
   const Stats& stats() const { return stats_; }

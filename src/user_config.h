@@ -28,6 +28,16 @@
 #define LCR_TCXO_VOLTAGE 1.6f
 #endif
 
+// Indirizzo pubblico della scheda, per il reflector: la scheda lo chiede a un servizio esterno con una GET in HTTP semplice (host e percorso qui
+// sotto; il servizio risponde con il solo indirizzo) al collegamento Wi-Fi e ogni 10 minuti, e lo manda al reflector nei messaggi di mantenimento.
+// Il servizio vede l'indirizzo della scheda (e' quello che serve). Per spegnere la funzione e non contattare nessuno: -DLCR_PUBLIC_IP_HOST=\"\".
+#ifndef LCR_PUBLIC_IP_HOST
+#define LCR_PUBLIC_IP_HOST "ifconfig.me"
+#endif
+#ifndef LCR_PUBLIC_IP_PATH
+#define LCR_PUBLIC_IP_PATH "/ip"
+#endif
+
 // Parametri radio (SX1278, 433 MHz). SF, banda, coding rate e preambolo ora vengono dal PROFILO (lib/voicecore/profile.cpp);
 // qui restano la frequenza, la potenza e la sync word.
 // ATTENZIONE: la frequenza e' un SEGNAPOSTO, da scegliere con il band plan

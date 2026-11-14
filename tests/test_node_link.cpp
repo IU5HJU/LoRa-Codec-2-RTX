@@ -239,6 +239,55 @@ static void testMaintenance() {
   CHECK(q.a.maintenance(t + kNodeDeadMs + 10000, buf, sizeof(buf)) > 0 && buf[3] == kNodeHello);
 }
 
+// L'indirizzo pubblico dichiarato dal nodo (nei HELLO e KEEPALIVE firmati): arriva solo dopo l'autenticazione, e le versioni senza indirizzo continuano a funzionare.
+static void testPublicAddress() {
+  Pair p;
+  handshake(p);
+  CHECK(p.b.peerPublicAddress() == 0 && p.a.peerPublicAddress() == 0);  // nessuno lo dice
+  uint8_t buf[kNodeMaxDatagram];
+  size_t n = p.a.makeKeepalive(buf, sizeof(buf));
+  CHECK(n == kNodeHeaderBytes + 5 + kNodeSigBytes);  // senza indirizzo il messaggio e' quello di prima (5 byte)
+  p.a.setPublicAddress((78u << 24) | (211u << 16) | (227u << 8) | 119u);
+  n = p.a.makeKeepalive(buf, sizeof(buf));
+  CHECK(n == kNodeHeaderBytes + 9 + kNodeSigBytes && buf[kNodeHeaderBytes + 5] == 78 && buf[kNodeHeaderBytes + 8] == 119);
+  p.t += 1000;
+  exchange(p.a, p.b, dg(buf, n), p.t);
+  CHECK(p.b.peerPublicAddress() == ((78u << 24) | (211u << 16) | (227u << 8) | 119u));
+  CHECK(p.b.linkUp(p.t));  // il collegamento funziona come prima
+  CHECK(p.a.peerPublicAddress() == 0);  // l'indirizzo e' di chi lo dichiara, non si rimanda indietro
+  // lo stesso con HELLO
+  n = p.a.makeHello(buf, sizeof(buf));
+  CHECK(n == kNodeHeaderBytes + 9 + kNodeSigBytes);
+  // un indirizzo che cambia (il router cambia, o il telefono passa da un'altra cella) si aggiorna
+  p.a.setPublicAddress((81u << 24) | (56u << 16) | (162u << 8) | 206u);
+  n = p.a.makeKeepalive(buf, sizeof(buf));
+  p.t += 1000;
+  exchange(p.a, p.b, dg(buf, n), p.t);
+  CHECK(p.b.peerPublicAddress() == ((81u << 24) | (56u << 16) | (162u << 8) | 206u));
+  // un nodo che non lo dichiara piu' (versione vecchia, funzione spenta) lascia l'ultimo valore finche' non si riavvia: dopo un nuovo avvio parte da zero
+  Pair q(0x1111, 0x2222);
+  q.a.setPublicAddress(0x01020304);
+  handshake(q);
+  n = q.a.makeKeepalive(buf, sizeof(buf));
+  q.t += 1000;
+  exchange(q.a, q.b, dg(buf, n), q.t);
+  CHECK(q.b.peerPublicAddress() == 0x01020304);
+  NodeLink restarted(cfg(1, 2, 0x5A), 0x3333, rngFn);  // lo stesso nodo dopo il riavvio, senza indirizzo
+  n = restarted.makeHello(buf, sizeof(buf));
+  q.t += 1000;
+  exchange(restarted, q.b, dg(buf, n), q.t);
+  CHECK(q.b.peerPublicAddress() == 0);
+  // un indirizzo non firmato bene non si accetta (la firma copre tutto il messaggio)
+  Pair r;
+  handshake(r);
+  r.a.setPublicAddress(0x0A0B0C0D);
+  n = r.a.makeKeepalive(buf, sizeof(buf));
+  buf[kNodeHeaderBytes + 6] ^= 1;
+  r.t += 1000;
+  NodeLink::Rx& rx = r.b.onDatagram(buf, n, r.t);
+  CHECK(rx.kind == K::BadSignature && r.b.peerPublicAddress() == 0);
+}
+
 int main() {
   testHandshake();
   testPacketFlow();
@@ -247,5 +296,6 @@ int main() {
   testAttackerWithoutKey();
   testChallengeRateLimit();
   testMaintenance();
+  testPublicAddress();
   TEST_MAIN_END();
 }

@@ -4,7 +4,7 @@
 //
 //   make vlnode
 //   build/vlnode --id 2 --peer-id 1 --key 000102030405060708090a0b0c0d0e0f --listen 5400 --peer 192.168.1.50:5400   (--peer puo' essere anche un nome; --listen 0 sceglie una porta)
-//                [--send-text IU5HJU "Prova del nodo" [--every 10]] [--send-voice IU5HJU [--frames 100]] [--duration 60]
+//                [--send-text IU5HJU "Prova del nodo" [--every 10]] [--send-voice IU5HJU [--frames 100]] [--duration 60] [--public-addr A.B.C.D]
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
   int listenPort = 5400, peerPort = 0, duration = 0, every = 0, frames = 100;
   std::string peerHost, textCall, text, voiceCall;
   bool haveKey = false;
+  uint32_t publicAddr = 0;  // l'indirizzo pubblico che il nodo dichiara al reflector (per provare)
   for (int i = 1; i < argc; i++) {
     const std::string a = argv[i];
     auto next = [&]() -> const char* { return i + 1 < argc ? argv[++i] : ""; };
@@ -68,6 +69,7 @@ int main(int argc, char** argv) {
     else if (a == "--frames") frames = atoi(next());
     else if (a == "--every") every = atoi(next());
     else if (a == "--duration") duration = atoi(next());
+    else if (a == "--public-addr") { unsigned a1, a2, a3, a4; if (sscanf(next(), "%u.%u.%u.%u", &a1, &a2, &a3, &a4) == 4 && a1 < 256 && a2 < 256 && a3 < 256 && a4 < 256) publicAddr = (a1 << 24) | (a2 << 16) | (a3 << 8) | a4; }
     else {
       fprintf(stderr, "parametro sconosciuto: %s (vedi l'inizio di tools/vlnode.cpp)\n", a.c_str());
       return 2;
@@ -108,6 +110,7 @@ int main(int argc, char** argv) {
   auto sendTo = [&](const uint8_t* d, size_t n) { sendto(sock, d, n, 0, reinterpret_cast<sockaddr*>(&peer), sizeof(peer)); };
 
   NodeLink link(cfg, rngFn(), rngFn);
+  link.setPublicAddress(publicAddr);
   if (listenPort == 0) {  // porta scelta dal sistema: dimostra che non serve nessuna porta nota (ne' aperta sul router)
     sockaddr_in got;
     socklen_t gl = sizeof(got);

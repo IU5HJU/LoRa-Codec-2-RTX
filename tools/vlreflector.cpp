@@ -197,6 +197,12 @@ static bool loadAdminAuth(const std::string& file, bool create, AdminAuth& out, 
   return parseAdminAuth(tok, out);
 }
 
+static std::string ipText(uint32_t a) {
+  char b[20];
+  snprintf(b, sizeof(b), "%u.%u.%u.%u", static_cast<unsigned>((a >> 24) & 255), static_cast<unsigned>((a >> 16) & 255), static_cast<unsigned>((a >> 8) & 255), static_cast<unsigned>(a & 255));
+  return b;
+}
+
 static std::string epText(Endpoint e) {
   char b[40];
   snprintf(b, sizeof(b), "%u.%u.%u.%u:%u", static_cast<unsigned>((e >> 40) & 255), static_cast<unsigned>((e >> 32) & 255), static_cast<unsigned>((e >> 24) & 255),
@@ -282,7 +288,7 @@ struct Admin {
       const int ei = findEntryById(entries, c.id);
       o << (first ? "" : ",") << "{\"id\":" << c.id << ",\"name\":\"" << jsonEscape(c.name) << "\",\"call\":\"" << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].name : c.name)
         << "\",\"label\":\"" << jsonEscape(ei >= 0 ? entries[static_cast<size_t>(ei)].label : "") << "\",\"up\":" << (c.up ? "true" : "false") << ",\"seenMs\":" << seen
-        << ",\"in\":" << c.packetsIn << ",\"out\":" << c.packetsOut << ",\"endpoint\":\"" << (c.haveEndpoint ? jsonEscape(epText(c.endpoint)) : "") << "\"}";
+        << ",\"in\":" << c.packetsIn << ",\"out\":" << c.packetsOut << ",\"endpoint\":\"" << (c.haveEndpoint ? jsonEscape(epText(c.endpoint)) : "") << "\",\"public\":\"" << (c.declaredAddr ? ipText(c.declaredAddr) : "") << "\"}";
       first = false;
     }
     o << "],\"recent\":[";
