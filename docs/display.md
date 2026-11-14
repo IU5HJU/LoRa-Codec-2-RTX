@@ -8,7 +8,7 @@ automatico del codice in `src/ui.cpp`. Sul display reale i colori dipendono dal 
 
 ## Novità del 10/11/2026
 
-- **Lettera del profilo:** in alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10×9 punti) indica il profilo in uso: **S** Standard, **R** Range, **M** Messaggio. La riga del nominativo è stata accorciata (`IU5HJU 433.900MHz`) per farle posto.
+- **Lettera del profilo:** in alto a destra, su ogni schermata, una lettera grande (bianca su nero, 10×9 punti) indica il profilo in uso: **S** Standard, **R** Range, **M** Messaggio. La riga del nominativo è stata accorciata (`IU5HJU 433.475MHz`) per farle posto.
 - **Menu (11/11/2026):** i tre profili si chiamano **Modo Standard**, **Modo Range** e **Modo Messaggio** (dal 12/11/2026; prima Standard, Messaggio e Qualità: la "à" di "Qualità" era il carattere CP437 del font dell'OLED, provato sulla scheda l'11/11/2026).
 - **MeshCom (11/11/2026):** durante l'escursione sulle reti di testo la lettera in alto a destra è **T**, compare la frequenza della rete e lo schermo a riposo dice "MESHCOM" con il conto alla rovescia dell'ascolto; il menu ha sei voci (scorre: se ne vedono cinque, la scelta resta visibile) e la voce MeshCom apre due scelte (testo, poi destinatario). [meshcom-testo.md](meshcom-testo.md).
 - **Menu a bordo:** quattro voci (Standard, Range, Messaggio, Wi-Fi; dall'11/11 cinque, con "Invia testo"), una per riga; la scelta in negativo e il profilo in uso con `*`.
