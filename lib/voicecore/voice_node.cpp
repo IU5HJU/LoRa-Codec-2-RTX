@@ -34,19 +34,24 @@ uint16_t VoiceNode::makeSessionId() {
 void VoiceNode::pttPressed(uint32_t nowMs) {
   if (sweepPhase_ != SweepPhase::None) {  // un PTT ferma la prova di potenza (e rimette la potenza di prima)
     sweepFinish(true);
+    // La pressione che ferma la prova conta anche come primo clic: tre pressioni brevi bastano per uscire dal modo prova, anche a prova in corso.
+    stopClick_ = true;
+    pressMs_ = nowMs;
     return;
   }
-  if (state_ == State::Transmitting) {
+  // In modo prova trasmette solo la prova (breve, anche quando e' stata appena fermata): i clic contano lo stesso.
+  if (state_ == State::Transmitting && !testMode_) {
     notify_.pttDenied(DenyReason::Transmitting);
     return;
   }
-  if (state_ == State::Receiving) {
+  // In modo prova i clic contano anche mentre si riceve (altre schede, rumore in banda): altrimenti, in giro, non si esce piu' dalla prova.
+  if (state_ == State::Receiving && !testMode_) {
     clickCount_ = 0;
     notify_.pttDenied(DenyReason::Receiving);
     return;
   }
-  // Un messaggio aperto (voce in riproduzione o testo in mostra) si chiude con la pressione, senza trasmettere.
-  if (playing_ || textOpen_) {
+  // Un messaggio aperto (voce in riproduzione o testo in mostra) si chiude con la pressione, senza trasmettere (non in modo prova: li' i clic servono per uscirne).
+  if (!testMode_ && (playing_ || textOpen_)) {
     closeMessage();
     return;
   }
@@ -207,11 +212,19 @@ void VoiceNode::recTick(uint32_t nowMs) {
 }
 
 void VoiceNode::pttReleased(uint32_t nowMs) {
+  if (stopClick_) {  // la pressione che ha fermato la prova di potenza: se e' breve e' il primo clic
+    stopClick_ = false;
+    if (nowMs - pressMs_ < kPttClickMaxMs) {
+      clickCount_ = 1;
+      lastClickMs_ = nowMs;
+    }
+    return;
+  }
   if (pendingStart_) {
     // Pressione breve: un clic. Non si e' trasmesso nulla; tre clic veloci cambiano il modo prova.
     pendingStart_ = false;
     stopMic();
-    if (inbox_.has()) {  // c'e' un messaggio in attesa: il clic lo apre
+    if (inbox_.has() && !testMode_) {  // c'e' un messaggio in attesa: il clic lo apre (non in modo prova)
       clickCount_ = 0;
       openMessage(nowMs);
       return;

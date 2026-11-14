@@ -135,6 +135,50 @@ static void testTripleClickTogglesTestMode() {
   CHECK(s.air.sent[0] == 0);
 }
 
+// In giro si deve poter uscire dal modo prova con tre pressioni brevi, qualunque cosa stia succedendo.
+static void testExitTestModeWhileReceiving() {
+  Sim s;
+  s.run(100);
+  click(s, 100, 150);
+  click(s, 100, 150);
+  click(s, 100, 150);
+  CHECK(s.a.node.testMode());
+  s.run(1000);
+  // B trasmette voce: A e' in ricezione. I tre clic devono comunque spegnere la prova.
+  s.b.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50);
+  s.run(1500);
+  CHECK(s.a.node.state() == VoiceNode::State::Receiving);
+  click(s, 100, 150);
+  click(s, 100, 150);
+  click(s, 100, 150);
+  CHECK(!s.a.node.testMode());
+  s.b.node.pttReleased(s.clock);
+  s.run(4000);
+}
+
+static void testExitTestModeDuringSweep() {
+  Sim s;
+  s.run(100);
+  click(s, 100, 150);
+  click(s, 100, 150);
+  click(s, 100, 150);
+  CHECK(s.a.node.testMode());
+  s.run(1000);
+  // PTT tenuto: parte la prova di potenza.
+  s.a.node.pttPressed(s.clock);
+  s.run(kPttClickMaxMs + 50);
+  s.a.node.pttReleased(s.clock);
+  s.run(1500);
+  CHECK(s.a.node.powerSweepActive());
+  // Tre pressioni brevi: la prima ferma la prova e conta come clic, quindi bastano tre in tutto.
+  click(s, 100, 150);
+  CHECK(!s.a.node.powerSweepActive());
+  click(s, 100, 150);
+  click(s, 100, 150);
+  CHECK(!s.a.node.testMode());
+}
+
 static void testSlowClicksDoNothing() {
   Sim s;
   s.run(100);
@@ -1260,6 +1304,8 @@ int main() {
   testRecordModeOffByDefault();
   testPacketSpacing();
   testTripleClickTogglesTestMode();
+  testExitTestModeWhileReceiving();
+  testExitTestModeDuringSweep();
   testSlowClicksDoNothing();
   testShortTapDoesNotTransmit();
   testClicksWorkWithoutCallsign();

@@ -64,3 +64,10 @@ Come margine conviene lavorare qualche dBm sopra il minimo trovato.
 - Le due schede devono avere la **stessa versione** del firmware: una scheda più vecchia scarterebbe i pacchetti di prova (modo sconosciuto).
 - La prova è una trasmissione: il nominativo viaggia in chiaro, ci si attiene a frequenza e potenza consentite.
 - Misura il collegamento in **un verso** per volta (chi trasmette -> chi riceve). La risposta, che viaggia nel verso opposto, è un solo pacchetto breve: se arriva, il percorso inverso funziona; se non arriva, non si può dire quale dei due pacchetti sia mancato.
+
+## Uscire dalla prova
+
+Si esce con le stesse tre pressioni brevi del PTT che l'hanno accesa, in qualunque momento:
+- anche mentre la scheda sta ricevendo (altre schede o rumore in banda): in prova i clic contano sempre;
+- anche a prova di potenza in corso: la prima pressione ferma la prova e conta già come primo clic, quindi bastano tre pressioni in tutto;
+- in prova il clic non apre né chiude messaggi in arrivo.

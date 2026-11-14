@@ -188,6 +188,7 @@ class VoiceNode {
   int rxPercent_ = 0;    // ultima percentuale di ricezione notificata
 
   // PTT: clic e attesa prima di trasmettere
+  bool stopClick_ = false;  // la pressione in corso ha fermato la prova di potenza: se breve vale come primo clic
   bool pendingStart_ = false;  // PTT premuto, in attesa di capire se e' un clic o l'inizio di una trasmissione
   uint32_t pressMs_ = 0;
   uint8_t clickCount_ = 0;
