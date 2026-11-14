@@ -30,7 +30,7 @@ Una **chiave** di 16 byte uguale sui due nodi (per esempio `openssl rand -hex 16
 
 ## Cosa deve succedere
 1. **All'avvio** (seriale USB): `[nodo] id 1, rete "...", altro nodo 192.168.1.51:5400 (id 2), ascolto sulla porta 5400, radio 433.900 MHz profilo Standard`, poi `[nodo] memoria libera: ... byte` (**dimmi il numero**: serve a sapere quanto resta), `[nodo] Wi-Fi 192.168.1.50` (il tuo IP).
-2. **Entro pochi secondi** `[nodo] collegamento con l'altro nodo attivo` su **tutti e due** i nodi. Sul display: "Nodo 192.168.1.51 ok".
+2. **Entro pochi secondi** `[nodo] collegamento con l'altro nodo attivo` su **tutti e due** i nodi. Sul display: "ok 192.168.1.51" (stato e indirizzo o nome dell'altro nodo, al massimo 18 caratteri del nome).
 3. **Radio → rete → radio:** una stazione sul sito 1 trasmette (per esempio un testo o una voce breve); il nodo 1 mostra `R>N` che sale, il nodo 2 `N>R` che sale e **trasmette**; una stazione sul sito 2 riceve. Il display della stazione dice "Ultimo ... **via RPT**" (il flag `RELAYED`). Poi al contrario.
 4. **Ogni 30 secondi** il nodo scrive sulla seriale i contatori (`radio->rete`, `rete->radio`, `persi coda`, `firma errata`, `ripetuti`, `heap`).
 

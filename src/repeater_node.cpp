@@ -454,7 +454,7 @@ void sendFrame(uint8_t type, const uint8_t* data, size_t len) {
       char l2[24], l3[24], l4[24], l5[24];
       if (wifi) snprintf(l2, sizeof(l2), "WiFi %s", WiFi.localIP().toString().c_str());
       else snprintf(l2, sizeof(l2), "WiFi: connessione...");
-      snprintf(l3, sizeof(l3), "Nodo %s %s", settings.peerIp, up ? "ok" : "NO");
+      snprintf(l3, sizeof(l3), "%s %.18s", up ? "ok" : "NO", settings.peerIp);  // stato e nome dell'altro nodo: 21 caratteri al massimo, un nome lungo (iu5hju.ddns.net) non deve andare a capo
       snprintf(l4, sizeof(l4), "R>N %lu  N>R %lu", static_cast<unsigned long>(core.stats().toNet), static_cast<unsigned long>(core.stats().transmitted));
       if (!mayTransmit) snprintf(l5, sizeof(l5), "N0CALL: non trasmette");
       else snprintf(l5, sizeof(l5), "Coda %u persi %lu", static_cast<unsigned>(core.queue().size()), static_cast<unsigned long>(core.queue().dropped()));

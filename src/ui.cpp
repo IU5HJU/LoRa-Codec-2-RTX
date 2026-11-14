@@ -84,7 +84,9 @@ void UiNotifier::showLines(const char* l1, const char* l2, const char* l3, const
   for (int i = 0; i < 5; i++) {
     if (!lines[i]) continue;
     display_.setCursor(0, i * 12);
-    display_.println(lines[i]);
+    char clipped[22];  // al massimo 21 caratteri (128 punti): una riga piu' lunga andrebbe a capo sopra la successiva
+    snprintf(clipped, sizeof(clipped), "%.21s", lines[i]);
+    display_.println(clipped);
   }
   display_.display();
 }
